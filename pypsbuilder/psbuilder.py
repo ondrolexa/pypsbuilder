@@ -24,9 +24,9 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 
-from builder import Ui_PSBuilder
-from addinv import Ui_AddInv
-from adduni import Ui_AddUni
+from ui_psbuilder import Ui_PSBuilder
+from ui_addinv import Ui_AddInv
+from ui_adduni import Ui_AddUni
 
 __version__ = '2.0.1'
 # Make sure that we are using QT5
