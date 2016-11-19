@@ -188,6 +188,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def initProject(self):
         """Open working directory and initialize project
         """
+        if self.changed:
+            quit_msg = 'Project have been changed. Save ?'
+            reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
+                                                   QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
+                                                   QtWidgets.QMessageBox.Save)
+
+            if reply == QtWidgets.QMessageBox.Save:
+                self.saveProject()
         workdir = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory",
                                                    os.path.expanduser('~'),
                                                    QtWidgets.QFileDialog.ShowDirsOnly)
@@ -238,8 +246,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             check = {'axfile': False, 'setbulk': False,
                      'setexcess': False, 'drawpd': False}
             self.errinfo = 'Check your scriptfile.'
-            for line in open(self.scriptfile, 'r'):
-                kw = line.split()
+            with open(self.scriptfile, 'r', encoding=TCenc) as f:
+                lines = f.readlines()
+            for line in lines:
+                kw = line.split('%')[0].split()
                 if kw != []:
                     if kw[0] == 'axfile':
                         self.axname = kw[1]
@@ -660,7 +670,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         self.app_settings(write=True)
         if self.changed:
-            quit_msg = 'Project {} have been changed. Save ?'.format(self.project)
+            quit_msg = 'Project have been changed. Save ?'
             reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
                                                    QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
                                                    QtWidgets.QMessageBox.Save)
