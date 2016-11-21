@@ -6,6 +6,12 @@ Visual pseudosection builder for THERMOCALC
 # website: petrol.natur.cuni.cz/~ondro
 # last edited: February 2016
 
+# TODO
+# Separate output window with fixed font
+# Highlight lines and point checkbox (on/off)
+# Copy starting guesses button (from inv or any point on line)
+
+
 import sys
 import os
 import pickle
@@ -597,6 +603,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     if row[3] == idx[0].row():
                         row[3] = 0
                 self.invmodel.removeRow(idx[0])
+                self.plot()
+                self.statusBar().showMessage('Invariant point removed')
 
     def remove_uni(self):
         if self.unisel.hasSelection():
@@ -606,6 +614,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
                 self.unimodel.removeRow(idx[0])
+                self.plot()
+                self.statusBar().showMessage('Univariant line removed')
 
     def clicker(self, event):
         if event.inaxes is not None:
@@ -804,6 +814,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.plot()
                     else:
                         self.statusBar().showMessage('Nothing in range.')
+                else:
+                    self.statusBar().showMessage('Bombed.')
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
@@ -824,6 +836,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.plot()
                     else:
                         self.statusBar().showMessage('Nothing in range.')
+                else:
+                    self.statusBar().showMessage('Bombed.')
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out.split())))
             #########
@@ -870,8 +884,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         id = r[0]
                         isnew = False
             else:
-                self.errinfo = 'Unknown format of dr file.'
-                raise Exception()
+                return 'none', isnew, None, label, b, e, zm
             pts = np.array([float(v) for v in ' '.join(data).split()])
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
