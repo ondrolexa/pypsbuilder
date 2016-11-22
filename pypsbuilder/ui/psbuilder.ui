@@ -200,23 +200,6 @@
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tabOutput">
-        <attribute name="title">
-         <string>Output</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_4">
-         <item>
-          <widget class="QPlainTextEdit" name="outText">
-           <property name="lineWrapMode">
-            <enum>QPlainTextEdit::NoWrap</enum>
-           </property>
-           <property name="readOnly">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
        <widget class="QWidget" name="tabSettings">
         <attribute name="title">
          <string>Settings</string>
@@ -643,7 +626,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushUnselectUni">
+            <widget class="QPushButton" name="pushGuessUni">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -651,7 +634,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Unselect</string>
+              <string>Copy guess</string>
              </property>
             </widget>
            </item>
@@ -722,7 +705,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushUnselectInv">
+            <widget class="QPushButton" name="pushGuessInv">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -730,7 +713,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Unselect</string>
+              <string>Copy guess</string>
              </property>
             </widget>
            </item>

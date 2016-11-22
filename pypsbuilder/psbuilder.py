@@ -7,9 +7,9 @@ Visual pseudosection builder for THERMOCALC
 # last edited: February 2016
 
 # TODO
-# Separate output window with fixed font
-# Highlight lines and point checkbox (on/off)
 # Copy starting guesses button (from inv or any point on line)
+# Store phase and out in unimodel and inv model and recall it
+# when double clicked
 
 
 import sys
@@ -59,6 +59,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog()
+        self.outText = OutputDialog()
+        self.unihigh = None
+        self.invhigh = None
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -109,7 +112,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionOpen.triggered.connect(self.openProject)
         self.actionSave.triggered.connect(self.saveProject)
         self.actionQuit.triggered.connect(self.close)
-        self.actionAbout.triggered.connect(lambda: self.about_dialog.exec_())
+        self.actionAbout.triggered.connect(lambda: self.about_dialog.exec())
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -119,13 +122,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushReadScript.clicked.connect(self.read_scriptfile)
         self.pushSaveScript.clicked.connect(self.save_scriptfile)
         self.actionReload.triggered.connect(self.reinitialize)
-        self.pushUnselectUni.clicked.connect(self.unisel_clear)
-        self.pushUnselectInv.clicked.connect(self.invsel_clear)
+        #self.pushGuessUni.clicked.connect(self.unisel_guesses)
+        #self.pushGuessInv.clicked.connect(self.invsel_guesses)
         self.pushInvAdd.toggled.connect(self.addudinv)
         self.pushInvAdd.setCheckable(True)
         self.pushUniAdd.clicked.connect(self.adduduni)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
+        self.outText.closesignal.connect(self.output_closed)
+
 
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
@@ -148,7 +153,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
-        self.invsel.selectionChanged.connect(self.invsel_changed)
+        #self.invsel.selectionChanged.connect(self.invsel_changed)
         # default unconnected ghost
         self.invmodel.appendRow([0, 'Unconnected', {}])
         self.invview.setRowHidden(0, True)
@@ -173,7 +178,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # signal
         self.unimodel.dataChanged.connect(self.plot)
         self.unisel = self.uniview.selectionModel()
-        self.unisel.selectionChanged.connect(self.unisel_changed)
+        #self.unisel.selectionChanged.connect(self.unisel_changed)
 
     def app_settings(self, write=False):
         # Applicatiom settings
@@ -189,7 +194,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)) 
+            self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
 
     def initProject(self):
         """Open working directory and initialize project
@@ -210,7 +215,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # init THERMOCALC
             self.doInit()
             # init UI
-            self.outText.clear()
             self.logText.clear()
             self.initViewModels()
             # all done
@@ -394,7 +398,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.initViewModels()
             for row in data['unilist']:
                 self.unimodel.appendRow(row)
-            self.uniview.resizeColumnsToContents()
+            self.adapt_uniview()
             for row in data['invlist']:
                 self.invmodel.appendRow(row)
             self.invview.resizeColumnsToContents()
@@ -558,36 +562,41 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project re-initialized from scriptfile.')
             self.changed = True
 
-    def unisel_changed(self, item=QtCore.QItemSelection, olditem=QtCore.QItemSelection):
-        idx = self.unisel.selectedIndexes()
-        if idx:
-            r = self.unimodel.data(idx[4])
-            self.unihigh.set_visible(True)
-            self.unihigh.set_data(r['T'], r['p'])
-            self.canvas.draw()
+    def output_closed(self):
+        self.unihigh = None
+        self.invhigh = None
+        self.plot()
 
-    def unisel_clear(self):
+    def adapt_uniview(self):
+        self.uniview.resizeColumnsToContents()
+        self.uniview.setColumnWidth(2, 40)
+        self.uniview.setColumnWidth(3, 40)
+
+    def unisel_clear(self): # redundant
         if self.ready:
             self.unisel.clearSelection()
-            self.unihigh.set_visible(False)
-            self.canvas.draw()
+            self.unihigh = None
+            self.plot()
 
-    def invsel_changed(self, item=QtCore.QItemSelection, olditem=QtCore.QItemSelection):
-        idx = self.invsel.selectedIndexes()
-        if idx:
-            pass # HIGHLIFT INV
-
-    def invsel_clear(self):
+    def invsel_clear(self): # redundant
         if self.ready:
             self.invsel.clearSelection()
 
     def show_uni(self, index):
         r = self.unimodel.unilist[index.row()][4]
-        self.outText.setPlainText(r['output'])
+        self.unihigh = (r['T'], r['p'])
+        self.invhigh = None
+        self.plot()
+        self.outText.setText(r['output'])
+        self.outText.show()
 
     def show_inv(self, index):
         r = self.invmodel.invlist[index.row()][2]
-        self.outText.setPlainText(r['output'])
+        self.invhigh = (r['T'], r['p'])
+        self.unihigh = None
+        self.plot()
+        self.outText.setText(r['output'])
+        self.outText.show()
 
     def remove_inv(self):
         if self.invsel.hasSelection():
@@ -657,7 +666,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                           'output': 'User-defined univariant line.'}
                     id = self.getiduni()
                     self.unimodel.appendRow((id, label, b, e, zm))
-                    self.uniview.resizeColumnsToContents()
+                    self.adapt_uniview()
                     self.plot()
                     self.statusBar().showMessage('User-defined univariant line.')
                 else:
@@ -804,7 +813,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.unimodel.appendRow((id, label, b, e, r))
                             self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 2, QtCore.QModelIndex()))
                             self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 3, QtCore.QModelIndex()))
-                            self.uniview.resizeColumnsToContents()
+                            self.adapt_uniview()
                         else:
                             for row in self.unimodel.unilist:
                                 if row[1] == label:
@@ -1034,7 +1043,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                bbox=dict(facecolor='cyan', alpha=0.5, pad=4))
             invlabel_kw = dict(ha='center', va='center', size='small',
                                bbox=dict(facecolor='yellow', alpha=0.5, pad=4))
-            unihigh_kw = dict(lw=3, alpha=0.6, marker='o', ms=4, color='red')
+            unihigh_kw = dict(lw=3, alpha=0.6, marker='o', ms=4, color='red',
+                              zorder=10)
+            invhigh_kw = dict(alpha=0.6, ms=6, color='red', zorder=10)
             if self.figure.axes == []:
                 cur = None
             else:
@@ -1064,16 +1075,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ex = self.excess[:]
             ex.insert(0, '')
             self.ax.set_title(self.axname + ' +'.join(ex))
-            self.unihigh, = self.ax.plot([0], [0], '-', visible=False,
-                                         **unihigh_kw)
+            if self.unihigh is not None:
+                self.ax.plot(self.unihigh[0], self.unihigh[1], '-',
+                             **unihigh_kw)
+            if self.invhigh is not None:
+                self.ax.plot(self.invhigh[0], self.invhigh[1], 'o',
+                             **invhigh_kw)
             if cur is None:
                 self.ax.set_xlim(self.trange)
                 self.ax.set_ylim(self.prange)
             else:
                 self.ax.set_xlim(cur[0])
                 self.ax.set_ylim(cur[1])
-            self.unisel_changed()
-            self.invsel_changed()
             self.canvas.draw()
 
 
@@ -1277,7 +1290,7 @@ class AboutDialog(QtWidgets.QDialog):
 
         about = QtWidgets.QLabel('PSbuilder\nsimplistic THERMOCALC front-end for constructing PT pseudosections')
         about.setAlignment(QtCore.Qt.AlignCenter)
-        
+
         author = QtWidgets.QLabel('Ondrej Lexa')
         author.setAlignment(QtCore.Qt.AlignCenter)
 
@@ -1293,6 +1306,43 @@ class AboutDialog(QtWidgets.QDialog):
 
         self.setLayout(self.layout)
 
+class OutputDialog(QtWidgets.QDialog):
+    """Output dialog
+    """
+    closesignal = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        """Display a dialog that shows application information."""
+        super(OutputDialog, self).__init__(parent)
+
+        self.setWindowTitle('TC output')
+        self.resize(800, 600)
+
+        self.plainText = QtWidgets.QPlainTextEdit(self)
+        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.plainText.setReadOnly(True)
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
+        self.plainText.setFont(f)
+
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.setAlignment(QtCore.Qt.AlignVCenter)
+
+        self.layout.addWidget(self.plainText)
+
+        self.setLayout(self.layout)
+
+    def setText(self, txt):
+        self.plainText.setPlainText(txt)
+
+    def clearText(self, txt):
+        self.plainText.clear()
+
+    def closeEvent(self, evnt):
+        self.closesignal.emit()
+        super(OutputDialog, self).closeEvent(evnt)
+
+
 def main():
     application = QtWidgets.QApplication(sys.argv)
     window = PSBuilder()
@@ -1305,4 +1355,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
