@@ -213,21 +213,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if workdir:
             self.workdir = workdir
             # init THERMOCALC
-            self.doInit()
-            # init UI
-            self.logText.clear()
-            self.initViewModels()
-            # all done
-            self.ready = True
-            self.project = None
-            self.changed = True
-            # update settings tab
-            self.apply_setting(4)
-            # read scriptfile
-            self.read_scriptfile()
-            # update plot
-            self.plot()
-            self.statusBar().showMessage('Ready')
+            if self.doInit():
+                # init UI
+                self.logText.clear()
+                self.initViewModels()
+                # all done
+                self.ready = True
+                self.project = None
+                self.changed = True
+                # update settings tab
+                self.apply_setting(4)
+                # read scriptfile
+                self.read_scriptfile()
+                # update plot
+                self.plot()
+                self.statusBar().showMessage('Ready')
 
     def doInit(self):
         """Parse configs and test TC settings
@@ -364,9 +364,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # connect signal
             self.phasemodel.itemChanged.connect(self.phase_changed)
             self.logText.setPlainText(tcout)
+            return True
         except BaseException as e:
-                QtWidgets.QMessageBox.critical(self, 'Error!', self.errinfo,
-                                               QtWidgets.QMessageBox.Abort)
+            QtWidgets.QMessageBox.critical(self, 'Error!', self.errinfo,
+                                           QtWidgets.QMessageBox.Abort)
+            return False
 
     def openProject(self):
         """Open working directory and initialize project
@@ -848,7 +850,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 else:
                     self.statusBar().showMessage('Bombed.')
             else:
-                self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out.split())))
+                self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             progress.cancel()
             self.progressBar.setValue(0)
