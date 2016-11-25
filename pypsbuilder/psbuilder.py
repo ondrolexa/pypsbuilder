@@ -59,7 +59,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog()
-        self.outText = OutputDialog()
+        self.fullOutput = OutputDialog()
         self.unihigh = None
         self.invhigh = None
 
@@ -105,6 +105,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pmaxEdit.textChanged.connect(self.check_validity)
         self.pmaxEdit.textChanged.emit(self.pmaxEdit.text())
 
+        # SET OUTPUT TEXT
+        self.textOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.textOutput.setReadOnly(True)
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
+        self.textOutput.setFont(f)
+
         self.initViewModels()
 
         # CONNECT SIGNALS
@@ -122,6 +128,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushReadScript.clicked.connect(self.read_scriptfile)
         self.pushSaveScript.clicked.connect(self.save_scriptfile)
         self.actionReload.triggered.connect(self.reinitialize)
+        self.actionGenerate.triggered.connect(self.generate)
         #self.pushGuessUni.clicked.connect(self.unisel_guesses)
         #self.pushGuessInv.clicked.connect(self.invsel_guesses)
         self.pushInvAdd.toggled.connect(self.addudinv)
@@ -129,8 +136,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushUniAdd.clicked.connect(self.adduduni)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
-        self.outText.closesignal.connect(self.output_closed)
-
+        self.pushFullOutput.clicked.connect(self.show_fullOutput)
 
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
@@ -188,12 +194,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("label_uni", self.checkLabelUni.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
+            builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
         else:
             self.spinSteps.setValue(builder_settings.value("steps", 50, type=int))
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
 
     def initProject(self):
@@ -489,6 +497,26 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.errinfo = ''
         return tcout
 
+    def generate(self):
+        if self.ready:
+            tpfile = QtWidgets.QFileDialog.getOpenFileName(self, 'Open text file', self.workdir, 'Text files (*.txt);;All files (*.*)')[0]
+            if tpfile:
+                tp = []
+                tpok = True
+                with open(tpfile, 'r', encoding=TCenc) as tfile:
+                    for line in tfile:
+                        n = line.split('%')[0].strip()
+                        if n != '':
+                            if '-' not in n:
+                                tpok = False
+                            else:
+                                tp.append(n)
+                if tpok and tp:
+                    for r in tp:
+                        out = r.split('-')[1].split()
+                        phases = r.split('-')[0].split() + out
+                        self.do_calc(True, phases=phases, out=out)
+
     @property
     def tc(self):
         return os.path.join(self.workdir, self.tcexe)
@@ -535,11 +563,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def reinitialize(self):
         if self.ready:
             # collect info
-            selphases = []
+            phases = []
             for i in range(self.phasemodel.rowCount()):
                 item = self.phasemodel.item(i)
                 if item.checkState() == QtCore.Qt.Checked:
-                    selphases.append(item.text())
+                    phases.append(item.text())
             out = []
             for i in range(self.outmodel.rowCount()):
                 item = self.outmodel.item(i)
@@ -551,7 +579,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # select phases
             for i in range(self.phasemodel.rowCount()):
                 item = self.phasemodel.item(i)
-                if item.text() in selphases:
+                if item.text() in phases:
                     item.setCheckState(QtCore.Qt.Checked)
             # select out
             for i in range(self.outmodel.rowCount()):
@@ -563,11 +591,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.prange = prange
             self.statusBar().showMessage('Project re-initialized from scriptfile.')
             self.changed = True
-
-    def output_closed(self):
-        self.unihigh = None
-        self.invhigh = None
-        self.plot()
 
     def adapt_uniview(self):
         self.uniview.resizeColumnsToContents()
@@ -584,21 +607,41 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             self.invsel.clearSelection()
 
+    def show_fullOutput(self):
+        self.fullOutput.exec()
+
+    def set_phaselist(self, r):
+        for i in range(self.phasemodel.rowCount()):
+            item = self.phasemodel.item(i)
+            if item.text() in r['phases'] or item.text() in r['out']:
+                item.setCheckState(QtCore.Qt.Checked)
+            else:
+                item.setCheckState(QtCore.Qt.Unchecked)
+        # select out
+        for i in range(self.outmodel.rowCount()):
+            item = self.outmodel.item(i)
+            if item.text() in r['out']:
+                item.setCheckState(QtCore.Qt.Checked)
+            else:
+                item.setCheckState(QtCore.Qt.Unchecked)
+        self.textOutput.setPlainText(r['output'])
+        self.fullOutput.setText(r['output'])
+
     def show_uni(self, index):
         r = self.unimodel.unilist[index.row()][4]
+        self.set_phaselist(r)
         self.unihigh = (r['T'], r['p'])
         self.invhigh = None
         self.plot()
-        self.outText.setText(r['output'])
-        self.outText.show()
+        #self.outText.show()
 
     def show_inv(self, index):
         r = self.invmodel.invlist[index.row()][2]
+        self.set_phaselist(r)
         self.invhigh = (r['T'], r['p'])
         self.unihigh = None
         self.plot()
-        self.outText.setText(r['output'])
-        self.outText.show()
+        #self.outText.show()
 
     def remove_inv(self):
         if self.invsel.hasSelection():
@@ -636,8 +679,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if respond == QtWidgets.QDialog.Accepted:
                 label, T, p = addinv.getValues()
                 zm = {'T': np.array([T]), 'p': np.array([p]),
-                      'output': 'User-defined invariant point.'}
-                id = self.getidinv()
+                      'output': 'User-defined invariant point.',
+                      'phases':set(), 'out':set()}
+                isnew, id = self.getidinv()
                 self.invmodel.appendRow((id, label, zm))
                 self.invview.resizeColumnsToContents()
                 self.plot()
@@ -665,8 +709,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 label, b, e = adduni.getValues()
                 if b and e:
                     zm = {'T': np.array([]), 'p': np.array([]),
-                          'output': 'User-defined univariant line.'}
-                    id = self.getiduni()
+                          'output': 'User-defined univariant line.',
+                          'phases': set(), 'out': set()}
+                    isnew, id = self.getiduni()
                     self.unimodel.appendRow((id, label, b, e, zm))
                     self.adapt_uniview()
                     self.plot()
@@ -706,6 +751,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 event.accept()
             else:
                 event.ignore()
+        self.fullOutput.close()
 
     def check_validity(self, *args, **kwargs):
         sender = self.sender()
@@ -776,18 +822,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
-    def do_calc(self, cT):
+    def do_calc(self, cT, phases=[], out=[]):
         if self.ready:
-            phases = []
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    phases.append(item.text())
-            out = []
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    out.append(item.text())
+            if phases == []:
+                for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.checkState() == QtCore.Qt.Checked:
+                        phases.append(item.text())
+            if out == []:
+                for i in range(self.outmodel.rowCount()):
+                    item = self.outmodel.item(i)
+                    if item.checkState() == QtCore.Qt.Checked:
+                        out.append(item.text())
             progress = RotatingProgress(0.25, self.move_progress)
             progress.start()
             ###########
@@ -808,17 +854,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
                 tcout = self.runprog(self.tc, ans)
                 self.logText.setPlainText(tcout)
-                typ, isnew, id, label, b, e, r = self.parsedrfile()
+                typ, label, r = self.parsedrfile()
+                r['phases'] = set(phases)
+                r['out'] = set(out)
                 if typ == 'uni':
                     if len(r['T']) > 0:
+                        isnew, id = self.getiduni(r)
                         if isnew:
-                            self.unimodel.appendRow((id, label, b, e, r))
+                            self.unimodel.appendRow((id, label, 0, 0, r))
                             self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 2, QtCore.QModelIndex()))
                             self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 3, QtCore.QModelIndex()))
                             self.adapt_uniview()
                         else:
                             for row in self.unimodel.unilist:
-                                if row[1] == label:
+                                if row[0] == id:
                                     row[4] = r
                         self.statusBar().showMessage('Univariant line calculated.')
                         self.changed = True
@@ -832,15 +881,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
                 tcout = self.runprog(self.tc, ans)
                 self.logText.setPlainText(tcout)
-                typ, isnew, id, label, b, e, r = self.parsedrfile()
+                typ, label, r = self.parsedrfile()
+                r['phases'] = set(phases)
+                r['out'] = set(out)
                 if typ == 'inv':
                     if len(r['T']) > 0:
+                        isnew, id = self.getidinv(r)
                         if isnew:
                             self.invmodel.appendRow((id, label, r))
                             self.invview.resizeColumnsToContents()
                         else:
                             for row in self.invmodel.invlist[1:]:
-                                if row[1] == label:
+                                if row[0] == id:
                                     row[2] = r
                         self.statusBar().showMessage('Invariant point calculated.')
                         self.changed = True
@@ -859,48 +911,30 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """Parse intermediate drfile
         """
         dr = []
-        # for line in open(self.drfile, 'rb'):
         with open(self.drfile, 'r', encoding=TCenc) as drfile:
             for line in drfile:
                 n = line.split('%')[0].strip()
                 if n != '':
                     dr.append(n)
 
-        typ = ''
-        label = ''
-        zm = {}
-        isnew = True
-        b = 0
-        e = 0
+        typ, label, zm = '', '', {}
         if len(dr) > 0:
             label = ' '.join(dr[0].split()[1:])
             with open(self.ofile, 'r', encoding=TCenc) as ofile:
                 output = ofile.read()
             if dr[0].split()[0] == 'u<k>':
                 typ = 'uni'
-                id = self.getiduni()
                 data = dr[2:]
-                for r in self.unimodel.unilist:
-                    if label == r[1]:
-                        b = r[2]
-                        e = r[3]
-                        id = r[0]
-                        isnew = False
             elif dr[0].split()[0] == 'i<k>':
                 typ = 'inv'
-                id = self.getidinv()
                 data = dr[1:]
-                for r in self.invmodel.invlist[1:]:
-                    if label == r[1]:
-                        id = r[0]
-                        isnew = False
             else:
                 return 'none', isnew, None, label, b, e, zm
             pts = np.array([float(v) for v in ' '.join(data).split()])
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
             zm['output'] = output
-        return typ, isnew, id, label, b, e, zm
+        return typ, label, zm
 
     def gendrawpd(self, exedrawpd):
         with open(self.drawpdfile, 'w', encoding=TCenc) as output:
@@ -929,7 +963,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 b2 = 'i%s' % u[3]
                 if b2 == 'i0':
                     b2 = 'end'
-                if u[4]['output'] == 'User-defined univariant line.':
+                if u[4]['phases'] == set():
                     output.write(b1 + ' ' + b2 + 'connect\n')
                     output.write('\n')
                 else:
@@ -961,21 +995,29 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             except OSError:
                 pass
 
-    def getiduni(self):
-        ids = [r[0] for r in self.unimodel.unilist]
-        if ids == []:
-            res = 1
-        else:
-            res = max(ids) + 1
-        return res
+    def getiduni(self, zm=None):
+        '''Return id of either new or existing univariant line'''
+        ids = 0
+        for r in self.unimodel.unilist:
+            if zm is not None:
+                if r[4]['phases'] == zm['phases']:
+                    if r[4]['out'] == zm['out']:
+                        return False, r[0]
+                else:
+                    ids = max(ids, r[0])
+        return True, ids + 1
 
-    def getidinv(self):
-        ids = [r[0] for r in self.invmodel.invlist[1:]]
-        if ids == []:
-            res = 1
-        else:
-            res = max(ids) + 1
-        return res
+    def getidinv(self, zm=None):
+        '''Return id of either new or existing invvariant point'''
+        ids = 0
+        for r in self.invmodel.invlist[1:]:
+            if zm is not None:
+                if r[2]['phases'] == zm['phases']:
+                    if r[2]['out'] == zm['out']:
+                        return False, r[0]
+                else:
+                    ids = max(ids, r[0])
+        return True, ids + 1
 
     def getunicutted(self, r, b, e):
         T = r['T'].copy()
@@ -1041,10 +1083,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def plot(self):
         if self.ready:
+            lalfa = self.spinAlpha.value()/100
             unilabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='cyan', alpha=0.5, pad=4))
+                               bbox=dict(facecolor='cyan', alpha=lalfa, pad=4))
             invlabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='yellow', alpha=0.5, pad=4))
+                               bbox=dict(facecolor='yellow', alpha=lalfa, pad=4))
             unihigh_kw = dict(lw=3, alpha=0.6, marker='o', ms=4, color='red',
                               zorder=10)
             invhigh_kw = dict(alpha=0.6, ms=6, color='red', zorder=10)
