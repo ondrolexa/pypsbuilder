@@ -8,9 +8,7 @@ Visual pseudosection builder for THERMOCALC
 
 # TODO
 # Copy starting guesses button (from inv or any point on line)
-# Store phase and out in unimodel and inv model and recall it
-# when double clicked
-
+# format Modes output better, with p and t and without out
 
 import sys
 import os
@@ -59,7 +57,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog()
-        self.fullOutput = OutputDialog()
         self.unihigh = None
         self.invhigh = None
 
@@ -70,7 +67,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.mplvl.addWidget(self.canvas)
         self.toolbar = NavigationToolbar(self.canvas, self.tabPlot,
-                                         coordinates=False)
+                                         coordinates=True)
         # remove "Edit curves lines and axes parameters"
         actions = self.toolbar.findChildren(QtWidgets.QAction)
         for a in actions:
@@ -106,10 +103,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pmaxEdit.textChanged.emit(self.pmaxEdit.text())
 
         # SET OUTPUT TEXT
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
         self.textOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.textOutput.setReadOnly(True)
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
         self.textOutput.setFont(f)
+        self.textFullOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.textFullOutput.setReadOnly(True)
+        self.textFullOutput.setFont(f)
 
         self.initViewModels()
 
@@ -136,7 +136,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushUniAdd.clicked.connect(self.adduduni)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
-        self.pushFullOutput.clicked.connect(self.show_fullOutput)
+        self.splitter_main.setSizes((100,400,200))
 
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
@@ -592,6 +592,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project re-initialized from scriptfile.')
             self.changed = True
 
+    def format_coord(self, x, y):
+        prec = self.spinPrec.value()
+        return 'T={:.{prec}f} p={:.{prec}f}'.format(x, y, prec=prec)
+
     def adapt_uniview(self):
         self.uniview.resizeColumnsToContents()
         self.uniview.setColumnWidth(2, 40)
@@ -607,8 +611,27 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             self.invsel.clearSelection()
 
-    def show_fullOutput(self):
-        self.fullOutput.exec()
+    def parse_output(self, txt, onlymodes=True):
+        t = txt.splitlines()
+        t = [r.strip(chr(164)).strip() for r in t]
+        za = [i+1 for i in range(len(t)) if t[i].startswith('-')]
+        st = [i for i in range(len(t)) if t[i].startswith('mode')]
+
+        clabels = t[za[0]].split()
+        mlabels = t[st[0]].split()[1:]
+        vals, modes = [], []
+
+        for b, e in zip(za, st):
+            vals.append(list(map(float, t[b + 1].split())))
+            modes.append(list(map(float, t[e + 1].split())))
+            for off in range((e-b-4)//2):
+                vals.append(list(map(float, t[b + 3 + 2*off].split())))
+                modes.append(list(map(float, t[e + 3 + 2*off].split())))
+
+        if onlymodes:
+            return mlabels, modes
+        else:
+            return clabels, vals, mlabels, modes
 
     def set_phaselist(self, r):
         for i in range(self.phasemodel.rowCount()):
@@ -624,8 +647,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-        self.textOutput.setPlainText(r['output'])
-        self.fullOutput.setText(r['output'])
+        mlabels, modes = self.parse_output(r['output'])
+        txt = ''
+        h_format ="{:>10}" * len(mlabels)
+        n_format ="{:10.6f}" * len(mlabels)
+        txt += h_format.format(*mlabels)
+        txt += '\n'
+        for row in modes:
+            txt += n_format.format(*row)
+            txt += '\n'
+        self.textOutput.setPlainText(txt)
+        self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
         r = self.unimodel.unilist[index.row()][4]
@@ -751,7 +783,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 event.accept()
             else:
                 event.ignore()
-        self.fullOutput.close()
 
     def check_validity(self, *args, **kwargs):
         sender = self.sender()
@@ -1097,6 +1128,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 cur = (self.ax.get_xlim(), self.ax.get_ylim())
             self.ax = self.figure.add_subplot(111)
             self.ax.cla()
+            self.ax.format_coord = self.format_coord
             for k in self.unimodel.unilist:
                 T, p = self.getunicutted(k[4], k[2], k[3])
                 self.ax.plot(T, p, 'k')
@@ -1350,42 +1382,6 @@ class AboutDialog(QtWidgets.QDialog):
         self.layout.addWidget(github)
 
         self.setLayout(self.layout)
-
-class OutputDialog(QtWidgets.QDialog):
-    """Output dialog
-    """
-    closesignal = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None):
-        """Display a dialog that shows application information."""
-        super(OutputDialog, self).__init__(parent)
-
-        self.setWindowTitle('TC output')
-        self.resize(800, 600)
-
-        self.plainText = QtWidgets.QPlainTextEdit(self)
-        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
-        self.plainText.setReadOnly(True)
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
-        self.plainText.setFont(f)
-
-
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setAlignment(QtCore.Qt.AlignVCenter)
-
-        self.layout.addWidget(self.plainText)
-
-        self.setLayout(self.layout)
-
-    def setText(self, txt):
-        self.plainText.setPlainText(txt)
-
-    def clearText(self, txt):
-        self.plainText.clear()
-
-    def closeEvent(self, evnt):
-        self.closesignal.emit()
-        super(OutputDialog, self).closeEvent(evnt)
 
 
 def main():
