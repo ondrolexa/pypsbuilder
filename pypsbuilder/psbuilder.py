@@ -7,8 +7,6 @@ Visual pseudosection builder for THERMOCALC
 # last edited: February 2016
 
 # TODO
-# Copy starting guesses button (from inv or any point on line)
-# format Modes output better, with p and t and without out
 
 import sys
 import os
@@ -31,6 +29,7 @@ from matplotlib.backends.backend_qt5agg import (
 from ui_psbuilder import Ui_PSBuilder
 from ui_addinv import Ui_AddInv
 from ui_adduni import Ui_AddUni
+from ui_uniguess import Ui_UniGuess
 
 __version__ = '2.0.1'
 # Make sure that we are using QT5
@@ -41,7 +40,7 @@ matplotlib.rcParams['ytick.direction'] = 'out'
 
 popenkw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                stderr=subprocess.STDOUT, universal_newlines=False)
-TCenc = 'latin1'
+TCenc = 'mac-roman'
 
 
 class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
@@ -119,8 +118,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionSave.triggered.connect(self.saveProject)
         self.actionQuit.triggered.connect(self.close)
         self.actionAbout.triggered.connect(lambda: self.about_dialog.exec())
-        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
-        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
+        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True, [], []))
+        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False, [], []))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
         self.pushResetSettings.clicked.connect(lambda: self.apply_setting(8))
         self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
@@ -129,8 +128,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushSaveScript.clicked.connect(self.save_scriptfile)
         self.actionReload.triggered.connect(self.reinitialize)
         self.actionGenerate.triggered.connect(self.generate)
-        #self.pushGuessUni.clicked.connect(self.unisel_guesses)
-        #self.pushGuessInv.clicked.connect(self.invsel_guesses)
+        self.pushGuessUni.clicked.connect(self.unisel_guesses)
+        self.pushGuessInv.clicked.connect(self.invsel_guesses)
         self.pushInvAdd.toggled.connect(self.addudinv)
         self.pushInvAdd.setCheckable(True)
         self.pushUniAdd.clicked.connect(self.adduduni)
@@ -159,7 +158,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
-        #self.invsel.selectionChanged.connect(self.invsel_changed)
+        self.invsel.selectionChanged.connect(self.clean_high)
         # default unconnected ghost
         self.invmodel.appendRow([0, 'Unconnected', {}])
         self.invview.setRowHidden(0, True)
@@ -184,7 +183,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # signal
         self.unimodel.dataChanged.connect(self.plot)
         self.unisel = self.uniview.selectionModel()
-        #self.unisel.selectionChanged.connect(self.unisel_changed)
+        self.unisel.selectionChanged.connect(self.clean_high)
 
     def app_settings(self, write=False):
         # Applicatiom settings
@@ -459,6 +458,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 stream.close()
                 self.changed = False
                 self.statusBar().showMessage('Project saved.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def update_exe(self):
         if sys.platform.startswith('win'):
@@ -516,6 +517,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         out = r.split('-')[1].split()
                         phases = r.split('-')[0].split() + out
                         self.do_calc(True, phases=phases, out=out)
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     @property
     def tc(self):
@@ -591,6 +594,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.prange = prange
             self.statusBar().showMessage('Project re-initialized from scriptfile.')
             self.changed = True
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def format_coord(self, x, y):
         prec = self.spinPrec.value()
@@ -601,37 +606,102 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.setColumnWidth(2, 40)
         self.uniview.setColumnWidth(3, 40)
 
-    def unisel_clear(self): # redundant
+    def clean_high(self):
         if self.ready:
-            self.unisel.clearSelection()
-            self.unihigh = None
-            self.plot()
+            if self.unihigh is not None:
+                self.unihigh = None
+                self.textOutput.clear()
+                self.textFullOutput.clear()
+                self.plot()
+            if self.invhigh is not None:
+                self.invhigh = None
+                self.textOutput.clear()
+                self.textFullOutput.clear()
+                self.plot()
 
-    def invsel_clear(self): # redundant
-        if self.ready:
-            self.invsel.clearSelection()
+    def guess_toclipboard(self, p, T, clabels, vals, r):
+        clipboard = QtWidgets.QApplication.clipboard()
+        txt = '% --------------------------------------------------------'
+        txt += '\n'
+        txt += '% at P = {}, T = {}, for: '.format(p, T)
+        txt += ' '.join(r['phases'])
+        txt += ' with ' + ', '.join(['{} = 0'.format(o) for o in r['out']])
+        txt += '\n'
+        txt += '% --------------------------------------------------------'
+        txt += '\n'
+        txt += 'ptguess {} {}'.format(p, T)
+        txt += '\n'
+        txt += '% --------------------------------------------------------'
+        txt += '\n'
+        for c, v in zip(clabels, vals):
+            txt += 'xyzguess {:<12}{:>10}'.format(c, v)
+            txt += '\n'
+        txt += '% --------------------------------------------------------'
+        txt += '\n'
+        clipboard.setText(txt)
+        self.statusBar().showMessage('Guesses copied to clipboard.')
 
-    def parse_output(self, txt, onlymodes=True):
+    def invsel_guesses(self):
+        if self.invsel.hasSelection():
+            idx = self.invsel.selectedIndexes()
+            r = self.invmodel.data(idx[2])
+            clabels, vals = self.parse_output(r['output'], getmodes=False)
+            p, T = vals[0][:2]
+            vals = vals[0][2:]
+            clabels = clabels[2:]
+            self.guess_toclipboard(p, T, clabels, vals, r)
+
+    def unisel_guesses(self):
+        if self.unisel.hasSelection():
+            idx = self.unisel.selectedIndexes()
+            #clipboard = QtWidgets.QApplication.clipboard()
+            r = self.unimodel.data(idx[4])
+            clabels, vals = self.parse_output(r['output'], getmodes=False)
+            l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+            uniguess = UniGuess(l, self)
+            respond = uniguess.exec()
+            if respond == QtWidgets.QDialog.Accepted:
+                ix = uniguess.getValue()
+                p, T = r['p'][ix], r['T'][ix]
+                self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
+
+    def parse_output(self, txt, getmodes=True):
         t = txt.splitlines()
-        t = [r.strip(chr(164)).strip() for r in t]
-        za = [i+1 for i in range(len(t)) if t[i].startswith('-')]
+        t = [r.strip(u'\u00A7').strip() for r in t]
+        za = [i + 1 for i in range(len(t)) if t[i].startswith('-')]
         st = [i for i in range(len(t)) if t[i].startswith('mode')]
 
-        clabels = t[za[0]].split()
-        mlabels = t[st[0]].split()[1:]
+        clabels = []
+        for ix in range(za[0], st[0] - 1, 2):
+            clabels.extend(t[ix].split())
+        mlabels = clabels[:2] + t[st[0]].split()[1:]
         vals, modes = [], []
 
         for b, e in zip(za, st):
-            vals.append(list(map(float, t[b + 1].split())))
-            modes.append(list(map(float, t[e + 1].split())))
-            for off in range((e-b-4)//2):
-                vals.append(list(map(float, t[b + 3 + 2*off].split())))
-                modes.append(list(map(float, t[e + 3 + 2*off].split())))
+            val = []
+            for ix in range(b + 1, e, 2):
+                val.extend(list(map(float, t[ix].split())))
+            vals.append(val)
+            mod = list(map(float, t[e + 1].split()))
+            modes.append(val[:2] + mod)
 
-        if onlymodes:
-            return mlabels, modes
+        # clabels = t[za[0]].split()
+        # mlabels = clabels[:2] + t[st[0]].split()[1:]
+        # vals, modes = [], []
+
+        # for b, e in zip(za, st):
+        #     val = list(map(float, t[b + 1].split()))
+        #     mod = list(map(float, t[e + 1].split()))
+        #     vals.append(val)
+        #     modes.append(val[:2] + mod)
+        #     for off in range((e-b-4)//2):
+        #         vals.append(list(map(float, t[b + 3 + 2*off].split())))
+        #         modes.append(list(map(float, t[e + 3 + 2*off].split())))
+
+        if getmodes:
+           return np.array(mlabels), np.array(modes)
         else:
-            return clabels, vals, mlabels, modes
+            return np.array(clabels), np.array(vals)
 
     def set_phaselist(self, r):
         for i in range(self.phasemodel.rowCount()):
@@ -648,9 +718,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
         mlabels, modes = self.parse_output(r['output'])
+        mask = ~np.in1d(mlabels, list(r['out']))
+        mlabels = mlabels[mask]
+        modes = modes[:, mask]
         txt = ''
-        h_format ="{:>10}" * len(mlabels)
-        n_format ="{:10.6f}" * len(mlabels)
+        h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
+        n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
         txt += h_format.format(*mlabels)
         txt += '\n'
         for row in modes:
@@ -732,6 +805,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.tabMain.setCurrentIndex(0)
             else:
                 self.canvas.mpl_disconnect(self.cid)
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def adduduni(self):
         if self.ready:
@@ -752,6 +827,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     msg = 'You must provide begin and end.'
                     QtWidgets.QMessageBox.critical(self, 'Error!', msg,
                                                    QtWidgets.QMessageBox.Abort)
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def read_scriptfile(self):
         if self.ready:
@@ -762,6 +839,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             with open(self.scriptfile, 'w', encoding=TCenc) as f:
                 f.write(self.outScript.toPlainText())
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def closeEvent(self, event):
         """Catch exit of app.
@@ -840,6 +919,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.tmaxEdit.setText(fmt(self.deftrange[1]))
                 self.pminEdit.setText(fmt(self.defprange[0]))
                 self.pmaxEdit.setText(fmt(self.defprange[1]))
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def phase_changed(self, item):
         """Manage phases in outmodel based on selection in phase model.
@@ -901,6 +982,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 if row[0] == id:
                                     row[4] = r
                         self.statusBar().showMessage('Univariant line calculated.')
+                        if self.unihigh is not None:
+                            self.set_phaselist(r)
+                            self.unihigh = (r['T'], r['p'])
+                            self.invhigh = None
                         self.changed = True
                         self.plot()
                     else:
@@ -926,6 +1011,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 if row[0] == id:
                                     row[2] = r
                         self.statusBar().showMessage('Invariant point calculated.')
+                        if self.invhigh is not None:
+                            self.set_phaselist(r)
+                            self.invhigh = (r['T'], r['p'])
+                            self.unihigh = None
                         self.changed = True
                         self.plot()
                     else:
@@ -937,6 +1026,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             #########
             progress.cancel()
             self.progressBar.setValue(0)
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def parsedrfile(self):
         """Parse intermediate drfile
@@ -1292,10 +1383,10 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         return combo
 
     def setEditorData(self, editor, index):
-        editor.setCurrentIndex(index.model().data(index))
+        editor.setCurrentText(str(index.model().data(index)))
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.currentIndex())
+        model.setData(index, int(editor.currentText()))
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
@@ -1353,6 +1444,18 @@ class AddUni(QtWidgets.QDialog, Ui_AddUni):
         b = self.comboBegin.currentIndex()
         e = self.comboEnd.currentIndex()
         return (label, b, e)
+
+
+class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
+    """Choose uni pt dialog class
+    """
+    def __init__(self, values, parent=None):
+        super(UniGuess, self).__init__(parent)
+        self.setupUi(self)
+        self.comboPoint.addItems(values)
+
+    def getValue(self):
+        return self.comboPoint.currentIndex()
 
 
 class AboutDialog(QtWidgets.QDialog):
