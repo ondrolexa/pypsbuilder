@@ -1454,8 +1454,8 @@ class AddUni(QtWidgets.QDialog, Ui_AddUni):
 
     def getValues(self):
         label = self.labelEdit.text()
-        b = self.comboBegin.currentIndex()
-        e = self.comboEnd.currentIndex()
+        b = int(self.comboBegin.currentText())
+        e = int(self.comboEnd.currentText())
         return (label, b, e)
 
 
@@ -1481,7 +1481,7 @@ class AboutDialog(QtWidgets.QDialog):
         self.setWindowTitle('About')
         self.resize(300, 100)
 
-        about = QtWidgets.QLabel('PSbuilder\nsimplistic THERMOCALC front-end for constructing PT pseudosections')
+        about = QtWidgets.QLabel('PSbuilder\nTHERMOCALC front-end for constructing PT pseudosections')
         about.setAlignment(QtCore.Qt.AlignCenter)
 
         author = QtWidgets.QLabel('Ondrej Lexa')
