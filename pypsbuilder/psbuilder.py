@@ -1206,6 +1206,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
         return np.hstack((T1, T[s1:s2], T2)), np.hstack((p1, p[s1:s2], p2))
 
+    def getunilabelpoint(self, T, p):
+        dT = np.diff(T)
+        dp = np.diff(p)
+        d = np.sqrt(dT**2 + dp**2)
+
+        cl = np.append([0], np.cumsum(d))
+        ix = np.interp(sum(d) / 2, cl, range(len(cl)))
+        cix = int(ix)
+        return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
+
     def segmentpos(self, px, py, x1, y1, x2, y2):
         ll = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
         u1 = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1))
@@ -1233,12 +1243,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 T, p = self.getunicutted(k[4], k[2], k[3])
                 self.ax.plot(T, p, 'k')
                 if self.checkLabelUni.isChecked():
+                    Tl, pl = self.getunilabelpoint(T, p)
                     if self.checkLabels.isChecked():
-                        self.ax.text(T[len(T) // 2], p[len(p) // 2], k[1],
-                                     **unilabel_kw)
+                        self.ax.text(Tl, pl, k[1], **unilabel_kw)
                     else:
-                        self.ax.text(T[len(T) // 2], p[len(p) // 2], str(k[0]),
-                                     **unilabel_kw)
+                        self.ax.text(Tl, pl, str(k[0]), **unilabel_kw)
             for k in self.invmodel.invlist[1:]:
                 T, p = k[2]['T'], k[2]['p']
                 self.ax.plot(T, p, 'k.')
