@@ -912,6 +912,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                float(self.pmaxEdit.text()))
                 self.ax.set_xlim(self.trange)
                 self.ax.set_ylim(self.prange)
+                #clear navigation toolbar history
+                self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
                 self.plot()
@@ -1207,14 +1209,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         return np.hstack((T1, T[s1:s2], T2)), np.hstack((p1, p[s1:s2], p2))
 
     def getunilabelpoint(self, T, p):
-        dT = np.diff(T)
-        dp = np.diff(p)
-        d = np.sqrt(dT**2 + dp**2)
+        if len(T) > 1:
+            dT = np.diff(T)
+            dp = np.diff(p)
+            d = np.sqrt(dT**2 + dp**2)
 
-        cl = np.append([0], np.cumsum(d))
-        ix = np.interp(sum(d) / 2, cl, range(len(cl)))
-        cix = int(ix)
-        return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
+            cl = np.append([0], np.cumsum(d))
+            ix = np.interp(sum(d) / 2, cl, range(len(cl)))
+            cix = int(ix)
+            return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
+        else:
+            return T[0], p[0]
 
     def segmentpos(self, px, py, x1, y1, x2, y2):
         ll = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
