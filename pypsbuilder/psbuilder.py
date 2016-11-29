@@ -1062,7 +1062,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 typ = 'inv'
                 data = dr[1:]
             else:
-                return 'none', isnew, None, label, b, e, zm
+                return 'none', label, zm
             pts = np.array([float(v) for v in ' '.join(data).split()])
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
