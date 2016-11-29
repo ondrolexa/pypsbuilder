@@ -645,25 +645,31 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
-            clabels, vals = self.parse_output(r['output'], getmodes=False)
-            p, T = vals[0][:2]
-            vals = vals[0][2:]
-            clabels = clabels[2:]
-            self.guess_toclipboard(p, T, clabels, vals, r)
+            if r['phases'] != set():
+                clabels, vals = self.parse_output(r['output'], getmodes=False)
+                p, T = vals[0][:2]
+                vals = vals[0][2:]
+                clabels = clabels[2:]
+                self.guess_toclipboard(p, T, clabels, vals, r)
+            else:
+                self.statusBar().showMessage('Guesses cannot be copied from user-defined invariant point.')
 
     def unisel_guesses(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             #clipboard = QtWidgets.QApplication.clipboard()
             r = self.unimodel.data(idx[4])
-            clabels, vals = self.parse_output(r['output'], getmodes=False)
-            l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
-            uniguess = UniGuess(l, self)
-            respond = uniguess.exec()
-            if respond == QtWidgets.QDialog.Accepted:
-                ix = uniguess.getValue()
-                p, T = r['p'][ix], r['T'][ix]
-                self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
+            if r['phases'] != set():
+                clabels, vals = self.parse_output(r['output'], getmodes=False)
+                l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+                uniguess = UniGuess(l, self)
+                respond = uniguess.exec()
+                if respond == QtWidgets.QDialog.Accepted:
+                    ix = uniguess.getValue()
+                    p, T = r['p'][ix], r['T'][ix]
+                    self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
+            else:
+                self.statusBar().showMessage('Guesses cannot be copied from user-defined univariant line.')
 
     def parse_output(self, txt, getmodes=True):
         t = txt.splitlines()
@@ -733,16 +739,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
-        r = self.unimodel.unilist[index.row()][4]
-        self.set_phaselist(r)
-        self.unihigh = (r['T'], r['p'])
+        k = self.unimodel.unilist[index.row()]
+        r = k[4]
+        if r['phases'] != set():
+            self.set_phaselist(r)
+        T, p = self.getunicutted(r, k[2], k[3])
+        self.unihigh = (T, p)
         self.invhigh = None
         self.plot()
         #self.outText.show()
 
     def show_inv(self, index):
         r = self.invmodel.invlist[index.row()][2]
-        self.set_phaselist(r)
+        if r['phases'] != set():
+            self.set_phaselist(r)
         self.invhigh = (r['T'], r['p'])
         self.unihigh = None
         self.plot()
@@ -803,6 +813,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.toolbar.zoom()
                 self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
                 self.tabMain.setCurrentIndex(0)
+                self.statusBar().showMessage('Click on canvas to add invariant point.')
             else:
                 self.canvas.mpl_disconnect(self.cid)
         else:
@@ -1125,8 +1136,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if r[4]['phases'] == zm['phases']:
                     if r[4]['out'] == zm['out']:
                         return False, r[0]
-                else:
-                    ids = max(ids, r[0])
+            ids = max(ids, r[0])
         return True, ids + 1
 
     def getidinv(self, zm=None):
@@ -1137,8 +1147,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if r[2]['phases'] == zm['phases']:
                     if r[2]['out'] == zm['out']:
                         return False, r[0]
-                else:
-                    ids = max(ids, r[0])
+            ids = max(ids, r[0])
         return True, ids + 1
 
     def getunicutted(self, r, b, e):
@@ -1386,7 +1395,11 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         editor.setCurrentText(str(index.model().data(index)))
 
     def setModelData(self, editor, model, index):
-        model.setData(index, int(editor.currentText()))
+        if model.unilist[index.row()][4]['phases'] == set() and int(editor.currentText()) == 0:
+            editor.setCurrentText(str(model.data(index)))
+            self.parent().statusBar().showMessage('User-defined univariant line must have begin and end.')
+        else:
+            model.setData(index, int(editor.currentText()))
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
