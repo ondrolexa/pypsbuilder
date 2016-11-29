@@ -761,15 +761,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def remove_inv(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
+            invnum = self.invmodel.data(idx[0])
             msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
             reply = QtWidgets.QMessageBox.question(self, 'Remove invariant point', msg,
                                                    QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
                 # Check unilines begins and ends
                 for row in self.unimodel.unilist:
-                    if row[2] == idx[0].row():
+                    if row[2] == invnum:
                         row[2] = 0
-                    if row[3] == idx[0].row():
+                    if row[3] == invnum:
                         row[3] = 0
                 self.invmodel.removeRow(idx[0])
                 self.plot()
