@@ -223,6 +223,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if self.doInit():
                 # init UI
                 self.logText.clear()
+                self.textOutput.clear()
+                self.textFullOutput.clear()
+                self.unihigh = None
+                self.invhigh = None
                 self.initViewModels()
                 # all done
                 self.ready = True
@@ -735,6 +739,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         for row in modes:
             txt += n_format.format(*row)
             txt += '\n'
+        txt += h_format.format(*mlabels)
         self.textOutput.setPlainText(txt)
         self.textFullOutput.setPlainText(r['output'])
 
