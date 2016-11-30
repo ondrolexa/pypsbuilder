@@ -104,7 +104,7 @@ class Ui_PSBuilder(object):
         self.tabSettings = QtWidgets.QWidget()
         self.tabSettings.setObjectName("tabSettings")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.tabSettings)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_3.setContentsMargins(9, 9, 9, 9)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.groupBox = QtWidgets.QGroupBox(self.tabSettings)
         self.groupBox.setObjectName("groupBox")
