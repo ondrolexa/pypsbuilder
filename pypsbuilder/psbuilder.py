@@ -7,6 +7,7 @@ Visual pseudosection builder for THERMOCALC
 # last edited: February 2016
 
 # TODO
+# user-defined uni and inv will use actual phases and out selected
 
 import sys
 import os
