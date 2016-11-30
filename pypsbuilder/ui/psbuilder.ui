@@ -184,27 +184,9 @@
          <attribute name="title">
           <string>Settings</string>
          </attribute>
-         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1,0">
-          <property name="leftMargin">
-           <number>9</number>
-          </property>
-          <property name="topMargin">
-           <number>9</number>
-          </property>
-          <property name="rightMargin">
-           <number>9</number>
-          </property>
-          <property name="bottomMargin">
-           <number>9</number>
-          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1,0,0">
           <item>
            <widget class="QGroupBox" name="groupBox">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
             <property name="title">
              <string>Default PT range for calculations</string>
             </property>
@@ -456,6 +438,48 @@
                 <string>Number of calculation steps:</string>
                </property>
               </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_4">
+            <property name="title">
+             <string>Programs settings</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="drawpdexeEdit"/>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="tcexeEdit"/>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>Drawpd executable:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>THERMOCALC executable:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <spacer name="horizontalSpacer_5">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </widget>
@@ -790,15 +814,21 @@
      <x>0</x>
      <y>0</y>
      <width>1106</width>
-     <height>19</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
+    <widget class="QMenu" name="menuOpen_recent">
+     <property name="title">
+      <string>Open &amp;recent</string>
+     </property>
+    </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
+    <addaction name="menuOpen_recent"/>
     <addaction name="actionSave"/>
     <addaction name="separator"/>
     <addaction name="actionExport_Drawpd"/>
@@ -807,14 +837,14 @@
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
-     <string>Tools</string>
+     <string>&amp;Tools</string>
     </property>
     <addaction name="actionReload"/>
     <addaction name="actionGenerate"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>Help</string>
+     <string>&amp;Help</string>
     </property>
     <addaction name="actionAbout"/>
    </widget>
@@ -825,7 +855,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionNew">
    <property name="text">
-    <string>New</string>
+    <string>&amp;New project</string>
    </property>
    <property name="toolTip">
     <string>Create new project</string>
@@ -833,7 +863,7 @@
   </action>
   <action name="actionOpen">
    <property name="text">
-    <string>Open</string>
+    <string>&amp;Open project</string>
    </property>
    <property name="toolTip">
     <string>Open project</string>
@@ -841,7 +871,7 @@
   </action>
   <action name="actionSave">
    <property name="text">
-    <string>Save</string>
+    <string>&amp;Save project</string>
    </property>
    <property name="toolTip">
     <string>Save project</string>
@@ -849,7 +879,7 @@
   </action>
   <action name="actionExport_Drawpd">
    <property name="text">
-    <string>Export Drawpd file</string>
+    <string>&amp;Export Drawpd file</string>
    </property>
    <property name="toolTip">
     <string>Export Drawpd file</string>
@@ -857,25 +887,67 @@
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>&amp;Quit</string>
    </property>
   </action>
   <action name="actionReload">
    <property name="text">
-    <string>Reload scriptfile</string>
+    <string>&amp;Reload scriptfile</string>
    </property>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About</string>
+    <string>&amp;About</string>
    </property>
   </action>
   <action name="actionGenerate">
    <property name="text">
-    <string>Generate from text file</string>
+    <string>&amp;Generate from text file</string>
+   </property>
+  </action>
+  <action name="actionAa">
+   <property name="text">
+    <string>aa</string>
    </property>
   </action>
  </widget>
+ <tabstops>
+  <tabstop>phaseview</tabstop>
+  <tabstop>outview</tabstop>
+  <tabstop>pushCalcTatP</tabstop>
+  <tabstop>pushCalcPatT</tabstop>
+  <tabstop>tabMain</tabstop>
+  <tabstop>tabOutput</tabstop>
+  <tabstop>textOutput</tabstop>
+  <tabstop>textFullOutput</tabstop>
+  <tabstop>tminEdit</tabstop>
+  <tabstop>tmaxEdit</tabstop>
+  <tabstop>pminEdit</tabstop>
+  <tabstop>pmaxEdit</tabstop>
+  <tabstop>pushFromAxes</tabstop>
+  <tabstop>pushResetSettings</tabstop>
+  <tabstop>spinSteps</tabstop>
+  <tabstop>spinPrec</tabstop>
+  <tabstop>checkLabelInv</tabstop>
+  <tabstop>checkLabelUni</tabstop>
+  <tabstop>spinAlpha</tabstop>
+  <tabstop>checkLabels</tabstop>
+  <tabstop>tcexeEdit</tabstop>
+  <tabstop>drawpdexeEdit</tabstop>
+  <tabstop>pushApplySettings</tabstop>
+  <tabstop>outScript</tabstop>
+  <tabstop>pushReadScript</tabstop>
+  <tabstop>pushSaveScript</tabstop>
+  <tabstop>logText</tabstop>
+  <tabstop>uniview</tabstop>
+  <tabstop>pushGuessUni</tabstop>
+  <tabstop>pushUniRemove</tabstop>
+  <tabstop>pushUniAdd</tabstop>
+  <tabstop>invview</tabstop>
+  <tabstop>pushGuessInv</tabstop>
+  <tabstop>pushInvRemove</tabstop>
+  <tabstop>pushInvAdd</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

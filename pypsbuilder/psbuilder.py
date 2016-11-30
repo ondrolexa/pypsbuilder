@@ -117,6 +117,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionOpen.triggered.connect(self.openProject)
         self.actionSave.triggered.connect(self.saveProject)
         self.actionQuit.triggered.connect(self.close)
+        self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(lambda: self.about_dialog.exec())
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True, [], []))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False, [], []))
@@ -141,6 +142,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.doubleClicked.connect(self.show_inv)
 
         self.app_settings()
+        self.populate_recent()
         self.ready = False
         self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2016'. format(__version__))
 
@@ -195,6 +197,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
+            builder_settings.setValue("tcexe", self.tcexeEdit.text())
+            builder_settings.setValue("drexe", self.drawpdexeEdit.text())
+            builder_settings.beginWriteArray("recent")
+            for ix, f in enumerate(self.recent):
+                builder_settings.setArrayIndex(ix)
+                builder_settings.setValue("projfile", f)
+            builder_settings.endArray()
         else:
             self.spinSteps.setValue(builder_settings.value("steps", 50, type=int))
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
@@ -202,6 +211,29 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            # default exe
+            if sys.platform.startswith('win'):
+                tcexe = 'tc340.exe'
+                drexe = 'dr116.exe'
+            elif sys.platform.startswith('linux'):
+                tcexe = 'tc340L'
+                drexe = 'dr115L'
+            else:
+                tcexe = 'tc340'
+                drexe = 'dr116'
+            self.tcexeEdit.setText(builder_settings.value("tcexe", tcexe, type=str))
+            self.drawpdexeEdit.setText(builder_settings.value("drexe", drexe, type=str))
+            self.recent = []
+            n = builder_settings.beginReadArray("recent")
+            for ix in range(n):
+                builder_settings.setArrayIndex(ix)
+                self.recent.append(builder_settings.value("projfile", type=str))
+            builder_settings.endArray()
+
+    def populate_recent(self):
+        self.menuOpen_recent.clear()
+        for f in self.recent:
+            self.menuOpen_recent.addAction(os.path.basename(f), lambda: self.openProject(False, projfile=f))
 
     def initProject(self):
         """Open working directory and initialize project
@@ -244,11 +276,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """Parse configs and test TC settings
         """
         try:
-            self.update_exe()
-            if not os.path.exists(os.path.join(self.workdir, 'tc-prefs.txt')):
+            if not os.path.exists(self.prefsfile):
                 self.errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
-            for line in open(os.path.join(self.workdir, 'tc-prefs.txt'), 'r'):
+            for line in open(self.prefsfile, 'r'):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == 'scriptfile':
@@ -357,7 +388,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if i.isupper():
                     nc += 1
             self.nc = nc
-
+            # run tc to initialize
             tcout = self.initFromTC()
             # disconnect signal
             try:
@@ -381,13 +412,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                            QtWidgets.QMessageBox.Abort)
             return False
 
-    def openProject(self):
+    def openProject(self, checked, projfile=None):
         """Open working directory and initialize project
         """
-        projfile = QtWidgets.QFileDialog.getOpenFileName(self, 'Open project', os.path.expanduser('~'), 'pypsbuilder project (*.psb)')[0]
-        if projfile:
-            if not projfile.lower().endswith('.psb'):
-                projfile = projfile + '.psb'
+        if self.changed:
+            quit_msg = 'Project have been changed. Save ?'
+            reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
+                                                   QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
+                                                   QtWidgets.QMessageBox.Save)
+
+            if reply == QtWidgets.QMessageBox.Save:
+                self.saveProject()
+        if projfile is None:
+            projfile = QtWidgets.QFileDialog.getOpenFileName(self, 'Open project', os.path.expanduser('~'), 'pypsbuilder project (*.psb)')[0]
+        if os.path.exists(projfile):
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
             stream.close()
@@ -419,6 +457,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ready = True
             self.project = projfile
             self.changed = False
+            if self.project in self.recent:
+                self.recent.pop(self.recent.index(self.project))
+            self.recent.insert(0, self.project)
+            self.populate_recent()
+            self.app_settings(write=True)
             # read scriptfile
             self.read_scriptfile()
             # update settings tab
@@ -426,18 +469,24 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # update plot
             self.plot()
             self.statusBar().showMessage('Project loaded.')
+        else:
+            if projfile in self.recent:
+                self.recent.pop(self.recent.index(projfile))
+                self.app_settings(write=True)
+                self.populate_recent()
+
 
     def saveProject(self):
         """Open working directory and initialize project
         """
         if self.ready:
             if self.project is None:
-                projfile = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', self.workdir, 'pypsbuilder project (*.psb)')[0]
-                if projfile:
-                    if not projfile.lower().endswith('.psb'):
-                        projfile = projfile + '.psb'
-                    self.project = projfile
-            if self.project is not None:
+                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', self.workdir, 'pypsbuilder project (*.psb)')[0]
+                if filename:
+                    if not filename.lower().endswith('.psb'):
+                        filename = filename + '.psb'
+                    self.project = filename
+            if self.project:
                 # collect info
                 selphases = []
                 for i in range(self.phasemodel.rowCount()):
@@ -461,23 +510,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 pickle.dump(data, stream)
                 stream.close()
                 self.changed = False
+                if self.project in self.recent:
+                    self.recent.pop(self.recent.index(self.project))
+                self.recent.insert(0, self.project)
+                self.populate_recent()
+                self.app_settings(write=True)
                 self.statusBar().showMessage('Project saved.')
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-
-    def update_exe(self):
-        if sys.platform.startswith('win'):
-            self.tcexe = 'tc340.exe'
-            self.drexe = 'dr116.exe'
-        elif sys.platform.startswith('linux'):
-            self.tcexe = 'tc340L'
-            self.drexe = 'dr115L'
-        elif sys.platform.startswith('darwin'):
-            self.tcexe = 'tc340'
-            self.drexe = 'dr116'
-        else:
-            self.errinfo = 'Running on unknown platform'
-            raise Exception()
 
     def runprog(self, exe, instr):
         # get list of available phases
@@ -500,6 +540,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.deftrange = self.trange
         self.defprange = self.prange
         self.errinfo = ''
+        self.tcversion = tcout.split('\n')[0]
         return tcout
 
     def generate(self):
@@ -526,11 +567,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def tc(self):
-        return os.path.join(self.workdir, self.tcexe)
+        return os.path.join(self.workdir, self.tcexeEdit.text())
 
     @property
     def dr(self):
-        return os.path.join(self.workdir, self.drexe)
+        return os.path.join(self.workdir, self.drawpdexeEdit.text())
 
     @property
     def scriptfile(self):
@@ -550,7 +591,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def axfile(self):
-        return os.path.join(self.workdir,'tc-' + self.axname + '.txt')
+        return os.path.join(self.workdir, 'tc-' + self.axname + '.txt')
+
+    @property
+    def prefsfile(self):
+        return os.path.join(self.workdir, 'tc-prefs.txt')
 
     @property
     def changed(self):
@@ -560,9 +605,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def changed(self, status):
         self.__changed = status
         if self.project is None:
-            title = 'PSbuilder - New project'
+            title = 'PSbuilder - New project - {}'.format(self.tcversion)
         else:
-            title = 'PSbuilder - {}'.format(os.path.basename(self.project))
+            title = 'PSbuilder - {} - {}'.format(os.path.basename(self.project), self.tcversion)
         if status:
             title += '*'
         self.setWindowTitle(title)
@@ -862,7 +907,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def closeEvent(self, event):
         """Catch exit of app.
         """
-        self.app_settings(write=True)
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
@@ -872,6 +916,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if reply == QtWidgets.QMessageBox.Save:
                 self.saveProject()
                 if self.project is not None:
+                    self.app_settings(write=True)
                     event.accept()
                 else:
                     event.ignore()
@@ -1077,7 +1122,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             zm['output'] = output
         return typ, label, zm
 
-    def gendrawpd(self, exedrawpd):
+    def gendrawpd(self):
         with open(self.drawpdfile, 'w', encoding=TCenc) as output:
             output.write('% Generated by PyPSbuilder (c) Ondrej Lexa 2016\n')
             output.write('2    % no. of variables in each line of data, in this case P, T\n')
@@ -1087,7 +1132,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             output.write('2 1  %% which columns to be x,y in phase diagram\n')
             output.write('\n')
             output.write('% Points\n')
-            for i in self.invmodel.invlist:
+            for i in self.invmodel.invlist[1:]:
                 output.write('% ------------------------------\n')
                 output.write('i%s   %s\n' % (i[0], i[1]))
                 output.write('\n')
@@ -1129,12 +1174,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             output.write('numbering yes\n')
             output.write('\n')
             output.write('*\n')
+            self.statusBar().showMessage('Drawpd file generated.')
 
-        if exedrawpd:
-            try:
-                self.runprog(self.dr, self.bname + '\n')
-            except OSError:
-                pass
+        try:
+            self.runprog(self.dr, self.bname + '\n')
+            self.statusBar().showMessage('Drawpd sucessfully executed.')
+        except OSError:
+            pass
 
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
