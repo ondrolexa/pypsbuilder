@@ -868,8 +868,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Click on canvas to add invariant point.')
             else:
                 self.canvas.mpl_disconnect(self.cid)
+                self.statusBar().showMessage('')
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+            self.pushInvAdd.setChecked(False)
 
     def adduduni(self):
         if self.ready:
@@ -1017,7 +1019,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             trange = self.ax.get_xlim()
             prange = self.ax.get_ylim()
             steps = self.spinSteps.value()
-            prec = self.spinPrec.value()
+            #prec = self.spinPrec.value()
+            prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
             var = self.nc + 2 - len(phases) - len(self.excess)
 
             if len(out) == 1:
@@ -1046,11 +1049,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             for row in self.unimodel.unilist:
                                 if row[0] == id:
                                     row[4] = r
+                                    if self.unihigh is not None:
+                                        self.set_phaselist(r)
+                                        T, p = self.getunicutted(r, row[2], row[3])
+                                        self.unihigh = (T, p)
+                                        self.invhigh = None
                         self.statusBar().showMessage('Univariant line calculated.')
-                        if self.unihigh is not None:
-                            self.set_phaselist(r)
-                            self.unihigh = (r['T'], r['p'])
-                            self.invhigh = None
                         self.changed = True
                         self.plot()
                     else:
@@ -1075,11 +1079,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             for row in self.invmodel.invlist[1:]:
                                 if row[0] == id:
                                     row[2] = r
+                                    if self.invhigh is not None:
+                                        self.set_phaselist(r)
+                                        self.invhigh = (r['T'], r['p'])
+                                        self.unihigh = None
                         self.statusBar().showMessage('Invariant point calculated.')
-                        if self.invhigh is not None:
-                            self.set_phaselist(r)
-                            self.invhigh = (r['T'], r['p'])
-                            self.unihigh = None
                         self.changed = True
                         self.plot()
                     else:
@@ -1209,76 +1213,67 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         T = r['T'].copy()
         p = r['p'].copy()
         invids = [r[0] for r in self.invmodel.invlist]
-        if len(T) and len(p):
-            # trim/extend begin
-            s1, T1, p1 = 0, [], []
-            if b != 0:
-                inv = invids.index(b)
-                T1 = self.invmodel.invlist[inv][2]['T'][0]
-                p1 = self.invmodel.invlist[inv][2]['p'][0]
-                if len(T) > 0:
-                    dst = [np.sqrt((T1 - x) ** 2 + (p1 - y) ** 2) for x, y in zip(T, p)]
-                    ix = np.array(dst).argmin()
-                    if ix < len(T) - 1:
-                        u = self.segmentpos(T1, p1,
-                                            T[ix], p[ix],
-                                            T[ix + 1], p[ix + 1])
-                        if u > 0:
-                            s1 = ix + 1
-                        else:
-                            s1 = ix
-                    else:
-                        s1, T1, p1 = 0, [], []
-            # trim/extend end
-            s2, T2, p2 = len(T), [], []
-            if e != 0:
-                inv = invids.index(e)
-                T2 = self.invmodel.invlist[inv][2]['T'][0]
-                p2 = self.invmodel.invlist[inv][2]['p'][0]
-                if len(T) > 0:
-                    dst = [np.sqrt((T2 - x) ** 2 + (p2 - y) ** 2) for x, y in zip(T, p)]
-                    ix = np.array(dst).argmin()
-                    if ix > 0:
-                        u = self.segmentpos(T2, p2,
-                                            T[ix], p[ix],
-                                            T[ix - 1], p[ix - 1])
-                        if u > 0:
-                            s2 = ix
-                        else:
-                            s2 = ix - 1
-                    else:
-                        s2, T2, p2 = len(T), [], []
-        else:
+        if b > 0:
             inv = invids.index(b)
             T1 = self.invmodel.invlist[inv][2]['T'][0]
             p1 = self.invmodel.invlist[inv][2]['p'][0]
+        else:
+            T1, p1 = T[0], p[0]
+        if e > 0:
             inv = invids.index(e)
             T2 = self.invmodel.invlist[inv][2]['T'][0]
             p2 = self.invmodel.invlist[inv][2]['p'][0]
-            T = [(T1 + T2) / 2]
-            p = [(p1 + p2) / 2]
-            s1, s2 = 0, 1
+        else:
+            T2, p2 = T[-1], p[-1]
+        if len(T) == 0:
+            return np.array([T1, T2]), np.array([p1, p2])
+        elif len(T) == 1:
+            dT = T2 - T1
+            dp = p2 - p1
+            d2 = dT**2 + dp**2
+            u = (dT * (T[0] - T1) + dp * (p[0] - p1)) / d2
+            if u > 0 and u < 1:
+                return np.array([T1, T[0], T2]), np.array([p1, p[0], p2])
+            else:
+                return np.array([T1, T2]), np.array([p1, p2])
+        else:
+            i1 = self.getidx(T, p, T1, p1)
+            i2 = self.getidx(T, p, T2, p2)
+            if i2 > i1:
+                za, ko = i1, i2
+            else:
+                za, ko = i2, i1
+                b, e = e, b
+                T1, T2 = T2, T1
+                p1, p2 = p2, p1
+            return np.hstack([T1, T[za:ko], T2]), np.hstack([p1, p[za:ko], p2])
 
-        return np.hstack((T1, T[s1:s2], T2)), np.hstack((p1, p[s1:s2], p2))
+    def getidx(self, T, p, Tp, pp):
+        dT = np.diff(T)
+        dp = np.diff(p)
+        d2 = dT**2 + dp**2
+        u = (dT * (Tp - T[:-1]) + dp * (pp - p[:-1])) / d2
+        ix = abs(u - 0.5).argmin()
+        if u[ix] > 1:
+            ix += 1
+        elif u[ix] < 0:
+            ix -= 1
+        return ix + 1
 
     def getunilabelpoint(self, T, p):
         if len(T) > 1:
             dT = np.diff(T)
             dp = np.diff(p)
             d = np.sqrt(dT**2 + dp**2)
-
-            cl = np.append([0], np.cumsum(d))
-            ix = np.interp(sum(d) / 2, cl, range(len(cl)))
-            cix = int(ix)
-            return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
+            if np.sum(d) > 0:
+                cl = np.append([0], np.cumsum(d))
+                ix = np.interp(np.sum(d) / 2, cl, range(len(cl)))
+                cix = int(ix)
+                return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
+            else:
+                return T[0], p[0]
         else:
             return T[0], p[0]
-
-    def segmentpos(self, px, py, x1, y1, x2, y2):
-        ll = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
-        u1 = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1))
-        u = u1 / ll
-        return u
 
     def plot(self):
         if self.ready:
