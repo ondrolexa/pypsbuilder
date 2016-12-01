@@ -695,7 +695,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
-            if r['phases'] != set():
+            if not r['output'].startswith('User-defined'):
                 clabels, vals = self.parse_output(r['output'], getmodes=False)
                 p, T = vals[0][:2]
                 vals = vals[0][2:]
@@ -709,7 +709,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.unisel.selectedIndexes()
             #clipboard = QtWidgets.QApplication.clipboard()
             r = self.unimodel.data(idx[4])
-            if r['phases'] != set():
+            if not r['output'].startswith('User-defined'):
                 clabels, vals = self.parse_output(r['output'], getmodes=False)
                 l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
                 uniguess = UniGuess(l, self)
@@ -773,27 +773,29 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-        mlabels, modes = self.parse_output(r['output'])
-        mask = ~np.in1d(mlabels, list(r['out']))
-        mlabels = mlabels[mask]
-        modes = modes[:, mask]
-        txt = ''
-        h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
-        n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
-        txt += h_format.format(*mlabels)
-        txt += '\n'
-        for row in modes:
-            txt += n_format.format(*row)
+        if not r['output'].startswith('User-defined'):
+            mlabels, modes = self.parse_output(r['output'])
+            mask = ~np.in1d(mlabels, list(r['out']))
+            mlabels = mlabels[mask]
+            modes = modes[:, mask]
+            txt = ''
+            h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
+            n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
+            txt += h_format.format(*mlabels)
             txt += '\n'
-        txt += h_format.format(*mlabels)
-        self.textOutput.setPlainText(txt)
+            for row in modes:
+                txt += n_format.format(*row)
+                txt += '\n'
+            txt += h_format.format(*mlabels)
+            self.textOutput.setPlainText(txt)
+        else:
+            self.textOutput.setPlainText(r['output'])
         self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
         k = self.unimodel.unilist[index.row()]
         r = k[4]
-        if r['phases'] != set():
-            self.set_phaselist(r)
+        self.set_phaselist(r)
         T, p = self.getunicutted(r, k[2], k[3])
         self.unihigh = (T, p)
         self.invhigh = None
@@ -802,8 +804,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def show_inv(self, index):
         r = self.invmodel.invlist[index.row()][2]
-        if r['phases'] != set():
-            self.set_phaselist(r)
+        self.set_phaselist(r)
         self.invhigh = (r['T'], r['p'])
         self.unihigh = None
         self.plot()
@@ -813,19 +814,29 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
             invnum = self.invmodel.data(idx[0])
-            msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
-            reply = QtWidgets.QMessageBox.question(self, 'Remove invariant point', msg,
-                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-            if reply == QtWidgets.QMessageBox.Yes:
-                # Check unilines begins and ends
-                for row in self.unimodel.unilist:
-                    if row[2] == invnum:
-                        row[2] = 0
-                    if row[3] == invnum:
-                        row[3] = 0
-                self.invmodel.removeRow(idx[0])
-                self.plot()
-                self.statusBar().showMessage('Invariant point removed')
+            todel = True
+            # Check ability to delete
+            for row in self.unimodel.unilist:
+                if row[2] == invnum or row[3] == invnum:
+                    if row[4]['output'].startswith('User-defined'):
+                        todel = False
+            if todel:
+                msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
+                reply = QtWidgets.QMessageBox.question(self, 'Remove invariant point', msg,
+                                                       QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                if reply == QtWidgets.QMessageBox.Yes:
+                    
+                    # Check unilines begins and ends
+                    for row in self.unimodel.unilist:
+                        if row[2] == invnum:
+                            row[2] = 0
+                        if row[3] == invnum:
+                            row[3] = 0
+                    self.invmodel.removeRow(idx[0])
+                    self.plot()
+                    self.statusBar().showMessage('Invariant point removed')
+            else:
+                self.statusBar().showMessage('Cannot delete invariant point, which define user-defined univariant line.')
 
     def remove_uni(self):
         if self.unisel.hasSelection():
@@ -844,54 +855,105 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
+                phases = []
+                for i in range(self.phasemodel.rowCount()):
+                        item = self.phasemodel.item(i)
+                        if item.checkState() == QtCore.Qt.Checked:
+                            phases.append(item.text())
+                out = []
+                for i in range(self.outmodel.rowCount()):
+                    item = self.outmodel.item(i)
+                    if item.checkState() == QtCore.Qt.Checked:
+                        out.append(item.text())
                 label, T, p = addinv.getValues()
-                zm = {'T': np.array([T]), 'p': np.array([p]),
-                      'output': 'User-defined invariant point.',
-                      'phases':set(), 'out':set()}
-                isnew, id = self.getidinv()
-                self.invmodel.appendRow((id, label, zm))
-                self.invview.resizeColumnsToContents()
+                r = {'T': np.array([T]), 'p': np.array([p]),
+                     'output': 'User-defined invariant point.',
+                     'phases':set(phases), 'out':set(out)}
+                isnew, id = self.getidinv(r)
+                if isnew:
+                    self.invmodel.appendRow((id, label, zm))
+                    self.invview.resizeColumnsToContents()
+                else:
+                    for row in self.invmodel.invlist[1:]:
+                        if row[0] == id:
+                            row[2] = r
+                            if self.invhigh is not None:
+                                self.set_phaselist(r)
+                                self.invhigh = (r['T'], r['p'])
+                                self.unihigh = None
                 self.plot()
                 self.statusBar().showMessage('User-defined invariant point added.')
             self.pushInvAdd.setChecked(False)
 
     def addudinv(self, checked=True):
         if self.ready:
-            if checked:
-                # cancle zoom and pan action on toolbar
-                if self.toolbar._active == "PAN":
-                    self.toolbar.pan()
-                elif self.toolbar._active == "ZOOM":
-                    self.toolbar.zoom()
-                self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
-                self.tabMain.setCurrentIndex(0)
-                self.statusBar().showMessage('Click on canvas to add invariant point.')
+            out = []
+            for i in range(self.outmodel.rowCount()):
+                item = self.outmodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    out.append(item.text())
+            if len(out) == 2:
+                if checked:
+                    # cancle zoom and pan action on toolbar
+                    if self.toolbar._active == "PAN":
+                        self.toolbar.pan()
+                    elif self.toolbar._active == "ZOOM":
+                        self.toolbar.zoom()
+                    self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
+                    self.tabMain.setCurrentIndex(0)
+                    self.statusBar().showMessage('Click on canvas to add invariant point.')
+                else:
+                    self.canvas.mpl_disconnect(self.cid)
+                    self.statusBar().showMessage('')
             else:
-                self.canvas.mpl_disconnect(self.cid)
-                self.statusBar().showMessage('')
+                self.statusBar().showMessage('Two out phases must be selected for invariant point.')
+                self.pushInvAdd.setChecked(False)    
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushInvAdd.setChecked(False)
 
     def adduduni(self):
         if self.ready:
-            adduni = AddUni(self.invmodel, self)
-            respond = adduni.exec()
-            if respond == QtWidgets.QDialog.Accepted:
-                label, b, e = adduni.getValues()
-                if b and e:
-                    zm = {'T': np.array([]), 'p': np.array([]),
-                          'output': 'User-defined univariant line.',
-                          'phases': set(), 'out': set()}
-                    isnew, id = self.getiduni()
-                    self.unimodel.appendRow((id, label, b, e, zm))
-                    self.adapt_uniview()
-                    self.plot()
-                    self.statusBar().showMessage('User-defined univariant line.')
-                else:
-                    msg = 'You must provide begin and end.'
-                    QtWidgets.QMessageBox.critical(self, 'Error!', msg,
-                                                   QtWidgets.QMessageBox.Abort)
+            phases = []
+            for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.checkState() == QtCore.Qt.Checked:
+                        phases.append(item.text())
+            out = []
+            for i in range(self.outmodel.rowCount()):
+                item = self.outmodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    out.append(item.text())
+            if len(out) == 1:
+                adduni = AddUni(self.invmodel, self)
+                respond = adduni.exec()
+                if respond == QtWidgets.QDialog.Accepted:
+                    label, b, e = adduni.getValues()
+                    if b and e:
+                        r = {'T': np.array([]), 'p': np.array([]),
+                             'output': 'User-defined univariant line.',
+                             'phases': set(phases), 'out': set(out)}
+                        isnew, id = self.getiduni(r)
+                        if isnew:
+                            self.unimodel.appendRow((id, label, b, e, r))
+                            self.adapt_uniview()
+                        else:
+                            for row in self.unimodel.unilist:
+                                if row[0] == id:
+                                    row[4] = r
+                                    if self.unihigh is not None:
+                                        self.set_phaselist(r)
+                                        T, p = self.getunicutted(r, row[2], row[3])
+                                        self.unihigh = (T, p)
+                                        self.invhigh = None
+                        self.plot()
+                        self.statusBar().showMessage('User-defined univariant line.')
+                    else:
+                        msg = 'You must provide begin and end.'
+                        QtWidgets.QMessageBox.critical(self, 'Error!', msg,
+                                                       QtWidgets.QMessageBox.Abort)
+            else:
+                self.statusBar().showMessage('One out phase must be selected for univariant line.')
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1042,8 +1104,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         isnew, id = self.getiduni(r)
                         if isnew:
                             self.unimodel.appendRow((id, label, 0, 0, r))
-                            self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 2, QtCore.QModelIndex()))
-                            self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 3, QtCore.QModelIndex()))
+                            #self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 2, QtCore.QModelIndex()))
+                            #self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 3, QtCore.QModelIndex()))
                             self.adapt_uniview()
                         else:
                             for row in self.unimodel.unilist:
@@ -1154,7 +1216,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 b2 = 'i%s' % u[3]
                 if b2 == 'i0':
                     b2 = 'end'
-                if u[4]['phases'] == set():
+                if u[4]['output'].startswith('User-defined'):
                     output.write(b1 + ' ' + b2 + 'connect\n')
                     output.write('\n')
                 else:
@@ -1457,7 +1519,7 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         editor.setCurrentText(str(index.model().data(index)))
 
     def setModelData(self, editor, model, index):
-        if model.unilist[index.row()][4]['phases'] == set() and int(editor.currentText()) == 0:
+        if model.unilist[index.row()][4]['output'].startswith('User-defined') and int(editor.currentText()) == 0:
             editor.setCurrentText(str(model.data(index)))
             self.parent().statusBar().showMessage('User-defined univariant line must have begin and end.')
         else:
