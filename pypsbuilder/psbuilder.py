@@ -198,6 +198,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
+            builder_settings.setValue("export_areas", self.checkAreas.checkState())
             builder_settings.setValue("tcexe", self.tcexeEdit.text())
             builder_settings.setValue("drexe", self.drawpdexeEdit.text())
             builder_settings.beginWriteArray("recent")
@@ -212,6 +213,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # default exe
             if sys.platform.startswith('win'):
                 tcexe = 'tc340.exe'
@@ -825,7 +827,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 reply = QtWidgets.QMessageBox.question(self, 'Remove invariant point', msg,
                                                        QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
                 if reply == QtWidgets.QMessageBox.Yes:
-                    
+
                     # Check unilines begins and ends
                     for row in self.unimodel.unilist:
                         if row[2] == invnum:
@@ -907,7 +909,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.statusBar().showMessage('')
             else:
                 self.statusBar().showMessage('Two out phases must be selected for invariant point.')
-                self.pushInvAdd.setChecked(False)    
+                self.pushInvAdd.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushInvAdd.setChecked(False)
@@ -1229,17 +1231,32 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             output.write('% ----------------------------------------------\n')
             output.write('\n')
             output.write('% Areas\n')
+            output.write('% ------------------------------\n')
+            if self.checkAreas.isChecked():
+                import networkx as nx
+                G = nx.Graph()
+                for inv in self.invmodel.invlist[1:]:
+                    G.add_node(inv[0], label=inv[1], phases=inv[2]['phases'], out=inv[2]['out'])
+                for uni in self.unimodel.unilist:
+                    if uni[2] != 0 and uni[3] != 0:
+                        G.add_edge(uni[2], uni[3], id=uni[0], label=uni[1], phases=uni[4]['phases'], out=uni[4]['out'])
+                edg_areas = [[G[c[ix]][c[ix-1]] for ix in range(len(c))] for c in nx.cycle_basis(G)]
+                phases_areas = [set.intersection(*[edg['phases'] for edg in c]) for c in edg_areas]
+                maxpf = max([len(p) for p in phases_areas]) + 1
+                for a, p in zip(edg_areas, phases_areas):
+                    d = '{:.2f} '.format(len(p)/maxpf) + ' '.join(['u{}'.format(e['id']) for e in a]) + ' % ' + ' '.join(p) + '\n'
+                    output.write(d)
             output.write('\n')
             output.write('*\n')
             output.write('\n')
-            output.write('window %s %s %s %s       %% T,P window\n' % (self.trange + self.prange))
+            output.write('window {} {} {} {}\n\n'.format(*self.trange, *self.prange))
             output.write('\n')
-            output.write('bigticks 50 %s 1 %s\n' % (int(100*np.round(self.trange[0]/100)), int(np.round(self.prange[0]))))
-            output.write('\n')
-            output.write('smallticks 10 0.1\n')
-            output.write('\n')
-            output.write('numbering yes\n')
-            output.write('\n')
+            xt, yt = self.ax.get_xticks(), self.ax.get_yticks()
+            output.write('bigticks {} {} {} {}\n\n'.format(xt[1]-xt[0], xt[0], yt[1]-yt[0], yt[0]))
+            output.write('smallticks {} {}\n\n'.format((xt[1]-xt[0])/10, (yt[1]-yt[0])/10))
+            output.write('numbering yes\n\n')
+            if self.checkAreas.isChecked():
+                output.write('doareas yes\n\n')
             output.write('*\n')
             self.statusBar().showMessage('Drawpd file generated.')
 
