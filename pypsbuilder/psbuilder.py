@@ -234,7 +234,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def populate_recent(self):
         self.menuOpen_recent.clear()
         for f in self.recent:
-            self.menuOpen_recent.addAction(os.path.basename(f), lambda: self.openProject(False, projfile=f))
+            self.menuOpen_recent.addAction(os.path.basename(f), lambda f=f: self.openProject(False, projfile=f))
 
     def initProject(self):
         """Open working directory and initialize project
@@ -458,9 +458,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ready = True
             self.project = projfile
             self.changed = False
-            if self.project in self.recent:
-                self.recent.pop(self.recent.index(self.project))
-            self.recent.insert(0, self.project)
+            if projfile in self.recent:
+                self.recent.pop(self.recent.index(projfile))
+            self.recent.insert(0, projfile)
             self.populate_recent()
             self.app_settings(write=True)
             # read scriptfile
