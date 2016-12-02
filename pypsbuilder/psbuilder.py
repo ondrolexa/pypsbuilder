@@ -132,12 +132,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionGenerate.triggered.connect(self.generate)
         self.pushGuessUni.clicked.connect(self.unisel_guesses)
         self.pushGuessInv.clicked.connect(self.invsel_guesses)
-        self.pushInvAdd.toggled.connect(self.addudinv)
-        self.pushInvAdd.setCheckable(True)
-        self.pushUniAdd.clicked.connect(self.adduduni)
+        #self.pushInvAdd.toggled.connect(self.addudinv)
+        #self.pushInvAdd.setCheckable(True)
+        self.pushUniZoom.clicked.connect(self.zoom_to_uni)
+        self.pushUniZoom.setCheckable(True)
+        self.pushManual.toggled.connect(self.add_userdefined)
+        self.pushManual.setCheckable(True)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
-        self.splitter_main.setSizes((100,400,200))
+        self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
+        self.splitter_bottom.setSizes((400,100))
 
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
@@ -653,6 +657,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         prec = self.spinPrec.value()
         return 'T={:.{prec}f} p={:.{prec}f}'.format(x, y, prec=prec)
 
+    def show_output(self, int):
+        if self.ready:
+            if int == 0:
+                dia = OutputDialog('Modes', self.textOutput.toPlainText())
+                dia.exec()
+            if int == 1:
+                dia = OutputDialog('TC output', self.textFullOutput.toPlainText())
+                dia.exec()
+
     def adapt_uniview(self):
         self.uniview.resizeColumnsToContents()
         self.uniview.setColumnWidth(2, 40)
@@ -670,6 +683,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.textOutput.clear()
                 self.textFullOutput.clear()
                 self.plot()
+            if self.pushUniZoom.isChecked():
+                idx = self.unisel.selectedIndexes()
+                k = self.unimodel.unilist[idx[0].row()]
+                T, p = self.getunicutted(k[4], k[2], k[3])
+                dT = (T.max() - T.min()) / 5
+                dp = (p.max() - p.min()) / 5
+                self.ax.set_xlim([T.min() - dT, T.max() + dT])
+                self.ax.set_ylim([p.min() - dp, p.max() + dp])
+                self.canvas.draw()
+
 
     def guess_toclipboard(self, p, T, clabels, vals, r):
         clipboard = QtWidgets.QApplication.clipboard()
@@ -812,6 +835,24 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.plot()
         #self.outText.show()
 
+    def zoom_to_uni(self, checked):
+        if checked:
+            if self.unisel.hasSelection():
+                idx = self.unisel.selectedIndexes()
+                k = self.unimodel.unilist[idx[0].row()]
+                T, p = self.getunicutted(k[4], k[2], k[3])
+                dT = (T.max() - T.min()) / 5
+                dp = (p.max() - p.min()) / 5
+                self.ax.set_xlim([T.min() - dT, T.max() + dT])
+                self.ax.set_ylim([p.min() - dp, p.max() + dp])
+                self.canvas.draw()
+        else:
+            self.ax.set_xlim(self.trange)
+            self.ax.set_ylim(self.prange)
+            #clear navigation toolbar history
+            self.toolbar.update()
+            self.plot()
+
     def remove_inv(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
@@ -870,11 +911,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 label, T, p = addinv.getValues()
                 r = {'T': np.array([T]), 'p': np.array([p]),
                      'output': 'User-defined invariant point.',
-                     'phases':set(phases), 'out':set(out)}
+                     'phases':set(phases), 'out':set(out), 'cmd': ''}
                 isnew, id = self.getidinv(r)
                 if isnew:
-                    self.invmodel.appendRow((id, label, zm))
-                    self.invview.resizeColumnsToContents()
+                    self.invmodel.appendRow((id, label, r))
                 else:
                     for row in self.invmodel.invlist[1:]:
                         if row[0] == id:
@@ -883,18 +923,58 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 self.set_phaselist(r)
                                 self.invhigh = (r['T'], r['p'])
                                 self.unihigh = None
+                self.invview.resizeColumnsToContents()
                 self.plot()
                 self.statusBar().showMessage('User-defined invariant point added.')
-            self.pushInvAdd.setChecked(False)
+            self.pushManual.setChecked(False)
 
-    def addudinv(self, checked=True):
+    def add_userdefined(self, checked=True):
         if self.ready:
+            phases = []
+            for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.checkState() == QtCore.Qt.Checked:
+                        phases.append(item.text())
             out = []
             for i in range(self.outmodel.rowCount()):
                 item = self.outmodel.item(i)
                 if item.checkState() == QtCore.Qt.Checked:
                     out.append(item.text())
-            if len(out) == 2:
+            if len(out) == 1:
+                if checked:
+                    adduni = AddUni(self.invmodel, self)
+                    respond = adduni.exec()
+                    if respond == QtWidgets.QDialog.Accepted:
+                        label, b, e = adduni.getValues()
+                        if b and e:
+                            r = {'T': np.array([]), 'p': np.array([]),
+                                 'output': 'User-defined univariant line.',
+                                 'phases': set(phases), 'out': set(out), 'cmd': ''}
+                            isnew, id = self.getiduni(r)
+                            if isnew:
+                                self.unimodel.appendRow((id, label, b, e, r))
+                            else:
+                                for row in self.unimodel.unilist:
+                                    if row[0] == id:
+                                        row[2] = b
+                                        row[3] = e
+                                        row[4] = r
+                                        if label:
+                                            row[1] = label
+                                        if self.unihigh is not None:
+                                            self.set_phaselist(r)
+                                            T, p = self.getunicutted(r, row[2], row[3])
+                                            self.unihigh = (T, p)
+                                            self.invhigh = None
+                            self.adapt_uniview()
+                            self.plot()
+                            self.statusBar().showMessage('User-defined univariant line.')
+                        else:
+                            msg = 'You must provide begin and end.'
+                            QtWidgets.QMessageBox.critical(self, 'Error!', msg,
+                                                           QtWidgets.QMessageBox.Abort)
+                    self.pushManual.setChecked(False)
+            elif len(out) == 2:
                 if checked:
                     # cancle zoom and pan action on toolbar
                     if self.toolbar._active == "PAN":
@@ -909,53 +989,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.statusBar().showMessage('')
             else:
                 self.statusBar().showMessage('Two out phases must be selected for invariant point.')
-                self.pushInvAdd.setChecked(False)
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
-            self.pushInvAdd.setChecked(False)
-
-    def adduduni(self):
-        if self.ready:
-            phases = []
-            for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        phases.append(item.text())
-            out = []
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    out.append(item.text())
-            if len(out) == 1:
-                adduni = AddUni(self.invmodel, self)
-                respond = adduni.exec()
-                if respond == QtWidgets.QDialog.Accepted:
-                    label, b, e = adduni.getValues()
-                    if b and e:
-                        r = {'T': np.array([]), 'p': np.array([]),
-                             'output': 'User-defined univariant line.',
-                             'phases': set(phases), 'out': set(out)}
-                        isnew, id = self.getiduni(r)
-                        if isnew:
-                            self.unimodel.appendRow((id, label, b, e, r))
-                            self.adapt_uniview()
-                        else:
-                            for row in self.unimodel.unilist:
-                                if row[0] == id:
-                                    row[4] = r
-                                    if self.unihigh is not None:
-                                        self.set_phaselist(r)
-                                        T, p = self.getunicutted(r, row[2], row[3])
-                                        self.unihigh = (T, p)
-                                        self.invhigh = None
-                        self.plot()
-                        self.statusBar().showMessage('User-defined univariant line.')
-                    else:
-                        msg = 'You must provide begin and end.'
-                        QtWidgets.QMessageBox.critical(self, 'Error!', msg,
-                                                       QtWidgets.QMessageBox.Abort)
-            else:
-                self.statusBar().showMessage('One out phase must be selected for univariant line.')
+                self.pushManual.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1101,23 +1135,23 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 typ, label, r = self.parsedrfile()
                 r['phases'] = set(phases)
                 r['out'] = set(out)
+                r['cmd'] = ans
                 if typ == 'uni':
                     if len(r['T']) > 0:
                         isnew, id = self.getiduni(r)
                         if isnew:
                             self.unimodel.appendRow((id, label, 0, 0, r))
-                            #self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 2, QtCore.QModelIndex()))
-                            #self.uniview.openPersistentEditor(self.unimodel.index(self.unimodel.rowCount(), 3, QtCore.QModelIndex()))
-                            self.adapt_uniview()
                         else:
                             for row in self.unimodel.unilist:
                                 if row[0] == id:
+                                    row[1] = label
                                     row[4] = r
                                     if self.unihigh is not None:
                                         self.set_phaselist(r)
                                         T, p = self.getunicutted(r, row[2], row[3])
                                         self.unihigh = (T, p)
                                         self.invhigh = None
+                        self.adapt_uniview()
                         self.statusBar().showMessage('Univariant line calculated.')
                         self.changed = True
                         self.plot()
@@ -1133,20 +1167,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 typ, label, r = self.parsedrfile()
                 r['phases'] = set(phases)
                 r['out'] = set(out)
+                r['cmd'] = ans
                 if typ == 'inv':
                     if len(r['T']) > 0:
                         isnew, id = self.getidinv(r)
                         if isnew:
                             self.invmodel.appendRow((id, label, r))
-                            self.invview.resizeColumnsToContents()
                         else:
                             for row in self.invmodel.invlist[1:]:
                                 if row[0] == id:
+                                    row[1] = label
                                     row[2] = r
                                     if self.invhigh is not None:
                                         self.set_phaselist(r)
                                         self.invhigh = (r['T'], r['p'])
                                         self.unihigh = None
+                        self.invview.resizeColumnsToContents()
                         self.statusBar().showMessage('Invariant point calculated.')
                         self.changed = True
                         self.plot()
@@ -1219,7 +1255,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if b2 == 'i0':
                     b2 = 'end'
                 if u[4]['output'].startswith('User-defined'):
-                    output.write(b1 + ' ' + b2 + 'connect\n')
+                    output.write(b1 + ' ' + b2 + ' connect\n')
                     output.write('\n')
                 else:
                     output.write(b1 + ' ' + b2 + '\n')
@@ -1640,6 +1676,28 @@ class AboutDialog(QtWidgets.QDialog):
 
         self.setLayout(self.layout)
 
+
+class OutputDialog(QtWidgets.QDialog): 
+    """Output dialog 
+    """ 
+    def __init__(self, title, txt, parent=None): 
+        """Display a dialog that shows application information.""" 
+        super(OutputDialog, self).__init__(parent) 
+ 
+        self.setWindowTitle(title) 
+        self.resize(800, 600) 
+ 
+        self.plainText = QtWidgets.QPlainTextEdit(self) 
+        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap) 
+        self.plainText.setReadOnly(True) 
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont) 
+        self.plainText.setFont(f) 
+        self.layout = QtWidgets.QVBoxLayout() 
+        self.layout.setAlignment(QtCore.Qt.AlignVCenter) 
+        self.layout.addWidget(self.plainText) 
+        self.setLayout(self.layout)
+        self.plainText.setPlainText(txt) 
+ 
 
 def main():
     application = QtWidgets.QApplication(sys.argv)
