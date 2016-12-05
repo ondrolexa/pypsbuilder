@@ -851,7 +851,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ax.set_ylim(self.prange)
             #clear navigation toolbar history
             self.toolbar.update()
-            self.plot()
+            #self.plot()
+            self.canvas.draw()
 
     def remove_inv(self):
         if self.invsel.hasSelection():
