@@ -1,0 +1,7 @@
+name: psbuilder
+dependencies:
+- matplotlib
+- numpy
+- pyqt=5
+- python=3
+
