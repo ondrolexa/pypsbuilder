@@ -89,6 +89,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
         # SET PT RANGE VALIDATORS
         validator = QtGui.QDoubleValidator()
+        validator.setLocale(QtCore.QLocale.c())
         self.tminEdit.setValidator(validator)
         self.tminEdit.textChanged.connect(self.check_validity)
         self.tminEdit.textChanged.emit(self.tminEdit.text())
@@ -1588,6 +1589,7 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
         self.setupUi(self)
         # validator
         validator = QtGui.QDoubleValidator()
+        validator.setLocale(QtCore.QLocale.c())
         self.tEdit.setValidator(validator)
         self.tEdit.textChanged.connect(self.check_validity)
         self.tEdit.textChanged.emit(self.tEdit.text())
@@ -1678,27 +1680,27 @@ class AboutDialog(QtWidgets.QDialog):
         self.setLayout(self.layout)
 
 
-class OutputDialog(QtWidgets.QDialog): 
-    """Output dialog 
-    """ 
-    def __init__(self, title, txt, parent=None): 
-        """Display a dialog that shows application information.""" 
-        super(OutputDialog, self).__init__(parent) 
- 
-        self.setWindowTitle(title) 
-        self.resize(800, 600) 
- 
-        self.plainText = QtWidgets.QPlainTextEdit(self) 
-        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap) 
-        self.plainText.setReadOnly(True) 
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont) 
-        self.plainText.setFont(f) 
-        self.layout = QtWidgets.QVBoxLayout() 
-        self.layout.setAlignment(QtCore.Qt.AlignVCenter) 
-        self.layout.addWidget(self.plainText) 
+class OutputDialog(QtWidgets.QDialog):
+    """Output dialog
+    """
+    def __init__(self, title, txt, parent=None):
+        """Display a dialog that shows application information."""
+        super(OutputDialog, self).__init__(parent)
+
+        self.setWindowTitle(title)
+        self.resize(800, 600)
+
+        self.plainText = QtWidgets.QPlainTextEdit(self)
+        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.plainText.setReadOnly(True)
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
+        self.plainText.setFont(f)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.setAlignment(QtCore.Qt.AlignVCenter)
+        self.layout.addWidget(self.plainText)
         self.setLayout(self.layout)
-        self.plainText.setPlainText(txt) 
- 
+        self.plainText.setPlainText(txt)
+
 
 def main():
     application = QtWidgets.QApplication(sys.argv)
