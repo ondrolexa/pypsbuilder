@@ -135,6 +135,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushGuessInv.clicked.connect(self.invsel_guesses)
         #self.pushInvAdd.toggled.connect(self.addudinv)
         #self.pushInvAdd.setCheckable(True)
+        self.pushInvAuto.clicked.connect(self.auto_inv_calc)
         self.pushUniZoom.clicked.connect(self.zoom_to_uni)
         self.pushUniZoom.setCheckable(True)
         self.pushManual.toggled.connect(self.add_userdefined)
@@ -204,6 +205,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
             builder_settings.setValue("export_areas", self.checkAreas.checkState())
+            builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.setValue("tcexe", self.tcexeEdit.text())
             builder_settings.setValue("drexe", self.drawpdexeEdit.text())
             builder_settings.beginWriteArray("recent")
@@ -219,6 +221,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # default exe
             if sys.platform.startswith('win'):
                 tcexe = 'tc340.exe'
@@ -475,6 +478,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # update settings tab
             self.apply_setting(4)
             # update plot
+            self.figure.clear()
             self.plot()
             self.statusBar().showMessage('Project loaded.')
         else:
@@ -836,6 +840,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.plot()
         #self.outText.show()
 
+    def auto_inv_calc(self):
+        if self.invsel.hasSelection():
+            idx = self.invsel.selectedIndexes()
+            r = self.invmodel.data(idx[2])
+            phases = r['phases']
+            a, b = r['out']
+            aset, bset = set([a]), set([b])
+            aphases, bphases = phases.difference(aset), phases.difference(bset)
+            self.do_calc(True, phases=phases, out=aset)
+            self.do_calc(True, phases=phases, out=bset)
+            self.do_calc(True, phases=bphases, out=aset)
+            self.do_calc(True, phases=aphases, out=bset)
+
     def zoom_to_uni(self, checked):
         if checked:
             if self.unisel.hasSelection():
@@ -944,38 +961,45 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     out.append(item.text())
             if len(out) == 1:
                 if checked:
-                    adduni = AddUni(self.invmodel, self)
-                    respond = adduni.exec()
-                    if respond == QtWidgets.QDialog.Accepted:
-                        label, b, e = adduni.getValues()
-                        if b and e:
-                            r = {'T': np.array([]), 'p': np.array([]),
-                                 'output': 'User-defined univariant line.',
-                                 'phases': set(phases), 'out': set(out), 'cmd': ''}
-                            isnew, id = self.getiduni(r)
-                            if isnew:
-                                self.unimodel.appendRow((id, label, b, e, r))
+                    invs = []
+                    for row in self.invmodel.invlist[1:]:
+                        if set(phases).issubset(row[2]['phases']) and out[0] in row[2]['out']:
+                            invs.append(row[0])
+                    if len(invs) > 1:
+                        adduni = AddUni(invs, self)
+                        respond = adduni.exec()
+                        if respond == QtWidgets.QDialog.Accepted:
+                            label, b, e = adduni.getValues()
+                            if b != e:
+                                r = {'T': np.array([]), 'p': np.array([]),
+                                     'output': 'User-defined univariant line.',
+                                     'phases': set(phases), 'out': set(out), 'cmd': ''}
+                                isnew, id = self.getiduni(r)
+                                if isnew:
+                                    self.unimodel.appendRow((id, label, b, e, r))
+                                else:
+                                    for row in self.unimodel.unilist:
+                                        if row[0] == id:
+                                            row[2] = b
+                                            row[3] = e
+                                            row[4] = r
+                                            if label:
+                                                row[1] = label
+                                            if self.unihigh is not None:
+                                                self.set_phaselist(r)
+                                                T, p = self.getunicutted(r, row[2], row[3])
+                                                self.unihigh = (T, p)
+                                                self.invhigh = None
+                                self.adapt_uniview()
+                                self.plot()
+                                self.statusBar().showMessage('User-defined univariant line.')
                             else:
-                                for row in self.unimodel.unilist:
-                                    if row[0] == id:
-                                        row[2] = b
-                                        row[3] = e
-                                        row[4] = r
-                                        if label:
-                                            row[1] = label
-                                        if self.unihigh is not None:
-                                            self.set_phaselist(r)
-                                            T, p = self.getunicutted(r, row[2], row[3])
-                                            self.unihigh = (T, p)
-                                            self.invhigh = None
-                            self.adapt_uniview()
-                            self.plot()
-                            self.statusBar().showMessage('User-defined univariant line.')
-                        else:
-                            msg = 'You must provide begin and end.'
-                            QtWidgets.QMessageBox.critical(self, 'Error!', msg,
-                                                           QtWidgets.QMessageBox.Abort)
-                    self.pushManual.setChecked(False)
+                                msg = 'Begin and end must be different.'
+                                QtWidgets.QMessageBox.critical(self, 'Error!', msg,
+                                                               QtWidgets.QMessageBox.Abort)
+                        self.pushManual.setChecked(False)
+                    else:
+                        self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
             elif len(out) == 2:
                 if checked:
                     # cancle zoom and pan action on toolbar
@@ -1139,24 +1163,30 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 r['out'] = set(out)
                 r['cmd'] = ans
                 if typ == 'uni':
-                    if len(r['T']) > 0:
+                    if len(r['T']) > 1:
                         isnew, id = self.getiduni(r)
                         if isnew:
                             self.unimodel.appendRow((id, label, 0, 0, r))
+                            self.statusBar().showMessage('New univariant line calculated.')
                         else:
-                            for row in self.unimodel.unilist:
-                                if row[0] == id:
-                                    row[1] = label
-                                    row[4] = r
-                                    if self.unihigh is not None:
-                                        self.set_phaselist(r)
-                                        T, p = self.getunicutted(r, row[2], row[3])
-                                        self.unihigh = (T, p)
-                                        self.invhigh = None
+                            if not self.checkOverwrite.isChecked():
+                                for row in self.unimodel.unilist:
+                                    if row[0] == id:
+                                        row[1] = label
+                                        row[4] = r
+                                        if self.unihigh is not None:
+                                            self.set_phaselist(r)
+                                            T, p = self.getunicutted(r, row[2], row[3])
+                                            self.unihigh = (T, p)
+                                            self.invhigh = None
+                                        self.statusBar().showMessage('Univariant line re-calculated.')
+                            else:
+                                self.statusBar().showMessage('Univariant line already exists.')
                         self.adapt_uniview()
-                        self.statusBar().showMessage('Univariant line calculated.')
                         self.changed = True
                         self.plot()
+                    elif len(r['T']) > 0:
+                        self.statusBar().showMessage('Only one point calculated. Change range.')
                     else:
                         self.statusBar().showMessage('Nothing in range.')
                 else:
@@ -1175,17 +1205,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         isnew, id = self.getidinv(r)
                         if isnew:
                             self.invmodel.appendRow((id, label, r))
+                            self.statusBar().showMessage('New invariant point calculated.')
                         else:
-                            for row in self.invmodel.invlist[1:]:
-                                if row[0] == id:
-                                    row[1] = label
-                                    row[2] = r
-                                    if self.invhigh is not None:
-                                        self.set_phaselist(r)
-                                        self.invhigh = (r['T'], r['p'])
-                                        self.unihigh = None
+                            if not self.checkOverwrite.isChecked():
+                                for row in self.invmodel.invlist[1:]:
+                                    if row[0] == id:
+                                        row[1] = label
+                                        row[2] = r
+                                        if self.invhigh is not None:
+                                            self.set_phaselist(r)
+                                            self.invhigh = (r['T'], r['p'])
+                                            self.unihigh = None
+                                        self.statusBar().showMessage('Invariant point re-calculated.')
+                            else:
+                                self.statusBar().showMessage('Invariant point already exists.')
                         self.invview.resizeColumnsToContents()
-                        self.statusBar().showMessage('Invariant point calculated.')
                         self.changed = True
                         self.plot()
                     else:
@@ -1227,6 +1261,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
             zm['output'] = output
+            t = output.splitlines()
+            t = [r.strip(u'\u00A7').strip() for r in t]
+            za = [i + 1 for i in range(len(t)) if t[i].startswith('-')]
+            if za:
+                if t[za[0] + 1].startswith('#'):
+                    typ = 'none'  # nonexisting values calculated
         return typ, label, zm
 
     def gendrawpd(self):
@@ -1560,25 +1600,42 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     A delegate that places a fully functioning QtWidgets.QComboBox in every
     cell of the column to which it's applied
     """
-    def __init__(self, parent, combomodel):
+    def __init__(self, parent, invmodel):
         super(ComboDelegate, self).__init__(parent)
-        self.combomodel = combomodel
+        self.invmodel = invmodel
 
     def createEditor(self, parent, option, index):
+        phases = index.model().unilist[index.row()][4]['phases']
+        out = index.model().unilist[index.row()][4]['out']
+        combomodel = QtGui.QStandardItemModel()
+        if not index.model().unilist[index.row()][4]['output'].startswith('User-defined'):
+            it = QtGui.QStandardItem('0')
+            it.setData(0, 1)
+            combomodel.appendRow(it)
+        for row in self.invmodel.invlist[1:]:
+            if phases.issubset(row[2]['phases']) and out.issubset(row[2]['out']):
+                it = QtGui.QStandardItem(str(row[0]))
+                it.setData(row[0], 1)
+                combomodel.appendRow(it)
         combo = QtWidgets.QComboBox(parent)
-        combo.setModel(self.combomodel)
-        combo.setModelColumn(0)
+        combo.setModel(combomodel)
+        #combo.setModelColumn(0)
         return combo
 
     def setEditorData(self, editor, index):
         editor.setCurrentText(str(index.model().data(index)))
 
     def setModelData(self, editor, model, index):
-        if model.unilist[index.row()][4]['output'].startswith('User-defined') and int(editor.currentText()) == 0:
-            editor.setCurrentText(str(model.data(index)))
-            self.parent().statusBar().showMessage('User-defined univariant line must have begin and end.')
+        if index.column() == 2:
+            other = model.unilist[index.row()][3]
         else:
-            model.setData(index, int(editor.currentText()))
+            other = model.unilist[index.row()][2]
+        new = editor.currentData(1)
+        if other == new and new != 0:
+            editor.setCurrentText(str(model.data(index)))
+            self.parent().statusBar().showMessage('Begin and end must be different.')
+        else:
+            model.setData(index, new)
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
@@ -1623,19 +1680,21 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
 class AddUni(QtWidgets.QDialog, Ui_AddUni):
     """Add uni dialog class
     """
-    def __init__(self, combomodel, parent=None):
+    def __init__(self, items, parent=None):
         super(AddUni, self).__init__(parent)
         self.setupUi(self)
-        self.combomodel = combomodel
+        self.combomodel = QtGui.QStandardItemModel()
+        for item in items:
+            it = QtGui.QStandardItem(str(item))
+            it.setData(item, 1)
+            self.combomodel.appendRow(it)
         self.comboBegin.setModel(self.combomodel)
-        self.comboBegin.setModelColumn(0)
         self.comboEnd.setModel(self.combomodel)
-        self.comboEnd.setModelColumn(0)
 
     def getValues(self):
         label = self.labelEdit.text()
-        b = int(self.comboBegin.currentText())
-        e = int(self.comboEnd.currentText())
+        b = self.comboBegin.currentData(1)
+        e = self.comboEnd.currentData(1)
         return (label, b, e)
 
 

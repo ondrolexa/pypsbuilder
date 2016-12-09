@@ -456,6 +456,13 @@
                 </property>
                </widget>
               </item>
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="checkOverwrite">
+                <property name="text">
+                 <string>Do not overwrite already calculated lines and points</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
@@ -805,7 +812,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushInvZoom">
+            <widget class="QPushButton" name="pushInvAuto">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -813,7 +820,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Zoom</string>
+              <string>Auto</string>
              </property>
             </widget>
            </item>
@@ -964,7 +971,7 @@
   <tabstop>invview</tabstop>
   <tabstop>pushGuessInv</tabstop>
   <tabstop>pushInvRemove</tabstop>
-  <tabstop>pushInvZoom</tabstop>
+  <tabstop>pushInvAuto</tabstop>
  </tabstops>
  <resources/>
  <connections/>
