@@ -251,27 +251,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
-            reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
-                                                   QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
-                                                   QtWidgets.QMessageBox.Save)
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Message', quit_msg,
+                                qb.Discard | qb.Save, qb.Save)
 
-            if reply == QtWidgets.QMessageBox.Save:
+            if reply == qb.Save:
                 self.saveProject()
-        workdir = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory",
-                                                   os.path.expanduser('~'),
-                                                   QtWidgets.QFileDialog.ShowDirsOnly)
+        qd = QtWidgets.QFileDialog
+        workdir = qd.getExistingDirectory(self, "Select Directory",
+                                          os.path.expanduser('~'),
+                                          qd.ShowDirsOnly)
         if workdir:
             self.workdir = workdir
             # init THERMOCALC
             if self.doInit():
-                # init UI
-                self.logText.clear()
-                self.textOutput.clear()
-                self.textFullOutput.clear()
-                self.unihigh = None
-                self.invhigh = None
-                self.initViewModels()
-                # all done
                 self.ready = True
                 self.project = None
                 self.changed = True
@@ -417,10 +410,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # connect signal
             self.phasemodel.itemChanged.connect(self.phase_changed)
             self.logText.setPlainText(tcout)
+            self.textOutput.clear()
+            self.textFullOutput.clear()
+            self.unihigh = None
+            self.invhigh = None
+            self.initViewModels()
+            self.pushUniZoom.setChecked(False)
             return True
         except BaseException as e:
-            QtWidgets.QMessageBox.critical(self, 'Error!', self.errinfo,
-                                           QtWidgets.QMessageBox.Abort)
+            qb = QtWidgets.QMessageBox
+            qb.critical(self, 'Error!', self.errinfo, qb.Abort)
             return False
 
     def openProject(self, checked, projfile=None):
@@ -428,59 +427,63 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
-            reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
-                                                   QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
-                                                   QtWidgets.QMessageBox.Save)
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Message', quit_msg,
+                                qb.Discard | qb.Save,
+                                qb.Save)
 
-            if reply == QtWidgets.QMessageBox.Save:
+            if reply == qb.Save:
                 self.saveProject()
         if projfile is None:
-            projfile = QtWidgets.QFileDialog.getOpenFileName(self, 'Open project', os.path.expanduser('~'), 'pypsbuilder project (*.psb)')[0]
+            qd = QtWidgets.QFileDialog
+            filt = 'pypsbuilder project (*.psb)'
+            projfile = qd.getOpenFileName(self, 'Open project',
+                                          os.path.expanduser('~'),
+                                          filt)[0]
         if os.path.exists(projfile):
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
             stream.close()
             # set actual working dir in case folder was moved
             self.workdir = os.path.dirname(projfile)
-            self.doInit()
-            # select phases
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.text() in data['selphases']:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # select out
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.text() in data['out']:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # settings
-            self.trange = data['trange']
-            self.prange = data['prange']
-            # views
-            self.initViewModels()
-            for row in data['unilist']:
-                self.unimodel.appendRow(row)
-            self.adapt_uniview()
-            for row in data['invlist']:
-                self.invmodel.appendRow(row)
-            self.invview.resizeColumnsToContents()
-            # all done
-            self.ready = True
-            self.project = projfile
-            self.changed = False
-            if projfile in self.recent:
-                self.recent.pop(self.recent.index(projfile))
-            self.recent.insert(0, projfile)
-            self.populate_recent()
-            self.app_settings(write=True)
-            # read scriptfile
-            self.read_scriptfile()
-            # update settings tab
-            self.apply_setting(4)
-            # update plot
-            self.figure.clear()
-            self.plot()
-            self.statusBar().showMessage('Project loaded.')
+            if self.doInit():
+                # select phases
+                for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.text() in data['selphases']:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # select out
+                for i in range(self.outmodel.rowCount()):
+                    item = self.outmodel.item(i)
+                    if item.text() in data['out']:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # settings
+                self.trange = data['trange']
+                self.prange = data['prange']
+                # views
+                for row in data['unilist']:
+                    self.unimodel.appendRow(row)
+                self.adapt_uniview()
+                for row in data['invlist']:
+                    self.invmodel.appendRow(row)
+                self.invview.resizeColumnsToContents()
+                # all done
+                self.ready = True
+                self.project = projfile
+                self.changed = False
+                if projfile in self.recent:
+                    self.recent.pop(self.recent.index(projfile))
+                self.recent.insert(0, projfile)
+                self.populate_recent()
+                self.app_settings(write=True)
+                # read scriptfile
+                self.read_scriptfile()
+                # update settings tab
+                self.apply_setting(4)
+                # update plot
+                self.figure.clear()
+                self.plot()
+                self.statusBar().showMessage('Project loaded.')
         else:
             if projfile in self.recent:
                 self.recent.pop(self.recent.index(projfile))
@@ -557,7 +560,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def generate(self):
         if self.ready:
-            tpfile = QtWidgets.QFileDialog.getOpenFileName(self, 'Open text file', self.workdir, 'Text files (*.txt);;All files (*.*)')[0]
+            qd = QtWidgets.QFileDialog
+            filt = 'Text files (*.txt);;All files (*.*)'
+            tpfile = qd.getOpenFileName(self, 'Open text file',
+                                        self.workdir, filt)[0]
             if tpfile:
                 tp = []
                 tpok = True
@@ -690,7 +696,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.plot()
             if self.pushUniZoom.isChecked():
                 idx = self.unisel.selectedIndexes()
-                k = self.unimodel.unilist[idx[0].row()]
+                k = self.unimodel.getRow(idx[0])
                 T, p = self.getunicutted(k[4], k[2], k[3])
                 dT = (T.max() - T.min()) / 5
                 dp = (p.max() - p.min()) / 5
@@ -737,7 +743,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def unisel_guesses(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
-            #clipboard = QtWidgets.QApplication.clipboard()
             r = self.unimodel.data(idx[4])
             if not r['output'].startswith('User-defined'):
                 clabels, vals = self.parse_output(r['output'], getmodes=False)
@@ -789,6 +794,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             return np.array(clabels), np.array(vals)
 
+    def get_phases_out(self):
+        phases = []
+        for i in range(self.phasemodel.rowCount()):
+                item = self.phasemodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    phases.append(item.text())
+        out = []
+        for i in range(self.outmodel.rowCount()):
+            item = self.outmodel.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                out.append(item.text())
+        return set(phases), set(out)
+
     def set_phaselist(self, r):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
@@ -823,22 +841,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
-        k = self.unimodel.unilist[index.row()]
-        r = k[4]
-        self.set_phaselist(r)
-        T, p = self.getunicutted(r, k[2], k[3])
+        row = self.unimodel.getRow(index)
+        self.set_phaselist(row[4])
+        T, p = self.getunicutted(row[4], row[2], row[3])
         self.unihigh = (T, p)
         self.invhigh = None
         self.plot()
-        #self.outText.show()
 
     def show_inv(self, index):
-        r = self.invmodel.invlist[index.row()][2]
-        self.set_phaselist(r)
-        self.invhigh = (r['T'], r['p'])
+        d = self.invmodel.getData(index, 'Data')
+        self.set_phaselist(d)
+        self.invhigh = (d['T'], d['p'])
         self.unihigh = None
         self.plot()
-        #self.outText.show()
 
     def auto_inv_calc(self):
         if self.invsel.hasSelection():
@@ -857,8 +872,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if checked:
             if self.unisel.hasSelection():
                 idx = self.unisel.selectedIndexes()
-                k = self.unimodel.unilist[idx[0].row()]
-                T, p = self.getunicutted(k[4], k[2], k[3])
+                row = self.unimodel.getRow(idx[0])
+                T, p = self.getunicutted(row[4], row[2], row[3])
                 dT = (T.max() - T.min()) / 5
                 dp = (p.max() - p.min()) / 5
                 self.ax.set_xlim([T.min() - dT, T.max() + dT])
@@ -884,9 +899,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         todel = False
             if todel:
                 msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
-                reply = QtWidgets.QMessageBox.question(self, 'Remove invariant point', msg,
-                                                       QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-                if reply == QtWidgets.QMessageBox.Yes:
+                qb = QtWidgets.QMessageBox
+                reply = qb.question(self, 'Remove invariant point',
+                                    msg, qb.Yes, qb.No)
+                if reply == qb.Yes:
 
                     # Check unilines begins and ends
                     for row in self.unimodel.unilist:
@@ -904,9 +920,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             msg = '{}\nAre you sure?'.format(self.unimodel.data(idx[1]))
-            reply = QtWidgets.QMessageBox.question(self, 'Remove univariant line', msg,
-                                                   QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-            if reply == QtWidgets.QMessageBox.Yes:
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Remove univariant line',
+                                msg, qb.Yes, qb.No)
+            if reply == qb.Yes:
                 self.unimodel.removeRow(idx[0])
                 self.plot()
                 self.statusBar().showMessage('Univariant line removed')
@@ -917,20 +934,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
-                phases = []
-                for i in range(self.phasemodel.rowCount()):
-                        item = self.phasemodel.item(i)
-                        if item.checkState() == QtCore.Qt.Checked:
-                            phases.append(item.text())
-                out = []
-                for i in range(self.outmodel.rowCount()):
-                    item = self.outmodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        out.append(item.text())
+                phases, out = self.get_phases_out()
                 label, T, p = addinv.getValues()
                 r = {'T': np.array([T]), 'p': np.array([p]),
                      'output': 'User-defined invariant point.',
-                     'phases':set(phases), 'out':set(out), 'cmd': ''}
+                     'phases':phases, 'out':out, 'cmd': ''}
                 isnew, id = self.getidinv(r)
                 if isnew:
                     self.invmodel.appendRow((id, label, r))
@@ -949,22 +957,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def add_userdefined(self, checked=True):
         if self.ready:
-            phases = []
-            for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        phases.append(item.text())
-            out = []
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    out.append(item.text())
+            phases, out = self.get_phases_out()
             if len(out) == 1:
                 if checked:
                     invs = []
                     for row in self.invmodel.invlist[1:]:
-                        if set(phases).issubset(row[2]['phases']) and out[0] in row[2]['out']:
-                            invs.append(row[0])
+                        d = row[2]
+                        if phases.issubset(d['phases']):
+                            if out.issubset(d['out']):
+                                invs.append(row[0])
                     if len(invs) > 1:
                         adduni = AddUni(invs, self)
                         respond = adduni.exec()
@@ -995,8 +996,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 self.statusBar().showMessage('User-defined univariant line.')
                             else:
                                 msg = 'Begin and end must be different.'
-                                QtWidgets.QMessageBox.critical(self, 'Error!', msg,
-                                                               QtWidgets.QMessageBox.Abort)
+                                qb = QtWidgets.QMessageBox
+                                qb.critical(self, 'Error!',
+                                            msg, qb.Abort)
                         self.pushManual.setChecked(False)
                     else:
                         self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
@@ -1036,18 +1038,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
-            reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
-                                                   QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Discard | QtWidgets.QMessageBox.Save,
-                                                   QtWidgets.QMessageBox.Save)
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Message', quit_msg,
+                                qb.Cancel | qb.Discard | qb.Save, qb.Save)
 
-            if reply == QtWidgets.QMessageBox.Save:
+            if reply == qb.Save:
                 self.saveProject()
                 if self.project is not None:
                     self.app_settings(write=True)
                     event.accept()
                 else:
                     event.ignore()
-            elif reply == QtWidgets.QMessageBox.Discard:
+            elif reply == qb.Discard:
                 event.accept()
             else:
                 event.ignore()
@@ -1543,12 +1545,18 @@ class InvModel(QtCore.QAbstractTableModel):
             return self.header[col]
         return None
 
+    def getData(self, index, what='ID'):
+        return self.invlist[index.row()][self.header.index(what)]
+
+    def getRow(self, index):
+        return self.invlist[index.row()]
+
 
 class UniModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
         super(UniModel, self).__init__(parent, *args)
         self.unilist = []
-        self.header = ['ID', 'Label', 'Begin', ' End ', 'Data']
+        self.header = ['ID', 'Label', 'Begin', 'End', 'Data']
 
     def rowCount(self, parent=None):
         return len(self.unilist)
@@ -1594,6 +1602,12 @@ class UniModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
+    def getData(self, index, what='ID'):
+        return self.unilist[index.row()][self.header.index(what)]
+
+    def getRow(self, index):
+        return self.unilist[index.row()]
+
 
 class ComboDelegate(QtWidgets.QItemDelegate):
     """
@@ -1605,21 +1619,23 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         self.invmodel = invmodel
 
     def createEditor(self, parent, option, index):
-        phases = index.model().unilist[index.row()][4]['phases']
-        out = index.model().unilist[index.row()][4]['out']
+        r = index.model().getData(index, 'Data')
+        phases, out = r['phases'], r['out']
         combomodel = QtGui.QStandardItemModel()
-        if not index.model().unilist[index.row()][4]['output'].startswith('User-defined'):
-            it = QtGui.QStandardItem('0')
-            it.setData(0, 1)
-            combomodel.appendRow(it)
+        if not r['output'].startswith('User-defined'):
+            item = QtGui.QStandardItem('0')
+            item.setData(0, 1)
+            combomodel.appendRow(item)
+        # filter possible candidates
         for row in self.invmodel.invlist[1:]:
-            if phases.issubset(row[2]['phases']) and out.issubset(row[2]['out']):
-                it = QtGui.QStandardItem(str(row[0]))
-                it.setData(row[0], 1)
-                combomodel.appendRow(it)
+            d = row[2]
+            if phases.issubset(d['phases']):
+                if out.issubset(d['out']):
+                    item = QtGui.QStandardItem(str(row[0]))
+                    item.setData(row[0], 1)
+                    combomodel.appendRow(item)
         combo = QtWidgets.QComboBox(parent)
         combo.setModel(combomodel)
-        #combo.setModelColumn(0)
         return combo
 
     def setEditorData(self, editor, index):
@@ -1627,9 +1643,9 @@ class ComboDelegate(QtWidgets.QItemDelegate):
 
     def setModelData(self, editor, model, index):
         if index.column() == 2:
-            other = model.unilist[index.row()][3]
+            other = model.getData(index, 'End')
         else:
-            other = model.unilist[index.row()][2]
+            other = model.getData(index, 'Begin')
         new = editor.currentData(1)
         if other == new and new != 0:
             editor.setCurrentText(str(model.data(index)))
@@ -1770,6 +1786,7 @@ def main():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
+
 
 if __name__ == "__main__":
     main()
