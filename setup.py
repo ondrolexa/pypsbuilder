@@ -1,29 +1,19 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 requirements = [
-    'pyqt5',
     'numpy',
-    'matplotlib'
-]
-
-test_requirements = [
-    'pytest',
-    'pytest-cov',
-    'pytest-faulthandler',
-    'pytest-mock',
-    'pytest-qt',
-    'pytest-xvfb',
+    'matplotlib',
+    'networkx'
 ]
 
 setup(
     name='pypsbuilder',
-    version='2.0.0',
-    description="simplistic THERMOCALC front-end for constructing PT pseudosections",
+    version='2.0.1',
+    description="Simplistic THERMOCALC front-end for constructing PT pseudosections",
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',
     url='https://github.com/ondrolexa/pypsbuilder',
-    packages=['pypsbuilder', 'pypsbuilder.images',
-              'pypsbuilder.tests'],
+    packages=find_packages(),
     package_data={'pypsbuilder.images': ['*.png']},
     entry_points={
         'console_scripts': [
@@ -34,10 +24,12 @@ setup(
     zip_safe=False,
     keywords='pypsbuilder',
     classifiers=[
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-    ],
-    test_suite='tests',
-    tests_require=test_requirements
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Programming Language :: Python :: 3 :: Only',
+        'Topic :: Scientific/Engineering',
+        'Topic :: Utilities'
+        ]
 )
+

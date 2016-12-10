@@ -15,7 +15,7 @@ import pickle
 import gzip
 import subprocess
 import threading
-import pkg_resources
+from pkg_resources import resource_filename
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -27,10 +27,10 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 
-from ui_psbuilder import Ui_PSBuilder
-from ui_addinv import Ui_AddInv
-from ui_adduni import Ui_AddUni
-from ui_uniguess import Ui_UniGuess
+from .ui_psbuilder import Ui_PSBuilder
+from .ui_addinv import Ui_AddInv
+from .ui_adduni import Ui_AddUni
+from .ui_uniguess import Ui_UniGuess
 
 __version__ = '2.0.1'
 # Make sure that we are using QT5
@@ -52,8 +52,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.setupUi(self)
         self.resize(1024, 768)
         self.setWindowTitle('PSBuilder')
-        window_icon = pkg_resources.resource_filename('images',
-                                                      'pypsbuilder.png')
+        window_icon = resource_filename(__name__, 'images/pypsbuilder.png')
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog()
