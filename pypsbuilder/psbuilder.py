@@ -14,7 +14,6 @@ import os
 import pickle
 import gzip
 import subprocess
-import threading
 from pkg_resources import resource_filename
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -731,11 +730,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             if not r['output'].startswith('User-defined'):
-                clabels, vals = self.parse_output(r['output'], getmodes=False)
-                p, T = vals[0][:2]
-                vals = vals[0][2:]
-                clabels = clabels[2:]
-                self.guess_toclipboard(p, T, clabels, vals, r)
+                try:
+                    clabels, vals = self.parse_output(r['output'], False)
+                    p, T = vals[0][:2]
+                    vals = vals[0][2:]
+                    clabels = clabels[2:]
+                    self.guess_toclipboard(p, T, clabels, vals, r)
+                except:
+                    self.statusBar().showMessage('Unexpected output parsing error.')
             else:
                 self.statusBar().showMessage('Guesses cannot be copied from user-defined invariant point.')
 
@@ -744,14 +746,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.unisel.selectedIndexes()
             r = self.unimodel.data(idx[4])
             if not r['output'].startswith('User-defined'):
-                clabels, vals = self.parse_output(r['output'], getmodes=False)
-                l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
-                uniguess = UniGuess(l, self)
-                respond = uniguess.exec()
-                if respond == QtWidgets.QDialog.Accepted:
-                    ix = uniguess.getValue()
-                    p, T = r['p'][ix], r['T'][ix]
-                    self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
+                try:
+                    clabels, vals = self.parse_output(r['output'], False)
+                    l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+                    uniguess = UniGuess(l, self)
+                    respond = uniguess.exec()
+                    if respond == QtWidgets.QDialog.Accepted:
+                        ix = uniguess.getValue()
+                        p, T = r['p'][ix], r['T'][ix]
+                        self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
+                except:
+                    self.statusBar().showMessage('Unexpected output parsing error.')
             else:
                 self.statusBar().showMessage('Guesses cannot be copied from user-defined univariant line.')
 
@@ -821,20 +826,23 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
         if not r['output'].startswith('User-defined'):
-            mlabels, modes = self.parse_output(r['output'])
-            mask = ~np.in1d(mlabels, list(r['out']))
-            mlabels = mlabels[mask]
-            modes = modes[:, mask]
-            txt = ''
-            h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
-            n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
-            txt += h_format.format(*mlabels)
-            txt += '\n'
-            for row in modes:
-                txt += n_format.format(*row)
+            try:
+                mlabels, modes = self.parse_output(r['output'])
+                mask = ~np.in1d(mlabels, list(r['out']))
+                mlabels = mlabels[mask]
+                modes = modes[:, mask]
+                txt = ''
+                h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
+                n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
+                txt += h_format.format(*mlabels)
                 txt += '\n'
-            txt += h_format.format(*mlabels)
-            self.textOutput.setPlainText(txt)
+                for row in modes:
+                    txt += n_format.format(*row)
+                    txt += '\n'
+                txt += h_format.format(*mlabels)
+                self.textOutput.setPlainText(txt)
+            except:
+                self.statusBar().showMessage('Unexpected output parsing error.')
         else:
             self.textOutput.setPlainText(r['output'])
         self.textFullOutput.setPlainText(r['output'])
@@ -1065,10 +1073,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             color = '#f6989d'  # red
         sender.setStyleSheet('QLineEdit { background-color: %s }' % color)
 
-    def move_progress(self):
-        nv = (self.progressBar.value() + 10) % 100
-        self.progressBar.setValue(nv)
-
     def apply_setting(self, bitopt=0):
         """Apply settings
         0 bit from text to app and plot (1)
@@ -1138,8 +1142,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     item = self.outmodel.item(i)
                     if item.checkState() == QtCore.Qt.Checked:
                         out.append(item.text())
-            progress = RotatingProgress(0.25, self.move_progress)
-            progress.start()
+            self.statusBar().showMessage('Running THERMOCALC...')
             ###########
             trange = self.ax.get_xlim()
             prange = self.ax.get_ylim()
@@ -1230,8 +1233,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
-            progress.cancel()
-            self.progressBar.setValue(0)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1485,26 +1486,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.set_xlim(cur[0])
                 self.ax.set_ylim(cur[1])
             self.canvas.draw()
-
-
-class RotatingProgress():
-    """Threading class to visualize progress
-    """
-    def __init__(self, t, hFunction):
-        self.t = t
-        self.hFunction = hFunction
-        self.thread = threading.Timer(self.t, self.handle_function)
-
-    def handle_function(self):
-        self.hFunction()
-        self.thread = threading.Timer(self.t, self.handle_function)
-        self.thread.start()
-
-    def start(self):
-        self.thread.start()
-
-    def cancel(self):
-        self.thread.cancel()
 
 
 class InvModel(QtCore.QAbstractTableModel):
