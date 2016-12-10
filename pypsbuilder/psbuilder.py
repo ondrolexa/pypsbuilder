@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.1'
+__version__ = '2.0.2'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -1314,13 +1314,54 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             output.write('% ------------------------------\n')
             if self.checkAreas.isChecked():
                 import networkx as nx
+                # Create Graph
                 G = nx.Graph()
                 for inv in self.invmodel.invlist[1:]:
-                    G.add_node(inv[0], label=inv[1], phases=inv[2]['phases'], out=inv[2]['out'])
+                    G.add_node(inv[0], label=inv[1], phases=inv[2]['phases'], out=inv[2]['out'], p=inv[2]['p'][0], T=inv[2]['T'][0])
+
                 for uni in self.unimodel.unilist:
                     if uni[2] != 0 and uni[3] != 0:
                         G.add_edge(uni[2], uni[3], id=uni[0], label=uni[1], phases=uni[4]['phases'], out=uni[4]['out'])
-                edg_areas = [[G[c[ix]][c[ix-1]] for ix in range(len(c))] for c in nx.cycle_basis(G)]
+
+                todel = [k for k,v in G.degree().items() if v < 2]
+                while todel:
+                    for k in todel:
+                        G.remove_node(k)
+                    todel = [k for k,v in G.degree().items() if v < 2]
+                # Convert to DiGraph and find all areas
+                H = nx.DiGraph(G)
+                ed = H.edges()
+                areas = []
+                while ed:
+                    go = True
+                    st = ed[0]
+                    err = 0
+                    while go:
+                        x0, x1 = H.node[st[-2]]['T'], H.node[st[-1]]['T']
+                        y0, y1 = H.node[st[-2]]['p'], H.node[st[-1]]['p']
+                        u1, v1 = x1 - x0, y1 - y0
+                        H.remove_edge(st[-2], st[-1])
+                        suc = H.successors(st[-1])
+                        ang = []
+                        for n in suc:
+                            u2, v2 = H.node[n]['T'] - x1, H.node[n]['p'] - y1
+                            ang.append(np.arctan2(u1*v2 - v1*u2, u1*u2 + v1*v2))
+
+                        ang = np.array(ang)
+                        if np.all(ang>0):
+                            err += ang.min()
+                        po = suc[ang.argmin()]
+                        st = st + (po,)
+                        if po == st[0]:
+                            H.remove_edge(st[-2], st[-1])
+                            go = False
+                    # Is area ok?
+                    if err< 1e-3:
+                        areas.append(st)
+                    # what remains...
+                    ed = H.edges()
+                # write output
+                edg_areas = [[G[c[ix - 1]][c[ix]] for ix in range(1, len(c))] for c in areas]
                 phases_areas = [set.intersection(*[edg['phases'] for edg in c]) for c in edg_areas]
                 maxpf = max([len(p) for p in phases_areas]) + 1
                 for a, p in zip(edg_areas, phases_areas):

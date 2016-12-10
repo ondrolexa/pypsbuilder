@@ -8,7 +8,7 @@ requirements = [
 
 setup(
     name='pypsbuilder',
-    version='2.0.1',
+    version='2.0.2',
     description="Simplistic THERMOCALC front-end for constructing PT pseudosections",
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',
@@ -30,6 +30,5 @@ setup(
         'Programming Language :: Python :: 3 :: Only',
         'Topic :: Scientific/Engineering',
         'Topic :: Utilities'
-        ]
+    ]
 )
-
