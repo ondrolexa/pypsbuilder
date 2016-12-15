@@ -1650,11 +1650,10 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         # filter possible candidates
         for row in self.invmodel.invlist[1:]:
             d = row[2]
-            if phases.issubset(d['phases']):
-                if out.issubset(d['out']):
-                    item = QtGui.QStandardItem(str(row[0]))
-                    item.setData(row[0], 1)
-                    combomodel.appendRow(item)
+            if phases.issubset(d['phases']): # if out.issubset(d['out']):
+                item = QtGui.QStandardItem(str(row[0]))
+                item.setData(row[0], 1)
+                combomodel.appendRow(item)
         combo = QtWidgets.QComboBox(parent)
         combo.setModel(combomodel)
         return combo
