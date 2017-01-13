@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -54,7 +54,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         window_icon = resource_filename(__name__, 'images/pypsbuilder.png')
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
-        self.about_dialog = AboutDialog()
+        self.about_dialog = AboutDialog(__version__)
         self.unihigh = None
         self.invhigh = None
 
@@ -118,7 +118,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionSave.triggered.connect(self.saveProject)
         self.actionQuit.triggered.connect(self.close)
         self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
-        self.actionAbout.triggered.connect(lambda: self.about_dialog.exec())
+        self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True, [], []))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False, [], []))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -141,10 +141,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
-        self.splitter_bottom.setSizes((400,100))
+        self.splitter_bottom.setSizes((400, 100))
 
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
+        self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
 
         self.app_settings()
         self.populate_recent()
@@ -165,10 +166,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
-        self.invsel.selectionChanged.connect(self.clean_high)
         # default unconnected ghost
         self.invmodel.appendRow([0, 'Unconnected', {}])
         self.invview.setRowHidden(0, True)
+        self.invview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        # signals
+        self.invsel.selectionChanged.connect(self.clean_high)
 
         # UNIVIEW
         self.unimodel = UniModel(self.uniview)
@@ -187,10 +190,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # edit trigger
         self.uniview.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked)
         self.uniview.viewport().installEventFilter(self)
-        # signal
+        # signals
         self.unimodel.dataChanged.connect(self.plot)
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.clean_high)
+
 
     def app_settings(self, write=False):
         # Applicatiom settings
@@ -811,7 +815,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 out.append(item.text())
         return set(phases), set(out)
 
-    def set_phaselist(self, r):
+    def set_phaselist(self, r, show_output=True):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
             if item.text() in r['phases'] or item.text() in r['out']:
@@ -825,27 +829,28 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
-        if not r['output'].startswith('User-defined'):
-            try:
-                mlabels, modes = self.parse_output(r['output'])
-                mask = ~np.in1d(mlabels, list(r['out']))
-                mlabels = mlabels[mask]
-                modes = modes[:, mask]
-                txt = ''
-                h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
-                n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
-                txt += h_format.format(*mlabels)
-                txt += '\n'
-                for row in modes:
-                    txt += n_format.format(*row)
+        if show_output:
+            if not r['output'].startswith('User-defined'):
+                try:
+                    mlabels, modes = self.parse_output(r['output'])
+                    mask = ~np.in1d(mlabels, list(r['out']))
+                    mlabels = mlabels[mask]
+                    modes = modes[:, mask]
+                    txt = ''
+                    h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
+                    n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
+                    txt += h_format.format(*mlabels)
                     txt += '\n'
-                txt += h_format.format(*mlabels)
-                self.textOutput.setPlainText(txt)
-            except:
-                self.statusBar().showMessage('Unexpected output parsing error.')
-        else:
-            self.textOutput.setPlainText(r['output'])
-        self.textFullOutput.setPlainText(r['output'])
+                    for row in modes:
+                        txt += n_format.format(*row)
+                        txt += '\n'
+                    txt += h_format.format(*mlabels)
+                    self.textOutput.setPlainText(txt)
+                except:
+                    self.statusBar().showMessage('Unexpected output parsing error.')
+            else:
+                self.textOutput.setPlainText(r['output'])
+            self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
         row = self.unimodel.getRow(index)
@@ -854,6 +859,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.unihigh = (T, p)
         self.invhigh = None
         self.plot()
+        if self.pushUniZoom.isChecked():
+            self.zoom_to_uni(True)
 
     def show_inv(self, index):
         d = self.invmodel.getData(index, 'Data')
@@ -861,6 +868,45 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invhigh = (d['T'], d['p'])
         self.unihigh = None
         self.plot()
+
+    def invviewRightClicked(self, QPos):
+        if self.invsel.hasSelection():
+            idx = self.invsel.selectedIndexes()
+            r = self.invmodel.data(idx[2])
+            phases = r['phases']
+            a, b = r['out']
+            aset, bset = set([a]), set([b])
+            aphases, bphases = phases.difference(aset), phases.difference(bset)
+            menu = QtWidgets.QMenu(self)
+            nr1 = dict(phases=phases, out=aset, output='User-defined')
+            lbl1 = ' '.join(nr1['phases']) + ' - ' + ' '.join(nr1['out'])
+            isnew, id = self.getiduni(nr1)
+            if isnew:
+                menu_item1 = menu.addAction(lbl1)
+                menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
+                #menu_item1.triggered.connect(lambda: self.do_calc(True, phases=phases, out=aset))
+            nr2 = dict(phases=phases, out=bset, output='User-defined')
+            lbl2 = ' '.join(nr2['phases']) + ' - ' + ' '.join(nr2['out'])
+            isnew, id = self.getiduni(nr2)
+            if isnew:
+                menu_item2 = menu.addAction(lbl2)
+                menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
+                #menu_item2.triggered.connect(lambda: self.do_calc(True, phases=phases, out=bset))
+            nr3 = dict(phases=bphases, out=aset, output='User-defined')
+            lbl2 = ' '.join(nr2['phases']) + ' - ' + ' '.join(nr2['out'])
+            isnew, id = self.getiduni(nr3)
+            if isnew:
+                menu_item3 = menu.addAction(lbl3)
+                menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
+                #menu_item3.triggered.connect(lambda: self.do_calc(True, phases=bphases, out=aset))
+            nr4 = dict(phases=aphases, out=bset, output='User-defined')
+            lbl4 = ' '.join(nr4['phases']) + ' - ' + ' '.join(nr4['out'])
+            isnew, id = self.getiduni(nr4)
+            if isnew:
+                menu_item4 = menu.addAction(lbl4)
+                menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
+                #menu_item4.triggered.connect(lambda: self.do_calc(True, phases=aphases, out=bset))
+            menu.exec(self.invview.mapToGlobal(QPos))
 
     def auto_inv_calc(self):
         if self.invsel.hasSelection():
@@ -1183,7 +1229,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                             T, p = self.getunicutted(r, row[2], row[3])
                                             self.unihigh = (T, p)
                                             self.invhigh = None
-                                        self.statusBar().showMessage('Univariant line re-calculated.')
+                                        self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Univariant line already exists.')
                         self.adapt_uniview()
@@ -1220,7 +1266,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                             self.set_phaselist(r)
                                             self.invhigh = (r['T'], r['p'])
                                             self.unihigh = None
-                                        self.statusBar().showMessage('Invariant point re-calculated.')
+                                        self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Invariant point already exists.')
                         self.invview.resizeColumnsToContents()
@@ -1749,14 +1795,14 @@ class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
 class AboutDialog(QtWidgets.QDialog):
     """About dialog
     """
-    def __init__(self, parent=None):
+    def __init__(self, version, parent=None):
         """Display a dialog that shows application information."""
         super(AboutDialog, self).__init__(parent)
 
         self.setWindowTitle('About')
         self.resize(300, 100)
 
-        about = QtWidgets.QLabel('PSbuilder\nTHERMOCALC front-end for constructing PT pseudosections')
+        about = QtWidgets.QLabel('PSbuilder {}\nTHERMOCALC front-end for constructing PT pseudosections'.format(version))
         about.setAlignment(QtCore.Qt.AlignCenter)
 
         author = QtWidgets.QLabel('Ondrej Lexa')
