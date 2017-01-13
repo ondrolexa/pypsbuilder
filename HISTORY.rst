@@ -32,3 +32,5 @@ History
 
 * invview right click to select not yet calculated uni lines implemented
 * Zoom uni button persistent
+* export list of phases in areas for TC-Investigator
+* drawpd areas construction fixed
