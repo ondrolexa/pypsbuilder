@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.3'
+__version__ = '2.0.4'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -116,6 +116,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionNew.triggered.connect(self.initProject)
         self.actionOpen.triggered.connect(self.openProject)
         self.actionSave.triggered.connect(self.saveProject)
+        self.actionSave_as.triggered.connect(self.saveProjectAs)
         self.actionQuit.triggered.connect(self.close)
         self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
@@ -258,7 +259,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
-                self.saveProject()
+                self.do_save()
         qd = QtWidgets.QFileDialog
         workdir = qd.getExistingDirectory(self, "Select Directory",
                                           os.path.expanduser('~'),
@@ -411,7 +412,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.phasemodel.appendRow(item)
             # connect signal
             self.phasemodel.itemChanged.connect(self.phase_changed)
-            self.logText.setPlainText(tcout)
             self.textOutput.clear()
             self.textFullOutput.clear()
             self.unihigh = None
@@ -435,7 +435,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 qb.Save)
 
             if reply == qb.Save:
-                self.saveProject()
+                self.do_save()
         if projfile is None:
             qd = QtWidgets.QFileDialog
             filt = 'pypsbuilder project (*.psb)'
@@ -503,38 +503,54 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     if not filename.lower().endswith('.psb'):
                         filename = filename + '.psb'
                     self.project = filename
-            if self.project:
-                # collect info
-                selphases = []
-                for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        selphases.append(item.text())
-                out = []
-                for i in range(self.outmodel.rowCount()):
-                    item = self.outmodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        out.append(item.text())
-                # put to dict
-                data = {'selphases': selphases,
-                        'out': out,
-                        'trange': self.trange,
-                        'prange': self.prange,
-                        'unilist': self.unimodel.unilist,
-                        'invlist': self.invmodel.invlist[1:]}
-                # do save
-                stream = gzip.open(self.project, 'wb')
-                pickle.dump(data, stream)
-                stream.close()
-                self.changed = False
-                if self.project in self.recent:
-                    self.recent.pop(self.recent.index(self.project))
-                self.recent.insert(0, self.project)
-                self.populate_recent()
-                self.app_settings(write=True)
-                self.statusBar().showMessage('Project saved.')
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
+                    self.do_save()
+            else:
+                self.do_save()
+
+    def saveProjectAs(self):
+        """Open working directory and initialize project
+        """
+        if self.ready:
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', self.workdir, 'pypsbuilder project (*.psb)')[0]
+            if filename:
+                if not filename.lower().endswith('.psb'):
+                    filename = filename + '.psb'
+                self.project = filename
+                self.do_save()
+
+    def do_save(self):
+        """Open working directory and initialize project
+        """
+        if self.project:
+            # collect info
+            selphases = []
+            for i in range(self.phasemodel.rowCount()):
+                item = self.phasemodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    selphases.append(item.text())
+            out = []
+            for i in range(self.outmodel.rowCount()):
+                item = self.outmodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    out.append(item.text())
+            # put to dict
+            data = {'selphases': selphases,
+                    'out': out,
+                    'trange': self.trange,
+                    'prange': self.prange,
+                    'unilist': self.unimodel.unilist,
+                    'invlist': self.invmodel.invlist[1:]}
+            # do save
+            stream = gzip.open(self.project, 'wb')
+            pickle.dump(data, stream)
+            stream.close()
+            self.changed = False
+            if self.project in self.recent:
+                self.recent.pop(self.recent.index(self.project))
+            self.recent.insert(0, self.project)
+            self.populate_recent()
+            self.app_settings(write=True)
+            self.statusBar().showMessage('Project saved.')
 
     def runprog(self, exe, instr):
         # get list of available phases
@@ -547,6 +563,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         p = subprocess.Popen(exe, cwd=self.workdir, startupinfo=startupinfo, **popenkw)
         output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
         sys.stdout.flush()
+        self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + output)
         return output
 
     def initFromTC(self):
@@ -989,16 +1006,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def clicker(self, event):
         if event.inaxes is not None:
-            addinv = AddInv(self)
+            phases, out = self.get_phases_out()
+            r = {'phases':phases, 'out':out, 'cmd': ''}
+            isnew, id = self.getidinv(r)
+            if isnew:
+                addinv = AddInv(parent=self)
+            else:
+                addinv = AddInv(label=False, parent=self)
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
-                phases, out = self.get_phases_out()
                 label, T, p = addinv.getValues()
-                r = {'T': np.array([T]), 'p': np.array([p]),
-                     'output': 'User-defined invariant point.',
-                     'phases':phases, 'out':out, 'cmd': ''}
-                isnew, id = self.getidinv(r)
+                r['T'], r['p'], r['output'] = np.array([T]), np.array([p]), 'User-defined invariant point.'
                 if isnew:
                     self.invmodel.appendRow((id, label, r))
                 else:
@@ -1075,7 +1094,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.canvas.mpl_disconnect(self.cid)
                     self.statusBar().showMessage('')
             else:
-                self.statusBar().showMessage('Two out phases must be selected for invariant point.')
+                self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
                 self.pushManual.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -1102,7 +1121,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 qb.Cancel | qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
-                self.saveProject()
+                self.do_save()
                 if self.project is not None:
                     self.app_settings(write=True)
                     event.accept()
@@ -1213,7 +1232,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                self.logText.setPlainText(tcout)
                 typ, label, r = self.parsedrfile()
                 r['phases'] = set(phases)
                 r['out'] = set(out)
@@ -1251,7 +1269,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                self.logText.setPlainText(tcout)
                 typ, label, r = self.parsedrfile()
                 r['phases'] = set(phases)
                 r['out'] = set(out)
@@ -1372,22 +1389,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if self.checkAreas.isChecked():
                     # phases in areas for TC-Investigator
                     with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
-                        areas, vertices, edges, phases = self.construct_areas()
+                        vertices, edges, phases = self.construct_areas()
                         # write output
                         output.write('% Areas\n')
                         output.write('% ------------------------------\n')
                         maxpf = max([len(p) for p in phases]) + 1
-                        for a, p, v in zip(edges, phases, vertices):
-                            v = np.array(v)
+                        for ed, ph, ve in zip(edges, phases, vertices):
+                            v = np.array(ve)
                             if not (np.all(v[:, 0] < self.trange[0]) or
                                     np.all(v[:, 0] > self.trange[1]) or
                                     np.all(v[:, 1] < self.prange[0]) or
                                     np.all(v[:, 1] > self.prange[1])):
-                                d = ('{:.2f} '.format(len(p) / maxpf) +
-                                     ' '.join(['u{}'.format(e['id']) for e in a]) +
-                                     ' % ' + ' '.join(p) + '\n')
+                                d = ('{:.2f} '.format(len(ph) / maxpf) +
+                                     ' '.join(['u{}'.format(e['id']) for e in ed]) +
+                                     ' % ' + ' '.join(ph) + '\n')
                                 output.write(d)
-                                tcinv.write(' '.join(list(p) + self.excess) + '\n')
+                                tcinv.write(' '.join(list(ph) + self.excess) + '\n')
                         output.write('\n')
                         output.write('*\n')
                 output.write('\n')
@@ -1474,7 +1491,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # find phases
         edges = [[G[c[ix - 1]][c[ix]] for ix in range(1, len(c))] for c in areas]
         phases = [set.intersection(*[edg['phases'] for edg in c]) for c in edges]
-        return areas, vertices, edges, phases
+        return vertices, edges, phases
 
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
@@ -1766,10 +1783,13 @@ class ComboDelegate(QtWidgets.QItemDelegate):
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
     """Add inv dialog class
     """
-    def __init__(self, parent=None):
+    def __init__(self, label=True, parent=None):
         super(AddInv, self).__init__(parent)
         self.setupUi(self)
         # validator
+        if not label:
+            self.label.hide()
+            self.labelEdit.hide()
         validator = QtGui.QDoubleValidator()
         validator.setLocale(QtCore.QLocale.c())
         self.tEdit.setValidator(validator)

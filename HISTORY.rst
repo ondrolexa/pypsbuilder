@@ -34,3 +34,9 @@ History
 * Zoom uni button persistent
 * export list of phases in areas for TC-Investigator
 * drawpd areas construction fixed
+
+2.0.4 (13 Jan 2017)
+-------------------------
+* saveas added
+* working directory written to Log window
+* Log window catch output of both thermocalc and drawpd

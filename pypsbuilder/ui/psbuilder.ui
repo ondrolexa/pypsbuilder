@@ -604,7 +604,7 @@
          </widget>
          <widget class="QWidget" name="tabLog">
           <attribute name="title">
-           <string>TC-Log</string>
+           <string>Log</string>
           </attribute>
           <layout class="QVBoxLayout" name="verticalLayout_9">
            <item>
@@ -839,6 +839,7 @@
     <addaction name="actionOpen"/>
     <addaction name="menuOpen_recent"/>
     <addaction name="actionSave"/>
+    <addaction name="actionSave_as"/>
     <addaction name="separator"/>
     <addaction name="actionExport_Drawpd"/>
     <addaction name="separator"/>
@@ -914,9 +915,9 @@
     <string>&amp;Generate from text file</string>
    </property>
   </action>
-  <action name="actionAa">
+  <action name="actionSave_as">
    <property name="text">
-    <string>aa</string>
+    <string>Save project as</string>
    </property>
   </action>
  </widget>
