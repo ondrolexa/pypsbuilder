@@ -1,4 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
+
+with open('README.rst') as readme_file:
+    readme = readme_file.read()
+
+with open('HISTORY.rst') as history_file:
+    history = history_file.read().replace('.. :changelog:', '')
 
 requirements = [
     'numpy',
@@ -10,6 +18,7 @@ setup(
     name='pypsbuilder',
     version='2.0.4',
     description="Simplistic THERMOCALC front-end for constructing PT pseudosections",
+    long_description=readme + '\n\n' + history,
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',
     url='https://github.com/ondrolexa/pypsbuilder',
