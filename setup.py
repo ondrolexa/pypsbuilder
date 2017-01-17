@@ -15,11 +15,10 @@ setup(
     url='https://github.com/ondrolexa/pypsbuilder',
     packages=find_packages(),
     package_data={'pypsbuilder.images': ['*.png']},
-    entry_points={
-        'console_scripts': [
-            'psbuilder=pypsbuilder.psbuilder:main'
-        ]
-    },
+    entry_points="""
+    [console_scripts]
+    psbuilder=pypsbuilder.psbuilder:main
+    """,
     install_requires=requirements,
     zip_safe=False,
     keywords='pypsbuilder',

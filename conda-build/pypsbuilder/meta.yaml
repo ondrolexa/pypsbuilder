@@ -9,8 +9,6 @@ source:
   git_rev: {{ 'v' + data.get('version') }}
 
 build:
-  # noarch_python: True
-  # preserve_egg_dir: True
   entry_points:
     - psbuilder = pypsbuilder.psbuilder:main
 
@@ -23,8 +21,6 @@ requirements:
     - python
     - setuptools
     - pyqt
-    - qt
-    - sip
     - numpy
     - matplotlib
     - networkx
@@ -32,8 +28,6 @@ requirements:
   run:
     - python
     - pyqt
-    - qt
-    - sip
     - numpy
     - matplotlib
     - networkx
@@ -43,9 +37,6 @@ test:
   imports:
     - pypsbuilder
 
-build:
-  script: python setup.py install
-
 about:
   home: https://github.com/ondrolexa/pypsbuilder
   license: GPL-3.0
@@ -54,7 +45,3 @@ about:
   license_family: GPL
 #  doc_url: https://pypsbuilder.readthedocs.org
   dev_url: https://github.com/ondrolexa/pypsbuilder
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
