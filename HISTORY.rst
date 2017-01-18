@@ -9,7 +9,7 @@ History
 * Initial release of PSBuilder
 
 2.0.1 (10 Dec 2016)
------------------
+-------------------
 
 * scriptfile encoding fix
 * unilabels placement fixed
@@ -22,13 +22,13 @@ History
 * THERMOCALC mac-roman encoding used
 
 2.0.2 (10 Dec 2016)
--------------------------
+-------------------
 
 * Areas export fixed
 * inv filtering fixed
 
 2.0.3 (13 Jan 2017)
--------------------------
+-------------------
 
 * invview right click to select not yet calculated uni lines implemented
 * Zoom uni button persistent
@@ -36,7 +36,14 @@ History
 * drawpd areas construction fixed
 
 2.0.4 (13 Jan 2017)
--------------------------
+-------------------
+
 * saveas added
 * working directory written to Log window
 * Log window catch output of both thermocalc and drawpd
+
+master
+------
+
+* output parsing fixed (hopefully...)
+* Rightclick invariant points menu fixed

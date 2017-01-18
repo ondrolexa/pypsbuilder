@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.4'
+__version__ = '2.0.5master'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -798,6 +798,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             clabels.extend(t[ix].split())
         mlabels = clabels[:2] + t[st[0]].split()[1:]
         vals, modes = [], []
+        # estimate fixed width
+        pl = t[st[0]].split()[-2]
+        width = len(t[st[0]]) - t[st[0]].index(pl) - len(pl)
 
         for b, e in zip(za, st):
             val = []
@@ -805,7 +808,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 val.extend(list(map(float, t[ix].split())))
             vals.append(val)
             modstr = t[e + 1][8:] # skip mode
-            mod = [float(modstr[0 + i:9 + i]) for i in range(0, len(modstr), 9)] #fixed width split
+            mod = [float(modstr[0 + i:width + i]) for i in range(0, len(modstr), width)] #fixed width split
             modes.append(val[:2] + mod)
 
         # clabels = t[za[0]].split()
@@ -918,13 +921,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
                 show_menu = True
             nr3 = dict(phases=bphases, out=aset, output='User-defined')
-            lbl3 = ' '.join(nr2['phases']) + ' - ' + ' '.join(nr2['out'])
+            lbl3 = ' '.join(nr3['phases']) + ' - ' + ' '.join(nr3['out'])
             isnew, id = self.getiduni(nr3)
             if isnew:
                 menu_item3 = menu.addAction(lbl3)
                 menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
                 show_menu = True
-            nr4 = dict(phases=aphases, out=bset, output='User-defined')
+            nr4 = dict(phases=bphases, out=bset, output='User-defined')
             lbl4 = ' '.join(nr4['phases']) + ' - ' + ' '.join(nr4['out'])
             isnew, id = self.getiduni(nr4)
             if isnew:
@@ -945,7 +948,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.do_calc(True, phases=phases, out=aset)
             self.do_calc(True, phases=phases, out=bset)
             self.do_calc(True, phases=bphases, out=aset)
-            self.do_calc(True, phases=aphases, out=bset)
+            self.do_calc(True, phases=bphases, out=bset)
 
     def zoom_to_uni(self, checked):
         if checked:

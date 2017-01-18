@@ -16,7 +16,7 @@ requirements = [
 
 setup(
     name='pypsbuilder',
-    version='2.0.4',
+    version='2.0.5',
     description="Simplistic THERMOCALC front-end for constructing PT pseudosections",
     long_description=readme + '\n\n' + history,
     author="Ondrej Lexa",
