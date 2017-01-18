@@ -192,7 +192,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked)
         self.uniview.viewport().installEventFilter(self)
         # signals
-        self.unimodel.dataChanged.connect(self.plot)
+        self.unimodel.dataChanged.connect(self.show_uni)
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.clean_high)
 
@@ -788,7 +788,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def parse_output(self, txt, getmodes=True):
         t = txt.splitlines()
         t = [r.strip(u'\u00A7').strip() for r in t]
-        za = [i + 1 for i in range(len(t)) if t[i].startswith('-')]
+        za = [i + 1 for i in range(len(t)) if t[i].startswith('----')]
         st = [i for i in range(len(t)) if t[i].startswith('mode')]
 
         clabels = []
@@ -819,7 +819,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         #         modes.append(list(map(float, t[e + 3 + 2*off].split())))
 
         if getmodes:
-           return np.array(mlabels), np.array(modes)
+            return np.array(mlabels), np.array(modes)
         else:
             return np.array(clabels), np.array(vals)
 
@@ -1559,7 +1559,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         dp = np.diff(p)
         d2 = dT**2 + dp**2
         u = (dT * (Tp - T[:-1]) + dp * (pp - p[:-1])) / d2
-        ix = abs(u - 0.5).argmin()
+        dist2 = (dT * (p[:-1] - pp) - dp * (T[:-1] - Tp))**2 / d2
+        ix = dist2.argmin()
         if u[ix] > 1:
             ix += 1
         elif u[ix] < 0:
