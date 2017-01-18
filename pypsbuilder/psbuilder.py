@@ -286,6 +286,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if not os.path.exists(self.prefsfile):
                 self.errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
+            self.errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
             for line in open(self.prefsfile, 'r'):
                 kw = line.split()
                 if kw != []:
@@ -418,6 +419,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.invhigh = None
             self.initViewModels()
             self.pushUniZoom.setChecked(False)
+            self.errinfo = ''
             return True
         except BaseException as e:
             qb = QtWidgets.QMessageBox
