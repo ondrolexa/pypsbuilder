@@ -789,9 +789,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def parse_output(self, txt, getmodes=True):
         t = txt.splitlines()
-        t = [r.strip(u'\u00A7').strip() for r in t]
+        t = [r.strip(u'\u00A7') for r in t]
         za = [i + 1 for i in range(len(t)) if t[i].startswith('----')]
-        st = [i for i in range(len(t)) if t[i].startswith('mode')]
+        st = [i for i in range(len(t)) if t[i].startswith('    mode')]
 
         clabels = []
         for ix in range(za[0], st[0] - 1, 2):
@@ -804,7 +804,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for ix in range(b + 1, e, 2):
                 val.extend(list(map(float, t[ix].split())))
             vals.append(val)
-            mod = list(map(float, t[e + 1].split()))
+            modstr = t[e + 1][8:] # skip mode
+            mod = [float(modstr[0 + i:9 + i]) for i in range(0, len(modstr), 9)] #fixed width split
             modes.append(val[:2] + mod)
 
         # clabels = t[za[0]].split()
