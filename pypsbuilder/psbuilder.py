@@ -1455,7 +1455,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             G.add_node(inv[0], label=inv[1], phases=inv[2]['phases'], out=inv[2]['out'], p=inv[2]['p'][0], T=inv[2]['T'][0])
         for uni in self.unimodel.unilist:
             if uni[2] != 0 and uni[3] != 0:
-                G.add_edge(uni[2], uni[3], id=uni[0], label=uni[1], phases=uni[4]['phases'], out=uni[4]['out'])
+                G.add_edge(uni[2], uni[3], id=uni[0], label=uni[1], phases=uni[4]['phases'], out=uni[4]['out'], p=uni[4]['p'], T=uni[4]['T'])
         # skeletonize
         todel = [k for k,v in G.degree().items() if v < 2]
         while todel:
@@ -1479,11 +1479,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 H.remove_edge(st[-2], st[-1])
                 suc = H.successors(st[-1])
                 if st[-2] in suc:
-                    suc.pop(suc.index(st[-2]))
+                    _ = suc.pop(suc.index(st[-2]))
                 ang = np.array([])
                 nvert = []
                 # find left most
                 for n in suc:
+                    # T, p = self.getunicutted(H[st[-1]][n], st[-1], n)
+                    # if T[0] == x1 and p[0] == y1:
+                    #     x2, y2 = T[1], p[1]
+                    # else:
+                    #     x2, y2 = T[-2], p[-2]
                     x2, y2 = H.node[n]['T'], H.node[n]['p']
                     v = (x2 - x1, y2 - y1)
                     ang = np.append(ang, np.degrees(np.arctan2(u[1], u[0]) - np.arctan2(v[1], v[0])) % 360)
@@ -1496,7 +1501,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     H.remove_edge(st[-2], st[-1])
                     go = False
             # check for outer polygon
-            if 0.5 * (sum(x0*y1 - x1*y0 for ((x0, y0), (x1, y1)) in zip(vert[:-1], vert[1:]))) > 0:
+            if 0.5 * sum([x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(vert[:-1], vert[1:])]) > 0:
                 areas.append(st)
                 vertices.append(vert)
             # what remains...
