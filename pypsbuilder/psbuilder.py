@@ -372,6 +372,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if not kw[1:2] == ['yes']:
                             self.errinfo = 'Zeromodeiso must be set to yes.'
                             raise Exception()
+                    if kw[0] == 'setmodeiso':
+                        if not kw[1:2] == ['yes']:
+                            self.errinfo = 'Setmodeiso must be set to yes.'
+                            raise Exception()
+                    if kw[0] == 'convliq':
+                        self.errinfo = 'Convliq not yet supported.'
+                        raise Exception()
                     if kw[0] == 'setiso':
                         if kw[1:2] != ['no']:
                             self.errinfo = 'Setiso must be set to no.'
