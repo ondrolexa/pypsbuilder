@@ -7,13 +7,13 @@ thermodynamic dataset and a-x file. PyPSbuilder will work only with certain sett
 like calcmode must be 1, setexcess keyword have to be present to skip question,
 calctatp have to be ask etc. If you are nor sure, what scripts should be set on and off,
 you can download sample working directory or download preferences and user files from
-Richard's White `Dataset 6 webpage <http://www.metamorph.geo.uni-mainz.de/thermocalc/dataset6/index.html>`_.
+Richard's White `Dataset 6 web page <http://www.metamorph.geo.uni-mainz.de/thermocalc/dataset6/index.html>`_.
 
 New project
 -----------
 
-When you create new project (File->New projext), you have to select prepared working directory.
-PyPSbuilder automatically execute THERMOCALC, check settings in your scriptfile and initialize
+When you create new project (File->New project), you have to select prepared working directory.
+PyPSbuilder automatically execute THERMOCALC, check settings in your script file and initialize
 project. Available phases are automatically loaded and default P-T range is set.
 
 .. image:: images/psbuilder_init.png
@@ -59,7 +59,7 @@ Project management and Export
 
 You can save your project, so next time you will open it all your previous work is restored.
 When you are happy with P-T pseudosection, you can either export diagram directly by clicking save button
-of graphic toolbar (eps, svg, pdf, jpg and png formats are supported) or you can generate drawpd file (File->Export Drawpd file).
+of graphic toolbar (eps, svg, pdf, jpg and png formats are supported) or you can generate Drawpd file (File->Export Drawpd file).
 
 .. image:: images/drawpd.png
 

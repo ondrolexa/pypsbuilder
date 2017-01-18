@@ -14,6 +14,8 @@ and install pypsbuilder directly from github using pip::
 
     $ pip install https://github.com/ondrolexa/pypsbuilder/archive/master.zip
 
-To upgrade to laste version use::
+To upgrade to latest version use::
 
-    $ pip install --upgrade --upgrade-strategy only-if-needed  https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+    $ pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip \
+          --upgrade-strategy only-if-needed
+
