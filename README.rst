@@ -1,18 +1,14 @@
-===============================
-pypsbuilder
-===============================
+===========
+PyPSbuilder
+===========
 
-
-.. image:: https://img.shields.io/travis/ondrolexa/pypsbuilder.svg
-        :target: https://travis-ci.org/ondrolexa/pypsbuilder
-
+.. image:: https://readthedocs.org/projects/pypsbuilder/badge/?version=latest
+        :target: http://pypsbuilder.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
 
 Simplistic THERMOCALC front-end for constructing PT pseudosections
 
 
-Features
---------
-
-* TODO
-
+* Free software: GPLv3 license
+* Documentation: http://pypsbuilder.readthedocs.io/en/latest/
 
