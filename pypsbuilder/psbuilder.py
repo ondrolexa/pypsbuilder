@@ -1555,16 +1555,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             return np.hstack([T1, T[za:ko], T2]), np.hstack([p1, p[za:ko], p2])
 
     def getidx(self, T, p, Tp, pp):
-        dT = np.diff(T)
-        dp = np.diff(p)
-        d2 = dT**2 + dp**2
-        u = (dT * (Tp - T[:-1]) + dp * (pp - p[:-1])) / d2
-        dist2 = (dT * (p[:-1] - pp) - dp * (T[:-1] - Tp))**2 / d2
-        ix = dist2.argmin()
-        if u[ix] > 1:
-            ix += 1
-        elif u[ix] < 0:
-            ix -= 1
+        st = np.array([T[:-1], p[:-1]])
+        vv = np.array([Tp - T[:-1], pp - p[:-1]])
+        ww = np.array([np.diff(T), np.diff(p)])
+        rat = sum(vv*ww)/np.linalg.norm(ww, axis=0)**2
+        h = st + rat*ww
+        d2 = sum(np.array([Tp - h[0], pp - h[1]])**2)
+        cnd = np.flatnonzero(abs(rat - 0.5)<=0.5)
+        if not cnd:
+            ix = abs(rat - 0.5).argmin()
+            if rat[ix]>1:
+                ix += 1
+            elif rat[ix]<0:
+                ix -= 1
+        else:
+            ix = cnd[d2[cnd].argmin()]
         return ix + 1
 
     def getunilabelpoint(self, T, p):
