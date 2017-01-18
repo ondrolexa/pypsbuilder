@@ -2,15 +2,6 @@
 Installation
 ============
 
-At the command line::
-
-    $ easy_install pypsbuilder
-
-If you use virtual env with virtualenvwrapper installed::
-
-    $ mkvirtualenv pypsbuilder
-    $ pip install pypsbuilder
-
 For Anaconda distribution (for now only Linux64 supported) you can install from personal channel::
 
     $ conda install -c https://conda.anaconda.org/ondrolexa pypsbuilder
