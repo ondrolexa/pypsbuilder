@@ -12,9 +12,9 @@ Richard's White `Dataset 6 webpage <http://www.metamorph.geo.uni-mainz.de/thermo
 New project
 -----------
 
-When you create new project, you have to select prepared working directory. PyPSbuilder automatically
-execute THERMOCALC, check settings in your scriptfile and initialize project. Available phases are
-automatically loaded and default P-T range is set.
+When you create new project (File->New projext), you have to select prepared working directory.
+PyPSbuilder automatically execute THERMOCALC, check settings in your scriptfile and initialize
+project. Available phases are automatically loaded and default P-T range is set.
 
 .. image:: images/psbuilder_init.png
 
@@ -25,6 +25,10 @@ In upper left pane you select phases which occurs within your field, while in lo
 select two phases which modal proportion should be zero. Than just click *Calc P* or *Calc T* and
 invariant point will appear on diagram and in the list of invariant points in lower right part of window.
 
+.. image:: images/psbuilder_inv1.png
+
+.. image:: images/psbuilder_inv4.png
+
 Create univariant line
 ----------------------
 
@@ -32,6 +36,10 @@ Similarly, you can create univariant line, when only one phase is selected to ha
 proportion. Click *Calc T* or *Calc p* according to dp/dT of univariant line. Once calculated,
 result is added to diagram and to the list of univariant lines in upper right part of the window.
 Within this list you can define begin and end by selecting appropriate invariant points.
+
+.. image:: images/psbuilder_uni1.png
+
+.. image:: images/psbuilder_uni2.png
 
 By default, PyPSbuilder use 50 steps to calculate univariant lines. You can change it in Setting pane.
 
@@ -44,10 +52,14 @@ Double-clicking any univariant line in the list will highlight that line on diag
 calculated points. Note that double-click name of univariant (or invariant) line will populate Modes and
 Full output panes at the bottom of application, so you can always check what is going on along lines.
 
+.. image:: images/psbuilder_finished.png
+
 Project management and Export
 -----------------------------
 
 You can save your project, so next time you will open it all your previous work is restored.
 When you are happy with P-T pseudosection, you can either export diagram directly by clicking save button
 of graphic toolbar (eps, svg, pdf, jpg and png formats are supported) or you can generate drawpd file (File->Export Drawpd file).
+
+.. image:: images/drawpd.png
 
