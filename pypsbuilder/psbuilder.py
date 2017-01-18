@@ -1562,7 +1562,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         h = st + rat*ww
         d2 = sum(np.array([Tp - h[0], pp - h[1]])**2)
         cnd = np.flatnonzero(abs(rat - 0.5)<=0.5)
-        if not cnd:
+        if not np.any(cnd):
             ix = abs(rat - 0.5).argmin()
             if rat[ix]>1:
                 ix += 1
