@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.5master'
+__version__ = '2.0.5'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 

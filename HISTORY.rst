@@ -42,8 +42,10 @@ History
 * working directory written to Log window
 * Log window catch output of both thermocalc and drawpd
 
-master
-------
+2.0.5 (19 Jan 2017)
+-------------------
 
 * output parsing fixed (hopefully...)
 * Rightclick invariant points menu fixed
+* area construction for drawpd export fixed
+* networkx dependecy removed
