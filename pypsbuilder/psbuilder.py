@@ -1414,7 +1414,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     np.all(v[:, 1] < self.prange[0]) or
                                     np.all(v[:, 1] > self.prange[1])):
                                 d = ('{:.2f} '.format(len(ph) / maxpf) +
-                                     ' '.join(['u{}'.format(e['id']) for e in ed]) +
+                                     ' '.join(['u{}'.format(e) for e in ed]) +
                                      ' % ' + ' '.join(ph) + '\n')
                                 output.write(d)
                                 tcinv.write(' '.join(list(ph) + self.excess) + '\n')
@@ -1448,67 +1448,91 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 qb.critical(self, 'Error {} during drawpd export!'.format(err), self.errinfo, qb.Abort)
 
     def construct_areas(self):
-        import networkx as nx
-        # Create Graph
-        G = nx.Graph()
-        for inv in self.invmodel.invlist[1:]:
-            G.add_node(inv[0], label=inv[1], phases=inv[2]['phases'], out=inv[2]['out'], p=inv[2]['p'][0], T=inv[2]['T'][0])
-        for uni in self.unimodel.unilist:
-            if uni[2] != 0 and uni[3] != 0:
-                G.add_edge(uni[2], uni[3], id=uni[0], label=uni[1], phases=uni[4]['phases'], out=uni[4]['out'], p=uni[4]['p'], T=uni[4]['T'])
-        # skeletonize
-        todel = [k for k,v in G.degree().items() if v < 2]
-        while todel:
-            for k in todel:
-                G.remove_node(k)
-            todel = [k for k,v in G.degree().items() if v < 2]
-        # Convert to DiGraph and find all enclosed areas
-        H = nx.DiGraph(G)
-        ed = H.edges()
-        areas = []
-        vertices = []
-        while ed:
-            # choose arbitrary start
-            go = True
-            st = ed[0]
-            err = 0
-            vert = [(H.node[st[-2]]['T'], H.node[st[-2]]['p']), (H.node[st[-1]]['T'], H.node[st[-1]]['p'])]
-            while go:
-                (x0, y0), (x1, y1) = vert[-2:]
-                u = (x1 - x0, y1 - y0)
-                H.remove_edge(st[-2], st[-1])
-                suc = H.successors(st[-1])
-                if st[-2] in suc:
-                    _ = suc.pop(suc.index(st[-2]))
-                ang = np.array([])
-                nvert = []
-                # find left most
-                for n in suc:
-                    # T, p = self.getunicutted(H[st[-1]][n], st[-1], n)
-                    # if T[0] == x1 and p[0] == y1:
-                    #     x2, y2 = T[1], p[1]
-                    # else:
-                    #     x2, y2 = T[-2], p[-2]
-                    x2, y2 = H.node[n]['T'], H.node[n]['p']
-                    v = (x2 - x1, y2 - y1)
-                    ang = np.append(ang, np.degrees(np.arctan2(u[1], u[0]) - np.arctan2(v[1], v[0])) % 360)
-                    nvert.append((x2, y2))
-                ang[ang >= 180] -= 360
-                po = suc[ang.argmin()]
-                st += (po,)
-                vert += [nvert[ang.argmin()]]
-                if po == st[0]:
-                    H.remove_edge(st[-2], st[-1])
-                    go = False
-            # check for outer polygon
-            if 0.5 * sum([x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(vert[:-1], vert[1:])]) > 0:
-                areas.append(st)
+        def area_exists(indexes):
+            def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
+                if found_cycle[0]:
+                    return
+                marked[u] = True
+                path.append(u)
+                for v in graph[u]:
+                    if marked[v] and v != pred_node:
+                        found_cycle[0] = True
+                        return
+                    if not marked[v]:
+                        dfs_visit(graph, v, found_cycle, u, marked, path)
+            # create graph
+            graph = {}
+            for ix in indexes:
+                b, e = self.unimodel.unilist[ix][2], self.unimodel.unilist[ix][3]
+                if b != 0 and e != 0:
+                    if b in graph:
+                        graph[b] = graph[b] + (e,)
+                    else:
+                        graph[b] = (e,)
+                    if e in graph:
+                        graph[e] = graph[e] + (b,)
+                    else:
+                        graph[e] = (b,)
+            # do search
+            path = []
+            marked = { u : False for u in graph }
+            found_cycle = [False]
+            for u in graph:
+                if not marked[u]:
+                    dfs_visit(graph, u, found_cycle, u, marked, path)
+                if found_cycle[0]:
+                    break
+            return found_cycle[0], path
+
+        def get_uni(b, e):
+            for r in self.unimodel.unilist:
+                if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
+                    return r[0]
+
+        def get_inv_coord(id):
+            for r in self.invmodel.invlist[1:]:
+                if r[0] == id:
+                    return r[2]['T'][0], r[2]['p'][0]
+
+        faces = {}
+        for ix, uni in enumerate(self.unimodel.unilist):
+            f1 = frozenset(uni[4]['phases'])
+            f2 = frozenset(uni[4]['phases'] - uni[4]['out'])
+            if f1 in faces:
+                faces[f1].append(ix)
+            else:
+                faces[f1] = [ix]
+            if f2 in faces:
+                faces[f2].append(ix)
+            else:
+                faces[f2] = [ix]
+            # topology of polymorphs is degenerated
+            for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
+                if poly.issubset(uni[4]['phases']):
+                    f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
+                    if f2 in faces:
+                        faces[f2].append(ix)
+                    else:
+                        faces[f2] = [ix]
+        vertices, edges, phases = [], [], []
+        for f in faces:
+            exists, path = area_exists(faces[f])
+            if exists:
+                edge = []
+                vert = []
+                for b, e in zip(path, path[1:] + path[:1]):
+                    edge.append(get_uni(b, e))
+                    vert.append(get_inv_coord(b))
+                edges.append(edge)
                 vertices.append(vert)
-            # what remains...
-            ed = H.edges()
-        # find phases
-        edges = [[G[c[ix - 1]][c[ix]] for ix in range(1, len(c))] for c in areas]
-        phases = [set.intersection(*[edg['phases'] for edg in c]) for c in edges]
+                phases.append(f)
+            else:
+                edge = []
+                vert = []
+                for b, e in zip(path[:-1], path[1:]):
+                    edge.append(get_uni(b, e))
+                    vert.append(get_inv_coord(b))
+                # TODO possible export boundary fields (need option)
         return vertices, edges, phases
 
     def getiduni(self, zm=None):
