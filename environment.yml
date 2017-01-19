@@ -4,5 +4,3 @@ dependencies:
 - pyqt=5
 - numpy
 - matplotlib
-- networkx
-

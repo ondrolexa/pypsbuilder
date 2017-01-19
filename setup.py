@@ -10,8 +10,7 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'numpy',
-    'matplotlib',
-    'networkx'
+    'matplotlib'
 ]
 
 setup(

@@ -4,11 +4,11 @@ Installation
 
 For Anaconda distribution (for now only Linux64 supported) you can install from personal channel::
 
-    $ conda install -c https://conda.anaconda.org/ondrolexa pypsbuilder
+    $ conda install -c ondrolexa pypsbuilder
 
 For Anaconda distribution on Windows you can install all dependencies from official channel::
 
-    $ conda install numpy matplotlib networkx pyqt
+    $ conda install numpy matplotlib pyqt
 
 and install pypsbuilder directly from github using pip::
 

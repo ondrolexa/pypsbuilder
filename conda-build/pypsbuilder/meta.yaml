@@ -23,14 +23,12 @@ requirements:
     - pyqt
     - numpy
     - matplotlib
-    - networkx
 
   run:
     - python
     - pyqt
     - numpy
     - matplotlib
-    - networkx
 
 test:
   # Python imports
