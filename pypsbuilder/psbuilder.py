@@ -1506,6 +1506,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 faces[f2].append(ix)
             else:
                 faces[f2] = [ix]
+            # topology of polymorphs is degenerated
+            for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
+                if poly.issubset(uni[4]['phases']):
+                    f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
+                    if f2 in faces:
+                        faces[f2].append(ix)
+                    else:
+                        faces[f2] = [ix]
         vertices, edges, phases = [], [], []
         for f in faces:
             exists, path = area_exists(faces[f])
