@@ -806,8 +806,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         mlabels = clabels[:2] + t[st[0]].split()[1:]
         vals, modes = [], []
         # estimate fixed width
-        pl = t[st[0]].split()[-2]
-        width = len(t[st[0]]) - t[st[0]].index(pl) - len(pl)
+        pl = t[st[0]].split()
+        width = len(t[st[0]]) - t[st[0]][:t[st[0]].rindex(pl[-1])].rindex(pl[-2]) - len(pl[-2])
 
         for b, e in zip(za, st):
             val = []
