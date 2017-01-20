@@ -192,7 +192,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked)
         self.uniview.viewport().installEventFilter(self)
         # signals
-        self.unimodel.dataChanged.connect(self.show_uni)
+        self.unimodel.dataChanged.connect(self.uni_edited)
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.clean_high)
 
@@ -478,6 +478,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 for row in data['invlist']:
                     self.invmodel.appendRow(row)
                 self.invview.resizeColumnsToContents()
+                # cutting
+                for row in self.unimodel.unilist:
+                    self.trimuni(row)
                 # all done
                 self.ready = True
                 self.project = projfile
@@ -729,7 +732,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if self.pushUniZoom.isChecked():
                 idx = self.unisel.selectedIndexes()
                 k = self.unimodel.getRow(idx[0])
-                T, p = self.getunicutted(k[4], k[2], k[3])
+                T, p = k[4]['fT'], k[4]['fp']
                 dT = (T.max() - T.min()) / 5
                 dp = (p.max() - p.min()) / 5
                 self.ax.set_xlim([T.min() - dT, T.max() + dT])
@@ -887,9 +890,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
+        dt = self.unimodel.getData(index, 'Data')
+        self.set_phaselist(dt)
+        T, p = dt['fT'], dt['fp']
+        self.unihigh = (T, p)
+        self.invhigh = None
+        self.plot()
+        if self.pushUniZoom.isChecked():
+            self.zoom_to_uni(True)
+
+    def uni_edited(self, index):
         row = self.unimodel.getRow(index)
         self.set_phaselist(row[4])
-        T, p = self.getunicutted(row[4], row[2], row[3])
+        self.trimuni(row)
+        T, p = T, p = row[4]['fT'], row[4]['fp']
         self.unihigh = (T, p)
         self.invhigh = None
         self.plot()
@@ -897,9 +911,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.zoom_to_uni(True)
 
     def show_inv(self, index):
-        d = self.invmodel.getData(index, 'Data')
-        self.set_phaselist(d)
-        self.invhigh = (d['T'], d['p'])
+        dt = self.invmodel.getData(index, 'Data')
+        self.set_phaselist(dt)
+        self.invhigh = (dt['T'], dt['p'])
         self.unihigh = None
         self.plot()
 
@@ -961,8 +975,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if checked:
             if self.unisel.hasSelection():
                 idx = self.unisel.selectedIndexes()
-                row = self.unimodel.getRow(idx[0])
-                T, p = self.getunicutted(row[4], row[2], row[3])
+                dt = self.unimodel.getData(idx[0], 'Data')
+                T, p = dt['fT'], dt['fp']
                 dT = (T.max() - T.min()) / 5
                 dp = (p.max() - p.min()) / 5
                 self.ax.set_xlim([T.min() - dT, T.max() + dT])
@@ -1085,7 +1099,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                         row[1] = label
                                     if self.unihigh is not None:
                                         self.set_phaselist(r)
-                                        T, p = self.getunicutted(r, row[2], row[3])
+                                        self.trimuni(row)
+                                        T, p = row[4]['fT'], row[4]['fp']
                                         self.unihigh = (T, p)
                                         self.invhigh = None
                                     # for row in self.unimodel.unilist:
@@ -1101,6 +1116,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     #             self.unihigh = (T, p)
                                     #             self.invhigh = None
                                     #     break
+                                row = self.unimodel.getRowFromId(id)
+                                self.trimuni(row)
                                 self.adapt_uniview()
                                 self.plot()
                                 self.statusBar().showMessage('User-defined univariant line.')
@@ -1281,7 +1298,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 row[4] = r
                                 if self.unihigh is not None:
                                     self.set_phaselist(r)
-                                    T, p = self.getunicutted(r, row[2], row[3])
+                                    self.trimuni(row)
+                                    T, p = row[4]['fT'], row[4]['fp']
                                     self.unihigh = (T, p)
                                     self.invhigh = None
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
@@ -1297,6 +1315,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 #         self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Univariant line already exists.')
+                        row = self.unimodel.getRowFromId(id)
+                        self.trimuni(row)
                         self.adapt_uniview()
                         self.changed = True
                         self.plot()
@@ -1592,30 +1612,30 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ids = max(ids, r[0])
         return True, ids + 1
 
-    def getunicutted(self, r, b, e):
-        T = r['T'].copy()
-        p = r['p'].copy()
-        if b > 0:
-            dt = self.invmodel.getDataFromId(b)
+    def trimuni(self, row):
+        T = row[4]['T'].copy()
+        p = row[4]['p'].copy()
+        if row[2] > 0:
+            dt = self.invmodel.getDataFromId(row[2])
             T1, p1 = dt['T'][0], dt['p'][0]
         else:
             T1, p1 = T[0], p[0]
-        if e > 0:
-            dt = self.invmodel.getDataFromId(e)
+        if row[3] > 0:
+            dt = self.invmodel.getDataFromId(row[3])
             T2, p2 = dt['T'][0], dt['p'][0]
         else:
             T2, p2 = T[-1], p[-1]
         if len(T) == 0:
-            return np.array([T1, T2]), np.array([p1, p2])
+            row[4]['fT'], row[4]['fp'] = np.array([T1, T2]), np.array([p1, p2])
         elif len(T) == 1:
             dT = T2 - T1
             dp = p2 - p1
             d2 = dT**2 + dp**2
             u = (dT * (T[0] - T1) + dp * (p[0] - p1)) / d2
             if u > 0 and u < 1:
-                return np.array([T1, T[0], T2]), np.array([p1, p[0], p2])
+                row[4]['fT'], row[4]['fp'] = np.array([T1, T[0], T2]), np.array([p1, p[0], p2])
             else:
-                return np.array([T1, T2]), np.array([p1, p2])
+                row[4]['fT'], row[4]['fp'] = np.array([T1, T2]), np.array([p1, p2])
         else:
             i1 = self.getidx(T, p, T1, p1)
             i2 = self.getidx(T, p, T2, p2)
@@ -1623,10 +1643,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 za, ko = i1, i2
             else:
                 za, ko = i2, i1
-                b, e = e, b
+                row[2], row[3] = row[3], row[2]
                 T1, T2 = T2, T1
                 p1, p2 = p2, p1
-            return np.hstack([T1, T[za:ko], T2]), np.hstack([p1, p[za:ko], p2])
+            row[4]['fT'], row[4]['fp'] = np.hstack([T1, T[za:ko], T2]), np.hstack([p1, p[za:ko], p2])
 
     def getidx(self, T, p, Tp, pp):
         st = np.array([T[:-1], p[:-1]])
@@ -1679,7 +1699,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ax.cla()
             self.ax.format_coord = self.format_coord
             for k in self.unimodel.unilist:
-                T, p = self.getunicutted(k[4], k[2], k[3])
+                T, p = k[4]['fT'], k[4]['fp']
                 self.ax.plot(T, p, 'k')
                 if self.checkLabelUni.isChecked():
                     Tl, pl = self.getunilabelpoint(T, p)
@@ -1688,7 +1708,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     else:
                         self.ax.text(Tl, pl, str(k[0]), **unilabel_kw)
             for k in self.invmodel.invlist[1:]:
-                T, p = k[2]['T'], k[2]['p']
+                T, p = k[2]['T'][0], k[2]['p'][0]
                 self.ax.plot(T, p, 'k.')
                 if self.checkLabelInv.isChecked():
                     if self.checkLabels.isChecked():
@@ -1755,7 +1775,7 @@ class InvModel(QtCore.QAbstractTableModel):
             return self.header[col]
         return None
 
-    def getData(self, index, what='ID'):
+    def getData(self, index, what='Data'):
         return self.invlist[index.row()][self.header.index(what)]
 
     def getRow(self, index):
@@ -1822,7 +1842,7 @@ class UniModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    def getData(self, index, what='ID'):
+    def getData(self, index, what='Data'):
         return self.unilist[index.row()][self.header.index(what)]
 
     def getRow(self, index):
