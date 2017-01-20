@@ -10,7 +10,7 @@ For other platforms install dependencies using conda::
 
     $ conda install numpy matplotlib pyqt
 
-or by any other mechanism (see `Installing Scientific Packages <https://packaging.python.org/science/>`_.
+or by any other mechanism (see `Installing Scientific Packages <https://packaging.python.org/science/>`_).
 
 Than install pypsbuilder directly from github using pip::
 
@@ -21,6 +21,6 @@ To upgrade to latest version use::
     $ pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip \
           --upgrade-strategy only-if-needed
 
-To install most recent (and likely less stable) developement version use::
+To install most recent (and likely less stable) development version use::
 
     $ pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
