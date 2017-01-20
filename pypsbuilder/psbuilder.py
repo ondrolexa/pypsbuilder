@@ -31,7 +31,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.6'
+__version__ = '2.0.develop'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -52,7 +52,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def __init__(self, parent=None):
         super(PSBuilder, self).__init__(parent)
         self.setupUi(self)
-        self.resize(1024, 768)
+        res = QtWidgets.QDesktopWidget().screenGeometry()
+        self.resize(min(1024, res.width() - 10), min(768, res.height() - 10))
         self.setWindowTitle('PSBuilder')
         window_icon = resource_filename(__name__, 'images/pypsbuilder.png')
         self.setWindowIcon(QtGui.QIcon(window_icon))
