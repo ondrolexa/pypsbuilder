@@ -492,6 +492,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if projfile in self.recent:
                     self.recent.pop(self.recent.index(projfile))
                 self.recent.insert(0, projfile)
+                if len(self.recent) > 15:
+                    self.recent = self.recent[:15]
                 self.populate_recent()
                 self.app_settings(write=True)
                 # read scriptfile
@@ -564,6 +566,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if self.project in self.recent:
                 self.recent.pop(self.recent.index(self.project))
             self.recent.insert(0, self.project)
+            if len(self.recent) > 15:
+                self.recent = self.recent[:15]
             self.populate_recent()
             self.app_settings(write=True)
             self.statusBar().showMessage('Project saved.')
