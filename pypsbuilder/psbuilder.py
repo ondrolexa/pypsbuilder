@@ -917,8 +917,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                        **unihigh_kw)
         self.invhigh = None
         self.canvas.draw()
-        if self.pushUniZoom.isChecked():
-            self.zoom_to_uni(True)
+        # if self.pushUniZoom.isChecked():
+        #     self.zoom_to_uni(True)
 
     def show_inv(self, index):
         dt = self.invmodel.getData(index, 'Data')
@@ -1304,6 +1304,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if isnew:
                             self.unimodel.appendRow((id, label, 0, 0, r))
                             self.statusBar().showMessage('New univariant line calculated.')
+                            row = self.unimodel.getRowFromId(id)
+                            self.trimuni(row)
+                            self.adapt_uniview()
+                            self.changed = True
+                            self.plot()
                         else:
                             if not self.checkOverwrite.isChecked():
                                 row = self.unimodel.getRowFromId(id)
@@ -1312,9 +1317,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 if self.unihigh is not None:
                                     self.set_phaselist(r)
                                     self.trimuni(row)
-                                    T, p = row[4]['fT'], row[4]['fp']
-                                    self.unihigh = (T, p)
+                                    self.adapt_uniview()
+                                    self.unihigh[0].pop(0).remove()
+                                    self.unihigh = ['', row[4]['fT'], row[4]['fp']]
+                                    self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
+                                                                   **unihigh_kw)
                                     self.invhigh = None
+                                    self.changed = True
+                                    self.canvas.draw()
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                                 # for row in self.unimodel.unilist:
                                 #     if row[0] == id:
@@ -1328,11 +1338,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 #         self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Univariant line already exists.')
-                        row = self.unimodel.getRowFromId(id)
-                        self.trimuni(row)
-                        self.adapt_uniview()
-                        self.changed = True
-                        self.plot()
                     elif len(r['T']) > 0:
                         self.statusBar().showMessage('Only one point calculated. Change range.')
                     else:
@@ -1353,6 +1358,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if isnew:
                             self.invmodel.appendRow((id, label, r))
                             self.statusBar().showMessage('New invariant point calculated.')
+                            self.invview.resizeColumnsToContents()
+                            self.changed = True
+                            self.plot()
                         else:
                             if not self.checkOverwrite.isChecked():
                                 row = self.invmodel.getRowFromId(id)
@@ -1360,8 +1368,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 row[2] = r
                                 if self.invhigh is not None:
                                     self.set_phaselist(r)
-                                    self.invhigh = (r['T'], r['p'])
+                                    self.invhigh[0].pop(0).remove()
+                                    self.invhigh = ['', r['T'], r['p']]
+                                    self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
+                                                                   **invhigh_kw)
                                     self.unihigh = None
+                                    self.changed = True
+                                    self.canvas.draw()
                                 self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                                 # for row in self.invmodel.invlist[1:]:
                                 #     if row[0] == id:
@@ -1374,9 +1387,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 #         self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Invariant point already exists.')
-                        self.invview.resizeColumnsToContents()
-                        self.changed = True
-                        self.plot()
                     else:
                         self.statusBar().showMessage('Nothing in range.')
                 else:
