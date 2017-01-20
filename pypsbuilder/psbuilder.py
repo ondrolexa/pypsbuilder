@@ -31,17 +31,20 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.5'
+__version__ = '2.0.6'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
 matplotlib.rcParams['xtick.direction'] = 'out'
 matplotlib.rcParams['ytick.direction'] = 'out'
 
-popenkw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                stderr=subprocess.STDOUT, universal_newlines=False)
+
 TCenc = 'mac-roman'
 
+unihigh_kw = dict(lw=3, alpha=1, marker='o', ms=4, color='red', zorder=10)
+invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 
 class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     """Main class
@@ -572,7 +575,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             startupinfo.wShowWindow = 0
         else:
             startupinfo = None
-        p = subprocess.Popen(exe, cwd=self.workdir, startupinfo=startupinfo, **popenkw)
+        p = subprocess.Popen(exe, cwd=self.workdir, startupinfo=startupinfo, **popen_kw)
         output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
         sys.stdout.flush()
         self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + output)
@@ -720,15 +723,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def clean_high(self):
         if self.ready:
             if self.unihigh is not None:
+                self.unihigh[0].pop(0).remove()
                 self.unihigh = None
                 self.textOutput.clear()
                 self.textFullOutput.clear()
-                self.plot()
+                self.canvas.draw()
             if self.invhigh is not None:
+                self.invhigh[0].pop(0).remove()
                 self.invhigh = None
                 self.textOutput.clear()
                 self.textFullOutput.clear()
-                self.plot()
+                self.canvas.draw()
             if self.pushUniZoom.isChecked():
                 idx = self.unisel.selectedIndexes()
                 k = self.unimodel.getRow(idx[0])
@@ -892,10 +897,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def show_uni(self, index):
         dt = self.unimodel.getData(index, 'Data')
         self.set_phaselist(dt)
-        T, p = dt['fT'], dt['fp']
-        self.unihigh = (T, p)
+        self.clean_high()
+        self.unihigh = ['', dt['fT'], dt['fp']]
+        self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
+                                       **unihigh_kw)
         self.invhigh = None
-        self.plot()
+        self.canvas.draw()
         if self.pushUniZoom.isChecked():
             self.zoom_to_uni(True)
 
@@ -903,19 +910,24 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         row = self.unimodel.getRow(index)
         self.set_phaselist(row[4])
         self.trimuni(row)
-        T, p = T, p = row[4]['fT'], row[4]['fp']
-        self.unihigh = (T, p)
+        self.clean_high()
+        self.unihigh = ['', row[4]['fT'], row[4]['fp']]
+        self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
+                                       **unihigh_kw)
         self.invhigh = None
-        self.plot()
+        self.canvas.draw()
         if self.pushUniZoom.isChecked():
             self.zoom_to_uni(True)
 
     def show_inv(self, index):
         dt = self.invmodel.getData(index, 'Data')
         self.set_phaselist(dt)
-        self.invhigh = (dt['T'], dt['p'])
+        self.clean_high()
+        self.invhigh = ['', dt['T'], dt['p']]
+        self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
+                                       **invhigh_kw)
         self.unihigh = None
-        self.plot()
+        self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
@@ -1683,14 +1695,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def plot(self):
         if self.ready:
-            lalfa = self.spinAlpha.value()/100
+            lalfa = self.spinAlpha.value() / 100
             unilabel_kw = dict(ha='center', va='center', size='small',
                                bbox=dict(facecolor='cyan', alpha=lalfa, pad=4))
             invlabel_kw = dict(ha='center', va='center', size='small',
                                bbox=dict(facecolor='yellow', alpha=lalfa, pad=4))
-            unihigh_kw = dict(lw=3, alpha=0.6, marker='o', ms=4, color='red',
-                              zorder=10)
-            invhigh_kw = dict(alpha=0.6, ms=6, color='red', zorder=10)
             if self.figure.axes == []:
                 cur = None
             else:
@@ -1720,12 +1729,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ex = self.excess[:]
             ex.insert(0, '')
             self.ax.set_title(self.axname + ' +'.join(ex))
-            if self.unihigh is not None:
-                self.ax.plot(self.unihigh[0], self.unihigh[1], '-',
-                             **unihigh_kw)
-            if self.invhigh is not None:
-                self.ax.plot(self.invhigh[0], self.invhigh[1], 'o',
-                             **invhigh_kw)
             if cur is None:
                 self.ax.set_xlim(self.trange)
                 self.ax.set_ylim(self.prange)
