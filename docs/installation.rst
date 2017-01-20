@@ -6,11 +6,13 @@ For Anaconda distribution (for now only Linux64 and Win64 supported) you can ins
 
     $ conda install -c ondrolexa pypsbuilder
 
-For Anaconda distribution on Windows you can install all dependencies from official channel::
+For other platforms or if you want to try most recent version install dependencies using conda::
 
     $ conda install numpy matplotlib pyqt
 
-and install pypsbuilder directly from github using pip::
+or by any other mechanism (see `Installing Scientific Packages <https://packaging.python.org/science/>`_.
+
+Than install pypsbuilder directly from github using pip::
 
     $ pip install https://github.com/ondrolexa/pypsbuilder/archive/master.zip
 
