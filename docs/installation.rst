@@ -6,7 +6,7 @@ For Anaconda distribution (for now only Linux64 and Win64 supported) you can ins
 
     $ conda install -c ondrolexa pypsbuilder
 
-For other platforms or if you want to try most recent version install dependencies using conda::
+For other platforms install dependencies using conda::
 
     $ conda install numpy matplotlib pyqt
 
@@ -21,3 +21,6 @@ To upgrade to latest version use::
     $ pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip \
           --upgrade-strategy only-if-needed
 
+To install most recent (and likely less stable) developement version use::
+
+    $ pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
