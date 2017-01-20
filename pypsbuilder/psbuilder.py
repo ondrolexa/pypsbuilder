@@ -1034,13 +1034,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if isnew:
                     self.invmodel.appendRow((id, label, r))
                 else:
-                    for row in self.invmodel.invlist[1:]:
-                        if row[0] == id:
-                            row[2] = r
-                            if self.invhigh is not None:
-                                self.set_phaselist(r)
-                                self.invhigh = (r['T'], r['p'])
-                                self.unihigh = None
+                    row = self.invmodel.getRowFromId(id)
+                    row[2] = r
+                    if self.invhigh is not None:
+                        self.set_phaselist(r)
+                        self.invhigh = (r['T'], r['p'])
+                        self.unihigh = None
+                    # for row in self.invmodel.invlist[1:]:
+                    #     if row[0] == id:
+                    #         row[2] = r
+                    #         if self.invhigh is not None:
+                    #             self.set_phaselist(r)
+                    #             self.invhigh = (r['T'], r['p'])
+                    #             self.unihigh = None
+                    #             break
                 self.invview.resizeColumnsToContents()
                 self.plot()
                 self.statusBar().showMessage('User-defined invariant point added.')
@@ -1070,18 +1077,30 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 if isnew:
                                     self.unimodel.appendRow((id, label, b, e, r))
                                 else:
-                                    for row in self.unimodel.unilist:
-                                        if row[0] == id:
-                                            row[2] = b
-                                            row[3] = e
-                                            row[4] = r
-                                            if label:
-                                                row[1] = label
-                                            if self.unihigh is not None:
-                                                self.set_phaselist(r)
-                                                T, p = self.getunicutted(r, row[2], row[3])
-                                                self.unihigh = (T, p)
-                                                self.invhigh = None
+                                    row = self.unimodel.getRowFromId(id)
+                                    row[2] = b
+                                    row[3] = e
+                                    row[4] = r
+                                    if label:
+                                        row[1] = label
+                                    if self.unihigh is not None:
+                                        self.set_phaselist(r)
+                                        T, p = self.getunicutted(r, row[2], row[3])
+                                        self.unihigh = (T, p)
+                                        self.invhigh = None
+                                    # for row in self.unimodel.unilist:
+                                    #     if row[0] == id:
+                                    #         row[2] = b
+                                    #         row[3] = e
+                                    #         row[4] = r
+                                    #         if label:
+                                    #             row[1] = label
+                                    #         if self.unihigh is not None:
+                                    #             self.set_phaselist(r)
+                                    #             T, p = self.getunicutted(r, row[2], row[3])
+                                    #             self.unihigh = (T, p)
+                                    #             self.invhigh = None
+                                    #     break
                                 self.adapt_uniview()
                                 self.plot()
                                 self.statusBar().showMessage('User-defined univariant line.')
@@ -1257,16 +1276,25 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.statusBar().showMessage('New univariant line calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
-                                for row in self.unimodel.unilist:
-                                    if row[0] == id:
-                                        row[1] = label
-                                        row[4] = r
-                                        if self.unihigh is not None:
-                                            self.set_phaselist(r)
-                                            T, p = self.getunicutted(r, row[2], row[3])
-                                            self.unihigh = (T, p)
-                                            self.invhigh = None
-                                        self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
+                                row = self.unimodel.getRowFromId(id)
+                                row[1] = label
+                                row[4] = r
+                                if self.unihigh is not None:
+                                    self.set_phaselist(r)
+                                    T, p = self.getunicutted(r, row[2], row[3])
+                                    self.unihigh = (T, p)
+                                    self.invhigh = None
+                                self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
+                                # for row in self.unimodel.unilist:
+                                #     if row[0] == id:
+                                #         row[1] = label
+                                #         row[4] = r
+                                #         if self.unihigh is not None:
+                                #             self.set_phaselist(r)
+                                #             T, p = self.getunicutted(r, row[2], row[3])
+                                #             self.unihigh = (T, p)
+                                #             self.invhigh = None
+                                #         self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Univariant line already exists.')
                         self.adapt_uniview()
@@ -1294,15 +1322,23 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.statusBar().showMessage('New invariant point calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
-                                for row in self.invmodel.invlist[1:]:
-                                    if row[0] == id:
-                                        row[1] = label
-                                        row[2] = r
-                                        if self.invhigh is not None:
-                                            self.set_phaselist(r)
-                                            self.invhigh = (r['T'], r['p'])
-                                            self.unihigh = None
-                                        self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
+                                row = self.invmodel.getRowFromId(id)
+                                row[1] = label
+                                row[2] = r
+                                if self.invhigh is not None:
+                                    self.set_phaselist(r)
+                                    self.invhigh = (r['T'], r['p'])
+                                    self.unihigh = None
+                                self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
+                                # for row in self.invmodel.invlist[1:]:
+                                #     if row[0] == id:
+                                #         row[1] = label
+                                #         row[2] = r
+                                #         if self.invhigh is not None:
+                                #             self.set_phaselist(r)
+                                #             self.invhigh = (r['T'], r['p'])
+                                #             self.unihigh = None
+                                #         self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Invariant point already exists.')
                         self.invview.resizeColumnsToContents()
@@ -1484,15 +1520,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     break
             return found_cycle[0], path
 
-        def get_uni(b, e):
+        def find_uni_between(b, e):
             for r in self.unimodel.unilist:
                 if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
                     return r[0]
 
         def get_inv_coord(id):
-            for r in self.invmodel.invlist[1:]:
-                if r[0] == id:
-                    return r[2]['T'][0], r[2]['p'][0]
+            dt = self.invmodel.getDataFromId(id)
+            return dt['T'][0], dt['p'][0]
 
         faces = {}
         for ix, uni in enumerate(self.unimodel.unilist):
@@ -1521,7 +1556,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 edge = []
                 vert = []
                 for b, e in zip(path, path[1:] + path[:1]):
-                    edge.append(get_uni(b, e))
+                    edge.append(find_uni_between(b, e))
                     vert.append(get_inv_coord(b))
                 edges.append(edge)
                 vertices.append(vert)
@@ -1530,7 +1565,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 edge = []
                 vert = []
                 for b, e in zip(path[:-1], path[1:]):
-                    edge.append(get_uni(b, e))
+                    edge.append(find_uni_between(b, e))
                     vert.append(get_inv_coord(b))
                 # TODO possible export boundary fields (need option)
         return vertices, edges, phases
@@ -1560,17 +1595,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def getunicutted(self, r, b, e):
         T = r['T'].copy()
         p = r['p'].copy()
-        invids = [r[0] for r in self.invmodel.invlist]
         if b > 0:
-            inv = invids.index(b)
-            T1 = self.invmodel.invlist[inv][2]['T'][0]
-            p1 = self.invmodel.invlist[inv][2]['p'][0]
+            dt = self.invmodel.getDataFromId(b)
+            T1, p1 = dt['T'][0], dt['p'][0]
         else:
             T1, p1 = T[0], p[0]
         if e > 0:
-            inv = invids.index(e)
-            T2 = self.invmodel.invlist[inv][2]['T'][0]
-            p2 = self.invmodel.invlist[inv][2]['p'][0]
+            dt = self.invmodel.getDataFromId(e)
+            T2, p2 = dt['T'][0], dt['p'][0]
         else:
             T2, p2 = T[-1], p[-1]
         if len(T) == 0:
@@ -1688,6 +1720,7 @@ class InvModel(QtCore.QAbstractTableModel):
         super(InvModel, self).__init__(parent, *args)
         self.invlist = []
         self.header = ['ID', 'Label', 'Data']
+        self.lookup = {}
 
     def rowCount(self, parent=None):
         return len(self.invlist)
@@ -1708,12 +1741,14 @@ class InvModel(QtCore.QAbstractTableModel):
                              len(self.invlist), len(self.invlist))
         self.invlist.append(list(datarow))
         self.endInsertRows()
+        self.lookup[datarow[0]] = self.rowCount() - 1
 
     def removeRow(self, index):
         """ Remove model row. """
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         del self.invlist[index.row()]
         self.endRemoveRows()
+        self.lookup = {dt[0]: ix + 1 for ix, dt in enumerate(self.invlist[1:])}
 
     def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
@@ -1726,12 +1761,20 @@ class InvModel(QtCore.QAbstractTableModel):
     def getRow(self, index):
         return self.invlist[index.row()]
 
+    def getDataFromId(self, id, what='Data'):
+        # print(id, self.rowCount(), what, self.lookup)
+        return self.invlist[self.lookup[id]][self.header.index(what)]
+
+    def getRowFromId(self, id):
+        return self.invlist[self.lookup[id]]
+
 
 class UniModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, *args):
         super(UniModel, self).__init__(parent, *args)
         self.unilist = []
         self.header = ['ID', 'Label', 'Begin', 'End', 'Data']
+        self.lookup = {}
 
     def rowCount(self, parent=None):
         return len(self.unilist)
@@ -1759,12 +1802,14 @@ class UniModel(QtCore.QAbstractTableModel):
                              len(self.unilist), len(self.unilist))
         self.unilist.append(list(datarow))
         self.endInsertRows()
+        self.lookup[datarow[0]] = self.rowCount() - 1
 
     def removeRow(self, index):
         """ Remove model row. """
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         del self.unilist[index.row()]
         self.endRemoveRows()
+        self.lookup = {dt[0]: ix for ix, dt in enumerate(self.unilist)}
 
     def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
@@ -1782,6 +1827,12 @@ class UniModel(QtCore.QAbstractTableModel):
 
     def getRow(self, index):
         return self.unilist[index.row()]
+
+    def getDataFromId(self, id, what='Data'):
+        return self.unilist[self.lookup[id]][self.header.index(what)]
+
+    def getRowFromId(self, id):
+        return self.unilist[self.lookup[id]]
 
 
 class ComboDelegate(QtWidgets.QItemDelegate):
