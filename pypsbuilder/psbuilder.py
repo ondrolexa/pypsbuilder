@@ -965,7 +965,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 menu_item3 = menu.addAction(lbl3)
                 menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
                 show_menu = True
-            nr4 = dict(phases=bphases, out=bset, output='User-defined')
+            nr4 = dict(phases=aphases, out=bset, output='User-defined')
             lbl4 = ' '.join(nr4['phases']) + ' - ' + ' '.join(nr4['out'])
             isnew, id = self.getiduni(nr4)
             if isnew:
