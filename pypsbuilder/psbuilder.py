@@ -176,7 +176,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.setRowHidden(0, True)
         self.invview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # signals
-        self.invsel.selectionChanged.connect(self.clean_high)
+        self.invsel.selectionChanged.connect(self.sel_changed)
 
         # UNIVIEW
         self.unimodel = UniModel(self.uniview)
@@ -198,7 +198,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # signals
         self.unimodel.dataChanged.connect(self.uni_edited)
         self.unisel = self.uniview.selectionModel()
-        self.unisel.selectionChanged.connect(self.clean_high)
+        self.unisel.selectionChanged.connect(self.sel_changed)
 
 
     def app_settings(self, write=False):
@@ -476,15 +476,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.trange = data['trange']
                 self.prange = data['prange']
                 # views
+                for row in data['unilist']:
+                    self.unimodel.appendRow(row)
+                self.adapt_uniview()
                 for row in data['invlist']:
                     self.invmodel.appendRow(row)
                 self.invview.resizeColumnsToContents()
-                for row in data['unilist']:
-                    # for old projects needed
-                    self.trimuni(row)
-                    self.unimodel.appendRow(row)
-                self.adapt_uniview()
-
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
@@ -729,29 +726,36 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.setColumnWidth(3, 40)
 
     def clean_high(self):
-        if self.ready:
-            if self.unihigh is not None:
-                self.unihigh[0].pop(0).remove()
-                self.unihigh = None
-                self.textOutput.clear()
-                self.textFullOutput.clear()
-                self.canvas.draw()
-            if self.invhigh is not None:
-                self.invhigh[0].pop(0).remove()
-                self.invhigh = None
-                self.textOutput.clear()
-                self.textFullOutput.clear()
-                self.canvas.draw()
-            if self.pushUniZoom.isChecked():
-                idx = self.unisel.selectedIndexes()
-                k = self.unimodel.getRow(idx[0])
-                T, p = k[4]['fT'], k[4]['fp']
-                dT = (T.max() - T.min()) / 5
-                dp = (p.max() - p.min()) / 5
-                self.ax.set_xlim([T.min() - dT, T.max() + dT])
-                self.ax.set_ylim([p.min() - dp, p.max() + dp])
-                self.canvas.draw()
+        if self.unihigh is not None:
+            try:
+                self.unihigh[0].remove()
+            except:
+                pass
+            self.unihigh = None
+            self.textOutput.clear()
+            self.textFullOutput.clear()
+            self.canvas.draw()
+        if self.invhigh is not None:
+            try:
+                self.invhigh[0].remove()
+            except:
+                pass
+            self.invhigh = None
+            self.textOutput.clear()
+            self.textFullOutput.clear()
+            self.canvas.draw()
 
+    def sel_changed(self):
+        self.clean_high()
+        if self.pushUniZoom.isChecked():
+            idx = self.unisel.selectedIndexes()
+            k = self.unimodel.getRow(idx[0])
+            T, p = k[4]['fT'], k[4]['fp']
+            dT = (T.max() - T.min()) / 5
+            dp = (p.max() - p.min()) / 5
+            self.ax.set_xlim([T.min() - dT, T.max() + dT])
+            self.ax.set_ylim([p.min() - dp, p.max() + dp])
+            self.canvas.draw()
 
     def guess_toclipboard(self, p, T, clabels, vals, r):
         clipboard = QtWidgets.QApplication.clipboard()
@@ -906,22 +910,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         dt = self.unimodel.getData(index, 'Data')
         self.set_phaselist(dt)
         self.clean_high()
-        self.unihigh = ['', dt['fT'], dt['fp']]
-        self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
-                                       **unihigh_kw)
-        self.invhigh = None
+        self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
         self.canvas.draw()
         if self.pushUniZoom.isChecked():
             self.zoom_to_uni(True)
 
     def uni_edited(self, index):
         row = self.unimodel.getRow(index)
-        self.set_phaselist(row[4])
+        #self.set_phaselist(row[4])
         self.trimuni(row)
-        self.clean_high()
+        self.changed = True
         # update plot
         self.plot()
-        self.canvas.draw()
         # if self.pushUniZoom.isChecked():
         #     self.zoom_to_uni(True)
 
@@ -929,10 +929,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         dt = self.invmodel.getData(index, 'Data')
         self.set_phaselist(dt)
         self.clean_high()
-        self.invhigh = ['', dt['T'], dt['p']]
-        self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
-                                       **invhigh_kw)
-        self.unihigh = None
+        self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
         self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
@@ -1072,8 +1069,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     row[2] = r
                     if self.invhigh is not None:
                         self.set_phaselist(r)
-                        self.invhigh = (r['T'], r['p'])
-                        self.unihigh = None
+                        self.clean_high()
+                        self.invhigh.set_data(r['T'], r['p'])
                     # for row in self.invmodel.invlist[1:]:
                     #     if row[0] == id:
                     #         row[2] = r
@@ -1117,12 +1114,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     row[4] = r
                                     if label:
                                         row[1] = label
-                                    if self.unihigh is not None:
-                                        self.set_phaselist(r)
-                                        self.trimuni(row)
-                                        T, p = row[4]['fT'], row[4]['fp']
-                                        self.unihigh = (T, p)
-                                        self.invhigh = None
                                     # for row in self.unimodel.unilist:
                                     #     if row[0] == id:
                                     #         row[2] = b
@@ -1138,7 +1129,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     #     break
                                 row = self.unimodel.getRowFromId(id)
                                 self.trimuni(row)
+                                if self.unihigh is not None:
+                                    self.clean_high()
+                                    self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
                                 self.adapt_uniview()
+                                self.changed = True
                                 self.plot()
                                 self.statusBar().showMessage('User-defined univariant line.')
                             else:
@@ -1310,28 +1305,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         isnew, id = self.getiduni(r)
                         if isnew:
                             self.unimodel.appendRow((id, label, 0, 0, r))
-                            self.statusBar().showMessage('New univariant line calculated.')
                             row = self.unimodel.getRowFromId(id)
                             self.trimuni(row)
                             self.adapt_uniview()
                             self.changed = True
                             self.plot()
+                            self.statusBar().showMessage('New univariant line calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
                                 row = self.unimodel.getRowFromId(id)
                                 row[1] = label
                                 row[4] = r
-                                self.clean_high
-                                # if self.unihigh is not None:
-                                #     self.set_phaselist(r)
-                                #     self.trimuni(row)
-                                #     self.adapt_uniview()
-                                #     self.unihigh[0].pop(0).remove()
-                                #     self.unihigh = ['', row[4]['fT'], row[4]['fp']]
-                                #     self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
-                                #                                    **unihigh_kw)
-                                #     self.invhigh = None
+                                self.trimuni(row)
                                 self.changed = True
+                                self.adapt_uniview()
                                 self.plot()
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                                 # for row in self.unimodel.unilist:
@@ -1365,16 +1352,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         isnew, id = self.getidinv(r)
                         if isnew:
                             self.invmodel.appendRow((id, label, r))
-                            self.statusBar().showMessage('New invariant point calculated.')
                             self.invview.resizeColumnsToContents()
                             self.changed = True
                             self.plot()
+                            self.statusBar().showMessage('New invariant point calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
                                 row = self.invmodel.getRowFromId(id)
                                 row[1] = label
                                 row[2] = r
-                                self.clean_high
                                 # if self.invhigh is not None:
                                 #     self.set_phaselist(r)
                                 #     self.invhigh[0].pop(0).remove()
@@ -1383,7 +1369,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 #                                    **invhigh_kw)
                                 #     self.unihigh = None
                                 self.changed = True
-                                self.canvas.draw()
+                                self.plot()
                                 self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                                 # for row in self.invmodel.invlist[1:]:
                                 #     if row[0] == id:
@@ -1755,6 +1741,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 self.ax.set_xlim(cur[0])
                 self.ax.set_ylim(cur[1])
+            if self.unihigh is not None and self.unisel.hasSelection():
+                idx = self.unisel.selectedIndexes()
+                dt = self.unimodel.getData(idx[0], 'Data')
+                self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
+            if self.invhigh is not None and self.invsel.hasSelection():
+                idx = self.invsel.selectedIndexes()
+                dt = self.invmodel.getData(idx[0], 'Data')
+                self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
             self.canvas.draw()
 
 
