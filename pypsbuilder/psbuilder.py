@@ -476,12 +476,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.trange = data['trange']
                 self.prange = data['prange']
                 # views
-                for row in data['unilist']:
-                    self.unimodel.appendRow(row)
-                self.adapt_uniview()
                 for row in data['invlist']:
                     self.invmodel.appendRow(row)
                 self.invview.resizeColumnsToContents()
+                for row in data['unilist']:
+                    # for old projects needed
+                    self.trimuni(row)
+                    self.unimodel.appendRow(row)
+                self.adapt_uniview()
+
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
@@ -916,10 +919,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.set_phaselist(row[4])
         self.trimuni(row)
         self.clean_high()
-        self.unihigh = ['', row[4]['fT'], row[4]['fp']]
-        self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
-                                       **unihigh_kw)
-        self.invhigh = None
+        # update plot
+        self.plot()
         self.canvas.draw()
         # if self.pushUniZoom.isChecked():
         #     self.zoom_to_uni(True)
@@ -1031,6 +1032,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if row[3] == invnum:
                             row[3] = 0
                     self.invmodel.removeRow(idx[0])
+                    self.changed = True
                     self.plot()
                     self.statusBar().showMessage('Invariant point removed')
             else:
@@ -1045,6 +1047,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 msg, qb.Yes, qb.No)
             if reply == qb.Yes:
                 self.unimodel.removeRow(idx[0])
+                self.changed = True
                 self.plot()
                 self.statusBar().showMessage('Univariant line removed')
 
@@ -1318,17 +1321,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 row = self.unimodel.getRowFromId(id)
                                 row[1] = label
                                 row[4] = r
-                                if self.unihigh is not None:
-                                    self.set_phaselist(r)
-                                    self.trimuni(row)
-                                    self.adapt_uniview()
-                                    self.unihigh[0].pop(0).remove()
-                                    self.unihigh = ['', row[4]['fT'], row[4]['fp']]
-                                    self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
-                                                                   **unihigh_kw)
-                                    self.invhigh = None
-                                    self.changed = True
-                                    self.canvas.draw()
+                                self.clean_high
+                                # if self.unihigh is not None:
+                                #     self.set_phaselist(r)
+                                #     self.trimuni(row)
+                                #     self.adapt_uniview()
+                                #     self.unihigh[0].pop(0).remove()
+                                #     self.unihigh = ['', row[4]['fT'], row[4]['fp']]
+                                #     self.unihigh[0] = self.ax.plot(self.unihigh[1], self.unihigh[2], '-',
+                                #                                    **unihigh_kw)
+                                #     self.invhigh = None
+                                self.changed = True
+                                self.plot()
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                                 # for row in self.unimodel.unilist:
                                 #     if row[0] == id:
@@ -1370,15 +1374,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 row = self.invmodel.getRowFromId(id)
                                 row[1] = label
                                 row[2] = r
-                                if self.invhigh is not None:
-                                    self.set_phaselist(r)
-                                    self.invhigh[0].pop(0).remove()
-                                    self.invhigh = ['', r['T'], r['p']]
-                                    self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
-                                                                   **invhigh_kw)
-                                    self.unihigh = None
-                                    self.changed = True
-                                    self.canvas.draw()
+                                self.clean_high
+                                # if self.invhigh is not None:
+                                #     self.set_phaselist(r)
+                                #     self.invhigh[0].pop(0).remove()
+                                #     self.invhigh = ['', r['T'], r['p']]
+                                #     self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
+                                #                                    **invhigh_kw)
+                                #     self.unihigh = None
+                                self.changed = True
+                                self.canvas.draw()
                                 self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                                 # for row in self.invmodel.invlist[1:]:
                                 #     if row[0] == id:
