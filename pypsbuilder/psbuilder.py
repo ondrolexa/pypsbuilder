@@ -84,10 +84,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # Create phasemodel and define some logic
         self.phasemodel = QtGui.QStandardItemModel(self.phaseview)
         self.phaseview.setModel(self.phasemodel)
+        self.phaseview.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.phaseview.show()
         # Create outmodel
         self.outmodel = QtGui.QStandardItemModel(self.outview)
         self.outview.setModel(self.outmodel)
+        self.outview.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.outview.show()
 
         # SET PT RANGE VALIDATORS
@@ -446,7 +448,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.textFullOutput.clear()
             self.unihigh = None
             self.invhigh = None
-            self.initViewModels()
             self.pushUniZoom.setChecked(False)
             self.errinfo = ''
             return True
@@ -480,6 +481,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # set actual working dir in case folder was moved
             self.workdir = os.path.dirname(projfile)
             if self.doInit():
+                self.initViewModels()
                 # select phases
                 for i in range(self.phasemodel.rowCount()):
                     item = self.phasemodel.item(i)
@@ -1521,8 +1523,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                      ' % ' + ' '.join(ph) + '\n')
                                 output.write(d)
                                 tcinv.write(' '.join(list(ph) + self.excess) + '\n')
-                        output.write('\n')
-                        output.write('*\n')
+                output.write('\n')
+                output.write('*\n')
                 output.write('\n')
                 output.write('window {} {} '.format(*self.trange) +
                              '{} {}\n\n'.format(*self.prange))
