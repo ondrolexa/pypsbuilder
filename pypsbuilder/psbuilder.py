@@ -15,6 +15,7 @@ import pickle
 import gzip
 import subprocess
 from pkg_resources import resource_filename
+from pathlib import Path
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -213,8 +214,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
             builder_settings.setValue("export_areas", self.checkAreas.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
-            builder_settings.setValue("tcexe", self.tcexeEdit.text())
-            builder_settings.setValue("drexe", self.drawpdexeEdit.text())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
                 builder_settings.setArrayIndex(ix)
@@ -229,18 +228,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            # default exe
-            if sys.platform.startswith('win'):
-                tcexe = 'tc340.exe'
-                drexe = 'dr116.exe'
-            elif sys.platform.startswith('linux'):
-                tcexe = 'tc340L'
-                drexe = 'dr115L'
-            else:
-                tcexe = 'tc340'
-                drexe = 'dr116'
-            self.tcexeEdit.setText(builder_settings.value("tcexe", tcexe, type=str))
-            self.drawpdexeEdit.setText(builder_settings.value("drexe", drexe, type=str))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
@@ -287,6 +274,37 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """Parse configs and test TC settings
         """
         try:
+            # default exe
+            if sys.platform.startswith('win'):
+                tcpat = 'tc3*.exe'
+                drpat = 'dr1*.exe'
+            elif sys.platform.startswith('linux'):
+                tcpat = 'tc3*L'
+                drpat = 'dr1*L'
+            else:
+                tcpat = 'tc3*'
+                drpat = 'dr1*'
+            # THERMOCALC exe
+            tcexe = None
+            for p in Path(self.workdir).glob(tcpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    tcexe = p.name
+                    break
+            if not tcexe:
+                self.errinfo = 'No THERMOCALC executable in working directory.'
+                raise Exception()
+            self.tcexeEdit.setText(tcexe)
+            # DRAWPD exe
+            drexe = None
+            for p in Path(self.workdir).glob(drpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    drexe = p.name
+                    break
+            if not drexe:
+                self.errinfo = 'No drawpd executable in working directory.'
+                raise Exception()
+            self.drawpdexeEdit.setText(drexe)
+            # tc-prefs file
             if not os.path.exists(self.prefsfile):
                 self.errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
@@ -434,7 +452,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             return True
         except BaseException as e:
             qb = QtWidgets.QMessageBox
-            qb.critical(self, 'Error!', self.errinfo, qb.Abort)
+            qb.critical(self, 'Error!', self.errinfo + '\n' + str(e), qb.Abort)
             return False
 
     def openProject(self, checked, projfile=None):
@@ -485,6 +503,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
+                # update executables
+                if 'tcexe' in data:
+                    p = Path(self.workdir, data['tcexe'])
+                    if p.is_file() and os.access(str(p), os.X_OK):
+                        self.tcexeEdit.setText(p.name)
+                if 'drexe' in data:
+                    p = Path(self.workdir, data['drexe'])
+                    if p.is_file() and os.access(str(p), os.X_OK):
+                        self.drawpdexeEdit.setText(p.name)
                 # all done
                 self.ready = True
                 self.project = projfile
@@ -557,7 +584,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     'trange': self.trange,
                     'prange': self.prange,
                     'unilist': self.unimodel.unilist,
-                    'invlist': self.invmodel.invlist[1:]}
+                    'invlist': self.invmodel.invlist[1:],
+                    'tcexe': self.tcexeEdit.text(),
+                    'drexe': self.drawpdexeEdit.text()}
             # do save
             stream = gzip.open(self.project, 'wb')
             pickle.dump(data, stream)
