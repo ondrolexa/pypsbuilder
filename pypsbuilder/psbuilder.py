@@ -939,8 +939,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def show_uni(self, index):
         dt = self.unimodel.getData(index, 'Data')
-        self.set_phaselist(dt)
         self.clean_high()
+        self.set_phaselist(dt, show_output=True)
         self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
         self.canvas.draw()
         if self.pushUniZoom.isChecked():
@@ -958,8 +958,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def show_inv(self, index):
         dt = self.invmodel.getData(index, 'Data')
-        self.set_phaselist(dt)
         self.clean_high()
+        self.set_phaselist(dt, show_output=True)
         self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
         self.canvas.draw()
 
@@ -1098,10 +1098,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 else:
                     row = self.invmodel.getRowFromId(id)
                     row[2] = r
-                    if self.invhigh is not None:
-                        self.set_phaselist(r)
-                        self.clean_high()
-                        self.invhigh.set_data(r['T'], r['p'])
+                    # if self.invhigh is not None:
+                    #     self.set_phaselist(r, show_output=True)
+                    #     self.clean_high()
+                    #     self.invhigh.set_data(r['T'], r['p'])
                     # for row in self.invmodel.invlist[1:]:
                     #     if row[0] == id:
                     #         row[2] = r
@@ -1112,6 +1112,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     #             break
                 self.invview.resizeColumnsToContents()
                 self.plot()
+                idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                self.show_inv(idx)
                 self.statusBar().showMessage('User-defined invariant point added.')
             self.pushManual.setChecked(False)
 
@@ -1160,13 +1162,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     #     break
                                 row = self.unimodel.getRowFromId(id)
                                 self.trimuni(row)
-                                if self.unihigh is not None:
-                                    self.clean_high()
-                                    self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
+                                # if self.unihigh is not None:
+                                #     self.clean_high()
+                                #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
                                 self.adapt_uniview()
                                 self.changed = True
                                 self.plot()
-                                self.statusBar().showMessage('User-defined univariant line.')
+                                idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                                if isnew:
+                                    self.uniview.selectRow(idx.row())
+                                    self.uniview.scrollToBottom()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('User-defined univariant line added.')
                             else:
                                 msg = 'Begin and end must be different.'
                                 qb = QtWidgets.QMessageBox
@@ -1341,6 +1348,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.adapt_uniview()
                             self.changed = True
                             self.plot()
+                            #self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.uniview.selectRow(idx.row())
+                            self.uniview.scrollToBottom()
+                            self.show_uni(idx)
                             self.statusBar().showMessage('New univariant line calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
@@ -1351,6 +1363,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 self.changed = True
                                 self.adapt_uniview()
                                 self.plot()
+                                idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                                self.show_uni(idx)
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                                 # for row in self.unimodel.unilist:
                                 #     if row[0] == id:
@@ -1386,6 +1400,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.invview.resizeColumnsToContents()
                             self.changed = True
                             self.plot()
+                            idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.invview.selectRow(idx.row())
+                            self.invview.scrollToBottom()
+                            self.show_inv(idx)
                             self.statusBar().showMessage('New invariant point calculated.')
                         else:
                             if not self.checkOverwrite.isChecked():
@@ -1401,6 +1419,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 #     self.unihigh = None
                                 self.changed = True
                                 self.plot()
+                                idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                                self.show_inv(idx)
                                 self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                                 # for row in self.invmodel.invlist[1:]:
                                 #     if row[0] == id:
