@@ -1118,18 +1118,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 else:
                     row = self.invmodel.getRowFromId(id)
                     row[2] = r
-                    # if self.invhigh is not None:
-                    #     self.set_phaselist(r, show_output=True)
-                    #     self.clean_high()
-                    #     self.invhigh.set_data(r['T'], r['p'])
-                    # for row in self.invmodel.invlist[1:]:
-                    #     if row[0] == id:
-                    #         row[2] = r
-                    #         if self.invhigh is not None:
-                    #             self.set_phaselist(r)
-                    #             self.invhigh = (r['T'], r['p'])
-                    #             self.unihigh = None
-                    #             break
+                    # retrim affected
+                    for row in self.unimodel.unilist:
+                        if row[2] == id or row[3] == id:
+                            self.trimuni(row)
                 self.invview.resizeColumnsToContents()
                 self.plot()
                 idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
@@ -1387,16 +1379,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
                                 self.show_uni(idx)
                                 self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
-                                # for row in self.unimodel.unilist:
-                                #     if row[0] == id:
-                                #         row[1] = label
-                                #         row[4] = r
-                                #         if self.unihigh is not None:
-                                #             self.set_phaselist(r)
-                                #             T, p = self.getunicutted(r, row[2], row[3])
-                                #             self.unihigh = (T, p)
-                                #             self.invhigh = None
-                                #         self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Univariant line already exists.')
                     elif len(r['T']) > 0:
@@ -1431,27 +1413,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 row = self.invmodel.getRowFromId(id)
                                 row[1] = label
                                 row[2] = r
-                                # if self.invhigh is not None:
-                                #     self.set_phaselist(r)
-                                #     self.invhigh[0].pop(0).remove()
-                                #     self.invhigh = ['', r['T'], r['p']]
-                                #     self.invhigh[0] = self.ax.plot(self.invhigh[1], self.invhigh[2], 'o',
-                                #                                    **invhigh_kw)
-                                #     self.unihigh = None
+                                # retrim affected
+                                for row in self.unimodel.unilist:
+                                    if row[2] == id or row[3] == id:
+                                        self.trimuni(row)
                                 self.changed = True
                                 self.plot()
                                 idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
                                 self.show_inv(idx)
                                 self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
-                                # for row in self.invmodel.invlist[1:]:
-                                #     if row[0] == id:
-                                #         row[1] = label
-                                #         row[2] = r
-                                #         if self.invhigh is not None:
-                                #             self.set_phaselist(r)
-                                #             self.invhigh = (r['T'], r['p'])
-                                #             self.unihigh = None
-                                #         self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                             else:
                                 self.statusBar().showMessage('Invariant point already exists.')
                     else:
