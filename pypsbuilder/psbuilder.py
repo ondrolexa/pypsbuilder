@@ -203,7 +203,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.sel_changed)
 
-
     def app_settings(self, write=False):
         # Applicatiom settings
         builder_settings = QtCore.QSettings('LX', 'pypsbuilder')
@@ -261,6 +260,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.workdir = workdir
             # init THERMOCALC
             if self.doInit():
+                self.initViewModels()
                 self.ready = True
                 self.project = None
                 self.changed = True
@@ -287,13 +287,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 tcpat = 'tc3*'
                 drpat = 'dr1*'
             # THERMOCALC exe
+            errtitle = 'Initialize project error!'
             tcexe = None
             for p in Path(self.workdir).glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     tcexe = p.name
                     break
             if not tcexe:
-                self.errinfo = 'No THERMOCALC executable in working directory.'
+                errinfo = 'No THERMOCALC executable in working directory.'
                 raise Exception()
             self.tcexeEdit.setText(tcexe)
             # DRAWPD exe
@@ -303,122 +304,140 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     drexe = p.name
                     break
             if not drexe:
-                self.errinfo = 'No drawpd executable in working directory.'
+                errinfo = 'No drawpd executable in working directory.'
                 raise Exception()
             self.drawpdexeEdit.setText(drexe)
             # tc-prefs file
             if not os.path.exists(self.prefsfile):
-                self.errinfo = 'No tc-prefs.txt file in working directory.'
+                errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
-            self.errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
+            errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
             for line in open(self.prefsfile, 'r'):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == 'scriptfile':
                         self.bname = kw[1]
                         if not os.path.exists(self.scriptfile):
-                            self.errinfo = 'tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.'
+                            errinfo = 'tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.'
                             raise Exception()
                     if kw[0] == 'calcmode':
                         if kw[1] != '1':
-                            self.errinfo = 'tc-prefs: calcmode must be 1.'
+                            errinfo = 'tc-prefs: calcmode must be 1.'
                             raise Exception()
 
+            errtitle = 'Scriptfile error!'
             self.excess = []
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
             check = {'axfile': False, 'setbulk': False,
                      'setexcess': False, 'drawpd': False}
-            self.errinfo = 'Check your scriptfile.'
+            errinfo = 'Check your scriptfile.'
             with open(self.scriptfile, 'r', encoding=TCenc) as f:
                 lines = f.readlines()
             for line in lines:
                 kw = line.split('%')[0].split()
-                if kw != []:
+                if kw == ['*']:
+                    break
+                if kw:
                     if kw[0] == 'axfile':
+                        errinfo = 'Wrong argument for axfile keyword in scriptfile.'
                         self.axname = kw[1]
                         if not os.path.exists(self.axfile):
-                            self.errinfo = 'Axfile tc-' + self.axname + '.txt does not exists in working directory'
+                            errinfo = 'Axfile tc-' + self.axname + '.txt does not exists in working directory'
                             raise Exception()
                         check['axfile'] = True
-                    if kw[0] == 'setdefTwindow':
+                    elif kw[0] == 'setdefTwindow':
+                        errinfo = 'Wrong arguments for setdefTwindow keyword in scriptfile.'
                         self.trange = (float(kw[-2]), float(kw[-1]))
-                    if kw[0] == 'setdefPwindow':
+                    elif kw[0] == 'setdefPwindow':
+                        errinfo = 'Wrong arguments for setdefPwindow keyword in scriptfile.'
                         self.prange = (float(kw[-2]), float(kw[-1]))
-                    if kw[0] == 'setbulk':
+                    elif kw[0] == 'setbulk':
+                        errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
                         self.bulk = kw[1:]
                         if 'yes' in self.bulk:
                             self.bulk.remove('yes')
                         check['setbulk'] = True
-                    if kw[0] == 'setexcess':
+                    elif kw[0] == 'setexcess':
+                        errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
                         self.excess = kw[1:]
                         if 'yes' in self.excess:
                             self.excess.remove('yes')
                         if 'no' in self.excess:
                             self.excess.remove('no')
                         if 'ask' in self.excess:
-                            self.errinfo = 'Setexcess must not be set to ask.'
+                            errinfo = 'Setexcess must not be set to ask.'
                             raise Exception()
                         check['setexcess'] = True
-                    if kw[0] == 'calctatp':
-                        if not kw[1:2] == ['ask']:
-                            self.errinfo = 'Calctatp must be set to ask.'
+                    elif kw[0] == 'calctatp':
+                        errinfo = 'Wrong argument for calctatp keyword in scriptfile.'
+                        if not kw[1] == 'ask':
+                            errinfo = 'Calctatp must be set to ask.'
                             raise Exception()
-                    if kw[0] == 'drawpd':
-                        if kw[1:2] == ['no']:
-                            self.errinfo = 'Drawpd must be set to yes.'
+                    elif kw[0] == 'drawpd':
+                        errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
+                        if kw[1] == 'no':
+                            errinfo = 'Drawpd must be set to yes.'
                             raise Exception()
                         check['drawpd'] = True
-                    if kw[0] == 'dogmin':
-                        if not kw[1:2] == ['no']:
-                            self.errinfo = 'Dogmin must be set to no.'
+                    elif kw[0] == 'dogmin':
+                        errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            errinfo = 'Dogmin must be set to no.'
                             raise Exception()
-                    if kw[0] == 'fluidpresent':
-                        self.errinfo = 'Fluidpresent must be deleted from scriptfile.'
+                    elif kw[0] == 'fluidpresent':
+                        errinfo = 'Fluidpresent must be deleted from scriptfile.'
                         raise Exception()
-                    if kw[0] == 'seta':
-                        if not kw[1:2] == ['no']:
-                            self.errinfo = 'Seta must be set to no.'
+                    elif kw[0] == 'seta':
+                        errinfo = 'Wrong argument for seta keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            errinfo = 'Seta must be set to no.'
                             raise Exception()
-                    if kw[0] == 'setmu':
-                        if not kw[1:2] == ['no']:
-                            self.errinfo = 'Setmu must be set to no.'
+                    elif kw[0] == 'setmu':
+                        errinfo = 'Wrong argument for setmu keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            errinfo = 'Setmu must be set to no.'
                             raise Exception()
-                    if kw[0] == 'usecalcq':
-                        if kw[1:2] == ['ask']:
-                            self.errinfo = 'Usecalcq must be yes or no.'
+                    elif kw[0] == 'usecalcq':
+                        errinfo = 'Wrong argument for usecalcq keyword in scriptfile.'
+                        if kw[1] == 'ask':
+                            errinfo = 'Usecalcq must be yes or no.'
                             raise Exception()
-                    if kw[0] == 'pseudosection':
-                        if kw[1:2] == ['ask']:
-                            self.errinfo = 'Pseudosection must be yes or no.'
+                    elif kw[0] == 'pseudosection':
+                        errinfo = 'Wrong argument for pseudosection keyword in scriptfile.'
+                        if kw[1] == 'ask':
+                            errinfo = 'Pseudosection must be yes or no.'
                             raise Exception()
-                    if kw[0] == 'zeromodeiso':
-                        if not kw[1:2] == ['yes']:
-                            self.errinfo = 'Zeromodeiso must be set to yes.'
+                    elif kw[0] == 'zeromodeiso':
+                        errinfo = 'Wrong argument for zeromodeiso keyword in scriptfile.'
+                        if not kw[1] == 'yes':
+                            errinfo = 'Zeromodeiso must be set to yes.'
                             raise Exception()
-                    if kw[0] == 'setmodeiso':
-                        if not kw[1:2] == ['yes']:
-                            self.errinfo = 'Setmodeiso must be set to yes.'
+                    elif kw[0] == 'setmodeiso':
+                        errinfo = 'Wrong argument for setmodeiso keyword in scriptfile.'
+                        if not kw[1] == 'yes':
+                            errinfo = 'Setmodeiso must be set to yes.'
                             raise Exception()
-                    if kw[0] == 'convliq':
-                        self.errinfo = 'Convliq not yet supported.'
+                    elif kw[0] == 'convliq':
+                        errinfo = 'Convliq not yet supported.'
                         raise Exception()
-                    if kw[0] == 'setiso':
-                        if kw[1:2] != ['no']:
-                            self.errinfo = 'Setiso must be set to no.'
+                    elif kw[0] == 'setiso':
+                        errinfo = 'Wrong argument for setiso keyword in scriptfile.'
+                        if kw[1] != 'no':
+                            errinfo = 'Setiso must be set to no.'
                             raise Exception()
 
             if not check['axfile']:
-                self.errinfo = 'Axfile name must be provided in scriptfile.'
+                errinfo = 'Axfile name must be provided in scriptfile.'
                 raise Exception()
             if not check['setbulk']:
-                self.errinfo = 'Setbulk must be provided in scriptfile.'
+                errinfo = 'Setbulk must be provided in scriptfile.'
                 raise Exception()
             if not check['setexcess']:
-                self.errinfo = 'Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.'
+                errinfo = 'Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.'
                 raise Exception()
             if not check['drawpd']:
-                self.errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
+                errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
                 raise Exception()
 
             # What???
@@ -428,12 +447,26 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     nc += 1
             self.nc = nc
             # run tc to initialize
-            tcout = self.initFromTC()
+            errtitle = 'Initial THERMOCALC run error!'
+            tcout = self.runprog(self.tc, '\nkill\n\n')
+            if 'BOMBED' in tcout:
+                errinfo = tcout.split('BOMBED')[1].split('\n')[0]
+                raise Exception()
+            else:
+                errinfo = 'Error parsing initial THERMOCALC output'
+                self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
+                self.phases.sort()
+                self.vre = int(tcout.split('variance of required equilibrium ')[1].split('\n')[0].split('(')[1].split('?')[0])
+                self.deftrange = self.trange
+                self.defprange = self.prange
+                self.tcversion = tcout.split('\n')[0]
             # disconnect signal
             try:
                 self.phasemodel.itemChanged.disconnect(self.phase_changed)
             except Exception:
                 pass
+            errtitle = ''
+            errinfo = ''
             self.phasemodel.clear()
             self.outmodel.clear()
             for p in self.phases:
@@ -449,11 +482,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.unihigh = None
             self.invhigh = None
             self.pushUniZoom.setChecked(False)
-            self.errinfo = ''
             return True
         except BaseException as e:
             qb = QtWidgets.QMessageBox
-            qb.critical(self, 'Error!', self.errinfo + '\n' + str(e), qb.Abort)
+            qb.critical(self, errtitle, errinfo + '\n' + str(e), qb.Abort)
             return False
 
     def openProject(self, checked, projfile=None):
@@ -539,6 +571,39 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.app_settings(write=True)
                 self.populate_recent()
 
+    def reinitialize(self):
+        if self.ready:
+            # collect info
+            phases = []
+            for i in range(self.phasemodel.rowCount()):
+                item = self.phasemodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    phases.append(item.text())
+            out = []
+            for i in range(self.outmodel.rowCount()):
+                item = self.outmodel.item(i)
+                if item.checkState() == QtCore.Qt.Checked:
+                    out.append(item.text())
+            trange = self.trange
+            prange = self.prange
+            self.doInit()
+            # select phases
+            for i in range(self.phasemodel.rowCount()):
+                item = self.phasemodel.item(i)
+                if item.text() in phases:
+                    item.setCheckState(QtCore.Qt.Checked)
+            # select out
+            for i in range(self.outmodel.rowCount()):
+                item = self.outmodel.item(i)
+                if item.text() in out:
+                    item.setCheckState(QtCore.Qt.Checked)
+            # settings
+            self.trange = trange
+            self.prange = prange
+            self.statusBar().showMessage('Project re-initialized from scriptfile.')
+            self.changed = True
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProject(self):
         """Open working directory and initialize project
@@ -617,17 +682,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + output)
         return output
 
-    def initFromTC(self):
-        tcout = self.runprog(self.tc, '\nkill\n\n')
-        self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
-        self.phases.sort()
-        self.vre = int(tcout.split('variance of required equilibrium ')[1].split('\n')[0].split('(')[1].split('?')[0])
-        self.deftrange = self.trange
-        self.defprange = self.prange
-        self.errinfo = ''
-        self.tcversion = tcout.split('\n')[0]
-        return tcout
-
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
@@ -703,40 +757,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if status:
             title += '*'
         self.setWindowTitle(title)
-
-    def reinitialize(self):
-        if self.ready:
-            # collect info
-            phases = []
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    phases.append(item.text())
-            out = []
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    out.append(item.text())
-            trange = self.trange
-            prange = self.prange
-            self.doInit()
-            # select phases
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.text() in phases:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # select out
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.text() in out:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # settings
-            self.trange = trange
-            self.prange = prange
-            self.statusBar().showMessage('Project re-initialized from scriptfile.')
-            self.changed = True
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
 
     def format_coord(self, x, y):
         prec = self.spinPrec.value()
@@ -1177,8 +1197,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             else:
                                 msg = 'Begin and end must be different.'
                                 qb = QtWidgets.QMessageBox
-                                qb.critical(self, 'Error!',
-                                            msg, qb.Abort)
+                                qb.critical(self, 'Error!', msg, qb.Abort)
                         self.pushManual.setChecked(False)
                     else:
                         self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
@@ -1210,6 +1229,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             with open(self.scriptfile, 'w', encoding=TCenc) as f:
                 f.write(self.outScript.toPlainText())
+            self.reinitialize()
+            self.apply_setting(1)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1570,7 +1591,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Drawpd sucessfully executed.')
             except OSError as err:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Error {} during drawpd export!'.format(err), self.errinfo, qb.Abort)
+                qb.critical(self, 'Drawpd error!', str(err), qb.Abort)
 
     def construct_areas(self):
         def area_exists(indexes):
@@ -1721,15 +1742,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         st = np.array([T[:-1], p[:-1]])
         vv = np.array([Tp - T[:-1], pp - p[:-1]])
         ww = np.array([np.diff(T), np.diff(p)])
-        rat = sum(vv*ww)/np.linalg.norm(ww, axis=0)**2
-        h = st + rat*ww
+        rat = sum(vv * ww) / np.linalg.norm(ww, axis=0)**2
+        h = st + rat * ww
         d2 = sum(np.array([Tp - h[0], pp - h[1]])**2)
-        cnd = np.flatnonzero(abs(rat - 0.5)<=0.5)
+        cnd = np.flatnonzero(abs(rat - 0.5) <= 0.5)
         if not np.any(cnd):
             ix = abs(rat - 0.5).argmin()
-            if rat[ix]>1:
+            if rat[ix] > 1:
                 ix += 1
-            elif rat[ix]<0:
+            elif rat[ix] < 0:
                 ix -= 1
         else:
             ix = cnd[d2[cnd].argmin()]
