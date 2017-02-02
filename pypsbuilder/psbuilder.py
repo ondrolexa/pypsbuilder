@@ -32,7 +32,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.develop'
+__version__ = '2.0.6'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
