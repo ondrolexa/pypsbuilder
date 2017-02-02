@@ -49,3 +49,11 @@ History
 * Rightclick invariant points menu fixed
 * area construction for drawpd export fixed
 * networkx dependecy removed
+
+2.0.6 (03 Feb 2017)
+-------------------
+
+* refactoring and speedup
+* executables stored in project
+* scriptfile parsing improved
+* several bugfixes
