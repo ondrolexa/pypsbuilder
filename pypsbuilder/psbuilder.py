@@ -32,7 +32,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.6'
+__version__ = '2.0.7devel'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -46,6 +46,7 @@ TCenc = 'mac-roman'
 
 unihigh_kw = dict(lw=3, alpha=1, marker='o', ms=4, color='red', zorder=10)
 invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
+outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
 
 class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     """Main class
@@ -62,6 +63,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.about_dialog = AboutDialog(__version__)
         self.unihigh = None
         self.invhigh = None
+        self.outhigh = None
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -151,6 +153,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
         self.splitter_bottom.setSizes((400, 100))
 
+        self.phaseview.doubleClicked.connect(self.show_out)
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
@@ -460,7 +463,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.deftrange = self.trange
                 self.defprange = self.prange
                 self.tcversion = tcout.split('\n')[0]
-            # disconnect signal
+            # disconnect signals
             try:
                 self.phasemodel.itemChanged.disconnect(self.phase_changed)
             except Exception:
@@ -481,6 +484,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.textFullOutput.clear()
             self.unihigh = None
             self.invhigh = None
+            self.outhigh = None
             self.pushUniZoom.setChecked(False)
             return True
         except BaseException as e:
@@ -795,6 +799,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.textOutput.clear()
             self.textFullOutput.clear()
             self.canvas.draw()
+        if self.outhigh is not None:
+            try:
+                self.outhigh[0].remove()
+            except:
+                pass
+            self.outhigh = None
+            self.canvas.draw()
 
     def sel_changed(self):
         self.clean_high()
@@ -963,12 +974,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.set_phaselist(dt, show_output=True)
         self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
         self.canvas.draw()
-        if self.pushUniZoom.isChecked():
-            self.zoom_to_uni(True)
+        # if self.pushUniZoom.isChecked():
+        #     self.zoom_to_uni(True)
 
     def uni_edited(self, index):
         row = self.unimodel.getRow(index)
-        #self.set_phaselist(row[4])
+        # self.set_phaselist(row[4])
         self.trimuni(row)
         self.changed = True
         # update plot
@@ -982,6 +993,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.set_phaselist(dt, show_output=True)
         self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
         self.canvas.draw()
+
+    def show_out(self, index):
+        out = self.phasemodel.itemFromIndex(index).text()
+        self.clean_high()
+        oT = []
+        op = []
+        for r in self.unimodel.unilist:
+            if out in r[4]['out']:
+                oT.append(r[4]['fT'])
+                oT.append([np.nan])
+                op.append(r[4]['fp'])
+                op.append([np.nan])
+        if oT:
+            self.outhigh = self.ax.plot(np.concatenate(oT), np.concatenate(op),
+                                        '-', **outhigh_kw)
+            self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
