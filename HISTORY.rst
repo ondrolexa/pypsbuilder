@@ -54,3 +54,4 @@ History
 2.0.7 (XX YYY 2017)
 -------------------
 * double-click on phaselist highlight all unilines with zero mode phase
+* option to export partial areas

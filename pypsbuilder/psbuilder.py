@@ -16,6 +16,7 @@ import gzip
 import subprocess
 from pkg_resources import resource_filename
 from pathlib import Path
+from itertools import permutations
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -217,6 +218,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
             builder_settings.setValue("export_areas", self.checkAreas.checkState())
+            builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -231,6 +233,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -737,7 +740,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def tcinvestigatorfile(self):
-        return os.path.join(self.workdir, 'dr-investigator.txt')
+        return os.path.join(self.workdir, 'assemblages.txt')
 
     @property
     def axfile(self):
@@ -1545,7 +1548,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if self.checkAreas.isChecked():
                     # phases in areas for TC-Investigator
                     with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
-                        vertices, edges, phases = self.construct_areas()
+                        vertices, edges, phases, tedges, tphases = self.construct_areas()
                         # write output
                         output.write('% Areas\n')
                         output.write('% ------------------------------\n')
@@ -1559,6 +1562,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 d = ('{:.2f} '.format(len(ph) / maxpf) +
                                      ' '.join(['u{}'.format(e) for e in ed]) +
                                      ' % ' + ' '.join(ph) + '\n')
+                                output.write(d)
+                                tcinv.write(' '.join(list(ph) + self.excess) + '\n')
+                        if self.checkPartial.isChecked():
+                            for ed, ph in zip(tedges, tphases):
+                                d = ('{:.2f} '.format(len(ph) / maxpf) +
+                                     ' '.join(['u{}'.format(e) for e in ed]) +
+                                     ' %- ' + ' '.join(ph) + '\n')
                                 output.write(d)
                                 tcinv.write(' '.join(list(ph) + self.excess) + '\n')
                 output.write('\n')
@@ -1607,15 +1617,24 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             graph = {}
             for ix in indexes:
                 b, e = self.unimodel.unilist[ix][2], self.unimodel.unilist[ix][3]
-                if b != 0 and e != 0:
-                    if b in graph:
-                        graph[b] = graph[b] + (e,)
-                    else:
-                        graph[b] = (e,)
-                    if e in graph:
-                        graph[e] = graph[e] + (b,)
-                    else:
-                        graph[e] = (b,)
+                if b == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][0], self.unimodel.unilist[ix][4]['p'][0]
+                    b = nix
+                if e == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][-1], self.unimodel.unilist[ix][4]['p'][-1]
+                    e = nix
+                if b in graph:
+                    graph[b] = graph[b] + (e,)
+                else:
+                    graph[b] = (e,)
+                if e in graph:
+                    graph[e] = graph[e] + (b,)
+                else:
+                    graph[e] = (b,)
+                uni_index[(b, e)] = self.unimodel.unilist[ix][0]
+                uni_index[(e, b)] = self.unimodel.unilist[ix][0]
             # do search
             path = []
             marked = { u : False for u in graph }
@@ -1627,15 +1646,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     break
             return found_cycle[0], path
 
-        def find_uni_between(b, e):
-            for r in self.unimodel.unilist:
-                if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
-                    return r[0]
+        # def find_uni_between(b, e):
+        #     for r in self.unimodel.unilist:
+        #         if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
+        #             return r[0]
 
-        def get_inv_coord(id):
-            dt = self.invmodel.getDataFromId(id)
-            return dt['T'][0], dt['p'][0]
+        # def get_inv_coord(id):
+        #     dt = self.invmodel.getDataFromId(id)
+        #     return dt['T'][0], dt['p'][0]
 
+        uni_index = {}
+        for r in self.unimodel.unilist:
+            uni_index[(r[2], r[3])] = r[0]
+            uni_index[(r[3], r[2])] = r[0]
+        inv_coords = {}
+        for r in self.invmodel.invlist[1:]:
+            inv_coords[r[0]] = r[2]['T'][0], r[2]['p'][0]
         faces = {}
         for ix, uni in enumerate(self.unimodel.unilist):
             f1 = frozenset(uni[4]['phases'])
@@ -1657,25 +1683,43 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     else:
                         faces[f2] = [ix]
         vertices, edges, phases = [], [], []
+        tedges, tphases = [], []
         for f in faces:
             exists, path = area_exists(faces[f])
             if exists:
                 edge = []
                 vert = []
                 for b, e in zip(path, path[1:] + path[:1]):
-                    edge.append(find_uni_between(b, e))
-                    vert.append(get_inv_coord(b))
-                edges.append(edge)
-                vertices.append(vert)
-                phases.append(f)
+                    edge.append(uni_index.get((b, e), None))
+                    vert.append(inv_coords[b])
+                # check for bad topology
+                if not None in edge:
+                    edges.append(edge)
+                    vertices.append(vert)
+                    phases.append(f)
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Topology error!',
+                                'Path {}\n Edges {}'.format(path, edge),
+                                qb.Ignore)
             else:
-                edge = []
-                vert = []
-                for b, e in zip(path[:-1], path[1:]):
-                    edge.append(find_uni_between(b, e))
-                    vert.append(get_inv_coord(b))
-                # TODO possible export boundary fields (need option)
-        return vertices, edges, phases
+                # loop not found, search for range crossing chain
+                for ppath in permutations(path):
+                    edge = []
+                    vert = []
+                    for b, e in zip(ppath[:-1], ppath[1:]):
+                        edge.append(uni_index.get((b, e), None))
+                        vert.append(inv_coords[b])
+                    vert.append(inv_coords[e])
+                    if not None in edge:
+                        x, y = vert[0]
+                        if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
+                            x, y = vert[-1]
+                            if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
+                                tedges.append(edge)
+                                tphases.append(f)
+                        break
+        return vertices, edges, phases, tedges, tphases
 
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
