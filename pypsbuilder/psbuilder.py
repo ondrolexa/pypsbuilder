@@ -130,8 +130,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionQuit.triggered.connect(self.close)
         self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
-        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True, [], []))
-        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False, [], []))
+        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
+        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
         self.pushResetSettings.clicked.connect(lambda: self.apply_setting(8))
         self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
@@ -275,6 +275,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 # read scriptfile
                 self.read_scriptfile()
                 # update plot
+                self.figure.clear()
                 self.plot()
                 self.statusBar().showMessage('Ready')
 
@@ -332,7 +333,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             raise Exception()
 
             errtitle = 'Scriptfile error!'
-            self.excess = []
+            self.excess = set()
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
             check = {'axfile': False, 'setbulk': False,
@@ -366,11 +367,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         check['setbulk'] = True
                     elif kw[0] == 'setexcess':
                         errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
-                        self.excess = kw[1:]
+                        self.excess = set(kw[1:])
                         if 'yes' in self.excess:
                             self.excess.remove('yes')
                         if 'no' in self.excess:
-                            self.excess.remove('no')
+                            self.excess = set()
                         if 'ask' in self.excess:
                             errinfo = 'Setexcess must not be set to ask.'
                             raise Exception()
@@ -536,9 +537,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.prange = data['prange']
                 # views
                 for row in data['unilist']:
+                    # fix older
+                    row[4]['phases'] = row[4]['phases'].union(self.excess)
+                    row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[4]['out']))))
                     self.unimodel.appendRow(row)
                 self.adapt_uniview()
                 for row in data['invlist']:
+                    # fix older
+                    row[2]['phases'] = row[2]['phases'].union(self.excess)
+                    row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[2]['out']))))
                     self.invmodel.appendRow(row)
                 self.invview.resizeColumnsToContents()
                 # cutting
@@ -604,6 +615,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item = self.outmodel.item(i)
                 if item.text() in out:
                     item.setCheckState(QtCore.Qt.Checked)
+            # adapt names to excess changes            
+            for row in self.unimodel.unilist:
+                row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                          ' - ' +
+                          ' '.join(sorted(list(row[4]['out']))))
+            self.adapt_uniview()
+            for row in self.invmodel.invlist[1:]:
+                row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                          ' - ' +
+                          ' '.join(sorted(list(row[2]['out']))))
+            self.invview.resizeColumnsToContents()
             # settings
             self.trange = trange
             self.prange = prange
@@ -660,7 +682,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     'unilist': self.unimodel.unilist,
                     'invlist': self.invmodel.invlist[1:],
                     'tcexe': self.tcexeEdit.text(),
-                    'drexe': self.drawpdexeEdit.text()}
+                    'drexe': self.drawpdexeEdit.text(),
+                    'version': __version__}
             # do save
             stream = gzip.open(self.project, 'wb')
             pickle.dump(data, stream)
@@ -708,8 +731,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 tp.append(n)
                 if tpok and tp:
                     for r in tp:
-                        out = r.split('-')[1].split()
-                        phases = r.split('-')[0].split() + out
+                        po = r.split('-')
+                        out = set(po[1].split())
+                        phases = set(po[0].split()).union(out).union(self.excess)
                         self.do_calc(True, phases=phases, out=out)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -932,7 +956,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             item = self.outmodel.item(i)
             if item.checkState() == QtCore.Qt.Checked:
                 out.append(item.text())
-        return set(phases), set(out)
+        return set(phases).union(self.excess), set(out)
 
     def set_phaselist(self, r, show_output=True):
         for i in range(self.phasemodel.rowCount()):
@@ -1065,7 +1089,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.do_calc(True, phases=phases, out=aset)
             self.do_calc(True, phases=phases, out=bset)
             self.do_calc(True, phases=bphases, out=aset)
-            self.do_calc(True, phases=bphases, out=bset)
+            self.do_calc(True, phases=aphases, out=bset)
 
     def zoom_to_uni(self, checked):
         if checked:
@@ -1189,19 +1213,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     row[4] = r
                                     if label:
                                         row[1] = label
-                                    # for row in self.unimodel.unilist:
-                                    #     if row[0] == id:
-                                    #         row[2] = b
-                                    #         row[3] = e
-                                    #         row[4] = r
-                                    #         if label:
-                                    #             row[1] = label
-                                    #         if self.unihigh is not None:
-                                    #             self.set_phaselist(r)
-                                    #             T, p = self.getunicutted(r, row[2], row[3])
-                                    #             self.unihigh = (T, p)
-                                    #             self.invhigh = None
-                                    #     break
                                 row = self.unimodel.getRowFromId(id)
                                 self.trimuni(row)
                                 # if self.unihigh is not None:
@@ -1315,6 +1326,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
+                self.figure.clear()
                 self.plot()
             if (1 << 1) & bitopt:
                 self.tminEdit.setText(fmt(self.ax.get_xlim()[0]))
@@ -1346,18 +1358,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
-    def do_calc(self, cT, phases=[], out=[]):
+    def do_calc(self, cT, phases={}, out={}):
         if self.ready:
-            if phases == []:
-                for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        phases.append(item.text())
-            if out == []:
-                for i in range(self.outmodel.rowCount()):
-                    item = self.outmodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        out.append(item.text())
+            if phases == {} and out == {}:
+                phases, out = self.get_phases_out()
             self.statusBar().showMessage('Running THERMOCALC...')
             ###########
             trange = self.ax.get_xlim()
@@ -1377,10 +1381,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, label, r = self.parsedrfile()
-                r['phases'] = set(phases)
-                r['out'] = set(out)
+                typ, r = self.parsedrfile()
+                r['phases'] = phases
+                r['out'] = out
                 r['cmd'] = ans
+                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
+                         ' - ' +
+                         ' '.join(sorted(list(out))))
                 if typ == 'uni':
                     if len(r['T']) > 1:
                         isnew, id = self.getiduni(r)
@@ -1421,10 +1428,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, label, r = self.parsedrfile()
-                r['phases'] = set(phases)
-                r['out'] = set(out)
+                typ, r = self.parsedrfile()
+                r['phases'] = phases
+                r['out'] = out
                 r['cmd'] = ans
+                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
+                         ' - ' +
+                         ' '.join(sorted(list(out))))
                 if typ == 'inv':
                     if len(r['T']) > 0:
                         isnew, id = self.getidinv(r)
@@ -1474,9 +1484,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if n != '':
                     dr.append(n)
 
-        typ, label, zm = '', '', {}
+        typ, zm = '', {}
         if len(dr) > 0:
-            label = ' '.join(dr[0].split()[1:])
             with open(self.ofile, 'r', encoding=TCenc) as ofile:
                 output = ofile.read()
             if dr[0].split()[0] == 'u<k>':
@@ -1486,7 +1495,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 typ = 'inv'
                 data = dr[1:]
             else:
-                return 'none', label, zm
+                return 'none', zm
             pts = np.array([float(v) for v in ' '.join(data).split()])
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
@@ -1497,7 +1506,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if za:
                 if t[za[0] + 1].startswith('#'):
                     typ = 'none'  # nonexisting values calculated
-        return typ, label, zm
+        return typ, zm
 
     def gendrawpd(self):
         if self.ready:
@@ -1509,7 +1518,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             with open(self.drawpdfile, 'w', encoding=TCenc) as output:
                 output.write('% Generated by PyPSbuilder (c) Ondrej Lexa 2016\n')
                 output.write('2    % no. of variables in each line of data, in this case P, T\n')
-                ex = self.excess[:]
+                ex = list(self.excess)
                 ex.insert(0, '')
                 output.write('{}'.format(self.nc - len(self.excess)) +
                              '    %% effective size of the system: ' +
@@ -1563,14 +1572,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                      ' '.join(['u{}'.format(e) for e in ed]) +
                                      ' % ' + ' '.join(ph) + '\n')
                                 output.write(d)
-                                tcinv.write(' '.join(list(ph) + self.excess) + '\n')
+                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
                         if self.checkPartial.isChecked():
                             for ed, ph in zip(tedges, tphases):
                                 d = ('{:.2f} '.format(len(ph) / maxpf) +
                                      ' '.join(['u{}'.format(e) for e in ed]) +
                                      ' %- ' + ' '.join(ph) + '\n')
                                 output.write(d)
-                                tcinv.write(' '.join(list(ph) + self.excess) + '\n')
+                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
                 output.write('\n')
                 output.write('*\n')
                 output.write('\n')
@@ -1845,7 +1854,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.ax.text(T, p, str(k[0]), **invlabel_kw)
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
-            ex = self.excess[:]
+            ex = list(self.excess)
             ex.insert(0, '')
             self.ax.set_title(self.axname + ' +'.join(ex))
             if cur is None:
@@ -2153,6 +2162,60 @@ class OutputDialog(QtWidgets.QDialog):
         self.layout.addWidget(self.plainText)
         self.setLayout(self.layout)
         self.plainText.setPlainText(txt)
+
+class ProjectFile(object):
+    def __init__(self, projfile):
+        if os.path.exists(projfile):
+            stream = gzip.open(projfile, 'rb')
+            self.data = pickle.load(stream)
+            stream.close()
+        else:
+            raise Exception('File {} does not exists.'.format(projfile))
+
+    @property
+    def selphases(self):
+        return self.data['selphases']
+
+    @property
+    def out(self):
+        return self.data['out']
+
+    @property
+    def trange(self):
+        return self.data['trange']
+
+    @property
+    def prange(self):
+        return self.data['prange']
+
+    @property
+    def unilist(self):
+        return self.data['unilist']
+
+    @property
+    def invlist(self):
+        return self.data['invlist']
+
+    @property
+    def tcexe(self):
+        if 'tcexe' in self.data:
+            return self.data['tcexe']
+        else:
+            print('Old format. No tcexe.')
+
+    @property
+    def drexe(self):
+        if 'drexe' in self.data:
+            return self.data['drexe']
+        else:
+            print('Old format. No drexe.')
+
+    @property
+    def version(self):
+        if 'version' in self.data:
+            return self.data['version']
+        else:
+            print('Old format. No version.')
 
 
 def main():
