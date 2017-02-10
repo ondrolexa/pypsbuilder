@@ -55,3 +55,6 @@ History
 -------------------
 * double-click on phaselist highlight all unilines with zero mode phase
 * option to export partial areas
+* excess phases stored in unilines and invpoints
+* labeling phases sorted alphabeltically, same as phaselist
+* auto bug fixed
