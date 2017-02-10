@@ -142,8 +142,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionGenerate.triggered.connect(self.generate)
         self.pushGuessUni.clicked.connect(self.unisel_guesses)
         self.pushGuessInv.clicked.connect(self.invsel_guesses)
-        #self.pushInvAdd.toggled.connect(self.addudinv)
-        #self.pushInvAdd.setCheckable(True)
         self.pushInvAuto.clicked.connect(self.auto_inv_calc)
         self.pushUniZoom.clicked.connect(self.zoom_to_uni)
         self.pushUniZoom.setCheckable(True)
@@ -158,6 +156,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
+        # additional keyboard shortcuts
+        self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
+        self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
+        self.scCalcPatT = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+P"), self)
+        self.scCalcPatT.activated.connect(lambda: self.do_calc(False))
+        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
+        self.scHome.activated.connect(self.toolbar.home)
 
         self.app_settings()
         self.populate_recent()

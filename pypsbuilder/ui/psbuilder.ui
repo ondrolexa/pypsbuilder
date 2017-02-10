@@ -877,6 +877,9 @@
    <property name="toolTip">
     <string>Create new project</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="actionOpen">
    <property name="text">
@@ -884,6 +887,9 @@
    </property>
    <property name="toolTip">
     <string>Open project</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionSave">
@@ -893,6 +899,9 @@
    <property name="toolTip">
     <string>Save project</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
   <action name="actionExport_Drawpd">
    <property name="text">
@@ -901,10 +910,16 @@
    <property name="toolTip">
     <string>Export Drawpd file</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
   </action>
   <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
    </property>
   </action>
   <action name="actionReload">

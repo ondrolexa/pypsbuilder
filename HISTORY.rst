@@ -58,3 +58,5 @@ History
 * excess phases stored in unilines and invpoints
 * labeling phases sorted alphabeltically, same as phaselist
 * auto bug fixed
+* Keyboard shortcuts added Ctrl-T and Ctrl-P for CalcTatP and CalcPatT
+* Ctrl-H Zoom home
