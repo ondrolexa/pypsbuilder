@@ -16,6 +16,7 @@ import gzip
 import subprocess
 from pkg_resources import resource_filename
 from pathlib import Path
+from itertools import permutations
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -32,7 +33,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.6'
+__version__ = '2.0.7devel'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -46,6 +47,7 @@ TCenc = 'mac-roman'
 
 unihigh_kw = dict(lw=3, alpha=1, marker='o', ms=4, color='red', zorder=10)
 invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
+outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
 
 class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     """Main class
@@ -62,6 +64,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.about_dialog = AboutDialog(__version__)
         self.unihigh = None
         self.invhigh = None
+        self.outhigh = None
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -127,8 +130,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionQuit.triggered.connect(self.close)
         self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
-        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True, [], []))
-        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False, [], []))
+        self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
+        self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
         self.pushResetSettings.clicked.connect(lambda: self.apply_setting(8))
         self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
@@ -139,8 +142,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionGenerate.triggered.connect(self.generate)
         self.pushGuessUni.clicked.connect(self.unisel_guesses)
         self.pushGuessInv.clicked.connect(self.invsel_guesses)
-        #self.pushInvAdd.toggled.connect(self.addudinv)
-        #self.pushInvAdd.setCheckable(True)
         self.pushInvAuto.clicked.connect(self.auto_inv_calc)
         self.pushUniZoom.clicked.connect(self.zoom_to_uni)
         self.pushUniZoom.setCheckable(True)
@@ -151,9 +152,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
         self.splitter_bottom.setSizes((400, 100))
 
+        self.phaseview.doubleClicked.connect(self.show_out)
         self.uniview.doubleClicked.connect(self.show_uni)
         self.invview.doubleClicked.connect(self.show_inv)
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
+        # additional keyboard shortcuts
+        self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
+        self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
+        self.scCalcPatT = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+P"), self)
+        self.scCalcPatT.activated.connect(lambda: self.do_calc(False))
+        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
+        self.scHome.activated.connect(self.toolbar.home)
 
         self.app_settings()
         self.populate_recent()
@@ -214,6 +223,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
             builder_settings.setValue("export_areas", self.checkAreas.checkState())
+            builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -228,6 +238,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -269,6 +280,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 # read scriptfile
                 self.read_scriptfile()
                 # update plot
+                self.figure.clear()
                 self.plot()
                 self.statusBar().showMessage('Ready')
 
@@ -326,7 +338,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             raise Exception()
 
             errtitle = 'Scriptfile error!'
-            self.excess = []
+            self.excess = set()
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
             check = {'axfile': False, 'setbulk': False,
@@ -360,11 +372,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         check['setbulk'] = True
                     elif kw[0] == 'setexcess':
                         errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
-                        self.excess = kw[1:]
+                        self.excess = set(kw[1:])
                         if 'yes' in self.excess:
                             self.excess.remove('yes')
                         if 'no' in self.excess:
-                            self.excess.remove('no')
+                            self.excess = set()
                         if 'ask' in self.excess:
                             errinfo = 'Setexcess must not be set to ask.'
                             raise Exception()
@@ -460,7 +472,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.deftrange = self.trange
                 self.defprange = self.prange
                 self.tcversion = tcout.split('\n')[0]
-            # disconnect signal
+            # disconnect signals
             try:
                 self.phasemodel.itemChanged.disconnect(self.phase_changed)
             except Exception:
@@ -481,6 +493,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.textFullOutput.clear()
             self.unihigh = None
             self.invhigh = None
+            self.outhigh = None
             self.pushUniZoom.setChecked(False)
             return True
         except BaseException as e:
@@ -529,9 +542,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.prange = data['prange']
                 # views
                 for row in data['unilist']:
+                    # fix older
+                    row[4]['phases'] = row[4]['phases'].union(self.excess)
+                    row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[4]['out']))))
                     self.unimodel.appendRow(row)
                 self.adapt_uniview()
                 for row in data['invlist']:
+                    # fix older
+                    row[2]['phases'] = row[2]['phases'].union(self.excess)
+                    row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[2]['out']))))
                     self.invmodel.appendRow(row)
                 self.invview.resizeColumnsToContents()
                 # cutting
@@ -597,6 +620,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item = self.outmodel.item(i)
                 if item.text() in out:
                     item.setCheckState(QtCore.Qt.Checked)
+            # adapt names to excess changes            
+            for row in self.unimodel.unilist:
+                row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                          ' - ' +
+                          ' '.join(sorted(list(row[4]['out']))))
+            self.adapt_uniview()
+            for row in self.invmodel.invlist[1:]:
+                row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                          ' - ' +
+                          ' '.join(sorted(list(row[2]['out']))))
+            self.invview.resizeColumnsToContents()
             # settings
             self.trange = trange
             self.prange = prange
@@ -653,7 +687,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     'unilist': self.unimodel.unilist,
                     'invlist': self.invmodel.invlist[1:],
                     'tcexe': self.tcexeEdit.text(),
-                    'drexe': self.drawpdexeEdit.text()}
+                    'drexe': self.drawpdexeEdit.text(),
+                    'version': __version__}
             # do save
             stream = gzip.open(self.project, 'wb')
             pickle.dump(data, stream)
@@ -701,8 +736,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 tp.append(n)
                 if tpok and tp:
                     for r in tp:
-                        out = r.split('-')[1].split()
-                        phases = r.split('-')[0].split() + out
+                        po = r.split('-')
+                        out = set(po[1].split())
+                        phases = set(po[0].split()).union(out).union(self.excess)
                         self.do_calc(True, phases=phases, out=out)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -733,7 +769,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def tcinvestigatorfile(self):
-        return os.path.join(self.workdir, 'dr-investigator.txt')
+        return os.path.join(self.workdir, 'assemblages.txt')
 
     @property
     def axfile(self):
@@ -794,6 +830,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.invhigh = None
             self.textOutput.clear()
             self.textFullOutput.clear()
+            self.canvas.draw()
+        if self.outhigh is not None:
+            try:
+                self.outhigh[0].remove()
+            except:
+                pass
+            self.outhigh = None
             self.canvas.draw()
 
     def sel_changed(self):
@@ -918,7 +961,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             item = self.outmodel.item(i)
             if item.checkState() == QtCore.Qt.Checked:
                 out.append(item.text())
-        return set(phases), set(out)
+        return set(phases).union(self.excess), set(out)
 
     def set_phaselist(self, r, show_output=True):
         for i in range(self.phasemodel.rowCount()):
@@ -963,12 +1006,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.set_phaselist(dt, show_output=True)
         self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
         self.canvas.draw()
-        if self.pushUniZoom.isChecked():
-            self.zoom_to_uni(True)
+        # if self.pushUniZoom.isChecked():
+        #     self.zoom_to_uni(True)
 
     def uni_edited(self, index):
         row = self.unimodel.getRow(index)
-        #self.set_phaselist(row[4])
+        # self.set_phaselist(row[4])
         self.trimuni(row)
         self.changed = True
         # update plot
@@ -982,6 +1025,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.set_phaselist(dt, show_output=True)
         self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
         self.canvas.draw()
+
+    def show_out(self, index):
+        out = self.phasemodel.itemFromIndex(index).text()
+        self.clean_high()
+        oT = []
+        op = []
+        for r in self.unimodel.unilist:
+            if out in r[4]['out']:
+                oT.append(r[4]['fT'])
+                oT.append([np.nan])
+                op.append(r[4]['fp'])
+                op.append([np.nan])
+        if oT:
+            self.outhigh = self.ax.plot(np.concatenate(oT), np.concatenate(op),
+                                        '-', **outhigh_kw)
+            self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
@@ -1035,7 +1094,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.do_calc(True, phases=phases, out=aset)
             self.do_calc(True, phases=phases, out=bset)
             self.do_calc(True, phases=bphases, out=aset)
-            self.do_calc(True, phases=bphases, out=bset)
+            self.do_calc(True, phases=aphases, out=bset)
 
     def zoom_to_uni(self, checked):
         if checked:
@@ -1159,19 +1218,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     row[4] = r
                                     if label:
                                         row[1] = label
-                                    # for row in self.unimodel.unilist:
-                                    #     if row[0] == id:
-                                    #         row[2] = b
-                                    #         row[3] = e
-                                    #         row[4] = r
-                                    #         if label:
-                                    #             row[1] = label
-                                    #         if self.unihigh is not None:
-                                    #             self.set_phaselist(r)
-                                    #             T, p = self.getunicutted(r, row[2], row[3])
-                                    #             self.unihigh = (T, p)
-                                    #             self.invhigh = None
-                                    #     break
                                 row = self.unimodel.getRowFromId(id)
                                 self.trimuni(row)
                                 # if self.unihigh is not None:
@@ -1285,6 +1331,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
+                self.figure.clear()
                 self.plot()
             if (1 << 1) & bitopt:
                 self.tminEdit.setText(fmt(self.ax.get_xlim()[0]))
@@ -1316,18 +1363,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
-    def do_calc(self, cT, phases=[], out=[]):
+    def do_calc(self, cT, phases={}, out={}):
         if self.ready:
-            if phases == []:
-                for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        phases.append(item.text())
-            if out == []:
-                for i in range(self.outmodel.rowCount()):
-                    item = self.outmodel.item(i)
-                    if item.checkState() == QtCore.Qt.Checked:
-                        out.append(item.text())
+            if phases == {} and out == {}:
+                phases, out = self.get_phases_out()
             self.statusBar().showMessage('Running THERMOCALC...')
             ###########
             trange = self.ax.get_xlim()
@@ -1347,10 +1386,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, label, r = self.parsedrfile()
-                r['phases'] = set(phases)
-                r['out'] = set(out)
+                typ, r = self.parsedrfile()
+                r['phases'] = phases
+                r['out'] = out
                 r['cmd'] = ans
+                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
+                         ' - ' +
+                         ' '.join(sorted(list(out))))
                 if typ == 'uni':
                     if len(r['T']) > 1:
                         isnew, id = self.getiduni(r)
@@ -1391,10 +1433,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, label, r = self.parsedrfile()
-                r['phases'] = set(phases)
-                r['out'] = set(out)
+                typ, r = self.parsedrfile()
+                r['phases'] = phases
+                r['out'] = out
                 r['cmd'] = ans
+                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
+                         ' - ' +
+                         ' '.join(sorted(list(out))))
                 if typ == 'inv':
                     if len(r['T']) > 0:
                         isnew, id = self.getidinv(r)
@@ -1444,9 +1489,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if n != '':
                     dr.append(n)
 
-        typ, label, zm = '', '', {}
+        typ, zm = '', {}
         if len(dr) > 0:
-            label = ' '.join(dr[0].split()[1:])
             with open(self.ofile, 'r', encoding=TCenc) as ofile:
                 output = ofile.read()
             if dr[0].split()[0] == 'u<k>':
@@ -1456,7 +1500,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 typ = 'inv'
                 data = dr[1:]
             else:
-                return 'none', label, zm
+                return 'none', zm
             pts = np.array([float(v) for v in ' '.join(data).split()])
             zm['p'] = pts[0::2]
             zm['T'] = pts[1::2]
@@ -1467,7 +1511,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if za:
                 if t[za[0] + 1].startswith('#'):
                     typ = 'none'  # nonexisting values calculated
-        return typ, label, zm
+        return typ, zm
 
     def gendrawpd(self):
         if self.ready:
@@ -1479,7 +1523,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             with open(self.drawpdfile, 'w', encoding=TCenc) as output:
                 output.write('% Generated by PyPSbuilder (c) Ondrej Lexa 2016\n')
                 output.write('2    % no. of variables in each line of data, in this case P, T\n')
-                ex = self.excess[:]
+                ex = list(self.excess)
                 ex.insert(0, '')
                 output.write('{}'.format(self.nc - len(self.excess)) +
                              '    %% effective size of the system: ' +
@@ -1518,7 +1562,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if self.checkAreas.isChecked():
                     # phases in areas for TC-Investigator
                     with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
-                        vertices, edges, phases = self.construct_areas()
+                        vertices, edges, phases, tedges, tphases = self.construct_areas()
                         # write output
                         output.write('% Areas\n')
                         output.write('% ------------------------------\n')
@@ -1533,7 +1577,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                      ' '.join(['u{}'.format(e) for e in ed]) +
                                      ' % ' + ' '.join(ph) + '\n')
                                 output.write(d)
-                                tcinv.write(' '.join(list(ph) + self.excess) + '\n')
+                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
+                        if self.checkPartial.isChecked():
+                            for ed, ph in zip(tedges, tphases):
+                                d = ('{:.2f} '.format(len(ph) / maxpf) +
+                                     ' '.join(['u{}'.format(e) for e in ed]) +
+                                     ' %- ' + ' '.join(ph) + '\n')
+                                output.write(d)
+                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
                 output.write('\n')
                 output.write('*\n')
                 output.write('\n')
@@ -1580,15 +1631,24 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             graph = {}
             for ix in indexes:
                 b, e = self.unimodel.unilist[ix][2], self.unimodel.unilist[ix][3]
-                if b != 0 and e != 0:
-                    if b in graph:
-                        graph[b] = graph[b] + (e,)
-                    else:
-                        graph[b] = (e,)
-                    if e in graph:
-                        graph[e] = graph[e] + (b,)
-                    else:
-                        graph[e] = (b,)
+                if b == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][0], self.unimodel.unilist[ix][4]['p'][0]
+                    b = nix
+                if e == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][-1], self.unimodel.unilist[ix][4]['p'][-1]
+                    e = nix
+                if b in graph:
+                    graph[b] = graph[b] + (e,)
+                else:
+                    graph[b] = (e,)
+                if e in graph:
+                    graph[e] = graph[e] + (b,)
+                else:
+                    graph[e] = (b,)
+                uni_index[(b, e)] = self.unimodel.unilist[ix][0]
+                uni_index[(e, b)] = self.unimodel.unilist[ix][0]
             # do search
             path = []
             marked = { u : False for u in graph }
@@ -1600,15 +1660,22 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     break
             return found_cycle[0], path
 
-        def find_uni_between(b, e):
-            for r in self.unimodel.unilist:
-                if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
-                    return r[0]
+        # def find_uni_between(b, e):
+        #     for r in self.unimodel.unilist:
+        #         if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
+        #             return r[0]
 
-        def get_inv_coord(id):
-            dt = self.invmodel.getDataFromId(id)
-            return dt['T'][0], dt['p'][0]
+        # def get_inv_coord(id):
+        #     dt = self.invmodel.getDataFromId(id)
+        #     return dt['T'][0], dt['p'][0]
 
+        uni_index = {}
+        for r in self.unimodel.unilist:
+            uni_index[(r[2], r[3])] = r[0]
+            uni_index[(r[3], r[2])] = r[0]
+        inv_coords = {}
+        for r in self.invmodel.invlist[1:]:
+            inv_coords[r[0]] = r[2]['T'][0], r[2]['p'][0]
         faces = {}
         for ix, uni in enumerate(self.unimodel.unilist):
             f1 = frozenset(uni[4]['phases'])
@@ -1630,25 +1697,43 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     else:
                         faces[f2] = [ix]
         vertices, edges, phases = [], [], []
+        tedges, tphases = [], []
         for f in faces:
             exists, path = area_exists(faces[f])
             if exists:
                 edge = []
                 vert = []
                 for b, e in zip(path, path[1:] + path[:1]):
-                    edge.append(find_uni_between(b, e))
-                    vert.append(get_inv_coord(b))
-                edges.append(edge)
-                vertices.append(vert)
-                phases.append(f)
+                    edge.append(uni_index.get((b, e), None))
+                    vert.append(inv_coords[b])
+                # check for bad topology
+                if not None in edge:
+                    edges.append(edge)
+                    vertices.append(vert)
+                    phases.append(f)
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Topology error!',
+                                'Path {}\n Edges {}'.format(path, edge),
+                                qb.Ignore)
             else:
-                edge = []
-                vert = []
-                for b, e in zip(path[:-1], path[1:]):
-                    edge.append(find_uni_between(b, e))
-                    vert.append(get_inv_coord(b))
-                # TODO possible export boundary fields (need option)
-        return vertices, edges, phases
+                # loop not found, search for range crossing chain
+                for ppath in permutations(path):
+                    edge = []
+                    vert = []
+                    for b, e in zip(ppath[:-1], ppath[1:]):
+                        edge.append(uni_index.get((b, e), None))
+                        vert.append(inv_coords[b])
+                    vert.append(inv_coords[e])
+                    if not None in edge:
+                        x, y = vert[0]
+                        if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
+                            x, y = vert[-1]
+                            if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
+                                tedges.append(edge)
+                                tphases.append(f)
+                        break
+        return vertices, edges, phases, tedges, tphases
 
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
@@ -1774,7 +1859,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.ax.text(T, p, str(k[0]), **invlabel_kw)
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
-            ex = self.excess[:]
+            ex = list(self.excess)
             ex.insert(0, '')
             self.ax.set_title(self.axname + ' +'.join(ex))
             if cur is None:
@@ -2082,6 +2167,60 @@ class OutputDialog(QtWidgets.QDialog):
         self.layout.addWidget(self.plainText)
         self.setLayout(self.layout)
         self.plainText.setPlainText(txt)
+
+class ProjectFile(object):
+    def __init__(self, projfile):
+        if os.path.exists(projfile):
+            stream = gzip.open(projfile, 'rb')
+            self.data = pickle.load(stream)
+            stream.close()
+        else:
+            raise Exception('File {} does not exists.'.format(projfile))
+
+    @property
+    def selphases(self):
+        return self.data['selphases']
+
+    @property
+    def out(self):
+        return self.data['out']
+
+    @property
+    def trange(self):
+        return self.data['trange']
+
+    @property
+    def prange(self):
+        return self.data['prange']
+
+    @property
+    def unilist(self):
+        return self.data['unilist']
+
+    @property
+    def invlist(self):
+        return self.data['invlist']
+
+    @property
+    def tcexe(self):
+        if 'tcexe' in self.data:
+            return self.data['tcexe']
+        else:
+            print('Old format. No tcexe.')
+
+    @property
+    def drexe(self):
+        if 'drexe' in self.data:
+            return self.data['drexe']
+        else:
+            print('Old format. No drexe.')
+
+    @property
+    def version(self):
+        if 'version' in self.data:
+            return self.data['version']
+        else:
+            print('Old format. No version.')
 
 
 def main():

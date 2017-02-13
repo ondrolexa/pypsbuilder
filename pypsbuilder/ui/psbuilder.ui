@@ -440,10 +440,17 @@
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
+              <item row="8" column="0">
                <widget class="QCheckBox" name="checkOverwrite">
                 <property name="text">
                  <string>Do not overwrite already calculated lines and points</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="checkPartial">
+                <property name="text">
+                 <string>Export partial areas to drawpd</string>
                 </property>
                </widget>
               </item>
@@ -870,6 +877,9 @@
    <property name="toolTip">
     <string>Create new project</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="actionOpen">
    <property name="text">
@@ -877,6 +887,9 @@
    </property>
    <property name="toolTip">
     <string>Open project</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionSave">
@@ -886,6 +899,9 @@
    <property name="toolTip">
     <string>Save project</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
   <action name="actionExport_Drawpd">
    <property name="text">
@@ -894,10 +910,16 @@
    <property name="toolTip">
     <string>Export Drawpd file</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
   </action>
   <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
    </property>
   </action>
   <action name="actionReload">
