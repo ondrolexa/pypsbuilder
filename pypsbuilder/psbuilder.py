@@ -2174,6 +2174,13 @@ class ProjectFile(object):
             stream = gzip.open(projfile, 'rb')
             self.data = pickle.load(stream)
             stream.close()
+            self.workdir = os.path.dirname(projfile)
+            self.unilookup = {}
+            self.invlookup = {}
+            for ix, r in enumerate(self.unilist):
+                self.unilookup[r[0]] = ix
+            for ix, r in enumerate(self.invlist):
+                self.invlookup[r[0]] = ix
         else:
             raise Exception('File {} does not exists.'.format(projfile))
 
@@ -2221,6 +2228,12 @@ class ProjectFile(object):
             return self.data['version']
         else:
             print('Old format. No version.')
+
+    def unidata(self, fid):
+        return self.unilist[self.unilookup[fid]][4]
+
+    def invdata(self, fid):
+        return self.invlist[self.invlookup[fid]][4]
 
 
 def main():
