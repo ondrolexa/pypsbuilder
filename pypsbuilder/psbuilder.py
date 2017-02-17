@@ -2175,6 +2175,7 @@ class ProjectFile(object):
             self.data = pickle.load(stream)
             stream.close()
             self.workdir = os.path.dirname(projfile)
+            self.name = os.path.splitext(os.path.basename(projfile))[0]
             self.unilookup = {}
             self.invlookup = {}
             for ix, r in enumerate(self.unilist):
