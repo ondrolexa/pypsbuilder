@@ -620,7 +620,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item = self.outmodel.item(i)
                 if item.text() in out:
                     item.setCheckState(QtCore.Qt.Checked)
-            # adapt names to excess changes            
+            # adapt names to excess changes
             for row in self.unimodel.unilist:
                 row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
                           ' - ' +
@@ -2231,10 +2231,14 @@ class ProjectFile(object):
             print('Old format. No version.')
 
     def unidata(self, fid):
-        return self.unilist[self.unilookup[fid]][4]
+        uni = self.unilist[self.unilookup[fid]]
+        dt = uni[4]
+        dt['begin'] = uni[2]
+        dt['end'] = uni[3]
+        return dt
 
     def invdata(self, fid):
-        return self.invlist[self.invlookup[fid]][4]
+        return self.invlist[self.invlookup[fid]][2]
 
 
 def main():
