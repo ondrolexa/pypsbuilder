@@ -11,12 +11,15 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'numpy',
     'matplotlib'
+    'scipy'
+    'shapely'
+    'descartes'
 ]
 
 setup(
     name='pypsbuilder',
-    version='2.0.7',
-    description="Simplistic THERMOCALC front-end for constructing PT pseudosections",
+    version='2.1.0',
+    description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + '\n\n' + history,
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',

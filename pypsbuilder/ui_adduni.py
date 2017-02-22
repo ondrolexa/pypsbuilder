@@ -20,6 +20,7 @@ class Ui_AddUni(object):
         self.label.setObjectName("label")
         self.horizontalLayout_2.addWidget(self.label)
         self.labelEdit = QtWidgets.QLineEdit(AddUni)
+        self.labelEdit.setReadOnly(True)
         self.labelEdit.setObjectName("labelEdit")
         self.horizontalLayout_2.addWidget(self.labelEdit)
         self.verticalLayout.addLayout(self.horizontalLayout_2)

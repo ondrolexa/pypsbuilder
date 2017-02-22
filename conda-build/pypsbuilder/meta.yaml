@@ -23,12 +23,18 @@ requirements:
     - pyqt
     - numpy
     - matplotlib
+    - scipy
+    - shapely
+    - descartes
 
   run:
     - python
     - pyqt
     - numpy
     - matplotlib
+    - scipy
+    - shapely
+    - descartes
 
 test:
   # Python imports

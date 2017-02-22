@@ -14,26 +14,38 @@ import os
 import pickle
 import gzip
 import subprocess
+import time
+import itertools
+import shutil
+import pathlib
+from collections import OrderedDict
 from pkg_resources import resource_filename
-from pathlib import Path
-from itertools import permutations
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 import numpy as np
 import matplotlib
-
+from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.colorbar import ColorbarBase
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
+
+from shapely.geometry import LineString, Point, MultiPoint
+from shapely.ops import polygonize, linemerge, unary_union
+from shapely.prepared import prep
+from scipy.interpolate import Rbf
+from tqdm import tqdm, trange
+from descartes import PolygonPatch
 
 from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.0.7devel'
+__version__ = '2.1.0devel'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -301,7 +313,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
             tcexe = None
-            for p in Path(self.workdir).glob(tcpat):
+            for p in pathlib.Path(self.workdir).glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     tcexe = p.name
                     break
@@ -311,7 +323,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.tcexeEdit.setText(tcexe)
             # DRAWPD exe
             drexe = None
-            for p in Path(self.workdir).glob(drpat):
+            for p in pathlib.Path(self.workdir).glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     drexe = p.name
                     break
@@ -341,8 +353,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.excess = set()
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
-            check = {'axfile': False, 'setbulk': False,
-                     'setexcess': False, 'drawpd': False}
+            check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
+                     'setexcess': False, 'drawpd': False, 'printxyz': False}
             errinfo = 'Check your scriptfile.'
             with open(self.scriptfile, 'r', encoding=TCenc) as f:
                 lines = f.readlines()
@@ -392,6 +404,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             errinfo = 'Drawpd must be set to yes.'
                             raise Exception()
                         check['drawpd'] = True
+                    elif kw[0] == 'printbulkinfo':
+                        errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
+                        if kw[1] == 'no':
+                            errinfo = 'Printbulkinfo must be set to yes.'
+                            raise Exception()
+                        check['printbulkinfo'] = True
+                    elif kw[0] == 'printxyz':
+                        errinfo = 'Wrong argument for printxyz keyword in scriptfile.'
+                        if kw[1] == 'no':
+                            errinfo = 'Printxyz must be set to yes.'
+                            raise Exception()
+                        check['printxyz'] = True
                     elif kw[0] == 'dogmin':
                         errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
                         if not kw[1] == 'no':
@@ -450,6 +474,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 raise Exception()
             if not check['drawpd']:
                 errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
+                raise Exception()
+            if not check['printbulkinfo']:
+                errinfo = 'Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.'
+                raise Exception()
+            if not check['printxyz']:
+                errinfo = 'Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.'
                 raise Exception()
 
             # What???
@@ -541,32 +571,48 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.trange = data['trange']
                 self.prange = data['prange']
                 # views
-                for row in data['unilist']:
-                    # fix older
-                    row[4]['phases'] = row[4]['phases'].union(self.excess)
-                    row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
-                              ' - ' +
-                              ' '.join(sorted(list(row[4]['out']))))
-                    self.unimodel.appendRow(row)
-                self.adapt_uniview()
-                for row in data['invlist']:
-                    # fix older
-                    row[2]['phases'] = row[2]['phases'].union(self.excess)
-                    row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
-                              ' - ' +
-                              ' '.join(sorted(list(row[2]['out']))))
-                    self.invmodel.appendRow(row)
-                self.invview.resizeColumnsToContents()
+                if data['version'] < '2.1.0':
+                    for row in data['invlist']:
+                        r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                                 variance=-1, p=row[2]['p'], T=row[2]['T'], manual=True,
+                                 output='Imported invariant point.')
+                        label = self.format_label(row[2]['phases'], row[2]['out'])
+                        self.invmodel.appendRow((row[0], label, r))
+                    self.invview.resizeColumnsToContents()
+                    for row in data['unilist']:
+                        r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                                 variance=-1, p=row[4]['p'], T=row[4]['T'], manual=True,
+                                 output='Imported univariant line.')
+                        label = self.format_label(row[4]['phases'], row[4]['out'])
+                        self.unimodel.appendRow((row[0], label, row[2], row[3], r))
+                    self.adapt_uniview()
+                else:
+                    for row in data['unilist']:
+                        # fix older
+                        row[4]['phases'] = row[4]['phases'].union(self.excess)
+                        row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                                  ' - ' +
+                                  ' '.join(sorted(list(row[4]['out']))))
+                        self.unimodel.appendRow(row)
+                    self.adapt_uniview()
+                    for row in data['invlist']:
+                        # fix older
+                        row[2]['phases'] = row[2]['phases'].union(self.excess)
+                        row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                                  ' - ' +
+                                  ' '.join(sorted(list(row[2]['out']))))
+                        self.invmodel.appendRow(row)
+                    self.invview.resizeColumnsToContents()
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
                 # update executables
                 if 'tcexe' in data:
-                    p = Path(self.workdir, data['tcexe'])
+                    p = pathlib.Path(self.workdir, data['tcexe'])
                     if p.is_file() and os.access(str(p), os.X_OK):
                         self.tcexeEdit.setText(p.name)
                 if 'drexe' in data:
-                    p = Path(self.workdir, data['drexe'])
+                    p = pathlib.Path(self.workdir, data['drexe'])
                     if p.is_file() and os.access(str(p), os.X_OK):
                         self.drawpdexeEdit.setText(p.name)
                 # all done
@@ -760,8 +806,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         return os.path.join(self.workdir, 'tc-' + self.bname + '-dr.txt')
 
     @property
-    def ofile(self):
-        return os.path.join(self.workdir, 'tc-' + self.bname + '-o.txt')
+    def logfile(self):
+        return os.path.join(self.workdir, 'tc-log.txt')
 
     @property
     def drawpdfile(self):
@@ -844,48 +890,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.pushUniZoom.isChecked():
             idx = self.unisel.selectedIndexes()
             k = self.unimodel.getRow(idx[0])
-            T, p = k[4]['fT'], k[4]['fp']
+            T, p = self.get_trimmed_uni(k)
             dT = (T.max() - T.min()) / 5
             dp = (p.max() - p.min()) / 5
             self.ax.set_xlim([T.min() - dT, T.max() + dT])
             self.ax.set_ylim([p.min() - dp, p.max() + dp])
             self.canvas.draw()
 
-    def guess_toclipboard(self, p, T, clabels, vals, r):
-        clipboard = QtWidgets.QApplication.clipboard()
-        txt = '% --------------------------------------------------------'
-        txt += '\n'
-        txt += '% at P = {}, T = {}, for: '.format(p, T)
-        txt += ' '.join(r['phases'])
-        txt += ' with ' + ', '.join(['{} = 0'.format(o) for o in r['out']])
-        txt += '\n'
-        txt += '% --------------------------------------------------------'
-        txt += '\n'
-        txt += 'ptguess {} {}'.format(p, T)
-        txt += '\n'
-        txt += '% --------------------------------------------------------'
-        txt += '\n'
-        for c, v in zip(clabels, vals):
-            txt += 'xyzguess {:<12}{:>10}'.format(c, v)
-            txt += '\n'
-        txt += '% --------------------------------------------------------'
-        txt += '\n'
-        clipboard.setText(txt)
-        self.statusBar().showMessage('Guesses copied to clipboard.')
-
     def invsel_guesses(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
-            if not r['output'].startswith('User-defined'):
-                try:
-                    clabels, vals = self.parse_output(r['output'], False)
-                    p, T = vals[0][:2]
-                    vals = vals[0][2:]
-                    clabels = clabels[2:]
-                    self.guess_toclipboard(p, T, clabels, vals, r)
-                except:
-                    self.statusBar().showMessage('Unexpected output parsing error.')
+            if not r['manual']:
+                clipboard = QtWidgets.QApplication.clipboard()
+                clipboard.setText('\n'.join(r['results'][0]['ptguess']))
+                self.statusBar().showMessage('Guesses copied to clipboard.')
             else:
                 self.statusBar().showMessage('Guesses cannot be copied from user-defined invariant point.')
 
@@ -893,62 +912,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             r = self.unimodel.data(idx[4])
-            if not r['output'].startswith('User-defined'):
-                try:
-                    clabels, vals = self.parse_output(r['output'], False)
-                    l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
-                    uniguess = UniGuess(l, self)
-                    respond = uniguess.exec()
-                    if respond == QtWidgets.QDialog.Accepted:
-                        ix = uniguess.getValue()
-                        p, T = r['p'][ix], r['T'][ix]
-                        self.guess_toclipboard(p, T, clabels[2:], vals[ix][2:], r)
-                except:
-                    self.statusBar().showMessage('Unexpected output parsing error.')
+            if not r['manual']:
+                l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+                uniguess = UniGuess(l, self)
+                respond = uniguess.exec()
+                if respond == QtWidgets.QDialog.Accepted:
+                    ix = uniguess.getValue()
+                    clipboard = QtWidgets.QApplication.clipboard()
+                    clipboard.setText('\n'.join(r['results'][ix]['ptguess']))
+                    self.statusBar().showMessage('Guesses copied to clipboard.')
             else:
                 self.statusBar().showMessage('Guesses cannot be copied from user-defined univariant line.')
-
-    def parse_output(self, txt, getmodes=True):
-        t = txt.splitlines()
-        t = [r.strip(u'\u00A7') for r in t]
-        za = [i + 1 for i in range(len(t)) if t[i].startswith('----')]
-        st = [i for i in range(len(t)) if t[i].startswith('    mode')]
-
-        clabels = []
-        for ix in range(za[0], st[0] - 1, 2):
-            clabels.extend(t[ix].split())
-        mlabels = clabels[:2] + t[st[0]].split()[1:]
-        vals, modes = [], []
-        # estimate fixed width
-        pl = t[st[0]].split()
-        width = len(t[st[0]]) - t[st[0]][:t[st[0]].rindex(pl[-1])].rindex(pl[-2]) - len(pl[-2])
-
-        for b, e in zip(za, st):
-            val = []
-            for ix in range(b + 1, e, 2):
-                val.extend(list(map(float, t[ix].split())))
-            vals.append(val)
-            modstr = t[e + 1][8:] # skip mode
-            mod = [float(modstr[0 + i:width + i]) for i in range(0, len(modstr), width)] #fixed width split
-            modes.append(val[:2] + mod)
-
-        # clabels = t[za[0]].split()
-        # mlabels = clabels[:2] + t[st[0]].split()[1:]
-        # vals, modes = [], []
-
-        # for b, e in zip(za, st):
-        #     val = list(map(float, t[b + 1].split()))
-        #     mod = list(map(float, t[e + 1].split()))
-        #     vals.append(val)
-        #     modes.append(val[:2] + mod)
-        #     for off in range((e-b-4)//2):
-        #         vals.append(list(map(float, t[b + 3 + 2*off].split())))
-        #         modes.append(list(map(float, t[e + 3 + 2*off].split())))
-
-        if getmodes:
-            return np.array(mlabels), np.array(modes)
-        else:
-            return np.array(clabels), np.array(vals)
 
     def get_phases_out(self):
         phases = []
@@ -978,33 +952,30 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
         if show_output:
-            if not r['output'].startswith('User-defined'):
-                try:
-                    mlabels, modes = self.parse_output(r['output'])
-                    mask = ~np.in1d(mlabels, list(r['out']))
-                    mlabels = mlabels[mask]
-                    modes = modes[:, mask]
-                    txt = ''
-                    h_format = '{:>10}{:>10}' + '{:>8}' * (len(mlabels) - 2)
-                    n_format = '{:10.4f}{:10.4f}' + '{:8.4f}' * (len(mlabels) - 2)
-                    txt += h_format.format(*mlabels)
+            if not r['manual']:
+                mlabels = sorted(list(r['results'][0]['data'].keys()))
+                txt = ''
+                h_format = '{:>10}{:>10}' + '{:>8}' * len(mlabels)
+                n_format = '{:10.4f}{:10.4f}' + '{:8.5f}' * len(mlabels)
+                txt += h_format.format('p', 'T', *mlabels)
+                txt += '\n'
+                for p, T, res in zip(r['p'], r['T'], r['results']):
+                    row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
+                    txt += n_format.format(*row)
                     txt += '\n'
-                    for row in modes:
-                        txt += n_format.format(*row)
-                        txt += '\n'
-                    txt += h_format.format(*mlabels)
-                    self.textOutput.setPlainText(txt)
-                except:
-                    self.statusBar().showMessage('Unexpected output parsing error.')
+                if len(r['results']) > 5:
+                    txt += h_format.format('p', 'T', *mlabels)
+                self.textOutput.setPlainText(txt)
             else:
                 self.textOutput.setPlainText(r['output'])
             self.textFullOutput.setPlainText(r['output'])
 
     def show_uni(self, index):
-        dt = self.unimodel.getData(index, 'Data')
+        row = self.unimodel.getRow(index)
         self.clean_high()
-        self.set_phaselist(dt, show_output=True)
-        self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
+        self.set_phaselist(row[4], show_output=True)
+        T, p = self.get_trimmed_uni(row)
+        self.unihigh = self.ax.plot(T, p, '-', **unihigh_kw)
         self.canvas.draw()
         # if self.pushUniZoom.isChecked():
         #     self.zoom_to_uni(True)
@@ -1033,9 +1004,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         op = []
         for r in self.unimodel.unilist:
             if out in r[4]['out']:
-                oT.append(r[4]['fT'])
+                T, p = self.get_trimmed_uni(r)
+                oT.append(T)
                 oT.append([np.nan])
-                op.append(r[4]['fp'])
+                op.append(p)
                 op.append([np.nan])
         if oT:
             self.outhigh = self.ax.plot(np.concatenate(oT), np.concatenate(op),
@@ -1100,8 +1072,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if checked:
             if self.unisel.hasSelection():
                 idx = self.unisel.selectedIndexes()
-                dt = self.unimodel.getData(idx[0], 'Data')
-                T, p = dt['fT'], dt['fp']
+                row = self.unimodel.getRow(idx[0])
+                T, p = self.get_trimmed_uni(row)
                 dT = (T.max() - T.min()) / 5
                 dp = (p.max() - p.min()) / 5
                 self.ax.set_xlim([T.min() - dT, T.max() + dT])
@@ -1123,7 +1095,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # Check ability to delete
             for row in self.unimodel.unilist:
                 if row[2] == invnum or row[3] == invnum:
-                    if row[4]['output'].startswith('User-defined'):
+                    if row[4]['manual']:
                         todel = False
             if todel:
                 msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
@@ -1161,16 +1133,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def clicker(self, event):
         if event.inaxes is not None:
             phases, out = self.get_phases_out()
-            r = {'phases':phases, 'out':out, 'cmd': ''}
+            r = dict(phases=phases, out=out, cmd='', variance=-1, manual=True)
+            label = self.format_label(phases, out)
             isnew, id = self.getidinv(r)
-            if isnew:
-                addinv = AddInv(parent=self)
-            else:
-                addinv = AddInv(label=False, parent=self)
+            addinv = AddInv(label, parent=self)
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
-                label, T, p = addinv.getValues()
+                T, p = addinv.getValues()
                 r['T'], r['p'], r['output'] = np.array([T]), np.array([p]), 'User-defined invariant point.'
                 if isnew:
                     self.invmodel.appendRow((id, label, r))
@@ -1193,6 +1163,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             phases, out = self.get_phases_out()
             if len(out) == 1:
                 if checked:
+                    label = self.format_label(phases, out)
                     invs = []
                     for row in self.invmodel.invlist[1:]:
                         d = row[2]
@@ -1200,14 +1171,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             if out.issubset(d['out']):
                                 invs.append(row[0])
                     if len(invs) > 1:
-                        adduni = AddUni(invs, self)
+                        adduni = AddUni(label, invs, self)
                         respond = adduni.exec()
                         if respond == QtWidgets.QDialog.Accepted:
-                            label, b, e = adduni.getValues()
+                            b, e = adduni.getValues()
                             if b != e:
-                                r = {'T': np.array([]), 'p': np.array([]),
-                                     'output': 'User-defined univariant line.',
-                                     'phases': set(phases), 'out': set(out), 'cmd': ''}
+                                r = dict(phases=phases, out=out, cmd='', variance=-1,
+                                         p=np.array([]), T=np.array([]), manual=True,
+                                         output='User-defined univariant line.')
                                 isnew, id = self.getiduni(r)
                                 if isnew:
                                     self.unimodel.appendRow((id, label, b, e, r))
@@ -1363,6 +1334,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
+    def format_label(self, phases, out):
+        return (' '.join(sorted(list(phases.difference(self.excess)))) +
+                ' - ' +
+                ' '.join(sorted(list(out))))
+
     def do_calc(self, cT, phases={}, out={}):
         if self.ready:
             if phases == {} and out == {}:
@@ -1386,132 +1362,92 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, r = self.parsedrfile()
-                r['phases'] = phases
-                r['out'] = out
-                r['cmd'] = ans
-                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
-                         ' - ' +
-                         ' '.join(sorted(list(out))))
-                if typ == 'uni':
-                    if len(r['T']) > 1:
-                        isnew, id = self.getiduni(r)
-                        if isnew:
-                            self.unimodel.appendRow((id, label, 0, 0, r))
-                            row = self.unimodel.getRowFromId(id)
-                            self.trimuni(row)
-                            self.adapt_uniview()
-                            self.changed = True
-                            self.plot()
-                            #self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
-                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
-                            self.uniview.selectRow(idx.row())
-                            self.uniview.scrollToBottom()
-                            self.show_uni(idx)
-                            self.statusBar().showMessage('New univariant line calculated.')
-                        else:
-                            if not self.checkOverwrite.isChecked():
-                                row = self.unimodel.getRowFromId(id)
-                                row[1] = label
-                                row[4] = r
-                                self.trimuni(row)
-                                self.changed = True
-                                self.adapt_uniview()
-                                self.plot()
-                                idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
-                                self.show_uni(idx)
-                                self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
-                            else:
-                                self.statusBar().showMessage('Univariant line already exists.')
-                    elif len(r['T']) > 0:
-                        self.statusBar().showMessage('Only one point calculated. Change range.')
-                    else:
-                        self.statusBar().showMessage('Nothing in range.')
-                else:
+                status, variance, pts, res, output = parse_logfile(self.logfile)
+                if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
+                elif status == 'nir':
+                    self.statusBar().showMessage('Nothing in range.')
+                elif len(res) < 2:
+                    self.statusBar().showMessage('Only one point calculated. Change range.')
+                else:
+                    r = dict(phases=phases, out=out, cmd=ans, variance=variance,
+                             p=pts[0], T=pts[1], manual=False,
+                             output=output, results=res)
+                    label = self.format_label(phases, out)
+                    isnew, id = self.getiduni(r)
+                    if isnew:
+                        self.unimodel.appendRow((id, label, 0, 0, r))
+                        row = self.unimodel.getRowFromId(id)
+                        self.trimuni(row)
+                        self.adapt_uniview()
+                        self.changed = True
+                        self.plot()
+                        #self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                        idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                        self.uniview.selectRow(idx.row())
+                        self.uniview.scrollToBottom()
+                        self.show_uni(idx)
+                        self.statusBar().showMessage('New univariant line calculated.')
+                    else:
+                        if not self.checkOverwrite.isChecked():
+                            row = self.unimodel.getRowFromId(id)
+                            row[1] = label
+                            row[4] = r
+                            self.trimuni(row)
+                            self.changed = True
+                            self.adapt_uniview()
+                            self.plot()
+                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.show_uni(idx)
+                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
+                        else:
+                            self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
                 tcout = self.runprog(self.tc, ans)
-                typ, r = self.parsedrfile()
-                r['phases'] = phases
-                r['out'] = out
-                r['cmd'] = ans
-                label = (' '.join(sorted(list(phases.difference(self.excess)))) +
-                         ' - ' +
-                         ' '.join(sorted(list(out))))
-                if typ == 'inv':
-                    if len(r['T']) > 0:
-                        isnew, id = self.getidinv(r)
-                        if isnew:
-                            self.invmodel.appendRow((id, label, r))
-                            self.invview.resizeColumnsToContents()
+                status, variance, pts, res, output = parse_logfile(self.logfile)
+                if status == 'bombed':
+                    self.statusBar().showMessage('Bombed.')
+                elif status == 'nir':
+                    self.statusBar().showMessage('Nothing in range.')
+                else:
+                    r = dict(phases=phases, out=out, cmd=ans, variance=variance,
+                             p=pts[0], T=pts[1], manual=False,
+                             output=output, results=res)
+                    label = self.format_label(phases, out)
+                    isnew, id = self.getidinv(r)
+                    if isnew:
+                        self.invmodel.appendRow((id, label, r))
+                        self.invview.resizeColumnsToContents()
+                        self.changed = True
+                        self.plot()
+                        idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                        self.invview.selectRow(idx.row())
+                        self.invview.scrollToBottom()
+                        self.show_inv(idx)
+                        self.statusBar().showMessage('New invariant point calculated.')
+                    else:
+                        if not self.checkOverwrite.isChecked():
+                            row = self.invmodel.getRowFromId(id)
+                            row[1] = label
+                            row[2] = r
+                            # retrim affected
+                            for row in self.unimodel.unilist:
+                                if row[2] == id or row[3] == id:
+                                    self.trimuni(row)
                             self.changed = True
                             self.plot()
                             idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
-                            self.invview.selectRow(idx.row())
-                            self.invview.scrollToBottom()
                             self.show_inv(idx)
-                            self.statusBar().showMessage('New invariant point calculated.')
+                            self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                         else:
-                            if not self.checkOverwrite.isChecked():
-                                row = self.invmodel.getRowFromId(id)
-                                row[1] = label
-                                row[2] = r
-                                # retrim affected
-                                for row in self.unimodel.unilist:
-                                    if row[2] == id or row[3] == id:
-                                        self.trimuni(row)
-                                self.changed = True
-                                self.plot()
-                                idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
-                                self.show_inv(idx)
-                                self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
-                            else:
-                                self.statusBar().showMessage('Invariant point already exists.')
-                    else:
-                        self.statusBar().showMessage('Nothing in range.')
-                else:
-                    self.statusBar().showMessage('Bombed.')
+                            self.statusBar().showMessage('Invariant point already exists.')
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-
-    def parsedrfile(self):
-        """Parse intermediate drfile
-        """
-        dr = []
-        with open(self.drfile, 'r', encoding=TCenc) as drfile:
-            for line in drfile:
-                n = line.split('%')[0].strip()
-                if n != '':
-                    dr.append(n)
-
-        typ, zm = '', {}
-        if len(dr) > 0:
-            with open(self.ofile, 'r', encoding=TCenc) as ofile:
-                output = ofile.read()
-            if dr[0].split()[0] == 'u<k>':
-                typ = 'uni'
-                data = dr[2:]
-            elif dr[0].split()[0] == 'i<k>':
-                typ = 'inv'
-                data = dr[1:]
-            else:
-                return 'none', zm
-            pts = np.array([float(v) for v in ' '.join(data).split()])
-            zm['p'] = pts[0::2]
-            zm['T'] = pts[1::2]
-            zm['output'] = output
-            t = output.splitlines()
-            t = [r.strip(u'\u00A7').strip() for r in t]
-            za = [i + 1 for i in range(len(t)) if t[i].startswith('-')]
-            if za:
-                if t[za[0] + 1].startswith('#'):
-                    typ = 'none'  # nonexisting values calculated
-        return typ, zm
 
     def gendrawpd(self):
         if self.ready:
@@ -1548,7 +1484,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     b2 = 'i%s' % u[3]
                     if b2 == 'i0':
                         b2 = 'end'
-                    if u[4]['output'].startswith('User-defined'):
+                    if u[4]['manual']:
                         output.write(b1 + ' ' + b2 + ' connect\n')
                         output.write('\n')
                     else:
@@ -1562,7 +1498,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if self.checkAreas.isChecked():
                     # phases in areas for TC-Investigator
                     with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
-                        vertices, edges, phases, tedges, tphases = self.construct_areas()
+                        vertices, edges, phases, tedges, tphases = construct_areas(self.unimodel.unilist,
+                                                                                   self.unimodel.invlist[1:],
+                                                                                   self.trange,
+                                                                                   self.prange)
                         # write output
                         output.write('% Areas\n')
                         output.write('% ------------------------------\n')
@@ -1614,127 +1553,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Drawpd error!', str(err), qb.Abort)
 
-    def construct_areas(self):
-        def area_exists(indexes):
-            def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
-                if found_cycle[0]:
-                    return
-                marked[u] = True
-                path.append(u)
-                for v in graph[u]:
-                    if marked[v] and v != pred_node:
-                        found_cycle[0] = True
-                        return
-                    if not marked[v]:
-                        dfs_visit(graph, v, found_cycle, u, marked, path)
-            # create graph
-            graph = {}
-            for ix in indexes:
-                b, e = self.unimodel.unilist[ix][2], self.unimodel.unilist[ix][3]
-                if b == 0:
-                    nix = max(list(inv_coords.keys())) + 1
-                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][0], self.unimodel.unilist[ix][4]['p'][0]
-                    b = nix
-                if e == 0:
-                    nix = max(list(inv_coords.keys())) + 1
-                    inv_coords[nix] = self.unimodel.unilist[ix][4]['T'][-1], self.unimodel.unilist[ix][4]['p'][-1]
-                    e = nix
-                if b in graph:
-                    graph[b] = graph[b] + (e,)
-                else:
-                    graph[b] = (e,)
-                if e in graph:
-                    graph[e] = graph[e] + (b,)
-                else:
-                    graph[e] = (b,)
-                uni_index[(b, e)] = self.unimodel.unilist[ix][0]
-                uni_index[(e, b)] = self.unimodel.unilist[ix][0]
-            # do search
-            path = []
-            marked = { u : False for u in graph }
-            found_cycle = [False]
-            for u in graph:
-                if not marked[u]:
-                    dfs_visit(graph, u, found_cycle, u, marked, path)
-                if found_cycle[0]:
-                    break
-            return found_cycle[0], path
-
-        # def find_uni_between(b, e):
-        #     for r in self.unimodel.unilist:
-        #         if (r[2] == b and r[3] == e) or (r[3] == b and r[2] == e):
-        #             return r[0]
-
-        # def get_inv_coord(id):
-        #     dt = self.invmodel.getDataFromId(id)
-        #     return dt['T'][0], dt['p'][0]
-
-        uni_index = {}
-        for r in self.unimodel.unilist:
-            uni_index[(r[2], r[3])] = r[0]
-            uni_index[(r[3], r[2])] = r[0]
-        inv_coords = {}
-        for r in self.invmodel.invlist[1:]:
-            inv_coords[r[0]] = r[2]['T'][0], r[2]['p'][0]
-        faces = {}
-        for ix, uni in enumerate(self.unimodel.unilist):
-            f1 = frozenset(uni[4]['phases'])
-            f2 = frozenset(uni[4]['phases'] - uni[4]['out'])
-            if f1 in faces:
-                faces[f1].append(ix)
-            else:
-                faces[f1] = [ix]
-            if f2 in faces:
-                faces[f2].append(ix)
-            else:
-                faces[f2] = [ix]
-            # topology of polymorphs is degenerated
-            for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
-                if poly.issubset(uni[4]['phases']):
-                    f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
-                    if f2 in faces:
-                        faces[f2].append(ix)
-                    else:
-                        faces[f2] = [ix]
-        vertices, edges, phases = [], [], []
-        tedges, tphases = [], []
-        for f in faces:
-            exists, path = area_exists(faces[f])
-            if exists:
-                edge = []
-                vert = []
-                for b, e in zip(path, path[1:] + path[:1]):
-                    edge.append(uni_index.get((b, e), None))
-                    vert.append(inv_coords[b])
-                # check for bad topology
-                if not None in edge:
-                    edges.append(edge)
-                    vertices.append(vert)
-                    phases.append(f)
-                else:
-                    qb = QtWidgets.QMessageBox
-                    qb.critical(self, 'Topology error!',
-                                'Path {}\n Edges {}'.format(path, edge),
-                                qb.Ignore)
-            else:
-                # loop not found, search for range crossing chain
-                for ppath in permutations(path):
-                    edge = []
-                    vert = []
-                    for b, e in zip(ppath[:-1], ppath[1:]):
-                        edge.append(uni_index.get((b, e), None))
-                        vert.append(inv_coords[b])
-                    vert.append(inv_coords[e])
-                    if not None in edge:
-                        x, y = vert[0]
-                        if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
-                            x, y = vert[-1]
-                            if (x < self.trange[0] or x > self.trange[1] or y < self.prange[0] or y > self.prange[1]):
-                                tedges.append(edge)
-                                tphases.append(f)
-                        break
-        return vertices, edges, phases, tedges, tphases
-
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
         ids = 0
@@ -1758,58 +1576,47 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         return True, ids + 1
 
     def trimuni(self, row):
-        T = row[4]['T'].copy()
-        p = row[4]['p'].copy()
+        if not row[4]['manual']:
+            xy = np.array([row[4]['T'], row[4]['p']]).T
+            line = LineString(xy)
+            if row[2] > 0:
+                dt = self.invmodel.getDataFromId(row[2])
+                p1 = Point(dt['T'][0], dt['p'][0])
+            else:
+                p1 = Point(row[4]['T'][0], row[4]['p'][0])
+            if row[3] > 0:
+                dt = self.invmodel.getDataFromId(row[3])
+                p2 = Point(dt['T'][0], dt['p'][0])
+            else:
+                p2 = Point(row[4]['T'][-1], row[4]['p'][-1])
+            # vertex distances
+            vdst = np.array([line.project(Point(*v)) for v in xy])
+            d1 = line.project(p1)
+            d2 = line.project(p2)
+            if d1 > d2:
+                d1, d2 = d2, d1
+                row[2], row[3] = row[3], row[2]
+            # get indexex of points to keep
+            row[4]['begix'] = np.flatnonzero(vdst >= d1)[0]
+            row[4]['endix'] = np.flatnonzero(vdst <= d2)[-1]
+
+    def get_trimmed_uni(self, row):
         if row[2] > 0:
             dt = self.invmodel.getDataFromId(row[2])
             T1, p1 = dt['T'][0], dt['p'][0]
         else:
-            T1, p1 = T[0], p[0]
+            T1, p1 = [], []
         if row[3] > 0:
             dt = self.invmodel.getDataFromId(row[3])
             T2, p2 = dt['T'][0], dt['p'][0]
         else:
-            T2, p2 = T[-1], p[-1]
-        if len(T) == 0:
-            row[4]['fT'], row[4]['fp'] = np.array([T1, T2]), np.array([p1, p2])
-        elif len(T) == 1:
-            dT = T2 - T1
-            dp = p2 - p1
-            d2 = dT**2 + dp**2
-            u = (dT * (T[0] - T1) + dp * (p[0] - p1)) / d2
-            if u > 0 and u < 1:
-                row[4]['fT'], row[4]['fp'] = np.array([T1, T[0], T2]), np.array([p1, p[0], p2])
-            else:
-                row[4]['fT'], row[4]['fp'] = np.array([T1, T2]), np.array([p1, p2])
+            T2, p2 = [], []
+        if not row[4]['manual']:
+            T = row[4]['T'][row[4]['begix']:row[4]['endix'] + 1]
+            p = row[4]['p'][row[4]['begix']:row[4]['endix'] + 1]
         else:
-            i1 = self.getidx(T, p, T1, p1)
-            i2 = self.getidx(T, p, T2, p2)
-            if i2 > i1:
-                za, ko = i1, i2
-            else:
-                za, ko = i2, i1
-                row[2], row[3] = row[3], row[2]
-                T1, T2 = T2, T1
-                p1, p2 = p2, p1
-            row[4]['fT'], row[4]['fp'] = np.hstack([T1, T[za:ko], T2]), np.hstack([p1, p[za:ko], p2])
-
-    def getidx(self, T, p, Tp, pp):
-        st = np.array([T[:-1], p[:-1]])
-        vv = np.array([Tp - T[:-1], pp - p[:-1]])
-        ww = np.array([np.diff(T), np.diff(p)])
-        rat = sum(vv * ww) / np.linalg.norm(ww, axis=0)**2
-        h = st + rat * ww
-        d2 = sum(np.array([Tp - h[0], pp - h[1]])**2)
-        cnd = np.flatnonzero(abs(rat - 0.5) <= 0.5)
-        if not np.any(cnd):
-            ix = abs(rat - 0.5).argmin()
-            if rat[ix] > 1:
-                ix += 1
-            elif rat[ix] < 0:
-                ix -= 1
-        else:
-            ix = cnd[d2[cnd].argmin()]
-        return ix + 1
+            T, p = [], []
+        return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
 
     def getunilabelpoint(self, T, p):
         if len(T) > 1:
@@ -1841,7 +1648,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ax.cla()
             self.ax.format_coord = self.format_coord
             for k in self.unimodel.unilist:
-                T, p = k[4]['fT'], k[4]['fp']
+                T, p = self.get_trimmed_uni(k)
                 self.ax.plot(T, p, 'k')
                 if self.checkLabelUni.isChecked():
                     Tl, pl = self.getunilabelpoint(T, p)
@@ -1870,8 +1677,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.set_ylim(cur[1])
             if self.unihigh is not None and self.unisel.hasSelection():
                 idx = self.unisel.selectedIndexes()
-                dt = self.unimodel.getData(idx[0], 'Data')
-                self.unihigh = self.ax.plot(dt['fT'], dt['fp'], '-', **unihigh_kw)
+                row = self.unimodel.getRow(idx[0])
+                T, p = self.get_trimmed_uni(row)
+                self.unihigh = self.ax.plot(T, p, '-', **unihigh_kw)
             if self.invhigh is not None and self.invsel.hasSelection():
                 idx = self.invsel.selectedIndexes()
                 dt = self.invmodel.getData(idx[0], 'Data')
@@ -2012,7 +1820,7 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         r = index.model().getData(index, 'Data')
         phases, out = r['phases'], r['out']
         combomodel = QtGui.QStandardItemModel()
-        if not r['output'].startswith('User-defined'):
+        if not r['manual']:
             item = QtGui.QStandardItem('0')
             item.setData(0, 1)
             combomodel.appendRow(item)
@@ -2046,13 +1854,11 @@ class ComboDelegate(QtWidgets.QItemDelegate):
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
     """Add inv dialog class
     """
-    def __init__(self, label=True, parent=None):
+    def __init__(self, label, parent=None):
         super(AddInv, self).__init__(parent)
         self.setupUi(self)
+        self.labelEdit.setText(label)
         # validator
-        if not label:
-            self.label.hide()
-            self.labelEdit.hide()
         validator = QtGui.QDoubleValidator()
         validator.setLocale(QtCore.QLocale.c())
         self.tEdit.setValidator(validator)
@@ -2079,18 +1885,18 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
         self.pEdit.setText(str(event.ydata))
 
     def getValues(self):
-        label = self.labelEdit.text()
         T = float(self.tEdit.text())
         p = float(self.pEdit.text())
-        return (label, T, p)
+        return T, p
 
 
 class AddUni(QtWidgets.QDialog, Ui_AddUni):
     """Add uni dialog class
     """
-    def __init__(self, items, parent=None):
+    def __init__(self, label, items, parent=None):
         super(AddUni, self).__init__(parent)
         self.setupUi(self)
+        self.labelEdit.setText(label)
         self.combomodel = QtGui.QStandardItemModel()
         for item in items:
             it = QtGui.QStandardItem(str(item))
@@ -2100,10 +1906,9 @@ class AddUni(QtWidgets.QDialog, Ui_AddUni):
         self.comboEnd.setModel(self.combomodel)
 
     def getValues(self):
-        label = self.labelEdit.text()
         b = self.comboBegin.currentData(1)
         e = self.comboEnd.currentData(1)
-        return (label, b, e)
+        return b, e
 
 
 class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
@@ -2240,6 +2045,876 @@ class ProjectFile(object):
     def invdata(self, fid):
         return self.invlist[self.invlookup[fid]][2]
 
+class PTPS:
+    def __init__(self, projfile):
+        self.prj = ProjectFile(projfile)
+        # Check prefs and scriptfile
+        if not os.path.exists(self.prefsfile):
+            raise Exception('No tc-prefs.txt file in working directory.')
+        for line in open(self.prefsfile, 'r'):
+            kw = line.split()
+            if kw != []:
+                if kw[0] == 'scriptfile':
+                    self.bname = kw[1]
+                    if not os.path.exists(self.scriptfile):
+                        raise Exception('tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.')
+                if kw[0] == 'calcmode':
+                    if kw[1] != '1':
+                        raise Exception('tc-prefs: calcmode must be 1.')
+        if not hasattr(self, 'bname'):
+            raise Exception('No scriptfile defined in tc-prefs.txt')
+        if os.path.exists(self.project):
+            self.load()
+            print('Compositions loaded.')
+        else:
+            # Store scriptfile content and initialize dicts
+            with open(self.scriptfile, 'r', encoding=TCenc) as f:
+                self.scriptfile_content = f.readlines()
+            self.shapes  = OrderedDict()
+            self.edges  = OrderedDict()
+            self.variance = OrderedDict()
+            # traverse pseudosecton
+            vertices, edges, phases, tedges, tphases = construct_areas(self.prj.unilist,
+                                                                       self.prj.invlist,
+                                                                       self.prj.trange,
+                                                                       self.prj.prange)
+            # default p-t range boundary
+            bnd = [LineString([(self.prj.trange[0], self.prj.prange[0]),(self.prj.trange[1], self.prj.prange[0])]),
+                   LineString([(self.prj.trange[1], self.prj.prange[0]),(self.prj.trange[1], self.prj.prange[1])]),
+                   LineString([(self.prj.trange[1], self.prj.prange[1]),(self.prj.trange[0], self.prj.prange[1])]),
+                   LineString([(self.prj.trange[0], self.prj.prange[1]),(self.prj.trange[0], self.prj.prange[0])])]
+            bnda = list(polygonize(bnd))[0]
+            # Create all full areas
+            #for e, f in tqdm(zip(edges, phases), desc='Full areas', total=len(edges)):
+            tq = trange(len(edges), desc='Full areas')
+            for ind in tq:
+                e, f = edges[ind], phases[ind]
+                lns = [LineString(np.c_[self.prj.unidata(fid)['fT'], self.prj.unidata(fid)['fp']]) for fid in e]
+                pp = polygonize(lns)
+                invalid = True
+                for ppp in pp:
+                    ppok = bnda.intersection(ppp)
+                    if ppok.geom_type == 'Polygon':
+                        invalid = False
+                        self.edges[f] = e
+                        self.variance[f] = self.parse_variance(self.runtc('{}\nkill\n\n'.format(' '.join(f))))
+                        if f in self.shapes:
+                            self.shapes[f] = self.shapes[f].union(ppok)
+                        else:
+                            self.shapes[f] = ppok
+                if invalid:
+                    tq.write('Lines {} have invalid geometry.'.format(e))
+            # Create all partial areas
+            #for e, f in tqdm(zip(tedges, tphases), desc='Partial areas', total=len(tedges)):
+            tq = trange(len(tedges), desc='Partial areas')
+            for ind in tq:
+                e, f = tedges[ind], tphases[ind]
+                lns = [LineString(np.c_[self.prj.unidata(fid)['fT'], self.prj.unidata(fid)['fp']]) for fid in e]
+                pp = linemerge(lns)
+                invalid = True
+                if pp.geom_type == 'LineString':
+                    bndu = unary_union([s for s in bnd if pp.crosses(s)])
+                    if not bndu.is_empty:
+                        pps = pp.difference(bndu)
+                        bnds = bndu.difference(pp)
+                        pp = polygonize(pps.union(bnds))
+                        for ppp in pp:
+                            ppok = bnda.intersection(ppp)
+                            if ppok.geom_type == 'Polygon':
+                                invalid = False
+                                self.edges[f] = e
+                                self.variance[f] = self.parse_variance(self.runtc('{}\nkill\n\n'.format(' '.join(f))))
+                                if f in self.shapes:
+                                    self.shapes[f] = self.shapes[f].union(ppok)
+                                else:
+                                    self.shapes[f] = ppok
+                if invalid:
+                    tq.write('Lines {} does not form valid polygon for default p-T range.'.format(e))
+            # Fix possible overlaps of partial areas 
+            for k1, k2 in itertools.combinations(self.shapes, 2):
+                if self.shapes[k1].within(self.shapes[k2]):
+                    self.shapes[k2] = self.shapes[k2].difference(self.shapes[k1])
+                if self.shapes[k2].within(self.shapes[k1]):
+                    self.shapes[k1] = self.shapes[k1].difference(self.shapes[k2])
+            print('{} compositions not yet calculated. Run calculate_composition() method.'.format(self.prj.name))
+
+    def __iter__(self):
+        return iter(self.shapes)
+
+    @property
+    def phases(self):
+        ph = set()
+        for k in self:
+            ph.update(k)
+        return ph
+
+    @property
+    def keys(self):
+        return list(self.shapes.keys())
+
+    @property
+    def tstep(self):
+        return self.tspace[1] - self.tspace[0]
+
+    @property
+    def pstep(self):
+        return self.pspace[1] - self.pspace[0]
+
+    @property
+    def scriptfile(self):
+        return os.path.join(self.prj.workdir, 'tc-' + self.bname + '.txt')
+
+    @property
+    def ofile(self):
+        return os.path.join(self.prj.workdir, 'tc-' + self.bname + '-o.txt')
+
+    @property
+    def logfile(self):
+        return os.path.join(self.prj.workdir, 'tc-log.txt')
+
+    @property
+    def prefsfile(self):
+        return os.path.join(self.prj.workdir, 'tc-prefs.txt')
+
+    @property
+    def tcexe(self):
+        return os.path.join(self.prj.workdir, self.prj.tcexe)
+
+    @property
+    def project(self):
+        return os.path.join(self.prj.workdir, self.prj.name + '.psi')
+
+    def unidata(self, fid):
+        return self.prj.unidata(fid)
+
+    def invdata(self, fid):
+        return self.prj.invdata(fid)
+
+    def save(self):
+        # put to dict
+        data = {'shapes': self.shapes,
+                'edges': self.edges,
+                'variance': self.variance,
+                'tspace': self.tspace,
+                'pspace': self.pspace,
+                'tg': self.tg,
+                'pg': self.pg,
+                'gridcalcs': self.gridcalcs,
+                'guesses': self.guesses,
+                'masks': self.masks,
+                'status': self.status,
+                'delta': self.delta}
+        # do save
+        stream = gzip.open(self.project, 'wb')
+        pickle.dump(data, stream)
+        stream.close()
+
+    def load(self):
+        stream = gzip.open(self.project, 'rb')
+        data = pickle.load(stream)
+        stream.close()
+        self.shapes  = data['shapes']
+        self.edges  = data['edges']
+        self.variance = data['variance']
+        self.tspace = data['tspace']
+        self.pspace = data['pspace']
+        self.tg = data['tg']
+        self.pg = data['pg']
+        self.gridcalcs = data['gridcalcs']
+        self.guesses = data['guesses']
+        self.masks = data['masks']
+        self.status = data['status']
+        self.delta = data['delta']
+
+#    def calculate_composition_old(self, T_N=51, p_N=51):
+#        self.T_N, self.p_N = T_N, p_N
+#        # Calc by areas
+#        tspace = np.linspace(self.prj.trange[0], self.prj.trange[1], self.T_N)
+#        tstep = tspace[1] - tspace[0]
+#        pspace = np.linspace(self.prj.prange[0], self.prj.prange[1], self.p_N)
+#        pstep = pspace[1] - pspace[0]
+#        total, done = len(self.keys), 0
+#        for key in self:
+#            tmin, pmin, tmax, pmax = self.shapes[key].bounds
+#            trange = tspace[np.logical_and(tspace >= tmin, tspace <= tmax)]
+#            prange = pspace[np.logical_and(pspace >= pmin, pspace <= pmax)]
+#            done += 1
+#            print('{} of {} - {} Calculating...'.format(done, total, ' '.join(key)))
+#            if trange.size > 0 and prange.size > 0:
+#                ans = '{}\n\n\n{} {}\n{} {}\n{}\n{}\nkill\n\n'.format(' '.join(key), prange.min(), prange.max(), trange.min(), trange.max(), tstep, pstep)
+#                out = self.runtc(ans)
+#                self.calcs[key] = dict(output=out, input=ans)
+#            else:
+#                rp = self.shapes[key].representative_point()
+#                t, p = rp.x, rp.y
+#                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(key), p, t)
+#                out = self.runtc(ans)
+#                self.calcs[key] = dict(output=out, input=ans)
+#            if not self.data_keys(key):
+#                print('Nothing in range for {}'.format(' '.join(key)))
+#        self.show_success()
+
+    def calculate_composition(self, numT=51, numP=51):
+        self.tspace = np.linspace(self.prj.trange[0], self.prj.trange[1], numT)
+        self.pspace = np.linspace(self.prj.prange[0], self.prj.prange[1], numP)
+        self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
+        self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
+        self.guesses = np.empty(self.tg.shape, np.dtype(object))
+        self.status = np.empty(self.tg.shape)
+        self.status[:] = np.nan
+        self.delta = np.empty(self.tg.shape)
+        self.delta[:] = np.nan
+        done = 0
+        # backup script file
+        shutil.copy2(self.scriptfile, self.scriptfile + '.backup')
+        for (r, c) in tqdm(np.ndindex(self.tg.shape), desc='Gridding', total=np.prod(self.tg.shape)):
+            t, p = self.tg[r, c], self.pg[r, c]
+            k = self.identify(t, p)
+            if k is not None:
+                self.status[r, c] = 0
+                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
+                start_time = time.time()
+                out = self.runtc(ans)
+                delta = time.time() - start_time
+                res = self.parse_output(out)
+                if len(res) == 1:
+                    self.gridcalcs[r, c] = res[0]
+                    self.status[r, c] = 1
+                    self.delta[r, c] = delta
+                    with open(self.logfile, 'r', encoding=TCenc) as f:
+                        lines = f.readlines()
+                    gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
+                    k = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
+                    self.guesses[r, c] = lines[gs - 3:gs + k + 3]
+                else:
+                    for rn, cn in self.neighs(r, c):
+                        if self.status[rn, cn] == 1:
+                            self.update_guesses(self.guesses[rn, cn])
+                            start_time = time.time()
+                            out = self.runtc(ans)
+                            delta = time.time() - start_time
+                            res = self.parse_output(out)
+                            if len(res) == 1:
+                                self.gridcalcs[r, c] = res[0]
+                                self.status[r, c] = 1
+                                self.delta[r, c] = delta
+                                with open(self.logfile, 'r', encoding=TCenc) as f:
+                                    lines = f.readlines()
+                                gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
+                                gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
+                                self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
+                                break
+                    if self.status[r, c] == 0:
+                        self.gridcalcs[r, c] = None
+                        self.guesses[r, c] = None
+            else:
+                self.gridcalcs[r, c] = None
+                self.guesses[r, c] = None
+            done += 1
+        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
+        self.reset_scriptfile()
+        # remove backup
+        os.remove(self.scriptfile + '.backup')
+        self.fix_solutions()
+        # Create data masks
+        points = MultiPoint(list(zip(self.tg.flatten(), self.pg.flatten())))
+        self.masks = OrderedDict()
+        for key in tqdm(self, desc='Masking', total=len(self.shapes)):
+            self.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.tg.shape)
+        self.save()
+
+    def fix_solutions(self):
+        # backup script file
+        shutil.copy2(self.scriptfile, self.scriptfile + '.backup')
+        ri, ci = np.nonzero(self.status == 0)
+        fixed, ftot = 0, len(ri)
+        tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+        for ind in tq:
+            r, c = ri[ind], ci[ind] 
+            t, p = self.tg[r, c], self.pg[r, c]
+            k = self.identify(t, p)
+            for rn, cn in self.neighs(r, c):
+                if self.status[rn, cn] == 1:
+                    ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
+                    start_time = time.time()
+                    out = self.runtc(ans)
+                    delta = time.time() - start_time
+                    res = self.parse_output(out)
+                    if len(res) == 1:
+                        self.gridcalcs[r, c] = res[0]
+                        self.status[r, c] = 1
+                        self.delta[r, c] = delta
+                        with open(self.logfile, 'r', encoding=TCenc) as f:
+                            lines = f.readlines()
+                        gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
+                        gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
+                        self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
+                        fixed += 1
+                        tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                        break
+                    else:
+                        self.update_guesses(self.guesses[rn, cn])
+                    start_time = time.time()
+                    out = self.runtc(ans)
+                    delta = time.time() - start_time
+                    res = self.parse_output(out)
+                    if len(res) == 1:
+                        self.gridcalcs[r, c] = res[0]
+                        self.status[r, c] = 1
+                        self.delta[r, c] = delta
+                        with open(self.logfile, 'r', encoding=TCenc) as f:
+                            lines = f.readlines()
+                        gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
+                        gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
+                        self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
+                        fixed += 1
+                        tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                        break
+            if self.status[r, c] == 0:
+                tqdm.write('No solution find for {}, {}'.format(t, p))
+        self.reset_scriptfile()
+        # remove backup
+        os.remove(self.scriptfile + '.backup')
+        print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
+
+    def neighs(self, r, c):
+        m = np.array([[(r-1,c-1), (r-1,c), (r-1,c+1)],
+                      [(r,c-1), (None,None), (r,c+1)],
+                      [(r+1,c-1), (r+1,c), (r+1,c+1)]])
+        if r < 1:
+            m = m[1:, :]
+        if r > len(self.pspace) - 2:
+            m = m[:-1, :]
+        if c < 1:
+            m = m[:, 1:]
+        if c > len(self.tspace) - 2:
+            m = m[:, :-1]
+        return zip([i for i in m[:,:,0].flat if i is not None],
+                   [i for i in m[:,:,1].flat if i is not None])
+
+    def update_guesses(self, guesses):
+        gsix = [ix for ix, ln in enumerate(self.scriptfile_content) if 'ptguess' in ln]
+        if gsix:
+            gs = gsix[0]
+        else:
+            gs = len(self.scriptfile_content) + 3
+        with open(self.scriptfile, 'w', encoding=TCenc) as f:
+            for ln in self.scriptfile_content[:gs - 3]:
+                f.write(ln)
+            for ln in guesses:
+                f.write(ln)
+            f.write('*\n')
+
+    def reset_scriptfile(self):
+        with open(self.scriptfile, 'w', encoding=TCenc) as f:
+            for ln in self.scriptfile_content:
+                f.write(ln)
+
+    def runtc(self, instr):
+        if sys.platform.startswith('win'):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags = 1
+            startupinfo.wShowWindow = 0
+        else:
+            startupinfo = None
+        p = subprocess.Popen(self.tcexe, cwd=self.prj.workdir, startupinfo=startupinfo, **popen_kw)
+        output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
+        sys.stdout.flush()
+        return output
+
+    def parse_variance(self, out):
+        for ln in out.splitlines():
+            if 'variance of required equilibrium' in ln:
+                break
+        return int(ln[ln.index('(') + 1:ln.index('?')])
+
+    def parse_output(self, out):
+        def format_key(s):
+            if '(' in s and ')' in s:
+                s = s[s.find('(')+1:s.find(')')] + '-' + s[:s.find('(')]
+            return s
+        lines = [''.join([c for c in ln if ord(c)<128]) for ln in out.splitlines() if ln != '']
+        isost = [ix for ix,ln in enumerate(lines) if 'P(kbar)' in ln]
+        modst = [ix for ix,ln in enumerate(lines) if 'mode' in ln]
+        res = []
+        for b, e in zip(isost, modst):
+            p = float(lines[b + 1][:8].strip())
+            t = float(lines[b + 1][8:18].strip())
+            # components rest of lines until modes
+            keys, vals = [], []
+            for ix in range(b, e, 2):
+                keys += [format_key(lines[ix][i:i + 10].strip()) for i in range(18, len(lines[ix].rstrip()), 10)]
+                vals += [float(lines[ix + 1][i:i + 10].strip()) for i in range(18, len(lines[ix + 1].rstrip()), 10)]
+            iso = dict(zip(keys, vals))
+            # modes
+            keys = [format_key(lines[e][i:i + 10].strip()) for i in range(8, len(lines[e].rstrip()), 10)]
+            vals = [float(lines[e + 1][i:i + 10].strip()) for i in range(8, len(lines[e + 1].rstrip()), 10)]
+            modes = dict(zip(keys, vals))
+            res.append((p, t, {**iso, **modes}))
+        return res
+
+    def data_keys(self, key):
+        data = dict()
+        if key in self.masks:
+            res = self.calcs(key)
+            if res:
+                p, T, data = res[0]
+        return sorted(list(data.keys()))
+    
+    @property
+    def all_data_keys(self):
+        keys = set()
+        for key in self.masks:
+            res = self.calcs(key)
+            if res:
+                p, T, data = res[0]
+                keys.update(data.keys())
+        return sorted(list(keys))
+
+    def collect_inv_data(self, key, comp):
+        dt = dict(pts=[], data=[])
+        if key in self.edges:
+            if comp in self.data_keys(key):
+                edges = self.edges[key]
+                for i in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
+                    for p, T, data in self.parse_output(self.invdata(i)['output']):
+                        v = data.get(comp, None)
+                        if v:
+                            dt['pts'].append((T, p))
+                            dt['data'].append(v)
+        return dt
+
+    def collect_edges_data(self, key, comp):
+        # zlobi point intersect napr pro frozenset({'ilm', 'sill', 'pl', 'H2O', 'ksp', 'g', 'bi', 'q', 'mu'})
+        dt = dict(pts=[], data=[])
+        if key in self.edges:
+            if comp in self.data_keys(key):
+                for e in self.edges[key]:
+                    for p, T, data in self.parse_output(self.unidata(e)['output']):
+                        if Point(T, p).intersects(self.shapes[key]):
+                            v = data.get(comp, None)
+                            if v:
+                                dt['pts'].append((T, p))
+                                dt['data'].append(v)
+        return dt
+
+    def collect_grid_data(self, key, comp):
+        dt = dict(pts=[], data=[])
+        if key in self.masks:
+            if comp in self.data_keys(key):
+                for p, T, data in self.calcs(key):
+                    v = data.get(comp, None)
+                    if v:
+                        dt['pts'].append((T, p))
+                        dt['data'].append(v)
+        return dt
+
+    def collect_all_data(self, key, comp):
+        d = self.collect_inv_data(key, comp)
+        de = self.collect_edges_data(key, comp)
+        dg = self.collect_grid_data(key, comp)
+        d['pts'].extend(de['pts'])
+        d['pts'].extend(dg['pts'])
+        d['data'].extend(de['data'])
+        d['data'].extend(dg['data'])
+        return d
+
+    def merge_data(self, comp, which='all'):
+        mn, mx = sys.float_info.max, sys.float_info.min
+        recs = OrderedDict()
+        for key in self:
+            if comp in self.data_keys(key):
+                if which == 'inv':
+                    d = self.collect_inv_data(key, comp)
+                elif which == 'edges':
+                    d = self.collect_edges_data(key, comp)
+                elif which == 'area':
+                    d = self.collect_grid_data(key, comp)
+                else:
+                    d = self.collect_all_data(key, comp)
+                z = d['data']
+                if z:
+                    recs[key] = d
+                    mn = min(mn, min(z))
+                    mx = max(mx, max(z))
+        return recs, mn, mx
+
+    def calcs(self, key):
+        return [r for r in self.gridcalcs[self.masks[key]] if r]
+
+    def show(self, out=[], cmap='viridis', alpha=1, label=False):
+        def split_key(key):
+            tl = list(key)
+            l = len(tl)
+            wp = l // 4 + int(l%4 > 1)
+            return '\n'.join([' '.join(s) for s in [tl[i*l // wp: (i+1)*l // wp] for i in range(wp)]])
+        if isinstance(out, str):
+            out = [out]
+        vv = np.unique([self.variance[k] for k in self])
+        pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
+        # Set alpha
+        pscolors[:,-1] = alpha
+        pscmap = ListedColormap(pscolors)
+        norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
+        fig, ax = plt.subplots()
+        lbls = []
+        exc = frozenset.intersection(*self.keys)
+        for k in self:
+            lbls.append((split_key(k.difference(exc)), self.shapes[k].representative_point().coords[0]))
+            ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
+        ax.autoscale_view()
+        self.overlay(ax)
+        if out:
+            for o in out:
+                segx = [np.append(row[4]['fT'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
+                segy = [np.append(row[4]['fp'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
+                ax.plot(np.hstack(segx)[:-1], np.hstack(segy)[:-1], lw=2, label=o)
+            # Shrink current axis's height by 6% on the bottom
+            box = ax.get_position()
+            ax.set_position([box.x0 + box.width * 0.05, box.y0, box.width * 0.95, box.height])
+            # Put a legend below current axis
+            ax.legend(loc='upper right', bbox_to_anchor=(-0.04, 1), title='Out', borderaxespad=0, frameon=False)
+        if label:
+            for txt, xy in lbls:
+                
+                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='4%', pad=0.05)
+        cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
+        cb.set_label('Variance')
+        ax.axis(self.prj.trange + self.prj.prange)
+        if label:
+            ax.set_title(self.prj.name + (len(exc) * ' +{}').format(*exc))
+        else:
+            ax.set_title(self.prj.name)
+        plt.show()
+        return ax
+
+    def overlay(self, ax, fc='none', ec='k'):
+        for k in self:
+            ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
+
+    def show_data(self, key, comp, which='all'):
+        if comp in self.data_keys(key):
+            if which == 'inv':
+                dt = self.collect_inv_data(key, comp)
+            elif which == 'edges':
+                dt = self.collect_edges_data(key, comp)
+            elif which == 'area':
+                dt = self.collect_grid_data(key, comp)
+            else:
+                dt = self.collect_all_data(key, comp)
+        x, y = np.array(dt['pts']).T
+        fig, ax = plt.subplots()
+        pts = ax.scatter(x, y, c=dt['data'])
+        ax.set_title(' '.join(key))
+        cb = plt.colorbar(pts)
+        cb.set_label(comp)
+        plt.show()
+
+    def show_status(self):
+        fig, ax = plt.subplots()
+        extent = (self.prj.trange[0] - self.tstep / 2, self.prj.trange[1] + self.tstep / 2,
+                  self.prj.prange[0] - self.pstep / 2, self.prj.prange[1] + self.pstep / 2)
+        cmap = ListedColormap(['orangered', 'limegreen'])
+        ax.imshow(self.status, extent=extent, aspect='auto', origin='lower', cmap=cmap)
+        self.overlay(ax)
+        plt.axis(self.prj.trange + self.prj.prange)
+        plt.show()
+
+    def show_delta(self):
+        fig, ax = plt.subplots()
+        extent = (self.prj.trange[0] - self.tstep / 2, self.prj.trange[1] + self.tstep / 2,
+                  self.prj.prange[0] - self.pstep / 2, self.prj.prange[1] + self.pstep / 2)
+        im = ax.imshow(self.delta, extent=extent, aspect='auto', origin='lower')
+        self.overlay(ax)
+        cb = plt.colorbar(im)
+        cb.set_label('sec/point')
+        plt.title('THERMOCALC execution time')
+        plt.axis(self.prj.trange + self.prj.prange)
+        plt.show()
+
+    def identify(self, T, p):
+        for key in self:
+            if Point(T, p).intersects(self.shapes[key]):
+                return key
+
+    def ginput(self):
+        plt.ion()
+        self.show()
+        return self.identify(*plt.ginput()[0])
+
+    def isopleths(self, comp, which='all',smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None):
+        if step is None and N is None:
+            N = 10
+        if only is not None:
+            recs = OrderedDict()
+            if comp in self.data_keys(only):
+                if which == 'inv':
+                    d = self.collect_inv_data(only, comp)
+                elif which == 'edges':
+                    d = self.collect_edges_data(only, comp)
+                elif which == 'area':
+                    d = self.collect_grid_data(only, comp)
+                else:
+                    d = self.collect_all_data(only, comp)
+                z = d['data']
+                if z:
+                    recs[only] = d
+                    mn = min(z)
+                    mx = max(z)
+            else:
+                raise Exception('No {} in {}.'.format(comp, ' '.join(only)))
+        else:
+            print('Collecting...')
+            recs, mn, mx = self.merge_data(comp, which)
+        if step:
+            cntv = np.arange(0, mx + step, step)
+            cntv = cntv[cntv > mn - step]
+        else:
+            cntv = np.linspace(mn, mx, N)
+        # Thin-plate contouring of areas
+        print('Contouring...')
+        scale = self.tstep / self.pstep
+        fig, ax = plt.subplots()
+        for key in recs:
+            tmin, pmin, tmax, pmax = self.shapes[key].bounds
+            ttspace = self.tspace[np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)]
+            ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
+            tg, pg = np.meshgrid(ttspace, ppspace)
+            x, y = np.array(recs[key]['pts']).T
+            # Use scaling
+            rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
+            zg = rbf(tg, scale*pg)
+            # experimental
+            if gradient:
+                if dt:
+                    zg = np.gradient(zg, self.tstep, self.pstep)[0]
+                else:
+                    zg = -np.gradient(zg, self.tstep, self.pstep)[1]
+                if N:
+                    cntv = N
+                else:
+                    cntv = 10
+            # ------------
+            if filled:
+                cont = ax.contourf(tg, pg, zg, cntv)
+            else:
+                cont = ax.contour(tg, pg, zg, cntv)
+            patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
+            ax.add_patch(patch)
+            for col in cont.collections:
+                col.set_clip_path(patch)
+        if only is None:
+            self.overlay(ax)
+        plt.colorbar(cont)
+        if only is None:
+            ax.axis(self.prj.trange + self.prj.prange)
+            ax.set_title('Isopleths - {}'.format(comp))
+        else:
+            ax.set_title('{} - {}'.format(' '.join(only), comp))
+        plt.show()
+
+    def gridded(self, comp, which='all', smooth=0):
+        recs, mn, mx = self.merge_data(comp, which)
+        scale = self.tstep / self.pstep
+        gd = np.empty(self.tg.shape)
+        gd[:] = np.nan
+        for key in recs:
+            tmin, pmin, tmax, pmax = self.shapes[key].bounds
+            ttind = np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)
+            ppind = np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)
+            slc = np.ix_(ppind, ttind)
+            tg, pg = self.tg[slc], self.pg[slc]
+            x, y = np.array(recs[key]['pts']).T
+            # Use scaling
+            rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
+            zg = rbf(tg, scale*pg)
+            gd[self.masks[key]] = zg[self.masks[key][slc]]
+        return gd
+
+    def save_tab(self, tabfile=None, comps=None):
+        if not tabfile:
+            tabfile = os.path.join(self.prj.workdir, self.prj.name + '.tab')
+        if not comps:
+            comps = self.all_data_keys
+        data = []
+        for comp in tqdm(comps, desc='Exporting'):
+            data.append(self.gridded(comp).flatten())
+        with open(tabfile, 'wb') as f:
+            head = ['psbuilder', self.prj.name + '.tab', '{:12d}'.format(2),
+                    'T(°C)', '   {:16.16f}'.format(self.prj.trange[0])[:19],
+                    '   {:16.16f}'.format(self.tstep)[:19], '{:12d}'.format(len(self.tspace)),
+                    'p(kbar)', '   {:16.16f}'.format(self.prj.prange[0])[:19],
+                    '   {:16.16f}'.format(self.pstep)[:19], '{:12d}'.format(len(self.pspace)),
+                    '{:12d}'.format(len(data)), (len(data)*'{:15s}').format(*comps)]
+            for ln in head:
+                f.write(bytes(ln + '\n', 'utf-8'))
+            np.savetxt(f, np.transpose(data), fmt='%15.6f', delimiter='')
+        print('Saved.')
+
+#
+#------------------UTILS---------------
+#
+
+def parse_logfile(logfile):
+    # res is list of dicts with data and ptguess keys
+    # data is dict with keys of phases and each contain dict of components, rbi dict and mode
+    # res[0]['data']['g']['mode']
+    # res[0]['data']['g']['z']
+    # res[0]['data']['g']['rbi']['MnO']
+    with open(logfile, 'r', encoding=TCenc) as f:
+        out = f.read()
+    lines = [''.join([c for c in ln if ord(c)<128]) for ln in out.splitlines() if ln != '']
+    pts = []
+    res = []
+    variance = -1
+    if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+        status = 'bombed'
+    else:
+        correct = {'L':'liq'}
+        for ln in lines:
+            if 'variance of required equilibrium' in ln:
+                variance = int(ln[ln.index('(') + 1:ln.index('?')])
+                break
+        bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
+        bstarts.append(len(lines))
+        for bs, be in zip(bstarts[:-1], bstarts[1:]):
+            block = lines[bs:be]
+            pts.append([float(n) for n in block[1].split()[:2]])
+            xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+            gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+            gixe = xyz[-1] + 2
+            ptguess = block[gixs:gixe]
+            data = {}
+            rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
+            phases = block[rbix - 1].split()[1:]
+            for phase, val in zip(phases, block[rbix].split()[2:]):
+                data[phase] = dict(mode=float(val))
+            for ix in xyz:
+                lbl = block[ix].split()[1]
+                phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
+                phase = correct.get(phase, phase)
+                data[phase][comp] = float(block[ix].split()[2])
+            rbiox = block[rbix + 1].split()[2:]
+            for delta in range(len(phases)):
+                comp = {c:float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
+                comp['H2O'] = float(block[rbix + 2 + delta].split()[1])
+                data[phases[delta]]['rbi'] = comp
+            res.append(dict(data=data,ptguess=ptguess))
+        if res:
+            status = 'ok'
+        else:
+            status = 'nir'
+    return status, variance, np.array(pts).T, res, out
+
+def construct_areas(unilist, invlist, trange, prange):
+    def area_exists(indexes):
+        def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
+            if found_cycle[0]:
+                return
+            marked[u] = True
+            path.append(u)
+            for v in graph[u]:
+                if marked[v] and v != pred_node:
+                    found_cycle[0] = True
+                    return
+                if not marked[v]:
+                    dfs_visit(graph, v, found_cycle, u, marked, path)
+        # create graph
+        graph = {}
+        for ix in indexes:
+            b, e = unilist[ix][2], unilist[ix][3]
+            if b == 0:
+                nix = max(list(inv_coords.keys())) + 1
+                inv_coords[nix] = unilist[ix][4]['T'][0], unilist[ix][4]['p'][0]
+                b = nix
+            if e == 0:
+                nix = max(list(inv_coords.keys())) + 1
+                inv_coords[nix] = unilist[ix][4]['T'][-1], unilist[ix][4]['p'][-1]
+                e = nix
+            if b in graph:
+                graph[b] = graph[b] + (e,)
+            else:
+                graph[b] = (e,)
+            if e in graph:
+                graph[e] = graph[e] + (b,)
+            else:
+                graph[e] = (b,)
+            uni_index[(b, e)] = unilist[ix][0]
+            uni_index[(e, b)] = unilist[ix][0]
+        # do search
+        path = []
+        marked = { u : False for u in graph }
+        found_cycle = [False]
+        for u in graph:
+            if not marked[u]:
+                dfs_visit(graph, u, found_cycle, u, marked, path)
+            if found_cycle[0]:
+                break
+        return found_cycle[0], path
+    uni_index = {}
+    for r in unilist:
+        uni_index[(r[2], r[3])] = r[0]
+        uni_index[(r[3], r[2])] = r[0]
+    inv_coords = {}
+    for r in invlist:
+        inv_coords[r[0]] = r[2]['T'][0], r[2]['p'][0]
+    faces = {}
+    for ix, uni in enumerate(unilist):
+        f1 = frozenset(uni[4]['phases'])
+        f2 = frozenset(uni[4]['phases'] - uni[4]['out'])
+        if f1 in faces:
+            faces[f1].append(ix)
+        else:
+            faces[f1] = [ix]
+        if f2 in faces:
+            faces[f2].append(ix)
+        else:
+            faces[f2] = [ix]
+        # topology of polymorphs is degenerated
+        for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
+            if poly.issubset(uni[4]['phases']):
+                f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
+                if f2 in faces:
+                    faces[f2].append(ix)
+                else:
+                    faces[f2] = [ix]
+    vertices, edges, phases = [], [], []
+    tedges, tphases = [], []
+    for f in faces:
+        exists, path = area_exists(faces[f])
+        if exists:
+            edge = []
+            vert = []
+            for b, e in zip(path, path[1:] + path[:1]):
+                edge.append(uni_index.get((b, e), None))
+                vert.append(inv_coords[b])
+            # check for bad topology
+            if not None in edge:
+                edges.append(edge)
+                vertices.append(vert)
+                phases.append(f)
+            else:
+                raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
+        else:
+            # loop not found, search for range crossing chain
+            for ppath in itertools.permutations(path):
+                edge = []
+                vert = []
+                for b, e in zip(ppath[:-1], ppath[1:]):
+                    edge.append(uni_index.get((b, e), None))
+                    vert.append(inv_coords[b])
+                vert.append(inv_coords[e])
+                if not None in edge:
+                    x, y = vert[0]
+                    if (x < trange[0] or x > trange[1] or y < prange[0] or y > prange[1]):
+                        x, y = vert[-1]
+                        if (x < trange[0] or x > trange[1] or y < prange[0] or y > prange[1]):
+                            tedges.append(edge)
+                            tphases.append(f)
+                    break
+    return vertices, edges, phases, tedges, tphases
 
 def main():
     application = QtWidgets.QApplication(sys.argv)
@@ -2250,7 +2925,6 @@ def main():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
-
 
 if __name__ == "__main__":
     main()
