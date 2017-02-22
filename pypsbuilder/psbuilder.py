@@ -1396,8 +1396,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.trimuni(row)
                             self.changed = True
                             self.adapt_uniview()
-                            self.plot()
                             idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.unimodel.dataChanged.emit(idx, idx)
+                            self.plot()
                             self.show_uni(idx)
                             self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
                         else:
@@ -1437,9 +1438,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 if row[2] == id or row[3] == id:
                                     self.trimuni(row)
                             self.changed = True
-                            self.plot()
                             idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
                             self.show_inv(idx)
+                            self.plot()
+                            self.invmodel.dataChanged.emit(idx, idx)
                             self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
                         else:
                             self.statusBar().showMessage('Invariant point already exists.')
@@ -1705,7 +1707,10 @@ class InvModel(QtCore.QAbstractTableModel):
             return None
         elif role != QtCore.Qt.DisplayRole:
             return None
-        return self.invlist[index.row()][index.column()]
+        if index.column() == 0 and self.invlist[index.row()][self.header.index('Data')]['manual']:
+            return -self.invlist[index.row()][index.column()]
+        else:
+            return self.invlist[index.row()][index.column()]
 
     def appendRow(self, datarow):
         """ Append model row. """
@@ -1759,7 +1764,10 @@ class UniModel(QtCore.QAbstractTableModel):
             return None
         elif role != QtCore.Qt.DisplayRole:
             return None
-        return self.unilist[index.row()][index.column()]
+        if index.column() == 0 and self.unilist[index.row()][self.header.index('Data')]['manual']:
+            return -self.unilist[index.row()][index.column()]
+        else:
+            return self.unilist[index.row()][index.column()]
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         # DO change and emit plot
