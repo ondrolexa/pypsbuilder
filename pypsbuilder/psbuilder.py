@@ -1736,10 +1736,13 @@ class InvModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
+        elif role == QtCore.Qt.ForegroundRole:
+            if self.invlist[index.row()][self.header.index('Data')]['manual']:
+                brush = QtGui.QBrush()
+                brush.setColor(QtGui.QColor('red'))
+                return brush
         elif role != QtCore.Qt.DisplayRole:
             return None
-        if index.column() == 0 and self.invlist[index.row()][self.header.index('Data')]['manual']:
-            return -self.invlist[index.row()][index.column()]
         else:
             return self.invlist[index.row()][index.column()]
 
@@ -1793,10 +1796,13 @@ class UniModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
+        elif role == QtCore.Qt.ForegroundRole:
+            if self.unilist[index.row()][self.header.index('Data')]['manual']:
+                brush = QtGui.QBrush()
+                brush.setColor(QtGui.QColor('red'))
+                return brush
         elif role != QtCore.Qt.DisplayRole:
             return None
-        if index.column() == 0 and self.unilist[index.row()][self.header.index('Data')]['manual']:
-            return -self.unilist[index.row()][index.column()]
         else:
             return self.unilist[index.row()][index.column()]
 
@@ -2109,22 +2115,26 @@ class PTPS:
             # Store scriptfile content and initialize dicts
             with open(self.scriptfile, 'r', encoding=TCenc) as f:
                 self.scriptfile_content = f.readlines()
-            self.shapes  = OrderedDict()
-            self.edges  = OrderedDict()
+            self.shapes = OrderedDict()
+            self.edges = OrderedDict()
             self.variance = OrderedDict()
             # traverse pseudosecton
-            vertices, edges, phases, tedges, tphases = construct_areas(self.prj.unilist,
-                                                                       self.prj.invlist,
-                                                                       self.prj.trange,
-                                                                       self.prj.prange)
+            (vertices, edges, phases,
+             tedges, tphases) = construct_areas(self.prj.unilist,
+                                                self.prj.invlist,
+                                                self.prj.trange,
+                                                self.prj.prange)
             # default p-t range boundary
-            bnd = [LineString([(self.prj.trange[0], self.prj.prange[0]),(self.prj.trange[1], self.prj.prange[0])]),
-                   LineString([(self.prj.trange[1], self.prj.prange[0]),(self.prj.trange[1], self.prj.prange[1])]),
-                   LineString([(self.prj.trange[1], self.prj.prange[1]),(self.prj.trange[0], self.prj.prange[1])]),
-                   LineString([(self.prj.trange[0], self.prj.prange[1]),(self.prj.trange[0], self.prj.prange[0])])]
+            bnd = [LineString([(self.prj.trange[0], self.prj.prange[0]),
+                              (self.prj.trange[1], self.prj.prange[0])]),
+                   LineString([(self.prj.trange[1], self.prj.prange[0]),
+                              (self.prj.trange[1], self.prj.prange[1])]),
+                   LineString([(self.prj.trange[1], self.prj.prange[1]),
+                              (self.prj.trange[0], self.prj.prange[1])]),
+                   LineString([(self.prj.trange[0], self.prj.prange[1]),
+                              (self.prj.trange[0], self.prj.prange[0])])]
             bnda = list(polygonize(bnd))[0]
             # Create all full areas
-            #for e, f in tqdm(zip(edges, phases), desc='Full areas', total=len(edges)):
             tq = trange(len(edges), desc='Full areas')
             for ind in tq:
                 e, f = edges[ind], phases[ind]
@@ -2144,7 +2154,6 @@ class PTPS:
                 if invalid:
                     tq.write('Lines {} have invalid geometry.'.format(e))
             # Create all partial areas
-            #for e, f in tqdm(zip(tedges, tphases), desc='Partial areas', total=len(tedges)):
             tq = trange(len(tedges), desc='Partial areas')
             for ind in tq:
                 e, f = tedges[ind], tphases[ind]
@@ -2169,7 +2178,7 @@ class PTPS:
                                     self.shapes[f] = ppok
                 if invalid:
                     tq.write('Lines {} does not form valid polygon for default p-T range.'.format(e))
-            # Fix possible overlaps of partial areas 
+            # Fix possible overlaps of partial areas
             for k1, k2 in itertools.combinations(self.shapes, 2):
                 if self.shapes[k1].within(self.shapes[k2]):
                     self.shapes[k2] = self.shapes[k2].difference(self.shapes[k1])
@@ -2369,7 +2378,7 @@ class PTPS:
         fixed, ftot = 0, len(ri)
         tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
         for ind in tq:
-            r, c = ri[ind], ci[ind] 
+            r, c = ri[ind], ci[ind]
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
             for rn, cn in self.neighs(r, c):
@@ -2499,7 +2508,7 @@ class PTPS:
             if res:
                 p, T, data = res[0]
         return sorted(list(data.keys()))
-    
+
     @property
     def all_data_keys(self):
         keys = set()
@@ -2615,7 +2624,7 @@ class PTPS:
             ax.legend(loc='upper right', bbox_to_anchor=(-0.04, 1), title='Out', borderaxespad=0, frameon=False)
         if label:
             for txt, xy in lbls:
-                
+
                 ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='4%', pad=0.05)
