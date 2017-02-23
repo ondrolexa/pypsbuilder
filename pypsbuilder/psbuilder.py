@@ -586,6 +586,37 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         label = self.format_label(row[4]['phases'], row[4]['out'])
                         self.unimodel.appendRow((row[0], label, row[2], row[3], r))
                     self.adapt_uniview()
+                    for row in tqdm(data['invlist'], desc='invlist'):
+                        tcout = self.runprog(self.tc, row[2]['cmd'])
+                        status, variance, pts, res, output = parse_logfile(self.logfile)
+                        if status == 'ok':
+                            r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                                     variance=variance, p=pts[0], T=pts[1], manual=False,
+                                     output=output, results=res)
+                            label = self.format_label(row[2]['phases'], row[2]['out'])
+                            isnew, id = self.getidinv(r)
+                            urow = self.invmodel.getRowFromId(id)
+                            urow[1] = label
+                            urow[2] = r
+                            # retrim affected
+                            for urow in self.unimodel.unilist:
+                                if urow[2] == id or urow[3] == id:
+                                    self.trimuni(urow)
+                    self.invview.resizeColumnsToContents()
+                    for row in tqdm(data['unilist'], desc='unilist'):
+                        tcout = self.runprog(self.tc, row[4]['cmd'])
+                        status, variance, pts, res, output = parse_logfile(self.logfile)
+                        if status == 'ok':
+                            r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                                     variance=variance, p=pts[0], T=pts[1], manual=False,
+                                     output=output, results=res)
+                            label = self.format_label(row[4]['phases'], row[4]['out'])
+                            isnew, id = self.getiduni(r)
+                            urow = self.unimodel.getRowFromId(id)
+                            urow[1] = label
+                            urow[4] = r
+                            self.trimuni(urow)
+                    self.adapt_uniview()
                 else:
                     for row in data['unilist']:
                         # fix older
