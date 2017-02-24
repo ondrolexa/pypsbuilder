@@ -16,7 +16,6 @@ import gzip
 import subprocess
 import time
 import itertools
-import shutil
 import pathlib
 from collections import OrderedDict
 from pkg_resources import resource_filename
@@ -25,6 +24,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 import numpy as np
 import matplotlib
+import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -2098,6 +2098,25 @@ class ProjectFile(object):
     def invdata(self, fid):
         return self.invlist[self.invlookup[fid]][2]
 
+    def get_trimmed_uni(self, fid):
+        uni = self.unilist[self.unilookup[fid]]
+        if uni[2] > 0:
+            dt = self.invdata(uni[2])
+            T1, p1 = dt['T'][0], dt['p'][0]
+        else:
+            T1, p1 = [], []
+        if uni[3] > 0:
+            dt = self.invdata(uni[3])
+            T2, p2 = dt['T'][0], dt['p'][0]
+        else:
+            T2, p2 = [], []
+        if not uni[4]['manual']:
+            T = uni[4]['T'][uni[4]['begix']:uni[4]['endix'] + 1]
+            p = uni[4]['p'][uni[4]['begix']:uni[4]['endix'] + 1]
+        else:
+            T, p = [], []
+        return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
+
 class PTPS:
     def __init__(self, projfile):
         self.prj = ProjectFile(projfile)
@@ -2143,7 +2162,7 @@ class PTPS:
             tq = trange(len(edges), desc='Full areas')
             for ind in tq:
                 e, f = edges[ind], phases[ind]
-                lns = [LineString(np.c_[self.prj.unidata(fid)['fT'], self.prj.unidata(fid)['fp']]) for fid in e]
+                lns = [LineString(np.c_[self.prj.get_trimmed_uni(fid)]) for fid in e]
                 pp = polygonize(lns)
                 invalid = True
                 for ppp in pp:
@@ -2162,7 +2181,7 @@ class PTPS:
             tq = trange(len(tedges), desc='Partial areas')
             for ind in tq:
                 e, f = tedges[ind], tphases[ind]
-                lns = [LineString(np.c_[self.prj.unidata(fid)['fT'], self.prj.unidata(fid)['fp']]) for fid in e]
+                lns = [LineString(np.c_[self.prj.get_trimmed_uni(fid)]) for fid in e]
                 pp = linemerge(lns)
                 invalid = True
                 if pp.geom_type == 'LineString':
@@ -2218,10 +2237,6 @@ class PTPS:
         return os.path.join(self.prj.workdir, 'tc-' + self.bname + '.txt')
 
     @property
-    def ofile(self):
-        return os.path.join(self.prj.workdir, 'tc-' + self.bname + '-o.txt')
-
-    @property
     def logfile(self):
         return os.path.join(self.prj.workdir, 'tc-log.txt')
 
@@ -2253,7 +2268,6 @@ class PTPS:
                 'tg': self.tg,
                 'pg': self.pg,
                 'gridcalcs': self.gridcalcs,
-                'guesses': self.guesses,
                 'masks': self.masks,
                 'status': self.status,
                 'delta': self.delta}
@@ -2274,7 +2288,6 @@ class PTPS:
         self.tg = data['tg']
         self.pg = data['pg']
         self.gridcalcs = data['gridcalcs']
-        self.guesses = data['guesses']
         self.masks = data['masks']
         self.status = data['status']
         self.delta = data['delta']
@@ -2312,14 +2325,11 @@ class PTPS:
         self.pspace = np.linspace(self.prj.prange[0], self.prj.prange[1], numP)
         self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
         self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
-        self.guesses = np.empty(self.tg.shape, np.dtype(object))
         self.status = np.empty(self.tg.shape)
         self.status[:] = np.nan
         self.delta = np.empty(self.tg.shape)
         self.delta[:] = np.nan
         done = 0
-        # backup script file
-        shutil.copy2(self.scriptfile, self.scriptfile + '.backup')
         for (r, c) in tqdm(np.ndindex(self.tg.shape), desc='Gridding', total=np.prod(self.tg.shape)):
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
@@ -2329,44 +2339,30 @@ class PTPS:
                 start_time = time.time()
                 out = self.runtc(ans)
                 delta = time.time() - start_time
-                res = self.parse_output(out)
+                status, variance, pts, res, output = parse_logfile(self.logfile)
                 if len(res) == 1:
                     self.gridcalcs[r, c] = res[0]
                     self.status[r, c] = 1
                     self.delta[r, c] = delta
-                    with open(self.logfile, 'r', encoding=TCenc) as f:
-                        lines = f.readlines()
-                    gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
-                    k = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
-                    self.guesses[r, c] = lines[gs - 3:gs + k + 3]
                 else:
                     for rn, cn in self.neighs(r, c):
                         if self.status[rn, cn] == 1:
-                            update_guesses(self.scriptfile, self.guesses[rn, cn])
+                            update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
                             start_time = time.time()
                             out = self.runtc(ans)
                             delta = time.time() - start_time
-                            res = self.parse_output(out)
+                            status, variance, pts, res, output = parse_logfile(self.logfile)
                             if len(res) == 1:
                                 self.gridcalcs[r, c] = res[0]
                                 self.status[r, c] = 1
                                 self.delta[r, c] = delta
-                                with open(self.logfile, 'r', encoding=TCenc) as f:
-                                    lines = f.readlines()
-                                gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
-                                gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
-                                self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
                                 break
                     if self.status[r, c] == 0:
                         self.gridcalcs[r, c] = None
-                        self.guesses[r, c] = None
             else:
                 self.gridcalcs[r, c] = None
-                self.guesses[r, c] = None
             done += 1
         print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
-        # remove backup
-        os.remove(self.scriptfile + '.backup')
         self.fix_solutions()
         # Create data masks
         points = MultiPoint(list(zip(self.tg.flatten(), self.pg.flatten())))
@@ -2376,8 +2372,6 @@ class PTPS:
         self.save()
 
     def fix_solutions(self):
-        # backup script file
-        shutil.copy2(self.scriptfile, self.scriptfile + '.backup')
         ri, ci = np.nonzero(self.status == 0)
         fixed, ftot = 0, len(ri)
         tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
@@ -2391,41 +2385,29 @@ class PTPS:
                     start_time = time.time()
                     out = self.runtc(ans)
                     delta = time.time() - start_time
-                    res = self.parse_output(out)
+                    status, variance, pts, res, output = parse_logfile(self.logfile)
                     if len(res) == 1:
                         self.gridcalcs[r, c] = res[0]
                         self.status[r, c] = 1
                         self.delta[r, c] = delta
-                        with open(self.logfile, 'r', encoding=TCenc) as f:
-                            lines = f.readlines()
-                        gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
-                        gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
-                        self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
                         fixed += 1
                         tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                         break
                     else:
-                        update_guesses(self.scriptfile, self.guesses[rn, cn])
+                        update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
                     start_time = time.time()
                     out = self.runtc(ans)
                     delta = time.time() - start_time
-                    res = self.parse_output(out)
+                    status, variance, pts, res, output = parse_logfile(self.logfile)
                     if len(res) == 1:
                         self.gridcalcs[r, c] = res[0]
                         self.status[r, c] = 1
                         self.delta[r, c] = delta
-                        with open(self.logfile, 'r', encoding=TCenc) as f:
-                            lines = f.readlines()
-                        gs = [ix for ix,ln in enumerate(lines) if 'ptguess' in ln][0]
-                        gk = [ix for ix,ln in enumerate(lines[gs + 2:]) if '%' in ln][0]
-                        self.guesses[r, c] = lines[gs - 3:gs + gk + 3]
                         fixed += 1
                         tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                         break
             if self.status[r, c] == 0:
                 tqdm.write('No solution find for {}, {}'.format(t, p))
-        # remove backup
-        os.remove(self.scriptfile + '.backup')
         print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
 
     def neighs(self, r, c):
@@ -2460,31 +2442,6 @@ class PTPS:
             if 'variance of required equilibrium' in ln:
                 break
         return int(ln[ln.index('(') + 1:ln.index('?')])
-
-    def parse_output(self, out):
-        def format_key(s):
-            if '(' in s and ')' in s:
-                s = s[s.find('(')+1:s.find(')')] + '-' + s[:s.find('(')]
-            return s
-        lines = [''.join([c for c in ln if ord(c)<128]) for ln in out.splitlines() if ln != '']
-        isost = [ix for ix,ln in enumerate(lines) if 'P(kbar)' in ln]
-        modst = [ix for ix,ln in enumerate(lines) if 'mode' in ln]
-        res = []
-        for b, e in zip(isost, modst):
-            p = float(lines[b + 1][:8].strip())
-            t = float(lines[b + 1][8:18].strip())
-            # components rest of lines until modes
-            keys, vals = [], []
-            for ix in range(b, e, 2):
-                keys += [format_key(lines[ix][i:i + 10].strip()) for i in range(18, len(lines[ix].rstrip()), 10)]
-                vals += [float(lines[ix + 1][i:i + 10].strip()) for i in range(18, len(lines[ix + 1].rstrip()), 10)]
-            iso = dict(zip(keys, vals))
-            # modes
-            keys = [format_key(lines[e][i:i + 10].strip()) for i in range(8, len(lines[e].rstrip()), 10)]
-            vals = [float(lines[e + 1][i:i + 10].strip()) for i in range(8, len(lines[e + 1].rstrip()), 10)]
-            modes = dict(zip(keys, vals))
-            res.append((p, t, {**iso, **modes}))
-        return res
 
     def data_keys(self, key):
         data = dict()
