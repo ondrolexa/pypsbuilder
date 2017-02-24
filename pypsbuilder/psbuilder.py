@@ -358,8 +358,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             errinfo = 'Check your scriptfile.'
             with open(self.scriptfile, 'r', encoding=TCenc) as f:
                 lines = f.readlines()
+            gsb, gse = False, False
             for line in lines:
                 kw = line.split('%')[0].split()
+                if '{PSBGUESS-BEGIN}' in line:
+                    gsb = True
+                if '{PSBGUESS-END}' in line:
+                    gse = True
                 if kw == ['*']:
                     break
                 if kw:
@@ -480,6 +485,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 raise Exception()
             if not check['printxyz']:
                 errinfo = 'Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.'
+                raise Exception()
+            if not (gsb and gse):
+                errinfo = 'There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.'
                 raise Exception()
 
             # What???
@@ -933,11 +941,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             if not r['manual']:
-                clipboard = QtWidgets.QApplication.clipboard()
-                clipboard.setText('\n'.join(r['results'][0]['ptguess']))
-                self.statusBar().showMessage('Guesses copied to clipboard.')
+                update_guesses(self.scriptfile, r['results'][0]['ptguess'])
+                self.read_scriptfile()
+                self.statusBar().showMessage('Guesses set.')
             else:
-                self.statusBar().showMessage('Guesses cannot be copied from user-defined invariant point.')
+                self.statusBar().showMessage('Guesses cannot be set from user-defined invariant point.')
 
     def unisel_guesses(self):
         if self.unisel.hasSelection():
@@ -949,11 +957,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
-                    clipboard = QtWidgets.QApplication.clipboard()
-                    clipboard.setText('\n'.join(r['results'][ix]['ptguess']))
-                    self.statusBar().showMessage('Guesses copied to clipboard.')
+                    update_guesses(self.scriptfile, r['results'][ix]['ptguess'])
+                    self.read_scriptfile()
+                    self.statusBar().showMessage('Guesses set.')
             else:
-                self.statusBar().showMessage('Guesses cannot be copied from user-defined univariant line.')
+                self.statusBar().showMessage('Guesses cannot be set from user-defined univariant line.')
 
     def get_phases_out(self):
         phases = []
@@ -1532,7 +1540,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     # phases in areas for TC-Investigator
                     with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
                         vertices, edges, phases, tedges, tphases = construct_areas(self.unimodel.unilist,
-                                                                                   self.unimodel.invlist[1:],
+                                                                                   self.invmodel.invlist[1:],
                                                                                    self.trange,
                                                                                    self.prange)
                         # write output
@@ -2112,9 +2120,6 @@ class PTPS:
             self.load()
             print('Compositions loaded.')
         else:
-            # Store scriptfile content and initialize dicts
-            with open(self.scriptfile, 'r', encoding=TCenc) as f:
-                self.scriptfile_content = f.readlines()
             self.shapes = OrderedDict()
             self.edges = OrderedDict()
             self.variance = OrderedDict()
@@ -2337,7 +2342,7 @@ class PTPS:
                 else:
                     for rn, cn in self.neighs(r, c):
                         if self.status[rn, cn] == 1:
-                            self.update_guesses(self.guesses[rn, cn])
+                            update_guesses(self.scriptfile, self.guesses[rn, cn])
                             start_time = time.time()
                             out = self.runtc(ans)
                             delta = time.time() - start_time
@@ -2360,7 +2365,6 @@ class PTPS:
                 self.guesses[r, c] = None
             done += 1
         print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
-        self.reset_scriptfile()
         # remove backup
         os.remove(self.scriptfile + '.backup')
         self.fix_solutions()
@@ -2401,7 +2405,7 @@ class PTPS:
                         tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                         break
                     else:
-                        self.update_guesses(self.guesses[rn, cn])
+                        update_guesses(self.scriptfile, self.guesses[rn, cn])
                     start_time = time.time()
                     out = self.runtc(ans)
                     delta = time.time() - start_time
@@ -2420,7 +2424,6 @@ class PTPS:
                         break
             if self.status[r, c] == 0:
                 tqdm.write('No solution find for {}, {}'.format(t, p))
-        self.reset_scriptfile()
         # remove backup
         os.remove(self.scriptfile + '.backup')
         print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
@@ -2439,24 +2442,6 @@ class PTPS:
             m = m[:, :-1]
         return zip([i for i in m[:,:,0].flat if i is not None],
                    [i for i in m[:,:,1].flat if i is not None])
-
-    def update_guesses(self, guesses):
-        gsix = [ix for ix, ln in enumerate(self.scriptfile_content) if 'ptguess' in ln]
-        if gsix:
-            gs = gsix[0]
-        else:
-            gs = len(self.scriptfile_content) + 3
-        with open(self.scriptfile, 'w', encoding=TCenc) as f:
-            for ln in self.scriptfile_content[:gs - 3]:
-                f.write(ln)
-            for ln in guesses:
-                f.write(ln)
-            f.write('*\n')
-
-    def reset_scriptfile(self):
-        with open(self.scriptfile, 'w', encoding=TCenc) as f:
-            for ln in self.scriptfile_content:
-                f.write(ln)
 
     def runtc(self, instr):
         if sys.platform.startswith('win'):
@@ -2963,6 +2948,22 @@ def construct_areas(unilist, invlist, trange, prange):
                             tphases.append(f)
                     break
     return vertices, edges, phases, tedges, tphases
+
+def update_guesses(scriptfile, guesses):
+    # Store scriptfile content and initialize dicts
+    with open(scriptfile, 'r', encoding=TCenc) as f:
+        sc = f.readlines() 
+    gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
+    gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
+    if gsb and gse:
+        with open(scriptfile, 'w', encoding=TCenc) as f:
+            for ln in sc[:gsb[0] + 1]:
+                f.write(ln)
+            for ln in guesses:
+                f.write(ln)
+                f.write('\n')
+            for ln in sc[gse[0]:]:
+                f.write(ln)
 
 def main():
     application = QtWidgets.QApplication(sys.argv)

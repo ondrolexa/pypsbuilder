@@ -706,7 +706,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Copy guess</string>
+              <string>Set ptguess</string>
              </property>
             </widget>
            </item>
@@ -785,7 +785,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Copy guess</string>
+              <string>Set ptguess</string>
              </property>
             </widget>
            </item>
