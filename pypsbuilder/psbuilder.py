@@ -2712,28 +2712,31 @@ class PTPS:
             ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
             tg, pg = np.meshgrid(ttspace, ppspace)
             x, y = np.array(recs[key]['pts']).T
-            # Use scaling
-            rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
-            zg = rbf(tg, scale*pg)
-            # experimental
-            if gradient:
-                if dt:
-                    zg = np.gradient(zg, self.tstep, self.pstep)[0]
+            try:
+                # Use scaling
+                rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
+                zg = rbf(tg, scale*pg)
+                # experimental
+                if gradient:
+                    if dt:
+                        zg = np.gradient(zg, self.tstep, self.pstep)[0]
+                    else:
+                        zg = -np.gradient(zg, self.tstep, self.pstep)[1]
+                    if N:
+                        cntv = N
+                    else:
+                        cntv = 10
+                # ------------
+                if filled:
+                    cont = ax.contourf(tg, pg, zg, cntv)
                 else:
-                    zg = -np.gradient(zg, self.tstep, self.pstep)[1]
-                if N:
-                    cntv = N
-                else:
-                    cntv = 10
-            # ------------
-            if filled:
-                cont = ax.contourf(tg, pg, zg, cntv)
-            else:
-                cont = ax.contour(tg, pg, zg, cntv)
-            patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
-            ax.add_patch(patch)
-            for col in cont.collections:
-                col.set_clip_path(patch)
+                    cont = ax.contour(tg, pg, zg, cntv)
+                patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
+                ax.add_patch(patch)
+                for col in cont.collections:
+                    col.set_clip_path(patch)
+            except:
+                print('Error for {}'.format(' '.join(key)))
         if only is None:
             self.overlay(ax)
         plt.colorbar(cont)
