@@ -2215,10 +2215,7 @@ class PTPS:
 
     @property
     def phases(self):
-        ph = set()
-        for k in self:
-            ph.update(k)
-        return ph
+        return {phase for key in self for phase in key}
 
     @property
     def keys(self):
@@ -2329,7 +2326,6 @@ class PTPS:
         self.status[:] = np.nan
         self.delta = np.empty(self.tg.shape)
         self.delta[:] = np.nan
-        done = 0
         for (r, c) in tqdm(np.ndindex(self.tg.shape), desc='Gridding', total=np.prod(self.tg.shape)):
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
@@ -2344,7 +2340,22 @@ class PTPS:
                     self.gridcalcs[r, c] = res[0]
                     self.status[r, c] = 1
                     self.delta[r, c] = delta
-                else:
+                # search already done inv neighs
+                if self.status[r, c] == 0:
+                    edges = self.edges[k]
+                    for inv in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
+                        if not self.invdata(inv)['manual']:
+                            update_guesses(self.scriptfile, self.invdata(inv)['results'][0]['ptguess'])
+                            start_time = time.time()
+                            out = self.runtc(ans)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = parse_logfile(self.logfile)
+                            if len(res) == 1:
+                                self.gridcalcs[r, c] = res[0]
+                                self.status[r, c] = 1
+                                self.delta[r, c] = delta
+                                break
+                if self.status[r, c] == 0:
                     for rn, cn in self.neighs(r, c):
                         if self.status[rn, cn] == 1:
                             update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
@@ -2361,7 +2372,6 @@ class PTPS:
                         self.gridcalcs[r, c] = None
             else:
                 self.gridcalcs[r, c] = None
-            done += 1
         print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
         self.fix_solutions()
         # Create data masks
@@ -2379,9 +2389,10 @@ class PTPS:
             r, c = ri[ind], ci[ind]
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
+            ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
+            # search already done grid neighs
             for rn, cn in self.neighs(r, c):
                 if self.status[rn, cn] == 1:
-                    ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
                     start_time = time.time()
                     out = self.runtc(ans)
                     delta = time.time() - start_time
@@ -2406,6 +2417,23 @@ class PTPS:
                         fixed += 1
                         tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                         break
+            # search already done inv neighs
+            if self.status[r, c] == 0:
+                edges = self.edges[k]
+                for inv in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
+                    if not self.invdata(inv)['manual']:
+                        update_guesses(self.scriptfile, self.invdata(inv)['results'][0]['ptguess'])
+                        start_time = time.time()
+                        out = self.runtc(ans)
+                        delta = time.time() - start_time
+                        status, variance, pts, res, output = parse_logfile(self.logfile)
+                        if len(res) == 1:
+                            self.gridcalcs[r, c] = res[0]
+                            self.status[r, c] = 1
+                            self.delta[r, c] = delta
+                            fixed += 1
+                            tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                            break
             if self.status[r, c] == 0:
                 tqdm.write('No solution find for {}, {}'.format(t, p))
         print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
@@ -2448,7 +2476,9 @@ class PTPS:
         if key in self.masks:
             res = self.calcs(key)
             if res:
-                p, T, data = res[0]
+                dt = res[0]['data']
+                ph = sorted(list(dt.keys()))
+                set(self.calcs(key)[0]['data']['q'].keys()).difference({'mode','rbi'})
         return sorted(list(data.keys()))
 
     @property
@@ -2461,76 +2491,89 @@ class PTPS:
                 keys.update(data.keys())
         return sorted(list(keys))
 
-    def collect_inv_data(self, key, comp):
+    def collect_inv_data(self, key, phase, comp, ox=None):
         dt = dict(pts=[], data=[])
-        if key in self.edges:
-            if comp in self.data_keys(key):
-                edges = self.edges[key]
-                for i in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
-                    for p, T, data in self.parse_output(self.invdata(i)['output']):
-                        v = data.get(comp, None)
-                        if v:
-                            dt['pts'].append((T, p))
-                            dt['data'].append(v)
+        edges = self.edges[key]
+        for i in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
+            T = self.invdata(i)['T'][0]
+            p = self.invdata(i)['p'][0]
+            res = self.invdata(i)['results'][0]
+            if comp == 'rbi':
+                v = res['data'][phase][comp][ox]
+                dt['pts'].append((T, p))
+                dt['data'].append(v)
+            else:
+                v = res['data'][phase][comp]
+                dt['pts'].append((T, p))
+                dt['data'].append(v)
         return dt
 
-    def collect_edges_data(self, key, comp):
-        # zlobi point intersect napr pro frozenset({'ilm', 'sill', 'pl', 'H2O', 'ksp', 'g', 'bi', 'q', 'mu'})
+    def collect_edges_data(self, key, phase, comp, ox=None):
         dt = dict(pts=[], data=[])
-        if key in self.edges:
-            if comp in self.data_keys(key):
-                for e in self.edges[key]:
-                    for p, T, data in self.parse_output(self.unidata(e)['output']):
-                        if Point(T, p).intersects(self.shapes[key]):
-                            v = data.get(comp, None)
-                            if v:
-                                dt['pts'].append((T, p))
-                                dt['data'].append(v)
-        return dt
-
-    def collect_grid_data(self, key, comp):
-        dt = dict(pts=[], data=[])
-        if key in self.masks:
-            if comp in self.data_keys(key):
-                for p, T, data in self.calcs(key):
-                    v = data.get(comp, None)
-                    if v:
+        for e in self.edges[key]:
+            if not self.unidata(e)['manual']:
+                bix, eix = self.unidata(e)['begix'], self.unidata(e)['endix']
+                edt = zip(self.unidata(e)['T'][bix:eix + 1],
+                          self.unidata(e)['p'][bix:eix + 1],
+                          self.unidata(e)['results'][bix:eix + 1])
+                for T, p, res in edt:
+                    if comp == 'rbi':
+                        v = res['data'][phase][comp][ox]
+                        dt['pts'].append((T, p))
+                        dt['data'].append(v)
+                    else:
+                        v = res['data'][phase][comp]
                         dt['pts'].append((T, p))
                         dt['data'].append(v)
         return dt
 
-    def collect_all_data(self, key, comp):
-        d = self.collect_inv_data(key, comp)
-        de = self.collect_edges_data(key, comp)
-        dg = self.collect_grid_data(key, comp)
+    def collect_grid_data(self, key, phase, comp, ox=None):
+        dt = dict(pts=[], data=[])
+        gdt = zip(self.tg[self.masks[key]],
+                  self.pg[self.masks[key]],
+                  self.gridcalcs[self.masks[key]],
+                  self.status[self.masks[key]])
+        for T, p, res, s in gdt:
+            if s:
+                if comp == 'rbi':
+                    v = res['data'][phase][comp][ox]
+                    dt['pts'].append((T, p))
+                    dt['data'].append(v)
+                else:
+                    v = res['data'][phase][comp]
+                    dt['pts'].append((T, p))
+                    dt['data'].append(v)
+        return dt
+
+    def collect_all_data(self, key, phase, comp, ox=None):
+        d = self.collect_inv_data(key, phase, comp, ox=ox)
+        de = self.collect_edges_data(key, phase, comp, ox=ox)
+        dg = self.collect_grid_data(key, phase, comp, ox=ox)
         d['pts'].extend(de['pts'])
         d['pts'].extend(dg['pts'])
         d['data'].extend(de['data'])
         d['data'].extend(dg['data'])
         return d
 
-    def merge_data(self, comp, which='all'):
+    def merge_data(self, phase, comp, ox=None, which='all'):
         mn, mx = sys.float_info.max, sys.float_info.min
         recs = OrderedDict()
         for key in self:
-            if comp in self.data_keys(key):
+            if phase in key:
                 if which == 'inv':
-                    d = self.collect_inv_data(key, comp)
+                    d = self.collect_inv_data(key, phase, comp, ox=ox)
                 elif which == 'edges':
-                    d = self.collect_edges_data(key, comp)
+                    d = self.collect_edges_data(key, phase, comp, ox=ox)
                 elif which == 'area':
-                    d = self.collect_grid_data(key, comp)
+                    d = self.collect_grid_data(key, phase, comp, ox=ox)
                 else:
-                    d = self.collect_all_data(key, comp)
+                    d = self.collect_all_data(key, phase, comp, ox=ox)
                 z = d['data']
                 if z:
                     recs[key] = d
                     mn = min(mn, min(z))
                     mx = max(mx, max(z))
         return recs, mn, mx
-
-    def calcs(self, key):
-        return [r for r in self.gridcalcs[self.masks[key]] if r]
 
     def show(self, out=[], cmap='viridis', alpha=1, label=False):
         def split_key(key):
@@ -2584,22 +2627,21 @@ class PTPS:
         for k in self:
             ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
 
-    def show_data(self, key, comp, which='all'):
-        if comp in self.data_keys(key):
-            if which == 'inv':
-                dt = self.collect_inv_data(key, comp)
-            elif which == 'edges':
-                dt = self.collect_edges_data(key, comp)
-            elif which == 'area':
-                dt = self.collect_grid_data(key, comp)
-            else:
-                dt = self.collect_all_data(key, comp)
+    def show_data(self, key, phase, comp, ox=None, which='all'):
+        if which == 'inv':
+            dt = self.collect_inv_data(key, phase, comp, ox=ox)
+        elif which == 'edges':
+            dt = self.collect_edges_data(key, phase, comp, ox=ox)
+        elif which == 'area':
+            dt = self.collect_grid_data(key, phase, comp, ox=ox)
+        else:
+            dt = self.collect_all_data(key, phase, comp, ox=ox)
         x, y = np.array(dt['pts']).T
         fig, ax = plt.subplots()
         pts = ax.scatter(x, y, c=dt['data'])
         ax.set_title(' '.join(key))
         cb = plt.colorbar(pts)
-        cb.set_label(comp)
+        cb.set_label('{}-{}'.format(phase, comp))
         plt.show()
 
     def show_status(self):
@@ -2634,30 +2676,27 @@ class PTPS:
         self.show()
         return self.identify(*plt.ginput()[0])
 
-    def isopleths(self, comp, which='all',smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None):
+    def isopleths(self, phase, comp, ox=None, which='all',smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None):
         if step is None and N is None:
             N = 10
         if only is not None:
             recs = OrderedDict()
-            if comp in self.data_keys(only):
-                if which == 'inv':
-                    d = self.collect_inv_data(only, comp)
-                elif which == 'edges':
-                    d = self.collect_edges_data(only, comp)
-                elif which == 'area':
-                    d = self.collect_grid_data(only, comp)
-                else:
-                    d = self.collect_all_data(only, comp)
-                z = d['data']
-                if z:
-                    recs[only] = d
-                    mn = min(z)
-                    mx = max(z)
+            if which == 'inv':
+                d = self.collect_inv_data(only, phase, comp, ox=ox)
+            elif which == 'edges':
+                d = self.collect_edges_data(only, phase, comp, ox=ox)
+            elif which == 'area':
+                d = self.collect_grid_data(only, phase, comp, ox=ox)
             else:
-                raise Exception('No {} in {}.'.format(comp, ' '.join(only)))
+                d = self.collect_all_data(only, phase, comp, ox=ox)
+            z = d['data']
+            if z:
+                recs[only] = d
+                mn = min(z)
+                mx = max(z)
         else:
             print('Collecting...')
-            recs, mn, mx = self.merge_data(comp, which)
+            recs, mn, mx = self.merge_data(phase, comp, ox=ox)
         if step:
             cntv = np.arange(0, mx + step, step)
             cntv = cntv[cntv > mn - step]
@@ -2909,7 +2948,7 @@ def construct_areas(unilist, invlist, trange, prange):
 def update_guesses(scriptfile, guesses):
     # Store scriptfile content and initialize dicts
     with open(scriptfile, 'r', encoding=TCenc) as f:
-        sc = f.readlines() 
+        sc = f.readlines()
     gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
     gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
     if gsb and gse:
