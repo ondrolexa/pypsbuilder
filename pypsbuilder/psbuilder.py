@@ -2355,19 +2355,6 @@ class PTPS:
                                 self.status[r, c] = 1
                                 self.delta[r, c] = delta
                                 break
-                if self.status[r, c] == 0:
-                    for rn, cn in self.neighs(r, c):
-                        if self.status[rn, cn] == 1:
-                            update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
-                            start_time = time.time()
-                            out = self.runtc(ans)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = parse_logfile(self.logfile)
-                            if len(res) == 1:
-                                self.gridcalcs[r, c] = res[0]
-                                self.status[r, c] = 1
-                                self.delta[r, c] = delta
-                                break
                     if self.status[r, c] == 0:
                         self.gridcalcs[r, c] = None
             else:
@@ -2417,23 +2404,6 @@ class PTPS:
                         fixed += 1
                         tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                         break
-            # search already done inv neighs
-            if self.status[r, c] == 0:
-                edges = self.edges[k]
-                for inv in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
-                    if not self.invdata(inv)['manual']:
-                        update_guesses(self.scriptfile, self.invdata(inv)['results'][0]['ptguess'])
-                        start_time = time.time()
-                        out = self.runtc(ans)
-                        delta = time.time() - start_time
-                        status, variance, pts, res, output = parse_logfile(self.logfile)
-                        if len(res) == 1:
-                            self.gridcalcs[r, c] = res[0]
-                            self.status[r, c] = 1
-                            self.delta[r, c] = delta
-                            fixed += 1
-                            tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                            break
             if self.status[r, c] == 0:
                 tqdm.write('No solution find for {}, {}'.format(t, p))
         print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
@@ -2471,15 +2441,23 @@ class PTPS:
                 break
         return int(ln[ln.index('(') + 1:ln.index('?')])
 
-    def data_keys(self, key):
+    def data_keys(self, key, phase=None):
         data = dict()
-        if key in self.masks:
-            res = self.calcs(key)
-            if res:
-                dt = res[0]['data']
-                ph = sorted(list(dt.keys()))
-                set(self.calcs(key)[0]['data']['q'].keys()).difference({'mode','rbi'})
-        return sorted(list(data.keys()))
+        res = self.gridcalcs[self.masks[key]]
+        if len(res) > 0:
+            dt = res[0]['data']
+            for k in key:
+                data[k] = sorted(list(set(dt[k].keys()).difference({'mode','rbi'})))
+        return data
+
+    def rbi_keys(self, key):
+        data = dict()
+        res = self.gridcalcs[self.masks[key]]
+        if len(res) > 0:
+            dt = res[0]['data']
+            for k in key:
+                data[k] = sorted(list(dt[k]['rbi'].keys()))
+        return data
 
     @property
     def all_data_keys(self):
@@ -2545,29 +2523,28 @@ class PTPS:
                     dt['data'].append(v)
         return dt
 
-    def collect_all_data(self, key, phase, comp, ox=None):
-        d = self.collect_inv_data(key, phase, comp, ox=ox)
-        de = self.collect_edges_data(key, phase, comp, ox=ox)
-        dg = self.collect_grid_data(key, phase, comp, ox=ox)
-        d['pts'].extend(de['pts'])
-        d['pts'].extend(dg['pts'])
-        d['data'].extend(de['data'])
-        d['data'].extend(dg['data'])
-        return d
+    def collect_data(self, key, phase, comp, ox=None, which=7):
+        dt = dict(pts=[], data=[])
+        if which & (1 << 0):
+            d = self.collect_inv_data(key, phase, comp, ox=ox)
+            dt['pts'].extend(d['pts'])
+            dt['data'].extend(d['data'])
+        if which & (1 << 1):
+            d = self.collect_edges_data(key, phase, comp, ox=ox)
+            dt['pts'].extend(d['pts'])
+            dt['data'].extend(d['data'])
+        if which & (1 << 2):
+            d = self.collect_grid_data(key, phase, comp, ox=ox)
+            dt['pts'].extend(d['pts'])
+            dt['data'].extend(d['data'])
+        return dt
 
-    def merge_data(self, phase, comp, ox=None, which='all'):
+    def merge_data(self, phase, comp, ox=None, which=7):
         mn, mx = sys.float_info.max, sys.float_info.min
         recs = OrderedDict()
         for key in self:
             if phase in key:
-                if which == 'inv':
-                    d = self.collect_inv_data(key, phase, comp, ox=ox)
-                elif which == 'edges':
-                    d = self.collect_edges_data(key, phase, comp, ox=ox)
-                elif which == 'area':
-                    d = self.collect_grid_data(key, phase, comp, ox=ox)
-                else:
-                    d = self.collect_all_data(key, phase, comp, ox=ox)
+                d = self.collect_data(key, phase, comp, ox=ox, which=which)
                 z = d['data']
                 if z:
                     recs[key] = d
@@ -2627,15 +2604,8 @@ class PTPS:
         for k in self:
             ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
 
-    def show_data(self, key, phase, comp, ox=None, which='all'):
-        if which == 'inv':
-            dt = self.collect_inv_data(key, phase, comp, ox=ox)
-        elif which == 'edges':
-            dt = self.collect_edges_data(key, phase, comp, ox=ox)
-        elif which == 'area':
-            dt = self.collect_grid_data(key, phase, comp, ox=ox)
-        else:
-            dt = self.collect_all_data(key, phase, comp, ox=ox)
+    def show_data(self, key, phase, comp, ox=None, which=7):
+        dt = self.collect_data(key, phase, comp, ox=ox, which=which)
         x, y = np.array(dt['pts']).T
         fig, ax = plt.subplots()
         pts = ax.scatter(x, y, c=dt['data'])
@@ -2676,27 +2646,20 @@ class PTPS:
         self.show()
         return self.identify(*plt.ginput()[0])
 
-    def isopleths(self, phase, comp, ox=None, which='all',smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None):
+    def isopleths(self, phase, comp, ox=None, which=7, smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None, refine=1):
         if step is None and N is None:
             N = 10
+        print('Collecting...')
         if only is not None:
             recs = OrderedDict()
-            if which == 'inv':
-                d = self.collect_inv_data(only, phase, comp, ox=ox)
-            elif which == 'edges':
-                d = self.collect_edges_data(only, phase, comp, ox=ox)
-            elif which == 'area':
-                d = self.collect_grid_data(only, phase, comp, ox=ox)
-            else:
-                d = self.collect_all_data(only, phase, comp, ox=ox)
+            d = self.collect_data(only, phase, comp, ox=ox, which=which)
             z = d['data']
             if z:
                 recs[only] = d
                 mn = min(z)
                 mx = max(z)
         else:
-            print('Collecting...')
-            recs, mn, mx = self.merge_data(phase, comp, ox=ox)
+            recs, mn, mx = self.merge_data(phase, comp, ox=ox, which=which)
         if step:
             cntv = np.arange(0, mx + step, step)
             cntv = cntv[cntv > mn - step]
@@ -2708,8 +2671,10 @@ class PTPS:
         fig, ax = plt.subplots()
         for key in recs:
             tmin, pmin, tmax, pmax = self.shapes[key].bounds
-            ttspace = self.tspace[np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)]
-            ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
+            #ttspace = self.tspace[np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)]
+            #ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
+            ttspace = np.arange(tmin - self.tstep, tmax + self.tstep, self.tstep / refine)
+            ppspace = np.arange(pmin - self.pstep, pmax + self.pstep, self.pstep / refine)
             tg, pg = np.meshgrid(ttspace, ppspace)
             x, y = np.array(recs[key]['pts']).T
             try:
