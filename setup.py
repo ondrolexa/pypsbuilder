@@ -10,10 +10,11 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'numpy',
-    'matplotlib'
-    'scipy'
-    'shapely'
-    'descartes'
+    'matplotlib',
+    'scipy',
+    'shapely',
+    'descartes',
+    'tqdm'
 ]
 
 setup(

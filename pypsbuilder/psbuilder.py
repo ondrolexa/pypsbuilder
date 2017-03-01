@@ -4,41 +4,18 @@ Visual pseudosection builder for THERMOCALC
 """
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
-# last edited: February 2016
 
-# TODO
-# user-defined uni and inv will use actual phases and out selected
+from .utils import *
 
-import sys
-import os
-import pickle
-import gzip
-import subprocess
-import time
-import itertools
-import pathlib
-from collections import OrderedDict
 from pkg_resources import resource_filename
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import numpy as np
 import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
-from matplotlib.colorbar import ColorbarBase
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
-
-from shapely.geometry import LineString, Point, MultiPoint
-from shapely.ops import polygonize, linemerge, unary_union
-from shapely.prepared import prep
-from scipy.interpolate import Rbf
-from tqdm import tqdm, trange
-from descartes import PolygonPatch
 
 from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
@@ -52,14 +29,10 @@ matplotlib.use('Qt5Agg')
 matplotlib.rcParams['xtick.direction'] = 'out'
 matplotlib.rcParams['ytick.direction'] = 'out'
 
-popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-               stderr=subprocess.STDOUT, universal_newlines=False)
-
-TCenc = 'mac-roman'
-
 unihigh_kw = dict(lw=3, alpha=1, marker='o', ms=4, color='red', zorder=10)
 invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
+
 
 class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     """Main class
@@ -140,8 +113,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionSave.triggered.connect(self.saveProject)
         self.actionSave_as.triggered.connect(self.saveProjectAs)
         self.actionQuit.triggered.connect(self.close)
-        self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
+        # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
+        self.actionImport_project.triggered.connect(self.import_from_prj)
+        # self.actionTest_topology.triggered.connect()
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -234,8 +209,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
-            builder_settings.setValue("export_areas", self.checkAreas.checkState())
-            builder_settings.setValue("export_partial", self.checkPartial.checkState())
+            #builder_settings.setValue("export_areas", self.checkAreas.checkState())
+            #builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -249,8 +224,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            #self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            #self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -312,25 +287,23 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 drpat = 'dr1*'
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
-            tcexe = None
+            self.tcexe = None
             for p in pathlib.Path(self.workdir).glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    tcexe = p.name
+                    self.tcexe = p.name
                     break
-            if not tcexe:
+            if not self.tcexe:
                 errinfo = 'No THERMOCALC executable in working directory.'
                 raise Exception()
-            self.tcexeEdit.setText(tcexe)
             # DRAWPD exe
-            drexe = None
+            self.drexe = None
             for p in pathlib.Path(self.workdir).glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    drexe = p.name
+                    self.drexe = p.name
                     break
-            if not drexe:
+            if not self.drexe:
                 errinfo = 'No drawpd executable in working directory.'
                 raise Exception()
-            self.drawpdexeEdit.setText(drexe)
             # tc-prefs file
             if not os.path.exists(self.prefsfile):
                 errinfo = 'No tc-prefs.txt file in working directory.'
@@ -354,7 +327,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
             check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
-                     'setexcess': False, 'drawpd': False, 'printxyz': False}
+                     'setexcess': False, 'printxyz': False}
             errinfo = 'Check your scriptfile.'
             with open(self.scriptfile, 'r', encoding=TCenc) as f:
                 lines = f.readlines()
@@ -403,12 +376,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if not kw[1] == 'ask':
                             errinfo = 'Calctatp must be set to ask.'
                             raise Exception()
-                    elif kw[0] == 'drawpd':
-                        errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
-                        if kw[1] == 'no':
-                            errinfo = 'Drawpd must be set to yes.'
-                            raise Exception()
-                        check['drawpd'] = True
+                    # elif kw[0] == 'drawpd':
+                    #     errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
+                    #     if kw[1] == 'no':
+                    #         errinfo = 'Drawpd must be set to yes.'
+                    #         raise Exception()
+                    #     check['drawpd'] = True
                     elif kw[0] == 'printbulkinfo':
                         errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
                         if kw[1] == 'no':
@@ -477,9 +450,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if not check['setexcess']:
                 errinfo = 'Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.'
                 raise Exception()
-            if not check['drawpd']:
-                errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
-                raise Exception()
+            # if not check['drawpd']:
+            #     errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
+            #     raise Exception()
             if not check['printbulkinfo']:
                 errinfo = 'Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.'
                 raise Exception()
@@ -498,7 +471,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.nc = nc
             # run tc to initialize
             errtitle = 'Initial THERMOCALC run error!'
-            tcout = self.runprog(self.tc, '\nkill\n\n')
+            tcout = runprog(self.tc, self.workdir, '\nkill\n\n')
+            self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
             if 'BOMBED' in tcout:
                 errinfo = tcout.split('BOMBED')[1].split('\n')[0]
                 raise Exception()
@@ -506,7 +480,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 errinfo = 'Error parsing initial THERMOCALC output'
                 self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
                 self.phases.sort()
-                self.vre = int(tcout.split('variance of required equilibrium ')[1].split('\n')[0].split('(')[1].split('?')[0])
                 self.deftrange = self.trange
                 self.defprange = self.prange
                 self.tcversion = tcout.split('\n')[0]
@@ -561,123 +534,161 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
             stream.close()
-            # set actual working dir in case folder was moved
-            self.workdir = os.path.dirname(projfile)
-            if self.doInit():
-                self.initViewModels()
-                # select phases
-                for i in range(self.phasemodel.rowCount()):
-                    item = self.phasemodel.item(i)
-                    if item.text() in data['selphases']:
-                        item.setCheckState(QtCore.Qt.Checked)
-                # select out
-                for i in range(self.outmodel.rowCount()):
-                    item = self.outmodel.item(i)
-                    if item.text() in data['out']:
-                        item.setCheckState(QtCore.Qt.Checked)
-                # settings
-                self.trange = data['trange']
-                self.prange = data['prange']
-                # views
-                if data['version'] < '2.1.0':
-                    for row in data['invlist']:
-                        r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
-                                 variance=-1, p=row[2]['p'], T=row[2]['T'], manual=True,
-                                 output='Imported invariant point.')
-                        label = self.format_label(row[2]['phases'], row[2]['out'])
-                        self.invmodel.appendRow((row[0], label, r))
-                    self.invview.resizeColumnsToContents()
+            if data.get('version', '1.0.0') < '2.1.0':
+                qb = QtWidgets.QMessageBox
+                qb.critical(self, 'Old version',
+                            'This project is created in older version.\nUse import from project.',
+                            qb.Abort)
+            else:
+                # set actual working dir in case folder was moved
+                self.workdir = os.path.dirname(projfile)
+                if self.doInit():
+                    self.initViewModels()
+                    # select phases
+                    for i in range(self.phasemodel.rowCount()):
+                        item = self.phasemodel.item(i)
+                        if item.text() in data['selphases']:
+                            item.setCheckState(QtCore.Qt.Checked)
+                    # select out
+                    for i in range(self.outmodel.rowCount()):
+                        item = self.outmodel.item(i)
+                        if item.text() in data['out']:
+                            item.setCheckState(QtCore.Qt.Checked)
+                    # settings
+                    self.trange = data['trange']
+                    self.prange = data['prange']
+                    # views
                     for row in data['unilist']:
-                        r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
-                                 variance=-1, p=row[4]['p'], T=row[4]['T'], manual=True,
-                                 output='Imported univariant line.')
-                        label = self.format_label(row[4]['phases'], row[4]['out'])
-                        self.unimodel.appendRow((row[0], label, row[2], row[3], r))
-                    self.adapt_uniview()
-                    for row in tqdm(data['invlist'], desc='invlist'):
-                        tcout = self.runprog(self.tc, row[2]['cmd'])
-                        status, variance, pts, res, output = parse_logfile(self.logfile)
-                        if status == 'ok':
-                            r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
-                                     variance=variance, p=pts[0], T=pts[1], manual=False,
-                                     output=output, results=res)
-                            label = self.format_label(row[2]['phases'], row[2]['out'])
-                            isnew, id = self.getidinv(r)
-                            urow = self.invmodel.getRowFromId(id)
-                            urow[1] = label
-                            urow[2] = r
-                            # retrim affected
-                            for urow in self.unimodel.unilist:
-                                if urow[2] == id or urow[3] == id:
-                                    self.trimuni(urow)
-                    self.invview.resizeColumnsToContents()
-                    for row in tqdm(data['unilist'], desc='unilist'):
-                        tcout = self.runprog(self.tc, row[4]['cmd'])
-                        status, variance, pts, res, output = parse_logfile(self.logfile)
-                        if status == 'ok':
-                            r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
-                                     variance=variance, p=pts[0], T=pts[1], manual=False,
-                                     output=output, results=res)
-                            label = self.format_label(row[4]['phases'], row[4]['out'])
-                            isnew, id = self.getiduni(r)
-                            urow = self.unimodel.getRowFromId(id)
-                            urow[1] = label
-                            urow[4] = r
-                            self.trimuni(urow)
-                    self.adapt_uniview()
-                else:
-                    for row in data['unilist']:
-                        # fix older
-                        row[4]['phases'] = row[4]['phases'].union(self.excess)
-                        row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
-                                  ' - ' +
-                                  ' '.join(sorted(list(row[4]['out']))))
                         self.unimodel.appendRow(row)
                     self.adapt_uniview()
                     for row in data['invlist']:
-                        # fix older
-                        row[2]['phases'] = row[2]['phases'].union(self.excess)
-                        row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
-                                  ' - ' +
-                                  ' '.join(sorted(list(row[2]['out']))))
                         self.invmodel.appendRow(row)
                     self.invview.resizeColumnsToContents()
-                # cutting
-                for row in self.unimodel.unilist:
-                    self.trimuni(row)
-                # update executables
-                if 'tcexe' in data:
-                    p = pathlib.Path(self.workdir, data['tcexe'])
-                    if p.is_file() and os.access(str(p), os.X_OK):
-                        self.tcexeEdit.setText(p.name)
-                if 'drexe' in data:
-                    p = pathlib.Path(self.workdir, data['drexe'])
-                    if p.is_file() and os.access(str(p), os.X_OK):
-                        self.drawpdexeEdit.setText(p.name)
-                # all done
-                self.ready = True
-                self.project = projfile
-                self.changed = False
-                if projfile in self.recent:
-                    self.recent.pop(self.recent.index(projfile))
-                self.recent.insert(0, projfile)
-                if len(self.recent) > 15:
-                    self.recent = self.recent[:15]
-                self.populate_recent()
-                self.app_settings(write=True)
-                # read scriptfile
-                self.read_scriptfile()
-                # update settings tab
-                self.apply_setting(4)
-                # update plot
-                self.figure.clear()
-                self.plot()
-                self.statusBar().showMessage('Project loaded.')
+                    # cutting
+                    for row in self.unimodel.unilist:
+                        self.trimuni(row)
+                    # update executables
+                    if 'tcexe' in data:
+                        p = pathlib.Path(self.workdir, data['tcexe'])
+                        if p.is_file() and os.access(str(p), os.X_OK):
+                            self.tcexe = p.name
+                    if 'drexe' in data:
+                        p = pathlib.Path(self.workdir, data['drexe'])
+                        if p.is_file() and os.access(str(p), os.X_OK):
+                            self.drexe = p.name
+                    # all done
+                    self.ready = True
+                    self.project = projfile
+                    self.changed = False
+                    if projfile in self.recent:
+                        self.recent.pop(self.recent.index(projfile))
+                    self.recent.insert(0, projfile)
+                    if len(self.recent) > 15:
+                        self.recent = self.recent[:15]
+                    self.populate_recent()
+                    self.app_settings(write=True)
+                    # read scriptfile
+                    self.read_scriptfile()
+                    # update settings tab
+                    self.apply_setting(4)
+                    # update plot
+                    self.figure.clear()
+                    self.plot()
+                    self.statusBar().showMessage('Project loaded.')
         else:
             if projfile in self.recent:
                 self.recent.pop(self.recent.index(projfile))
                 self.app_settings(write=True)
                 self.populate_recent()
+
+    def import_from_prj(self):
+        if self.ready:
+            qd = QtWidgets.QFileDialog
+            filt = 'pypsbuilder project (*.psb)'
+            projfile = qd.getOpenFileName(self, 'Import from project',
+                                          os.path.expanduser('~'),
+                                          filt)[0]
+            if os.path.exists(projfile):
+                stream = gzip.open(projfile, 'rb')
+                data = pickle.load(stream)
+                stream.close()
+                # set actual working dir in case folder was moved
+                self.workdir = os.path.dirname(projfile)
+                if self.doInit():
+                    self.initViewModels()
+                    # select phases
+                    for i in range(self.phasemodel.rowCount()):
+                        item = self.phasemodel.item(i)
+                        if item.text() in data['selphases']:
+                            item.setCheckState(QtCore.Qt.Checked)
+                    # select out
+                    for i in range(self.outmodel.rowCount()):
+                        item = self.outmodel.item(i)
+                        if item.text() in data['out']:
+                            item.setCheckState(QtCore.Qt.Checked)
+                    # settings
+                    self.trange = data['trange']
+                    self.prange = data['prange']
+                    # Import
+                    for row in data['invlist']:
+                        r = dict(phases=row[2]['phases'], out=row[2]['out'],
+                                 cmd=row[2].get('cmd', ''), variance=-1,
+                                 p=row[2]['p'], T=row[2]['T'], manual=True,
+                                 output='Imported invariant point.')
+                        label = self.format_label(row[2]['phases'], row[2]['out'])
+                        self.invmodel.appendRow((row[0], label, r))
+                    self.invview.resizeColumnsToContents()
+                    for row in data['unilist']:
+                        r = dict(phases=row[4]['phases'], out=row[4]['out'],
+                                 cmd=row[4].get('cmd', ''), variance=-1,
+                                 p=row[4]['p'], T=row[4]['T'], manual=True,
+                                 output='Imported univariant line.')
+                        label = self.format_label(row[4]['phases'], row[4]['out'])
+                        self.unimodel.appendRow((row[0], label, row[2], row[3], r))
+                    self.adapt_uniview()
+                    # try to recalc
+                    for row in data['invlist']:
+                        if 'cmd' in row[2]:
+                            tcout = runprog(self.tc, self.workdir, row[2]['cmd'])
+                            status, variance, pts, res, output = parse_logfile(self.logfile)
+                            if status == 'ok':
+                                r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                                         output=output, results=res)
+                                label = self.format_label(row[2]['phases'], row[2]['out'])
+                                isnew, id = self.getidinv(r)
+                                urow = self.invmodel.getRowFromId(id)
+                                urow[1] = label
+                                urow[2] = r
+                    self.invview.resizeColumnsToContents()
+                    for row in data['unilist']:
+                        if 'cmd' in row[4]:
+                            tcout = runprog(self.tc, self.workdir, row[4]['cmd'])
+                            status, variance, pts, res, output = parse_logfile(self.logfile)
+                            if status == 'ok':
+                                r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                                         output=output, results=res)
+                                label = self.format_label(row[4]['phases'], row[4]['out'])
+                                isnew, id = self.getiduni(r)
+                                urow = self.unimodel.getRowFromId(id)
+                                urow[1] = label
+                                urow[4] = r
+                    self.adapt_uniview()
+                    # cutting
+                    for row in self.unimodel.unilist:
+                        self.trimuni(row)
+                    # all done
+                    self.changed = True
+                    self.app_settings(write=True)
+                    # read scriptfile
+                    self.read_scriptfile()
+                    # update settings tab
+                    self.apply_setting(4)
+                    # update plot
+                    self.figure.clear()
+                    self.plot()
+                    self.statusBar().showMessage('Project Imported.')
 
     def reinitialize(self):
         if self.ready:
@@ -771,8 +782,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     'prange': self.prange,
                     'unilist': self.unimodel.unilist,
                     'invlist': self.invmodel.invlist[1:],
-                    'tcexe': self.tcexeEdit.text(),
-                    'drexe': self.drawpdexeEdit.text(),
+                    'tcexe': self.tcexe,
+                    'drexe': self.drexe,
+                    'tcversion': self.tcversion,
                     'version': __version__}
             # do save
             stream = gzip.open(self.project, 'wb')
@@ -788,19 +800,33 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.app_settings(write=True)
             self.statusBar().showMessage('Project saved.')
 
-    def runprog(self, exe, instr):
-        # get list of available phases
-        if sys.platform.startswith('win'):
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags = 1
-            startupinfo.wShowWindow = 0
-        else:
-            startupinfo = None
-        p = subprocess.Popen(exe, cwd=self.workdir, startupinfo=startupinfo, **popen_kw)
-        output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
-        sys.stdout.flush()
-        self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + output)
-        return output
+    def reparse_outouts(self):
+        for row in data['invlist']:
+            status, variance, pts, res, output = parse_logfile(self.logfile, out=row[2]['output'])
+            if status == 'ok':
+                r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                         output=output, results=res)
+                label = self.format_label(row[2]['phases'], row[2]['out'])
+                isnew, id = self.getidinv(r)
+                urow = self.invmodel.getRowFromId(id)
+                urow[1] = label
+                urow[2] = r
+        self.invview.resizeColumnsToContents()
+        for row in data['unilist']:
+            status, variance, pts, res, output = parse_logfile(self.logfile, out=row[4]['output'])
+            if status == 'ok':
+                r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                         output=output, results=res)
+                label = self.format_label(row[4]['phases'], row[4]['out'])
+                isnew, id = self.getiduni(r)
+                urow = self.unimodel.getRowFromId(id)
+                urow[1] = label
+                urow[4] = r
+        self.adapt_uniview()
+        self.statusBar().showMessage('Outputs re-parsed.')
+        self.changed = True
 
     def generate(self):
         if self.ready:
@@ -830,11 +856,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def tc(self):
-        return os.path.join(self.workdir, self.tcexeEdit.text())
+        return os.path.join(self.workdir, self.tcexe)
 
     @property
     def dr(self):
-        return os.path.join(self.workdir, self.drawpdexeEdit.text())
+        return os.path.join(self.workdir, self.drexe)
 
     @property
     def scriptfile(self):
@@ -848,13 +874,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def logfile(self):
         return os.path.join(self.workdir, 'tc-log.txt')
 
-    @property
-    def drawpdfile(self):
-        return os.path.join(self.workdir, 'dr-' + self.bname + '.txt')
-
-    @property
-    def tcinvestigatorfile(self):
-        return os.path.join(self.workdir, 'assemblages.txt')
+    # @property
+    # def drawpdfile(self):
+    #     return os.path.join(self.workdir, 'dr-' + self.bname + '.txt')
 
     @property
     def axfile(self):
@@ -952,8 +974,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.unisel.selectedIndexes()
             r = self.unimodel.data(idx[4])
             if not r['manual']:
-                l = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
-                uniguess = UniGuess(l, self)
+                lbl = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+                uniguess = UniGuess(lbl, self)
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
@@ -1121,9 +1143,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             self.ax.set_xlim(self.trange)
             self.ax.set_ylim(self.prange)
-            #clear navigation toolbar history
+            # clear navigation toolbar history
             self.toolbar.update()
-            #self.plot()
+            # self.plot()
             self.canvas.draw()
 
     def remove_inv(self):
@@ -1337,7 +1359,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                float(self.pmaxEdit.text()))
                 self.ax.set_xlim(self.trange)
                 self.ax.set_ylim(self.prange)
-                #clear navigation toolbar history
+                # clear navigation toolbar history
                 self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
@@ -1387,7 +1409,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             trange = self.ax.get_xlim()
             prange = self.ax.get_ylim()
             steps = self.spinSteps.value()
-            #prec = self.spinPrec.value()
+            # prec = self.spinPrec.value()
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
             var = self.nc + 2 - len(phases) - len(self.excess)
 
@@ -1400,7 +1422,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     step = (trange[1] - trange[0]) / steps
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
-                tcout = self.runprog(self.tc, ans)
+                tcout = runprog(self.tc, self.workdir, ans)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
                 status, variance, pts, res, output = parse_logfile(self.logfile)
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
@@ -1421,7 +1444,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.adapt_uniview()
                         self.changed = True
                         self.plot()
-                        #self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                        # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
                         idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
@@ -1445,7 +1468,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
-                tcout = self.runprog(self.tc, ans)
+                tcout = runprog(self.tc, self.workdir, ans)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
                 status, variance, pts, res, output = parse_logfile(self.logfile)
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
@@ -1489,110 +1513,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             #########
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-
-    def gendrawpd(self):
-        if self.ready:
-            self.ax.set_xlim(self.trange)
-            self.ax.set_ylim(self.prange)
-            #clear navigation toolbar history
-            self.toolbar.update()
-            self.plot()
-            with open(self.drawpdfile, 'w', encoding=TCenc) as output:
-                output.write('% Generated by PyPSbuilder (c) Ondrej Lexa 2016\n')
-                output.write('2    % no. of variables in each line of data, in this case P, T\n')
-                ex = list(self.excess)
-                ex.insert(0, '')
-                output.write('{}'.format(self.nc - len(self.excess)) +
-                             '    %% effective size of the system: ' +
-                             self.axname + ' +'.join(ex) + '\n')
-                output.write('2 1  %% which columns to be x,y in phase diagram\n')
-                output.write('\n')
-                output.write('% Points\n')
-                for i in self.invmodel.invlist[1:]:
-                    output.write('% ------------------------------\n')
-                    output.write('i%s   %s\n' % (i[0], i[1]))
-                    output.write('\n')
-                    output.write('%s %s\n' % (i[2]['p'][0], i[2]['T'][0]))
-                    output.write('\n')
-                output.write('% Lines\n')
-                for u in self.unimodel.unilist:
-                    output.write('% ------------------------------\n')
-                    output.write('u%s   %s\n' % (u[0], u[1]))
-                    output.write('\n')
-                    b1 = 'i%s' % u[2]
-                    if b1 == 'i0':
-                        b1 = 'begin'
-                    b2 = 'i%s' % u[3]
-                    if b2 == 'i0':
-                        b2 = 'end'
-                    if u[4]['manual']:
-                        output.write(b1 + ' ' + b2 + ' connect\n')
-                        output.write('\n')
-                    else:
-                        output.write(b1 + ' ' + b2 + '\n')
-                        output.write('\n')
-                        for p, t in zip(u[4]['p'], u[4]['T']):
-                            output.write('%s %s\n' % (p, t))
-                        output.write('\n')
-                output.write('*\n')
-                output.write('% ----------------------------------------------\n\n')
-                if self.checkAreas.isChecked():
-                    # phases in areas for TC-Investigator
-                    with open(self.tcinvestigatorfile, 'w', encoding=TCenc) as tcinv:
-                        vertices, edges, phases, tedges, tphases = construct_areas(self.unimodel.unilist,
-                                                                                   self.invmodel.invlist[1:],
-                                                                                   self.trange,
-                                                                                   self.prange)
-                        # write output
-                        output.write('% Areas\n')
-                        output.write('% ------------------------------\n')
-                        maxpf = max([len(p) for p in phases]) + 1
-                        for ed, ph, ve in zip(edges, phases, vertices):
-                            v = np.array(ve)
-                            if not (np.all(v[:, 0] < self.trange[0]) or
-                                    np.all(v[:, 0] > self.trange[1]) or
-                                    np.all(v[:, 1] < self.prange[0]) or
-                                    np.all(v[:, 1] > self.prange[1])):
-                                d = ('{:.2f} '.format(len(ph) / maxpf) +
-                                     ' '.join(['u{}'.format(e) for e in ed]) +
-                                     ' % ' + ' '.join(ph) + '\n')
-                                output.write(d)
-                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
-                        if self.checkPartial.isChecked():
-                            for ed, ph in zip(tedges, tphases):
-                                d = ('{:.2f} '.format(len(ph) / maxpf) +
-                                     ' '.join(['u{}'.format(e) for e in ed]) +
-                                     ' %- ' + ' '.join(ph) + '\n')
-                                output.write(d)
-                                tcinv.write(' '.join(ph.union(self.excess)) + '\n')
-                output.write('\n')
-                output.write('*\n')
-                output.write('\n')
-                output.write('window {} {} '.format(*self.trange) +
-                             '{} {}\n\n'.format(*self.prange))
-                output.write('darkcolour  56 16 101\n\n')
-                xt, yt = self.ax.get_xticks(), self.ax.get_yticks()
-                xt = xt[xt > self.trange[0]]
-                xt = xt[xt < self.trange[1]]
-                yt = yt[yt > self.prange[0]]
-                yt = yt[yt < self.prange[1]]
-                output.write('bigticks ' +
-                             '{} {} '.format(xt[1] - xt[0], xt[0]) +
-                             '{} {}\n\n'.format(yt[1] - yt[0], yt[0]))
-                output.write('smallticks {} '.format((xt[1] - xt[0]) / 10) +
-                             '{}\n\n'.format((yt[1] - yt[0]) / 10))
-                output.write('numbering yes\n\n')
-                if self.checkAreas.isChecked():
-                    output.write('doareas yes\n\n')
-                output.write('*\n')
-                self.statusBar().showMessage('Drawpd file generated successfully.')
-
-            try:
-                self.runprog(self.dr, self.bname + '\n')
-                self.statusBar().showMessage('Drawpd sucessfully executed.')
-            except OSError as err:
-                qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Drawpd error!', str(err), qb.Abort)
 
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
@@ -1678,9 +1598,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             lalfa = self.spinAlpha.value() / 100
             unilabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='cyan', alpha=lalfa, pad=4))
+                               bbox=dict(facecolor='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='yellow', alpha=lalfa, pad=4))
+                               bbox=dict(facecolor='yellow', alpha=lalfa, pad=2))
             if self.figure.axes == []:
                 cur = None
             else:
@@ -2026,908 +1946,6 @@ class OutputDialog(QtWidgets.QDialog):
         self.setLayout(self.layout)
         self.plainText.setPlainText(txt)
 
-class ProjectFile(object):
-    def __init__(self, projfile):
-        if os.path.exists(projfile):
-            stream = gzip.open(projfile, 'rb')
-            self.data = pickle.load(stream)
-            stream.close()
-            self.workdir = os.path.dirname(projfile)
-            self.name = os.path.splitext(os.path.basename(projfile))[0]
-            self.unilookup = {}
-            self.invlookup = {}
-            for ix, r in enumerate(self.unilist):
-                self.unilookup[r[0]] = ix
-            for ix, r in enumerate(self.invlist):
-                self.invlookup[r[0]] = ix
-        else:
-            raise Exception('File {} does not exists.'.format(projfile))
-
-    @property
-    def selphases(self):
-        return self.data['selphases']
-
-    @property
-    def out(self):
-        return self.data['out']
-
-    @property
-    def trange(self):
-        return self.data['trange']
-
-    @property
-    def prange(self):
-        return self.data['prange']
-
-    @property
-    def unilist(self):
-        return self.data['unilist']
-
-    @property
-    def invlist(self):
-        return self.data['invlist']
-
-    @property
-    def tcexe(self):
-        if 'tcexe' in self.data:
-            return self.data['tcexe']
-        else:
-            print('Old format. No tcexe.')
-
-    @property
-    def drexe(self):
-        if 'drexe' in self.data:
-            return self.data['drexe']
-        else:
-            print('Old format. No drexe.')
-
-    @property
-    def version(self):
-        if 'version' in self.data:
-            return self.data['version']
-        else:
-            print('Old format. No version.')
-
-    def unidata(self, fid):
-        uni = self.unilist[self.unilookup[fid]]
-        dt = uni[4]
-        dt['begin'] = uni[2]
-        dt['end'] = uni[3]
-        return dt
-
-    def invdata(self, fid):
-        return self.invlist[self.invlookup[fid]][2]
-
-    def get_trimmed_uni(self, fid):
-        uni = self.unilist[self.unilookup[fid]]
-        if uni[2] > 0:
-            dt = self.invdata(uni[2])
-            T1, p1 = dt['T'][0], dt['p'][0]
-        else:
-            T1, p1 = [], []
-        if uni[3] > 0:
-            dt = self.invdata(uni[3])
-            T2, p2 = dt['T'][0], dt['p'][0]
-        else:
-            T2, p2 = [], []
-        if not uni[4]['manual']:
-            T = uni[4]['T'][uni[4]['begix']:uni[4]['endix'] + 1]
-            p = uni[4]['p'][uni[4]['begix']:uni[4]['endix'] + 1]
-        else:
-            T, p = [], []
-        return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
-
-class PTPS:
-    def __init__(self, projfile):
-        self.prj = ProjectFile(projfile)
-        # Check prefs and scriptfile
-        if not os.path.exists(self.prefsfile):
-            raise Exception('No tc-prefs.txt file in working directory.')
-        for line in open(self.prefsfile, 'r'):
-            kw = line.split()
-            if kw != []:
-                if kw[0] == 'scriptfile':
-                    self.bname = kw[1]
-                    if not os.path.exists(self.scriptfile):
-                        raise Exception('tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.')
-                if kw[0] == 'calcmode':
-                    if kw[1] != '1':
-                        raise Exception('tc-prefs: calcmode must be 1.')
-        if not hasattr(self, 'bname'):
-            raise Exception('No scriptfile defined in tc-prefs.txt')
-        if os.path.exists(self.project):
-            self.load()
-            print('Compositions loaded.')
-        else:
-            self.shapes = OrderedDict()
-            self.edges = OrderedDict()
-            self.variance = OrderedDict()
-            # traverse pseudosecton
-            (vertices, edges, phases,
-             tedges, tphases) = construct_areas(self.prj.unilist,
-                                                self.prj.invlist,
-                                                self.prj.trange,
-                                                self.prj.prange)
-            # default p-t range boundary
-            bnd = [LineString([(self.prj.trange[0], self.prj.prange[0]),
-                              (self.prj.trange[1], self.prj.prange[0])]),
-                   LineString([(self.prj.trange[1], self.prj.prange[0]),
-                              (self.prj.trange[1], self.prj.prange[1])]),
-                   LineString([(self.prj.trange[1], self.prj.prange[1]),
-                              (self.prj.trange[0], self.prj.prange[1])]),
-                   LineString([(self.prj.trange[0], self.prj.prange[1]),
-                              (self.prj.trange[0], self.prj.prange[0])])]
-            bnda = list(polygonize(bnd))[0]
-            # Create all full areas
-            tq = trange(len(edges), desc='Full areas')
-            for ind in tq:
-                e, f = edges[ind], phases[ind]
-                lns = [LineString(np.c_[self.prj.get_trimmed_uni(fid)]) for fid in e]
-                pp = polygonize(lns)
-                invalid = True
-                for ppp in pp:
-                    ppok = bnda.intersection(ppp)
-                    if ppok.geom_type == 'Polygon':
-                        invalid = False
-                        self.edges[f] = e
-                        self.variance[f] = self.parse_variance(self.runtc('{}\nkill\n\n'.format(' '.join(f))))
-                        if f in self.shapes:
-                            self.shapes[f] = self.shapes[f].union(ppok)
-                        else:
-                            self.shapes[f] = ppok
-                if invalid:
-                    tq.write('Lines {} have invalid geometry.'.format(e))
-            # Create all partial areas
-            tq = trange(len(tedges), desc='Partial areas')
-            for ind in tq:
-                e, f = tedges[ind], tphases[ind]
-                lns = [LineString(np.c_[self.prj.get_trimmed_uni(fid)]) for fid in e]
-                pp = linemerge(lns)
-                invalid = True
-                if pp.geom_type == 'LineString':
-                    bndu = unary_union([s for s in bnd if pp.crosses(s)])
-                    if not bndu.is_empty:
-                        pps = pp.difference(bndu)
-                        bnds = bndu.difference(pp)
-                        pp = polygonize(pps.union(bnds))
-                        for ppp in pp:
-                            ppok = bnda.intersection(ppp)
-                            if ppok.geom_type == 'Polygon':
-                                invalid = False
-                                self.edges[f] = e
-                                self.variance[f] = self.parse_variance(self.runtc('{}\nkill\n\n'.format(' '.join(f))))
-                                if f in self.shapes:
-                                    self.shapes[f] = self.shapes[f].union(ppok)
-                                else:
-                                    self.shapes[f] = ppok
-                if invalid:
-                    tq.write('Lines {} does not form valid polygon for default p-T range.'.format(e))
-            # Fix possible overlaps of partial areas
-            for k1, k2 in itertools.combinations(self.shapes, 2):
-                if self.shapes[k1].within(self.shapes[k2]):
-                    self.shapes[k2] = self.shapes[k2].difference(self.shapes[k1])
-                if self.shapes[k2].within(self.shapes[k1]):
-                    self.shapes[k1] = self.shapes[k1].difference(self.shapes[k2])
-            print('{} compositions not yet calculated. Run calculate_composition() method.'.format(self.prj.name))
-
-    def __iter__(self):
-        return iter(self.shapes)
-
-    @property
-    def phases(self):
-        return {phase for key in self for phase in key}
-
-    @property
-    def keys(self):
-        return list(self.shapes.keys())
-
-    @property
-    def tstep(self):
-        return self.tspace[1] - self.tspace[0]
-
-    @property
-    def pstep(self):
-        return self.pspace[1] - self.pspace[0]
-
-    @property
-    def scriptfile(self):
-        return os.path.join(self.prj.workdir, 'tc-' + self.bname + '.txt')
-
-    @property
-    def logfile(self):
-        return os.path.join(self.prj.workdir, 'tc-log.txt')
-
-    @property
-    def prefsfile(self):
-        return os.path.join(self.prj.workdir, 'tc-prefs.txt')
-
-    @property
-    def tcexe(self):
-        return os.path.join(self.prj.workdir, self.prj.tcexe)
-
-    @property
-    def project(self):
-        return os.path.join(self.prj.workdir, self.prj.name + '.psi')
-
-    def unidata(self, fid):
-        return self.prj.unidata(fid)
-
-    def invdata(self, fid):
-        return self.prj.invdata(fid)
-
-    def save(self):
-        # put to dict
-        data = {'shapes': self.shapes,
-                'edges': self.edges,
-                'variance': self.variance,
-                'tspace': self.tspace,
-                'pspace': self.pspace,
-                'tg': self.tg,
-                'pg': self.pg,
-                'gridcalcs': self.gridcalcs,
-                'masks': self.masks,
-                'status': self.status,
-                'delta': self.delta}
-        # do save
-        stream = gzip.open(self.project, 'wb')
-        pickle.dump(data, stream)
-        stream.close()
-
-    def load(self):
-        stream = gzip.open(self.project, 'rb')
-        data = pickle.load(stream)
-        stream.close()
-        self.shapes  = data['shapes']
-        self.edges  = data['edges']
-        self.variance = data['variance']
-        self.tspace = data['tspace']
-        self.pspace = data['pspace']
-        self.tg = data['tg']
-        self.pg = data['pg']
-        self.gridcalcs = data['gridcalcs']
-        self.masks = data['masks']
-        self.status = data['status']
-        self.delta = data['delta']
-
-#    def calculate_composition_old(self, T_N=51, p_N=51):
-#        self.T_N, self.p_N = T_N, p_N
-#        # Calc by areas
-#        tspace = np.linspace(self.prj.trange[0], self.prj.trange[1], self.T_N)
-#        tstep = tspace[1] - tspace[0]
-#        pspace = np.linspace(self.prj.prange[0], self.prj.prange[1], self.p_N)
-#        pstep = pspace[1] - pspace[0]
-#        total, done = len(self.keys), 0
-#        for key in self:
-#            tmin, pmin, tmax, pmax = self.shapes[key].bounds
-#            trange = tspace[np.logical_and(tspace >= tmin, tspace <= tmax)]
-#            prange = pspace[np.logical_and(pspace >= pmin, pspace <= pmax)]
-#            done += 1
-#            print('{} of {} - {} Calculating...'.format(done, total, ' '.join(key)))
-#            if trange.size > 0 and prange.size > 0:
-#                ans = '{}\n\n\n{} {}\n{} {}\n{}\n{}\nkill\n\n'.format(' '.join(key), prange.min(), prange.max(), trange.min(), trange.max(), tstep, pstep)
-#                out = self.runtc(ans)
-#                self.calcs[key] = dict(output=out, input=ans)
-#            else:
-#                rp = self.shapes[key].representative_point()
-#                t, p = rp.x, rp.y
-#                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(key), p, t)
-#                out = self.runtc(ans)
-#                self.calcs[key] = dict(output=out, input=ans)
-#            if not self.data_keys(key):
-#                print('Nothing in range for {}'.format(' '.join(key)))
-#        self.show_success()
-
-    def calculate_composition(self, numT=51, numP=51):
-        self.tspace = np.linspace(self.prj.trange[0], self.prj.trange[1], numT)
-        self.pspace = np.linspace(self.prj.prange[0], self.prj.prange[1], numP)
-        self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
-        self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
-        self.status = np.empty(self.tg.shape)
-        self.status[:] = np.nan
-        self.delta = np.empty(self.tg.shape)
-        self.delta[:] = np.nan
-        for (r, c) in tqdm(np.ndindex(self.tg.shape), desc='Gridding', total=np.prod(self.tg.shape)):
-            t, p = self.tg[r, c], self.pg[r, c]
-            k = self.identify(t, p)
-            if k is not None:
-                self.status[r, c] = 0
-                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
-                start_time = time.time()
-                out = self.runtc(ans)
-                delta = time.time() - start_time
-                status, variance, pts, res, output = parse_logfile(self.logfile)
-                if len(res) == 1:
-                    self.gridcalcs[r, c] = res[0]
-                    self.status[r, c] = 1
-                    self.delta[r, c] = delta
-                # search already done inv neighs
-                if self.status[r, c] == 0:
-                    edges = self.edges[k]
-                    for inv in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
-                        if not self.invdata(inv)['manual']:
-                            update_guesses(self.scriptfile, self.invdata(inv)['results'][0]['ptguess'])
-                            start_time = time.time()
-                            out = self.runtc(ans)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = parse_logfile(self.logfile)
-                            if len(res) == 1:
-                                self.gridcalcs[r, c] = res[0]
-                                self.status[r, c] = 1
-                                self.delta[r, c] = delta
-                                break
-                    if self.status[r, c] == 0:
-                        self.gridcalcs[r, c] = None
-            else:
-                self.gridcalcs[r, c] = None
-        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
-        self.fix_solutions()
-        # Create data masks
-        points = MultiPoint(list(zip(self.tg.flatten(), self.pg.flatten())))
-        self.masks = OrderedDict()
-        for key in tqdm(self, desc='Masking', total=len(self.shapes)):
-            self.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.tg.shape)
-        self.save()
-
-    def fix_solutions(self):
-        ri, ci = np.nonzero(self.status == 0)
-        fixed, ftot = 0, len(ri)
-        tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
-        for ind in tq:
-            r, c = ri[ind], ci[ind]
-            t, p = self.tg[r, c], self.pg[r, c]
-            k = self.identify(t, p)
-            ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
-            # search already done grid neighs
-            for rn, cn in self.neighs(r, c):
-                if self.status[rn, cn] == 1:
-                    start_time = time.time()
-                    out = self.runtc(ans)
-                    delta = time.time() - start_time
-                    status, variance, pts, res, output = parse_logfile(self.logfile)
-                    if len(res) == 1:
-                        self.gridcalcs[r, c] = res[0]
-                        self.status[r, c] = 1
-                        self.delta[r, c] = delta
-                        fixed += 1
-                        tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                        break
-                    else:
-                        update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
-                    start_time = time.time()
-                    out = self.runtc(ans)
-                    delta = time.time() - start_time
-                    status, variance, pts, res, output = parse_logfile(self.logfile)
-                    if len(res) == 1:
-                        self.gridcalcs[r, c] = res[0]
-                        self.status[r, c] = 1
-                        self.delta[r, c] = delta
-                        fixed += 1
-                        tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                        break
-            if self.status[r, c] == 0:
-                tqdm.write('No solution find for {}, {}'.format(t, p))
-        print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
-
-    def neighs(self, r, c):
-        m = np.array([[(r-1,c-1), (r-1,c), (r-1,c+1)],
-                      [(r,c-1), (None,None), (r,c+1)],
-                      [(r+1,c-1), (r+1,c), (r+1,c+1)]])
-        if r < 1:
-            m = m[1:, :]
-        if r > len(self.pspace) - 2:
-            m = m[:-1, :]
-        if c < 1:
-            m = m[:, 1:]
-        if c > len(self.tspace) - 2:
-            m = m[:, :-1]
-        return zip([i for i in m[:,:,0].flat if i is not None],
-                   [i for i in m[:,:,1].flat if i is not None])
-
-    def runtc(self, instr):
-        if sys.platform.startswith('win'):
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags = 1
-            startupinfo.wShowWindow = 0
-        else:
-            startupinfo = None
-        p = subprocess.Popen(self.tcexe, cwd=self.prj.workdir, startupinfo=startupinfo, **popen_kw)
-        output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
-        sys.stdout.flush()
-        return output
-
-    def parse_variance(self, out):
-        for ln in out.splitlines():
-            if 'variance of required equilibrium' in ln:
-                break
-        return int(ln[ln.index('(') + 1:ln.index('?')])
-
-    def data_keys(self, key, phase=None):
-        data = dict()
-        res = self.gridcalcs[self.masks[key]]
-        if len(res) > 0:
-            dt = res[0]['data']
-            for k in key:
-                data[k] = sorted(list(set(dt[k].keys()).difference({'mode','rbi'})))
-        return data
-
-    def rbi_keys(self, key):
-        data = dict()
-        res = self.gridcalcs[self.masks[key]]
-        if len(res) > 0:
-            dt = res[0]['data']
-            for k in key:
-                data[k] = sorted(list(dt[k]['rbi'].keys()))
-        return data
-
-    @property
-    def all_data_keys(self):
-        keys = set()
-        for key in self.masks:
-            res = self.calcs(key)
-            if res:
-                p, T, data = res[0]
-                keys.update(data.keys())
-        return sorted(list(keys))
-
-    def collect_inv_data(self, key, phase, comp, ox=None):
-        dt = dict(pts=[], data=[])
-        edges = self.edges[key]
-        for i in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
-            T = self.invdata(i)['T'][0]
-            p = self.invdata(i)['p'][0]
-            res = self.invdata(i)['results'][0]
-            if comp == 'rbi':
-                v = res['data'][phase][comp][ox]
-                dt['pts'].append((T, p))
-                dt['data'].append(v)
-            else:
-                v = res['data'][phase][comp]
-                dt['pts'].append((T, p))
-                dt['data'].append(v)
-        return dt
-
-    def collect_edges_data(self, key, phase, comp, ox=None):
-        dt = dict(pts=[], data=[])
-        for e in self.edges[key]:
-            if not self.unidata(e)['manual']:
-                bix, eix = self.unidata(e)['begix'], self.unidata(e)['endix']
-                edt = zip(self.unidata(e)['T'][bix:eix + 1],
-                          self.unidata(e)['p'][bix:eix + 1],
-                          self.unidata(e)['results'][bix:eix + 1])
-                for T, p, res in edt:
-                    if comp == 'rbi':
-                        v = res['data'][phase][comp][ox]
-                        dt['pts'].append((T, p))
-                        dt['data'].append(v)
-                    else:
-                        v = res['data'][phase][comp]
-                        dt['pts'].append((T, p))
-                        dt['data'].append(v)
-        return dt
-
-    def collect_grid_data(self, key, phase, comp, ox=None):
-        dt = dict(pts=[], data=[])
-        gdt = zip(self.tg[self.masks[key]],
-                  self.pg[self.masks[key]],
-                  self.gridcalcs[self.masks[key]],
-                  self.status[self.masks[key]])
-        for T, p, res, s in gdt:
-            if s:
-                if comp == 'rbi':
-                    v = res['data'][phase][comp][ox]
-                    dt['pts'].append((T, p))
-                    dt['data'].append(v)
-                else:
-                    v = res['data'][phase][comp]
-                    dt['pts'].append((T, p))
-                    dt['data'].append(v)
-        return dt
-
-    def collect_data(self, key, phase, comp, ox=None, which=7):
-        dt = dict(pts=[], data=[])
-        if which & (1 << 0):
-            d = self.collect_inv_data(key, phase, comp, ox=ox)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
-        if which & (1 << 1):
-            d = self.collect_edges_data(key, phase, comp, ox=ox)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
-        if which & (1 << 2):
-            d = self.collect_grid_data(key, phase, comp, ox=ox)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
-        return dt
-
-    def merge_data(self, phase, comp, ox=None, which=7):
-        mn, mx = sys.float_info.max, sys.float_info.min
-        recs = OrderedDict()
-        for key in self:
-            if phase in key:
-                d = self.collect_data(key, phase, comp, ox=ox, which=which)
-                z = d['data']
-                if z:
-                    recs[key] = d
-                    mn = min(mn, min(z))
-                    mx = max(mx, max(z))
-        return recs, mn, mx
-
-    def show(self, out=[], cmap='viridis', alpha=1, label=False):
-        def split_key(key):
-            tl = list(key)
-            l = len(tl)
-            wp = l // 4 + int(l%4 > 1)
-            return '\n'.join([' '.join(s) for s in [tl[i*l // wp: (i+1)*l // wp] for i in range(wp)]])
-        if isinstance(out, str):
-            out = [out]
-        vv = np.unique([self.variance[k] for k in self])
-        pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
-        # Set alpha
-        pscolors[:,-1] = alpha
-        pscmap = ListedColormap(pscolors)
-        norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
-        fig, ax = plt.subplots()
-        lbls = []
-        exc = frozenset.intersection(*self.keys)
-        for k in self:
-            lbls.append((split_key(k.difference(exc)), self.shapes[k].representative_point().coords[0]))
-            ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
-        ax.autoscale_view()
-        self.overlay(ax)
-        if out:
-            for o in out:
-                segx = [np.append(row[4]['fT'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
-                segy = [np.append(row[4]['fp'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
-                ax.plot(np.hstack(segx)[:-1], np.hstack(segy)[:-1], lw=2, label=o)
-            # Shrink current axis's height by 6% on the bottom
-            box = ax.get_position()
-            ax.set_position([box.x0 + box.width * 0.05, box.y0, box.width * 0.95, box.height])
-            # Put a legend below current axis
-            ax.legend(loc='upper right', bbox_to_anchor=(-0.04, 1), title='Out', borderaxespad=0, frameon=False)
-        if label:
-            for txt, xy in lbls:
-
-                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='4%', pad=0.05)
-        cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
-        cb.set_label('Variance')
-        ax.axis(self.prj.trange + self.prj.prange)
-        if label:
-            ax.set_title(self.prj.name + (len(exc) * ' +{}').format(*exc))
-        else:
-            ax.set_title(self.prj.name)
-        plt.show()
-        return ax
-
-    def overlay(self, ax, fc='none', ec='k'):
-        for k in self:
-            ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
-
-    def show_data(self, key, phase, comp, ox=None, which=7):
-        dt = self.collect_data(key, phase, comp, ox=ox, which=which)
-        x, y = np.array(dt['pts']).T
-        fig, ax = plt.subplots()
-        pts = ax.scatter(x, y, c=dt['data'])
-        ax.set_title(' '.join(key))
-        cb = plt.colorbar(pts)
-        cb.set_label('{}-{}'.format(phase, comp))
-        plt.show()
-
-    def show_status(self):
-        fig, ax = plt.subplots()
-        extent = (self.prj.trange[0] - self.tstep / 2, self.prj.trange[1] + self.tstep / 2,
-                  self.prj.prange[0] - self.pstep / 2, self.prj.prange[1] + self.pstep / 2)
-        cmap = ListedColormap(['orangered', 'limegreen'])
-        ax.imshow(self.status, extent=extent, aspect='auto', origin='lower', cmap=cmap)
-        self.overlay(ax)
-        plt.axis(self.prj.trange + self.prj.prange)
-        plt.show()
-
-    def show_delta(self):
-        fig, ax = plt.subplots()
-        extent = (self.prj.trange[0] - self.tstep / 2, self.prj.trange[1] + self.tstep / 2,
-                  self.prj.prange[0] - self.pstep / 2, self.prj.prange[1] + self.pstep / 2)
-        im = ax.imshow(self.delta, extent=extent, aspect='auto', origin='lower')
-        self.overlay(ax)
-        cb = plt.colorbar(im)
-        cb.set_label('sec/point')
-        plt.title('THERMOCALC execution time')
-        plt.axis(self.prj.trange + self.prj.prange)
-        plt.show()
-
-    def identify(self, T, p):
-        for key in self:
-            if Point(T, p).intersects(self.shapes[key]):
-                return key
-
-    def ginput(self):
-        plt.ion()
-        self.show()
-        return self.identify(*plt.ginput()[0])
-
-    def isopleths(self, phase, comp, ox=None, which=7, smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None, refine=1):
-        if step is None and N is None:
-            N = 10
-        print('Collecting...')
-        if only is not None:
-            recs = OrderedDict()
-            d = self.collect_data(only, phase, comp, ox=ox, which=which)
-            z = d['data']
-            if z:
-                recs[only] = d
-                mn = min(z)
-                mx = max(z)
-        else:
-            recs, mn, mx = self.merge_data(phase, comp, ox=ox, which=which)
-        if step:
-            cntv = np.arange(0, mx + step, step)
-            cntv = cntv[cntv > mn - step]
-        else:
-            cntv = np.linspace(mn, mx, N)
-        # Thin-plate contouring of areas
-        print('Contouring...')
-        scale = self.tstep / self.pstep
-        fig, ax = plt.subplots()
-        for key in recs:
-            tmin, pmin, tmax, pmax = self.shapes[key].bounds
-            #ttspace = self.tspace[np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)]
-            #ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
-            ttspace = np.arange(tmin - self.tstep, tmax + self.tstep, self.tstep / refine)
-            ppspace = np.arange(pmin - self.pstep, pmax + self.pstep, self.pstep / refine)
-            tg, pg = np.meshgrid(ttspace, ppspace)
-            x, y = np.array(recs[key]['pts']).T
-            try:
-                # Use scaling
-                rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
-                zg = rbf(tg, scale*pg)
-                # experimental
-                if gradient:
-                    if dt:
-                        zg = np.gradient(zg, self.tstep, self.pstep)[0]
-                    else:
-                        zg = -np.gradient(zg, self.tstep, self.pstep)[1]
-                    if N:
-                        cntv = N
-                    else:
-                        cntv = 10
-                # ------------
-                if filled:
-                    cont = ax.contourf(tg, pg, zg, cntv)
-                else:
-                    cont = ax.contour(tg, pg, zg, cntv)
-                patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
-                ax.add_patch(patch)
-                for col in cont.collections:
-                    col.set_clip_path(patch)
-            except:
-                print('Error for {}'.format(' '.join(key)))
-        if only is None:
-            self.overlay(ax)
-        plt.colorbar(cont)
-        if only is None:
-            ax.axis(self.prj.trange + self.prj.prange)
-            ax.set_title('Isopleths - {}'.format(comp))
-        else:
-            ax.set_title('{} - {}'.format(' '.join(only), comp))
-        plt.show()
-
-    def gridded(self, comp, which='all', smooth=0):
-        recs, mn, mx = self.merge_data(comp, which)
-        scale = self.tstep / self.pstep
-        gd = np.empty(self.tg.shape)
-        gd[:] = np.nan
-        for key in recs:
-            tmin, pmin, tmax, pmax = self.shapes[key].bounds
-            ttind = np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)
-            ppind = np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)
-            slc = np.ix_(ppind, ttind)
-            tg, pg = self.tg[slc], self.pg[slc]
-            x, y = np.array(recs[key]['pts']).T
-            # Use scaling
-            rbf = Rbf(x, scale*y, recs[key]['data'], function='thin_plate', smooth=smooth)
-            zg = rbf(tg, scale*pg)
-            gd[self.masks[key]] = zg[self.masks[key][slc]]
-        return gd
-
-    def save_tab(self, tabfile=None, comps=None):
-        if not tabfile:
-            tabfile = os.path.join(self.prj.workdir, self.prj.name + '.tab')
-        if not comps:
-            comps = self.all_data_keys
-        data = []
-        for comp in tqdm(comps, desc='Exporting'):
-            data.append(self.gridded(comp).flatten())
-        with open(tabfile, 'wb') as f:
-            head = ['psbuilder', self.prj.name + '.tab', '{:12d}'.format(2),
-                    'T(°C)', '   {:16.16f}'.format(self.prj.trange[0])[:19],
-                    '   {:16.16f}'.format(self.tstep)[:19], '{:12d}'.format(len(self.tspace)),
-                    'p(kbar)', '   {:16.16f}'.format(self.prj.prange[0])[:19],
-                    '   {:16.16f}'.format(self.pstep)[:19], '{:12d}'.format(len(self.pspace)),
-                    '{:12d}'.format(len(data)), (len(data)*'{:15s}').format(*comps)]
-            for ln in head:
-                f.write(bytes(ln + '\n', 'utf-8'))
-            np.savetxt(f, np.transpose(data), fmt='%15.6f', delimiter='')
-        print('Saved.')
-
-#
-#------------------UTILS---------------
-#
-
-def parse_logfile(logfile):
-    # res is list of dicts with data and ptguess keys
-    # data is dict with keys of phases and each contain dict of components, rbi dict and mode
-    # res[0]['data']['g']['mode']
-    # res[0]['data']['g']['z']
-    # res[0]['data']['g']['rbi']['MnO']
-    with open(logfile, 'r', encoding=TCenc) as f:
-        out = f.read()
-    lines = [''.join([c for c in ln if ord(c)<128]) for ln in out.splitlines() if ln != '']
-    pts = []
-    res = []
-    variance = -1
-    if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-        status = 'bombed'
-    else:
-        correct = {'L':'liq'}
-        for ln in lines:
-            if 'variance of required equilibrium' in ln:
-                variance = int(ln[ln.index('(') + 1:ln.index('?')])
-                break
-        bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
-        bstarts.append(len(lines))
-        for bs, be in zip(bstarts[:-1], bstarts[1:]):
-            block = lines[bs:be]
-            pts.append([float(n) for n in block[1].split()[:2]])
-            xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-            gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
-            gixe = xyz[-1] + 2
-            ptguess = block[gixs:gixe]
-            data = {}
-            rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
-            phases = block[rbix - 1].split()[1:]
-            for phase, val in zip(phases, block[rbix].split()[2:]):
-                data[phase] = dict(mode=float(val))
-            for ix in xyz:
-                lbl = block[ix].split()[1]
-                phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
-                phase = correct.get(phase, phase)
-                data[phase][comp] = float(block[ix].split()[2])
-            rbiox = block[rbix + 1].split()[2:]
-            for delta in range(len(phases)):
-                comp = {c:float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
-                comp['H2O'] = float(block[rbix + 2 + delta].split()[1])
-                data[phases[delta]]['rbi'] = comp
-            res.append(dict(data=data,ptguess=ptguess))
-        if res:
-            status = 'ok'
-        else:
-            status = 'nir'
-    return status, variance, np.array(pts).T, res, out
-
-def construct_areas(unilist, invlist, trange, prange):
-    def area_exists(indexes):
-        def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
-            if found_cycle[0]:
-                return
-            marked[u] = True
-            path.append(u)
-            for v in graph[u]:
-                if marked[v] and v != pred_node:
-                    found_cycle[0] = True
-                    return
-                if not marked[v]:
-                    dfs_visit(graph, v, found_cycle, u, marked, path)
-        # create graph
-        graph = {}
-        for ix in indexes:
-            b, e = unilist[ix][2], unilist[ix][3]
-            if b == 0:
-                nix = max(list(inv_coords.keys())) + 1
-                inv_coords[nix] = unilist[ix][4]['T'][0], unilist[ix][4]['p'][0]
-                b = nix
-            if e == 0:
-                nix = max(list(inv_coords.keys())) + 1
-                inv_coords[nix] = unilist[ix][4]['T'][-1], unilist[ix][4]['p'][-1]
-                e = nix
-            if b in graph:
-                graph[b] = graph[b] + (e,)
-            else:
-                graph[b] = (e,)
-            if e in graph:
-                graph[e] = graph[e] + (b,)
-            else:
-                graph[e] = (b,)
-            uni_index[(b, e)] = unilist[ix][0]
-            uni_index[(e, b)] = unilist[ix][0]
-        # do search
-        path = []
-        marked = { u : False for u in graph }
-        found_cycle = [False]
-        for u in graph:
-            if not marked[u]:
-                dfs_visit(graph, u, found_cycle, u, marked, path)
-            if found_cycle[0]:
-                break
-        return found_cycle[0], path
-    uni_index = {}
-    for r in unilist:
-        uni_index[(r[2], r[3])] = r[0]
-        uni_index[(r[3], r[2])] = r[0]
-    inv_coords = {}
-    for r in invlist:
-        inv_coords[r[0]] = r[2]['T'][0], r[2]['p'][0]
-    faces = {}
-    for ix, uni in enumerate(unilist):
-        f1 = frozenset(uni[4]['phases'])
-        f2 = frozenset(uni[4]['phases'] - uni[4]['out'])
-        if f1 in faces:
-            faces[f1].append(ix)
-        else:
-            faces[f1] = [ix]
-        if f2 in faces:
-            faces[f2].append(ix)
-        else:
-            faces[f2] = [ix]
-        # topology of polymorphs is degenerated
-        for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
-            if poly.issubset(uni[4]['phases']):
-                f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
-                if f2 in faces:
-                    faces[f2].append(ix)
-                else:
-                    faces[f2] = [ix]
-    vertices, edges, phases = [], [], []
-    tedges, tphases = [], []
-    for f in faces:
-        exists, path = area_exists(faces[f])
-        if exists:
-            edge = []
-            vert = []
-            for b, e in zip(path, path[1:] + path[:1]):
-                edge.append(uni_index.get((b, e), None))
-                vert.append(inv_coords[b])
-            # check for bad topology
-            if not None in edge:
-                edges.append(edge)
-                vertices.append(vert)
-                phases.append(f)
-            else:
-                raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
-        else:
-            # loop not found, search for range crossing chain
-            for ppath in itertools.permutations(path):
-                edge = []
-                vert = []
-                for b, e in zip(ppath[:-1], ppath[1:]):
-                    edge.append(uni_index.get((b, e), None))
-                    vert.append(inv_coords[b])
-                vert.append(inv_coords[e])
-                if not None in edge:
-                    x, y = vert[0]
-                    if (x < trange[0] or x > trange[1] or y < prange[0] or y > prange[1]):
-                        x, y = vert[-1]
-                        if (x < trange[0] or x > trange[1] or y < prange[0] or y > prange[1]):
-                            tedges.append(edge)
-                            tphases.append(f)
-                    break
-    return vertices, edges, phases, tedges, tphases
-
-def update_guesses(scriptfile, guesses):
-    # Store scriptfile content and initialize dicts
-    with open(scriptfile, 'r', encoding=TCenc) as f:
-        sc = f.readlines()
-    gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
-    gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
-    if gsb and gse:
-        with open(scriptfile, 'w', encoding=TCenc) as f:
-            for ln in sc[:gsb[0] + 1]:
-                f.write(ln)
-            for ln in guesses:
-                f.write(ln)
-                f.write('\n')
-            for ln in sc[gse[0]:]:
-                f.write(ln)
 
 def main():
     application = QtWidgets.QApplication(sys.argv)

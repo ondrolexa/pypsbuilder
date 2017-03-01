@@ -51,7 +51,7 @@ History
 * scriptfile parsing improved
 * several bugfixes
 
-2.0.7 (XX YYY 2017)
+2.0.7 (13 Feb 2017)
 -------------------
 * double-click on phaselist highlight all unilines with zero mode phase
 * option to export partial areas
@@ -60,3 +60,11 @@ History
 * auto bug fixed
 * Keyboard shortcuts added Ctrl-T and Ctrl-P for CalcTatP and CalcPatT
 * Ctrl-H Zoom home
+
+2.1.0 (XX YYY 2017)
+-------------------
+* Major update and refactoring
+* Guesses directly written to scriptfile
+* Updated parsing include rbi data
+* Initial version of psexplorer for isopleths (cli version)
+* Manual unilines and invpoints highlighted in lists
