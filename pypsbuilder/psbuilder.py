@@ -526,10 +526,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.do_save()
         if projfile is None:
             qd = QtWidgets.QFileDialog
-            filt = 'pypsbuilder project (*.psb)'
             projfile = qd.getOpenFileName(self, 'Open project',
                                           os.path.expanduser('~'),
-                                          filt)[0]
+                                          'pypsbuilder project (*.psb)')[0]
         if os.path.exists(projfile):
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
@@ -604,10 +603,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def import_from_prj(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            filt = 'pypsbuilder project (*.psb)'
-            projfile = qd.getOpenFileName(self, 'Import from project',
-                                          os.path.expanduser('~'),
-                                          filt)[0]
+            projfile = qd.getOpenFileName(self, 'Import from project', self.workdir,
+                                          'pypsbuilder project (*.psb)')[0]
             if os.path.exists(projfile):
                 stream = gzip.open(projfile, 'rb')
                 data = pickle.load(stream)
@@ -831,9 +828,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            filt = 'Text files (*.txt);;All files (*.*)'
-            tpfile = qd.getOpenFileName(self, 'Open text file',
-                                        self.workdir, filt)[0]
+            tpfile = qd.getOpenFileName(self, 'Open text file', self.workdir,
+                                        'Text files (*.txt);;All files (*.*)')[0]
             if tpfile:
                 tp = []
                 tpok = True
