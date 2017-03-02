@@ -30,6 +30,8 @@ setup(
     entry_points="""
     [console_scripts]
     psbuilder=pypsbuilder.psbuilder:main
+    psshow=pypsbuilder.psexplorer:ps_show
+    psiso=pypsbuilder.psexplorer:ps_iso
     """,
     install_requires=requirements,
     zip_safe=False,

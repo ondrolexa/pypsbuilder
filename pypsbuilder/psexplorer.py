@@ -646,16 +646,35 @@ class PTPS:
         print('Saved.')
 
 
-def show_ps():
+def ps_show():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", type=str, choices=['ps', 'iso'],
-                        help="operational mode")
-    parser.add_argument("-o", "--out", nargs='+',
-                        help="highlight out lines for given phases")
+    parser.add_argument('project', type=str,
+                        help='psbuilder project file')
+    parser.add_argument('-o', '--out', nargs='+',
+                        help='highlight out lines for given phases')
+    parser.add_argument('-l', '--label', action='store_true',
+                        help='show alrea labels')
     args = parser.parse_args()
-    print(args.mode)
-    print(args.out)
+    print('Running psexplorer...')
+    ps = PTPS(args.project)
+    sys.exit(ps.show(out=args.out, label=args.label))
+
+
+def ps_iso():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('project', type=str,
+                        help='psbuilder project file')
+    parser.add_argument('phase', type=str,
+                        help='phase used for contouring')
+    parser.add_argument('expr', type=str,
+                        help='expression evalutaed to calculate values')
+    parser.add_argument('-f', '--filled', action='store_true',
+                        help='filled contours')
+    args = parser.parse_args()
+    print('Running psexplorer...')
+    ps = PTPS(args.project)
+    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled))
 
 
 if __name__ == "__main__":
-    show_ps()
+    ps_show()
