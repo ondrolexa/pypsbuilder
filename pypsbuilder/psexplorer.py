@@ -258,7 +258,7 @@ class PTPS:
                 self.status[r, c] = 0
                 ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
                 start_time = time.time()
-                out = runprog(self.tcexe, self.prj.workdir, ans)
+                runprog(self.tcexe, self.prj.workdir, ans)
                 delta = time.time() - start_time
                 status, variance, pts, res, output = parse_logfile(self.logfile)
                 if len(res) == 1:
@@ -272,7 +272,7 @@ class PTPS:
                         if not self.invdata(inv)['manual']:
                             update_guesses(self.scriptfile, self.invdata(inv)['results'][0]['ptguess'])
                             start_time = time.time()
-                            out = runprog(self.tcexe, self.prj.workdir, ans)
+                            runprog(self.tcexe, self.prj.workdir, ans)
                             delta = time.time() - start_time
                             status, variance, pts, res, output = parse_logfile(self.logfile)
                             if len(res) == 1:
@@ -313,7 +313,7 @@ class PTPS:
                 for rn, cn in self.neighs(r, c):
                     if self.status[rn, cn] == 1:
                         start_time = time.time()
-                        out = runprog(self.tcexe, self.prj.workdir, ans)
+                        runprog(self.tcexe, self.prj.workdir, ans)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = parse_logfile(self.logfile)
                         if len(res) == 1:
@@ -326,7 +326,7 @@ class PTPS:
                         else:
                             update_guesses(self.scriptfile, self.gridcalcs[rn, cn]['ptguess'])
                         start_time = time.time()
-                        out = runprog(self.tcexe, self.prj.workdir, ans)
+                        runprog(self.tcexe, self.prj.workdir, ans)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = parse_logfile(self.logfile)
                         if len(res) == 1:
@@ -341,9 +341,9 @@ class PTPS:
             print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
 
     def neighs(self, r, c):
-        m = np.array([[(r-1,c-1), (r-1,c), (r-1,c+1)],
-                      [(r,c-1), (None,None), (r,c+1)],
-                      [(r+1,c-1), (r+1,c), (r+1,c+1)]])
+        m = np.array([[(r - 1, c - 1), (r - 1, c), (r - 1, c + 1)],
+                      [(r, c - 1), (None, None), (r, c + 1)],
+                      [(r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]])
         if r < 1:
             m = m[1:, :]
         if r > len(self.pspace) - 2:
@@ -352,8 +352,8 @@ class PTPS:
             m = m[:, 1:]
         if c > len(self.tspace) - 2:
             m = m[:, :-1]
-        return zip([i for i in m[:,:,0].flat if i is not None],
-                   [i for i in m[:,:,1].flat if i is not None])
+        return zip([i for i in m[:, :, 0].flat if i is not None],
+                   [i for i in m[:, :, 1].flat if i is not None])
 
     def data_keys(self, key):
         data = dict()
@@ -645,6 +645,7 @@ class PTPS:
             np.savetxt(f, np.transpose(data), fmt='%15.6f', delimiter='')
         print('Saved.')
 
+
 def show_ps():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", type=str, choices=['ps', 'iso'],
@@ -654,6 +655,7 @@ def show_ps():
     args = parser.parse_args()
     print(args.mode)
     print(args.out)
+
 
 if __name__ == "__main__":
     show_ps()

@@ -113,7 +113,10 @@ class ProjectFile(object):
             T = uni[4]['T'][uni[4]['begix']:uni[4]['endix'] + 1]
             p = uni[4]['p'][uni[4]['begix']:uni[4]['endix'] + 1]
         else:
-            T, p = [], []
+            if uni[2] == 0 and uni[3] == 0:
+                T, p = uni[4]['T'], uni[4]['p']
+            else:
+                T, p = [], []
         return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
 
     def construct_areas(self):

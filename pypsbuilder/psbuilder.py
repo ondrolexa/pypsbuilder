@@ -644,7 +644,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.unimodel.appendRow((row[0], label, row[2], row[3], r))
                     self.adapt_uniview()
                     # try to recalc
-                    for row in data['invlist']:
+                    progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
+                                                         0, len(data['invlist']), self)
+                    progress.setWindowModality(QtCore.Qt.WindowModal)
+                    progress.setMinimumDuration(0)
+                    for ix, row in enumerate(data['invlist']):
+                        progress.setValue(ix)
                         if 'cmd' in row[2]:
                             tcout = runprog(self.tc, self.workdir, row[2]['cmd'])
                             status, variance, pts, res, output = parse_logfile(self.logfile)
@@ -657,8 +662,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 urow = self.invmodel.getRowFromId(id)
                                 urow[1] = label
                                 urow[2] = r
+                        if progress.wasCanceled():
+                            break
+                    progress.setValue(len(data['invlist']))
+                    progress.deleteLater()
                     self.invview.resizeColumnsToContents()
-                    for row in data['unilist']:
+                    progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel",
+                                                         0, len(data['unilist']), self)
+                    progress.setWindowModality(QtCore.Qt.WindowModal)
+                    progress.setMinimumDuration(0)
+                    for ix, row in enumerate(data['unilist']):
+                        progress.setValue(ix)
                         if 'cmd' in row[4]:
                             tcout = runprog(self.tc, self.workdir, row[4]['cmd'])
                             status, variance, pts, res, output = parse_logfile(self.logfile)
@@ -671,6 +685,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                 urow = self.unimodel.getRowFromId(id)
                                 urow[1] = label
                                 urow[4] = r
+                        if progress.wasCanceled():
+                            break
+                    progress.setValue(len(data['unilist']))
+                    progress.deleteLater()
                     self.adapt_uniview()
                     # cutting
                     for row in self.unimodel.unilist:
@@ -1572,7 +1590,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             T = row[4]['T'][row[4]['begix']:row[4]['endix'] + 1]
             p = row[4]['p'][row[4]['begix']:row[4]['endix'] + 1]
         else:
-            T, p = [], []
+            if row[2] == 0 and row[3] == 0:
+                T, p = row[4]['T'], row[4]['p']
+            else:
+                T, p = [], []
         return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
 
     def getunilabelpoint(self, T, p):
