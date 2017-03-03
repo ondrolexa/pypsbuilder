@@ -83,6 +83,10 @@ class PTPS:
         return self.pspace[1] - self.pspace[0]
 
     @property
+    def ratio(self):
+        return (self.trange[1] - self.trange[0]) / (self.prange[1] - self.prange[0])
+
+    @property
     def scriptfile(self):
         return os.path.join(self.prj.workdir, 'tc-' + self.bname + '.txt')
 
@@ -561,7 +565,6 @@ class PTPS:
             cntv = np.linspace(mn, mx, N)
         # Thin-plate contouring of areas
         print('Contouring...')
-        scale = self.tstep / self.pstep
         fig, ax = plt.subplots()
         for key in recs:
             tmin, pmin, tmax, pmax = self.shapes[key].bounds
@@ -573,8 +576,8 @@ class PTPS:
             x, y = np.array(recs[key]['pts']).T
             try:
                 # Use scaling
-                rbf = Rbf(x, scale * y, recs[key]['data'], function='thin_plate', smooth=smooth)
-                zg = rbf(tg, scale * pg)
+                rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
+                zg = rbf(tg, self.ratio * pg)
                 # experimental
                 if gradient:
                     if dt:
@@ -608,7 +611,6 @@ class PTPS:
 
     def get_gridded(self, phase, expr, which=7, smooth=0):
         recs, mn, mx = self.merge_data(phase, expr, which=which)
-        scale = self.tstep / self.pstep
         gd = np.empty(self.tg.shape)
         gd[:] = np.nan
         for key in recs:
@@ -619,8 +621,8 @@ class PTPS:
             tg, pg = self.tg[slc], self.pg[slc]
             x, y = np.array(recs[key]['pts']).T
             # Use scaling
-            rbf = Rbf(x, scale * y, recs[key]['data'], function='thin_plate', smooth=smooth)
-            zg = rbf(tg, scale * pg)
+            rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
+            zg = rbf(tg, self.ratio * pg)
             gd[self.masks[key]] = zg[self.masks[key][slc]]
         return gd
 

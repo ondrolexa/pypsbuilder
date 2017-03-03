@@ -1552,18 +1552,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def trimuni(self, row):
         if not row[4]['manual']:
-            xy = np.array([row[4]['T'], row[4]['p']]).T
+            ratio = (self.trange[1] - self.trange[0]) / (self.prange[1] - self.prange[0])
+            xy = np.array([row[4]['T'], ratio * row[4]['p']]).T
             line = LineString(xy)
             if row[2] > 0:
                 dt = self.invmodel.getDataFromId(row[2])
-                p1 = Point(dt['T'][0], dt['p'][0])
+                p1 = Point(dt['T'][0], ratio * dt['p'][0])
             else:
-                p1 = Point(row[4]['T'][0], row[4]['p'][0])
+                p1 = Point(row[4]['T'][0], ratio * row[4]['p'][0])
             if row[3] > 0:
                 dt = self.invmodel.getDataFromId(row[3])
-                p2 = Point(dt['T'][0], dt['p'][0])
+                p2 = Point(dt['T'][0], ratio * dt['p'][0])
             else:
-                p2 = Point(row[4]['T'][-1], row[4]['p'][-1])
+                p2 = Point(row[4]['T'][-1], ratio * row[4]['p'][-1])
             # vertex distances
             vdst = np.array([line.project(Point(*v)) for v in xy])
             d1 = line.project(p1)
