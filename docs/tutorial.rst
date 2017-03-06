@@ -83,13 +83,6 @@ guesses should be copied and hit **Set ptguess** button. PSbuilder store new sta
 script file, so nect calculation will use them. You can any time check and/or modify your script file with
 integrated editor on `Script file` pane. The `Log` pane always shows standard output of last `THERMOCALC` execution.
 
-You can save your project, so next time you will open it all your previous work is restored.
-When you are happy with P-T pseudosection, you can either export diagram directly by clicking save button
-of graphic toolbar (eps, svg, pdf, jpg and png formats are supported) or you can generate Drawpd
-file (File->Export Drawpd file).
-
-.. image:: images/drawpd.png
-
 Phase out lines
 ---------------
 
