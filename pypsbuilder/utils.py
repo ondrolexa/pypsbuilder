@@ -5,11 +5,10 @@ import gzip
 import ast
 import subprocess
 import itertools
-import pathlib
 from collections import OrderedDict
 import numpy as np
 
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 from shapely.ops import polygonize, linemerge, unary_union
 
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,

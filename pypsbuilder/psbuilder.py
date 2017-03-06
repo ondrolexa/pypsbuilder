@@ -5,6 +5,7 @@ Visual pseudosection builder for THERMOCALC
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
 
+import pathlib
 from .utils import *
 
 from pkg_resources import resource_filename
@@ -209,8 +210,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_usenames", self.checkLabels.checkState())
-            #builder_settings.setValue("export_areas", self.checkAreas.checkState())
-            #builder_settings.setValue("export_partial", self.checkPartial.checkState())
+            # builder_settings.setValue("export_areas", self.checkAreas.checkState())
+            # builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -224,8 +225,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            #self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            #self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -1974,6 +1975,7 @@ def main():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
+
 
 if __name__ == "__main__":
     main()
