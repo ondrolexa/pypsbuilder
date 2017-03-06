@@ -1,5 +1,5 @@
-First steps with PSbuilder
-==========================
+PSbuilder tutorial
+==================
 
 Before you can successfully run PSbuilder you have to prepare working directory,
 which contain `THERMOCALC 3.40` and `Drawpd 1.16` executables, preferences file,
@@ -10,9 +10,7 @@ if some action is needed.
 
 **The only special need is to place ptguess tags in your script file,
 to allow PSbuilder manage starting guesses**. Just insert following comment lines to your script file
-to line where normally starting guesses should be placed (definitely before last `*`).
-
-.. line-block::
+to line where normally starting guesses should be placed (definitely before last `*`).::
 
     %{PSBGUESS-BEGIN}
     %{PSBGUESS-END}
@@ -54,7 +52,6 @@ appropriate invariant points.
 
 .. image:: images/psbuilder_uni1.png
 
-
 .. image:: images/psbuilder_uni2.png
 
 By default, PSbuilder use 50 steps to calculate univariant lines. You can change it in `Settings` pane.
@@ -89,8 +86,8 @@ Phase out lines
 Double click on any phase in `Phases` list will highlight all univariant lines with zero modal proportion of
 selected phase.
 
-PSexplorer
-==========
+PSexplorer tutorial
+===================
 
 PSexplorer allows you visualize finalized pseudosection, create isopleth diagrams or generate `drawpd` file.
 It provides four command line scipts `psgrid`, `psdrawpd`, `psshow` and `psiso`.
@@ -100,9 +97,7 @@ Draw pseudosections
 
 Before any further calculations you can check and draw your pseudosection using `psshow` command which construct
 finished areas within your project. It has few options to label pseudosection with assamblages or highlight out
-phase lines.
-
-.. line-block::
+phase lines.::
 
     psshow -h
     usage: psshow [-h] [-o OUT [OUT ...]] [-l] project
@@ -118,20 +113,19 @@ phase lines.
                             highlight out lines for given phases
       -l, --label           show alrea labels
 
-For example, to draw pseudosection with marked garnet-out and staurolite-out lines execute:
-
-.. line-block::
+For example, to draw pseudosection with marked garnet-out and staurolite-out lines execute::
 
     psshow '/path/to/project.psb' -o g st
 
 .. image:: images/psshow_out.png
 
+Draw isopleths diagrams
+-----------------------
+
 To create isopleths diagrams the pseudoction should be gridded at first (In other case only values from univariant
 lines and invariant points are used and interpolated accross areas). Command `psgrid` will do all calculations
 and result are saved afterwards, so next time results are automatically loaded. Be aware that calculations takes
-some time.
-
-.. line-block::
+some time.::
 
     usage: psgrid [-h] [--numT NUMT] [--numP NUMP] project
 
@@ -145,17 +139,13 @@ some time.
       --numT NUMT  number of T steps
       --numP NUMP  number of P steps
 
-For gridding pseudosection with grid 120x100 run following command:
-
-. line-block::
+For gridding pseudosection with grid 120x100 run following command::
 
     psgrid '/path/to/project.psb' --numT 120 --numP 100
 
-Once gridded you can draw isopleths diagrams using `psiso` command.
+Once gridded you can draw isopleths diagrams using `psiso` command::
 
-.. line-block::
-
-    usage: psiso-script.py [-h] [-f] project phase expr
+    usage: psiso [-h] [-f] project phase expr
 
     Draw isopleth diagrams
 
@@ -168,26 +158,20 @@ Once gridded you can draw isopleths diagrams using `psiso` command.
       -h, --help    show this help message and exit
       -f, --filled  filled contours
 
-Following example shows isopleths of garnet mode:
-
-.. line-block::
+Following example shows isopleths of garnet mode::
 
     psiso '/path/to/project.psb' -f g mode
 
 .. image:: images/psiso_mode.png
 
-To draw isopleths of almandine garnet proportion you can use expression from a-x file `alm = x + (-m) x + (-x) z`:
-
-.. line-block::
+To draw isopleths of almandine garnet proportion you can use expression from a-x file `alm = x + (-m) x + (-x) z`::
 
     psiso '/path/to/project.psb' -f g 'x-m*x-x*z'
 
 .. image:: images/psiso_alm.png
 
 You can also use mineral compositions calculated with rbi script in your expression. Here is example of SiO2
-in muscovite:
-
-.. line-block::
+in muscovite::
 
     psiso '/path/to/project.psb' -f mu 'SiO2'
 
