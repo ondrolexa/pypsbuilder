@@ -64,7 +64,7 @@ History
 2.1.0 (XX YYY 2017)
 -------------------
 * Major update and refactoring
-* Guesses directly written to scriptfile
+* Starting guesses directly written to scriptfile (note that commented tags are needed)
 * Updated parsing include rbi data
-* Initial version of psexplorer for isopleths (cli version)
+* Initial version of psexplorer(four cli scrips provided)
 * Manual unilines and invpoints highlighted in lists

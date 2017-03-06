@@ -13,6 +13,8 @@ build:
     - psbuilder = pypsbuilder.psbuilder:main
     - psshow = pypsbuilder.psexplorer:ps_show
     - psiso = pypsbuilder.psexplorer:ps_iso
+    - psgrid = pypsbuilder.psexplorer:ps_grid
+    - psdrawpd = pypsbuilder.psexplorer:ps_drawpd
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.

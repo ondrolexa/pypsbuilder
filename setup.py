@@ -32,6 +32,8 @@ setup(
     psbuilder=pypsbuilder.psbuilder:main
     psshow=pypsbuilder.psexplorer:ps_show
     psiso=pypsbuilder.psexplorer:ps_iso
+    psgrid=pypsbuilder.psexplorer:ps_grid
+    psdrawpd=pypsbuilder.psexplorer:ps_drawpd
     """,
     install_requires=requirements,
     zip_safe=False,

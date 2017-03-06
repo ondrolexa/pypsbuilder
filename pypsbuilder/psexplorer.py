@@ -84,7 +84,7 @@ class PTPS:
 
     @property
     def ratio(self):
-        return (self.trange[1] - self.trange[0]) / (self.prange[1] - self.prange[0])
+        return (self.prj.trange[1] - self.prj.trange[0]) / (self.prj.prange[1] - self.prj.prange[0])
 
     @property
     def scriptfile(self):
@@ -199,10 +199,10 @@ class PTPS:
                     maxpf = max([len(p) for p in phases]) + 1
                     for ed, ph, ve in zip(edges, phases, vertices):
                         v = np.array(ve)
-                        if not (np.all(v[:, 0] < self.trange[0]) or
-                                np.all(v[:, 0] > self.trange[1]) or
-                                np.all(v[:, 1] < self.prange[0]) or
-                                np.all(v[:, 1] > self.prange[1])):
+                        if not (np.all(v[:, 0] < self.prj.trange[0]) or
+                                np.all(v[:, 0] > self.prj.trange[1]) or
+                                np.all(v[:, 1] < self.prj.prange[0]) or
+                                np.all(v[:, 1] > self.prj.prange[1])):
                             d = ('{:.2f} '.format(len(ph) / maxpf) +
                                  ' '.join(['u{}'.format(e) for e in ed]) +
                                  ' % ' + ' '.join(ph) + '\n')
@@ -217,14 +217,14 @@ class PTPS:
             output.write('\n')
             output.write('*\n')
             output.write('\n')
-            output.write('window {} {} '.format(*self.trange) +
-                         '{} {}\n\n'.format(*self.prange))
+            output.write('window {} {} '.format(*self.prj.trange) +
+                         '{} {}\n\n'.format(*self.prj.prange))
             output.write('darkcolour  56 16 101\n\n')
             xt, yt = self.ax.get_xticks(), self.ax.get_yticks()
-            xt = xt[xt > self.trange[0]]
-            xt = xt[xt < self.trange[1]]
-            yt = yt[yt > self.prange[0]]
-            yt = yt[yt < self.prange[1]]
+            xt = xt[xt > self.prj.trange[0]]
+            xt = xt[xt < self.prj.trange[1]]
+            yt = yt[yt > self.prj.prange[0]]
+            yt = yt[yt < self.prj.prange[1]]
             output.write('bigticks ' +
                          '{} {} '.format(xt[1] - xt[0], xt[0]) +
                          '{} {}\n\n'.format(yt[1] - yt[0], yt[0]))
@@ -459,6 +459,9 @@ class PTPS:
             return '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
         if isinstance(out, str):
             out = [out]
+        # check shapes created
+        if not self.ready:
+            self.refresh_geometry()
         vv = np.unique([self.variance[k] for k in self])
         pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
         # Set alpha
@@ -475,9 +478,11 @@ class PTPS:
         self.add_overlay(ax)
         if out:
             for o in out:
-                segx = [np.append(row[4]['fT'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
-                segy = [np.append(row[4]['fp'], np.nan) for row in self.prj.unilist if o in row[4]['out']]
-                ax.plot(np.hstack(segx)[:-1], np.hstack(segy)[:-1], lw=2, label=o)
+                lst = [self.prj.get_trimmed_uni(row[0]) for row in self.prj.unilist if o in row[4]['out']]
+                if lst:
+                    ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
+                            np.hstack([(*seg[1], np.nan) for seg in lst]),
+                            lw=2, label=o)
             # Shrink current axis's height by 6% on the bottom
             box = ax.get_position()
             ax.set_position([box.x0 + box.width * 0.05, box.y0, box.width * 0.95, box.height])
@@ -547,7 +552,10 @@ class PTPS:
     def isopleths(self, phase, expr, which=7, smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None, refine=1):
         if step is None and N is None:
             N = 10
-        print('Collecting...')
+        if self.gridded:
+            print('Collecting...')
+        else:
+            print('Collecting onlu from uni lines and inv points. Not yet gridded...')
         if only is not None:
             recs = OrderedDict()
             d = self.collect_data(only, phase, expr, which=which)
@@ -597,8 +605,8 @@ class PTPS:
                 ax.add_patch(patch)
                 for col in cont.collections:
                     col.set_clip_path(patch)
-            except:
-                print('Error for {}'.format(key))
+            except Exception as e:
+                print('Error for {}: {}'.format(key, e))
         if only is None:
             self.add_overlay(ax)
         plt.colorbar(cont)
@@ -610,6 +618,8 @@ class PTPS:
         plt.show()
 
     def get_gridded(self, phase, expr, which=7, smooth=0):
+        if not self.gridded:
+            print('Not yet gridded.')
         recs, mn, mx = self.merge_data(phase, expr, which=which)
         gd = np.empty(self.tg.shape)
         gd[:] = np.nan
@@ -649,7 +659,7 @@ class PTPS:
 
 
 def ps_show():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Draw pseudosection from project file')
     parser.add_argument('project', type=str,
                         help='psbuilder project file')
     parser.add_argument('-o', '--out', nargs='+',
@@ -657,25 +667,51 @@ def ps_show():
     parser.add_argument('-l', '--label', action='store_true',
                         help='show alrea labels')
     args = parser.parse_args()
-    print('Running psexplorer...')
+    print('Running psshow...')
     ps = PTPS(args.project)
     sys.exit(ps.show(out=args.out, label=args.label))
 
 
+def ps_grid():
+    parser = argparse.ArgumentParser(description='Calculate compositions in grid')
+    parser.add_argument('project', type=str,
+                        help='psbuilder project file')
+    parser.add_argument('--numT', type=int, default=51,
+                        help='number of T steps')
+    parser.add_argument('--numP', type=int, default=51,
+                        help='number of P steps')
+    args = parser.parse_args()
+    print('Running psgrid...')
+    ps = PTPS(args.project)
+    sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
+
+
 def ps_iso():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='Draw isopleth diagrams')
     parser.add_argument('project', type=str,
                         help='psbuilder project file')
     parser.add_argument('phase', type=str,
                         help='phase used for contouring')
     parser.add_argument('expr', type=str,
-                        help='expression evalutaed to calculate values')
+                        help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
     args = parser.parse_args()
-    print('Running psexplorer...')
+    print('Running psiso...')
     ps = PTPS(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled))
+
+
+def ps_drawpd():
+    parser = argparse.ArgumentParser(description='Generate drawpd file from project')
+    parser.add_argument('project', type=str,
+                        help='psbuilder project file')
+    parser.add_argument('-a', '--areas', action='store_true',
+                        help='export also areas', default=True)
+    args = parser.parse_args()
+    print('Running psdrawpd...')
+    ps = PTPS(args.project)
+    sys.exit(ps.gendrawpd(export_areas=args.areas))
 
 
 if __name__ == "__main__":
