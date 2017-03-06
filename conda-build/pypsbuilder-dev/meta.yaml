@@ -22,21 +22,21 @@ build:
 
 requirements:
   build:
-    - python
+    - python # [py35]
     - setuptools
-    - pyqt
+    - pyqt >=5
     - numpy
-    - matplotlib
+    - matplotlib >=2
     - scipy
     - shapely
     - descartes
     - tqdm
 
   run:
-    - python
-    - pyqt
+    - python # [py35]
+    - pyqt >=5
     - numpy
-    - matplotlib
+    - matplotlib >=2
     - scipy
     - shapely
     - descartes
