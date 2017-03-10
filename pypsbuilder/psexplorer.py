@@ -24,14 +24,14 @@ class PTPS:
     def __init__(self, projfile):
         self.prj = ProjectFile(projfile)
         # Check prefs and scriptfile
-        if not os.path.exists(self.prefsfile):
+        if not Path(self.prefsfile).exists():
             raise Exception('No tc-prefs.txt file in working directory.')
         for line in open(self.prefsfile, 'r'):
             kw = line.split()
             if kw != []:
                 if kw[0] == 'scriptfile':
                     self.bname = kw[1]
-                    if not os.path.exists(self.scriptfile):
+                    if not Path(self.scriptfile).exists():
                         raise Exception('tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.')
                 if kw[0] == 'calcmode':
                     if kw[1] != '1':
@@ -88,31 +88,31 @@ class PTPS:
 
     @property
     def scriptfile(self):
-        return os.path.join(self.prj.workdir, 'tc-' + self.bname + '.txt')
+        return str(Path(self.prj.workdir, 'tc-' + self.bname + '.txt'))
 
     @property
     def logfile(self):
-        return os.path.join(self.prj.workdir, 'tc-log.txt')
+        return str(Path(self.prj.workdir, 'tc-log.txt'))
 
     @property
     def prefsfile(self):
-        return os.path.join(self.prj.workdir, 'tc-prefs.txt')
+        return str(Path(self.prj.workdir, 'tc-prefs.txt'))
 
     @property
     def tcexe(self):
-        return os.path.join(self.prj.workdir, self.prj.tcexe)
+        return str(Path(self.prj.workdir, self.prj.tcexe))
 
     @property
     def drexe(self):
-        return os.path.join(self.prj.workdir, self.prj.drexe)
+        return str(Path(self.prj.workdir, self.prj.drexe))
 
     @property
     def project(self):
-        return os.path.join(self.prj.workdir, self.prj.name + '.psi')
+        return str(Path(self.prj.workdir, self.prj.name + '.psi'))
 
     @property
     def saved(self):
-        return os.path.exists(self.project)
+        return Path(self.project).exists()
 
     def unidata(self, fid):
         return self.prj.unidata(fid)
@@ -191,7 +191,7 @@ class PTPS:
             output.write('% ----------------------------------------------\n\n')
             if export_areas:
                 # phases in areas for TC-Investigator
-                with open(os.path.join(self.workdir, 'assemblages.txt'), 'w', encoding=TCenc) as tcinv:
+                with open(str(Path(self.workdir, 'assemblages.txt')), 'w', encoding=TCenc) as tcinv:
                     vertices, edges, phases, tedges, tphases = self.prj.construct_areas()
                     # write output
                     output.write('% Areas\n')
@@ -639,7 +639,7 @@ class PTPS:
     # Need FIX
     def save_tab(self, tabfile=None, comps=None):
         if not tabfile:
-            tabfile = os.path.join(self.prj.workdir, self.prj.name + '.tab')
+            tabfile = str(Path(self.prj.workdir, self.prj.name + '.tab'))
         if not comps:
             comps = self.all_data_keys
         data = []

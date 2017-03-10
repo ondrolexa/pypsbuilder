@@ -5,7 +5,7 @@ import gzip
 import ast
 import subprocess
 import itertools
-import pathlib
+from pathlib import Path
 from collections import OrderedDict
 import numpy as np
 
@@ -20,12 +20,13 @@ TCenc = 'mac-roman'
 
 class ProjectFile(object):
     def __init__(self, projfile):
-        if os.path.exists(projfile):
-            stream = gzip.open(projfile, 'rb')
+        prj = Path(projfile).absolute()
+        if prj.exists():
+            stream = gzip.open(str(prj), 'rb')
             self.data = pickle.load(stream)
             stream.close()
-            self.workdir = os.path.dirname(projfile)
-            self.name = os.path.splitext(os.path.basename(projfile))[0]
+            self.workdir = str(prj.parent)
+            self.name = str(prj.name)
             self.unilookup = {}
             self.invlookup = {}
             for ix, r in enumerate(self.unilist):
@@ -45,7 +46,7 @@ class ProjectFile(object):
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
             self.tcexe = None
-            for p in pathlib.Path(self.workdir).glob(tcpat):
+            for p in Path(self.workdir).glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.tcexe = p.name
                     break
@@ -53,7 +54,7 @@ class ProjectFile(object):
                 raise Exception('No THERMOCALC executable in working directory.')
             # DRAWPD exe
             self.drexe = None
-            for p in pathlib.Path(self.workdir).glob(drpat):
+            for p in Path(self.workdir).glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.drexe = p.name
                     break

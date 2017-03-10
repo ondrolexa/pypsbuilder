@@ -237,7 +237,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def populate_recent(self):
         self.menuOpen_recent.clear()
         for f in self.recent:
-            self.menuOpen_recent.addAction(os.path.basename(f), lambda f=f: self.openProject(False, projfile=f))
+            self.menuOpen_recent.addAction(Path(f).name, lambda f=f: self.openProject(False, projfile=f))
 
     def initProject(self):
         """Open working directory and initialize project
@@ -288,7 +288,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
             self.tcexe = None
-            for p in pathlib.Path(self.workdir).glob(tcpat):
+            for p in Path(self.workdir).glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.tcexe = p.name
                     break
@@ -297,7 +297,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 raise Exception()
             # DRAWPD exe
             self.drexe = None
-            for p in pathlib.Path(self.workdir).glob(drpat):
+            for p in Path(self.workdir).glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.drexe = p.name
                     break
@@ -305,7 +305,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 errinfo = 'No drawpd executable in working directory.'
                 raise Exception()
             # tc-prefs file
-            if not os.path.exists(self.prefsfile):
+            if not Path(self.prefsfile).exists():
                 errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
             errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
@@ -314,7 +314,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if kw != []:
                     if kw[0] == 'scriptfile':
                         self.bname = kw[1]
-                        if not os.path.exists(self.scriptfile):
+                        if not Path(self.scriptfile).exists():
                             errinfo = 'tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.'
                             raise Exception()
                     if kw[0] == 'calcmode':
@@ -344,7 +344,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     if kw[0] == 'axfile':
                         errinfo = 'Wrong argument for axfile keyword in scriptfile.'
                         self.axname = kw[1]
-                        if not os.path.exists(self.axfile):
+                        if not Path(self.axfile).exists():
                             errinfo = 'Axfile tc-' + self.axname + '.txt does not exists in working directory'
                             raise Exception()
                         check['axfile'] = True
@@ -529,7 +529,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             projfile = qd.getOpenFileName(self, 'Open project',
                                           os.path.expanduser('~'),
                                           'pypsbuilder project (*.psb)')[0]
-        if os.path.exists(projfile):
+        if Path(projfile).exists():
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
             stream.close()
@@ -540,7 +540,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             qb.Abort)
             else:
                 # set actual working dir in case folder was moved
-                self.workdir = os.path.dirname(projfile)
+                self.workdir = str(Path(projfile).absolute().parent)
                 if self.doInit():
                     self.initViewModels()
                     # select phases
@@ -596,12 +596,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', self.workdir,
                                           'pypsbuilder project (*.psb)')[0]
-            if os.path.exists(projfile):
+            if Path(projfile).exists():
                 stream = gzip.open(projfile, 'rb')
                 data = pickle.load(stream)
                 stream.close()
                 # set actual working dir in case folder was moved
-                self.workdir = os.path.dirname(projfile)
+                self.workdir = str(Path(projfile).absolute().parent)
                 if self.doInit():
                     self.initViewModels()
                     # select phases
@@ -859,23 +859,23 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def tc(self):
-        return os.path.join(self.workdir, self.tcexe)
+        return str(Path(self.workdir, self.tcexe))
 
     @property
     def dr(self):
-        return os.path.join(self.workdir, self.drexe)
+        return str(Path(self.workdir, self.drexe))
 
     @property
     def scriptfile(self):
-        return os.path.join(self.workdir, 'tc-' + self.bname + '.txt')
+        return str(Path(self.workdir, 'tc-' + self.bname + '.txt'))
 
     @property
     def drfile(self):
-        return os.path.join(self.workdir, 'tc-' + self.bname + '-dr.txt')
+        return str(Path(self.workdir, 'tc-' + self.bname + '-dr.txt'))
 
     @property
     def logfile(self):
-        return os.path.join(self.workdir, 'tc-log.txt')
+        return str(Path(self.workdir, 'tc-log.txt'))
 
     # @property
     # def drawpdfile(self):
@@ -883,11 +883,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def axfile(self):
-        return os.path.join(self.workdir, 'tc-' + self.axname + '.txt')
+        return str(Path(self.workdir, 'tc-' + self.axname + '.txt'))
 
     @property
     def prefsfile(self):
-        return os.path.join(self.workdir, 'tc-prefs.txt')
+        return str(Path(self.workdir, 'tc-prefs.txt'))
 
     @property
     def changed(self):
@@ -899,7 +899,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.project is None:
             title = 'PSbuilder - New project - {}'.format(self.tcversion)
         else:
-            title = 'PSbuilder - {} - {}'.format(os.path.basename(self.project), self.tcversion)
+            title = 'PSbuilder - {} - {}'.format(Path(self.project).name, self.tcversion)
         if status:
             title += '*'
         self.setWindowTitle(title)
