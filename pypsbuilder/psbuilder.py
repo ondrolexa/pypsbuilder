@@ -288,33 +288,33 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
             self.tcexe = None
-            for p in Path(self.workdir).glob(tcpat):
+            for p in self.workdir.glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.name
+                    self.tcexe = p.absolute()
                     break
             if not self.tcexe:
                 errinfo = 'No THERMOCALC executable in working directory.'
                 raise Exception()
             # DRAWPD exe
             self.drexe = None
-            for p in Path(self.workdir).glob(drpat):
+            for p in self.workdir.glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.name
+                    self.drexe = p.absolute()
                     break
             if not self.drexe:
                 errinfo = 'No drawpd executable in working directory.'
                 raise Exception()
             # tc-prefs file
-            if not Path(self.prefsfile).exists():
+            if not self.prefsfile.exists():
                 errinfo = 'No tc-prefs.txt file in working directory.'
                 raise Exception()
             errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
-            for line in open(self.prefsfile, 'r'):
+            for line in self.prefsfile.open('r', encoding=TCenc):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == 'scriptfile':
                         self.bname = kw[1]
-                        if not Path(self.scriptfile).exists():
+                        if not self.scriptfile.exists():
                             errinfo = 'tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.'
                             raise Exception()
                     if kw[0] == 'calcmode':
@@ -329,7 +329,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
                      'setexcess': False, 'printxyz': False}
             errinfo = 'Check your scriptfile.'
-            with open(self.scriptfile, 'r', encoding=TCenc) as f:
+            with self.scriptfile.open('r', encoding=TCenc) as f:
                 lines = f.readlines()
             gsb, gse = False, False
             for line in lines:
@@ -471,7 +471,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.nc = nc
             # run tc to initialize
             errtitle = 'Initial THERMOCALC run error!'
-            tcout = runprog(self.tc, self.workdir, '\nkill\n\n')
+            tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
             if 'BOMBED' in tcout:
                 errinfo = tcout.split('BOMBED')[1].split('\n')[0]
@@ -540,7 +540,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             qb.Abort)
             else:
                 # set actual working dir in case folder was moved
-                self.workdir = str(Path(projfile).absolute().parent)
+                self.workdir = Path(projfile).absolute().parent
                 if self.doInit():
                     self.initViewModels()
                     # select phases
@@ -601,7 +601,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 data = pickle.load(stream)
                 stream.close()
                 # set actual working dir in case folder was moved
-                self.workdir = str(Path(projfile).absolute().parent)
+                self.workdir = Path(projfile).absolute().parent
                 if self.doInit():
                     self.initViewModels()
                     # select phases
@@ -642,7 +642,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for ix, row in enumerate(data['invlist']):
                         progress.setValue(ix)
                         if 'cmd' in row[2]:
-                            tcout = runprog(self.tc, self.workdir, row[2]['cmd'])
+                            tcout = runprog(self.tcexe, self.workdir, row[2]['cmd'])
                             status, variance, pts, res, output = parse_logfile(self.logfile)
                             if status == 'ok':
                                 r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
@@ -665,7 +665,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for ix, row in enumerate(data['unilist']):
                         progress.setValue(ix)
                         if 'cmd' in row[4]:
-                            tcout = runprog(self.tc, self.workdir, row[4]['cmd'])
+                            tcout = runprog(self.tcexe, self.workdir, row[4]['cmd'])
                             status, variance, pts, res, output = parse_logfile(self.logfile)
                             if status == 'ok':
                                 r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
@@ -746,7 +746,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.ready:
             if self.project is None:
-                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', self.workdir, 'pypsbuilder project (*.psb)')[0]
+                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.workdir), 'pypsbuilder project (*.psb)')[0]
                 if filename:
                     if not filename.lower().endswith('.psb'):
                         filename = filename + '.psb'
@@ -759,7 +759,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """Open working directory and initialize project
         """
         if self.ready:
-            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', self.workdir, 'pypsbuilder project (*.psb)')[0]
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', str(self.workdir), 'pypsbuilder project (*.psb)')[0]
             if filename:
                 if not filename.lower().endswith('.psb'):
                     filename = filename + '.psb'
@@ -835,7 +835,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            tpfile = qd.getOpenFileName(self, 'Open text file', self.workdir,
+            tpfile = qd.getOpenFileName(self, 'Open text file', str(self.workdir),
                                         'Text files (*.txt);;All files (*.*)')[0]
             if tpfile:
                 tp = []
@@ -858,24 +858,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     @property
-    def tc(self):
-        return str(Path(self.workdir, self.tcexe))
-
-    @property
-    def dr(self):
-        return str(Path(self.workdir, self.drexe))
-
-    @property
     def scriptfile(self):
-        return str(Path(self.workdir, 'tc-' + self.bname + '.txt'))
+        return self.workdir.joinpath('tc-' + self.bname + '.txt')
 
     @property
     def drfile(self):
-        return str(Path(self.workdir, 'tc-' + self.bname + '-dr.txt'))
+        return self.workdir.joinpath('tc-' + self.bname + '-dr.txt')
 
     @property
     def logfile(self):
-        return str(Path(self.workdir, 'tc-log.txt'))
+        return self.workdir.joinpath('tc-log.txt')
 
     # @property
     # def drawpdfile(self):
@@ -883,11 +875,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     @property
     def axfile(self):
-        return str(Path(self.workdir, 'tc-' + self.axname + '.txt'))
+        return self.workdir.joinpath('tc-' + self.axname + '.txt')
 
     @property
     def prefsfile(self):
-        return str(Path(self.workdir, 'tc-prefs.txt'))
+        return self.workdir.joinpath('tc-prefs.txt')
 
     @property
     def changed(self):
@@ -1295,12 +1287,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def read_scriptfile(self):
         if self.ready:
-            with open(self.scriptfile, 'r', encoding=TCenc) as f:
+            with self.scriptfile.open('r', encoding=TCenc) as f:
                 self.outScript.setPlainText(f.read())
 
     def save_scriptfile(self):
         if self.ready:
-            with open(self.scriptfile, 'w', encoding=TCenc) as f:
+            with self.scriptfile.open('w', encoding=TCenc) as f:
                 f.write(self.outScript.toPlainText())
             self.reinitialize()
             self.apply_setting(1)
@@ -1425,7 +1417,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     step = (trange[1] - trange[0]) / steps
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
-                tcout = runprog(self.tc, self.workdir, ans)
+                tcout = runprog(self.tcexe, self.workdir, ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
                 status, variance, pts, res, output = parse_logfile(self.logfile)
                 if status == 'bombed':
@@ -1471,7 +1463,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
-                tcout = runprog(self.tc, self.workdir, ans)
+                tcout = runprog(self.tcexe, self.workdir, ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
                 status, variance, pts, res, output = parse_logfile(self.logfile)
                 if status == 'bombed':

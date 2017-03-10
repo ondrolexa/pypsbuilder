@@ -25,8 +25,8 @@ class ProjectFile(object):
             stream = gzip.open(str(prj), 'rb')
             self.data = pickle.load(stream)
             stream.close()
-            self.workdir = str(prj.parent)
-            self.name = str(prj.name)
+            self.workdir = prj.parent
+            self.name = prj.name
             self.unilookup = {}
             self.invlookup = {}
             for ix, r in enumerate(self.unilist):
@@ -46,7 +46,7 @@ class ProjectFile(object):
             # THERMOCALC exe
             errtitle = 'Initialize project error!'
             self.tcexe = None
-            for p in Path(self.workdir).glob(tcpat):
+            for p in self.workdir.glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.tcexe = p.name
                     break
@@ -54,7 +54,7 @@ class ProjectFile(object):
                 raise Exception('No THERMOCALC executable in working directory.')
             # DRAWPD exe
             self.drexe = None
-            for p in Path(self.workdir).glob(drpat):
+            for p in self.workdir.glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.drexe = p.name
                     break
@@ -311,7 +311,7 @@ def parse_logfile(logfile, out=None):
     # res[0]['data']['g']['z']
     # res[0]['data']['g']['MnO']
     if out is None:
-        with open(logfile, 'r', encoding=TCenc) as f:
+        with logfile.open('r', encoding=TCenc) as f:
             out = f.read()
     lines = [''.join([c for c in ln if ord(c) < 128]) for ln in out.splitlines() if ln != '']
     pts = []
@@ -360,12 +360,12 @@ def parse_logfile(logfile, out=None):
 
 def update_guesses(scriptfile, guesses):
     # Store scriptfile content and initialize dicts
-    with open(scriptfile, 'r', encoding=TCenc) as f:
+    with scriptfile.open('r', encoding=TCenc) as f:
         sc = f.readlines()
     gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
     gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
     if gsb and gse:
-        with open(scriptfile, 'w', encoding=TCenc) as f:
+        with scriptfile.open('w', encoding=TCenc) as f:
             for ln in sc[:gsb[0] + 1]:
                 f.write(ln)
             for ln in guesses:
@@ -389,7 +389,7 @@ def runprog(exe, workdir, instr):
         startupinfo.wShowWindow = 0
     else:
         startupinfo = None
-    p = subprocess.Popen(exe, cwd=workdir, startupinfo=startupinfo, **popen_kw)
+    p = subprocess.Popen(str(exe), cwd=str(workdir), startupinfo=startupinfo, **popen_kw)
     output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
     sys.stdout.flush()
     return output
