@@ -5,10 +5,11 @@ import gzip
 import ast
 import subprocess
 import itertools
+import pathlib
 from collections import OrderedDict
 import numpy as np
 
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 from shapely.ops import polygonize, linemerge, unary_union
 
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
@@ -31,6 +32,31 @@ class ProjectFile(object):
                 self.unilookup[r[0]] = ix
             for ix, r in enumerate(self.invlist):
                 self.invlookup[r[0]] = ix
+            # default exe
+            if sys.platform.startswith('win'):
+                tcpat = 'tc3*.exe'
+                drpat = 'dr1*.exe'
+            elif sys.platform.startswith('linux'):
+                tcpat = 'tc3*L'
+                drpat = 'dr1*L'
+            else:
+                tcpat = 'tc3*'
+                drpat = 'dr1*'
+            # THERMOCALC exe
+            errtitle = 'Initialize project error!'
+            self.tcexe = None
+            for p in pathlib.Path(self.workdir).glob(tcpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    self.tcexe = p.name
+                    break
+            if not self.tcexe:
+                raise Exception('No THERMOCALC executable in working directory.')
+            # DRAWPD exe
+            self.drexe = None
+            for p in pathlib.Path(self.workdir).glob(drpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    self.drexe = p.name
+                    break
         else:
             raise Exception('File {} does not exists.'.format(projfile))
 
@@ -57,20 +83,6 @@ class ProjectFile(object):
     @property
     def invlist(self):
         return self.data['invlist']
-
-    @property
-    def tcexe(self):
-        if 'tcexe' in self.data:
-            return self.data['tcexe']
-        else:
-            print('Old format. No tcexe.')
-
-    @property
-    def drexe(self):
-        if 'drexe' in self.data:
-            return self.data['drexe']
-        else:
-            print('Old format. No drexe.')
 
     @property
     def tcversion(self):

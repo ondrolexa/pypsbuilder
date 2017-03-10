@@ -5,7 +5,6 @@ Visual pseudosection builder for THERMOCALC
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
 
-import pathlib
 from .utils import *
 
 from pkg_resources import resource_filename
@@ -567,15 +566,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     # cutting
                     for row in self.unimodel.unilist:
                         self.trimuni(row)
-                    # update executables
-                    if 'tcexe' in data:
-                        p = pathlib.Path(self.workdir, data['tcexe'])
-                        if p.is_file() and os.access(str(p), os.X_OK):
-                            self.tcexe = p.name
-                    if 'drexe' in data:
-                        p = pathlib.Path(self.workdir, data['drexe'])
-                        if p.is_file() and os.access(str(p), os.X_OK):
-                            self.drexe = p.name
                     # all done
                     self.ready = True
                     self.project = projfile
@@ -798,8 +788,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     'prange': self.prange,
                     'unilist': self.unimodel.unilist,
                     'invlist': self.invmodel.invlist[1:],
-                    'tcexe': self.tcexe,
-                    'drexe': self.drexe,
                     'tcversion': self.tcversion,
                     'version': __version__}
             # do save
