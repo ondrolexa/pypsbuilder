@@ -48,7 +48,7 @@ class ProjectFile(object):
             self.tcexe = None
             for p in self.workdir.glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.name
+                    self.tcexe = p.absolute()
                     break
             if not self.tcexe:
                 raise Exception('No THERMOCALC executable in working directory.')
@@ -56,7 +56,7 @@ class ProjectFile(object):
             self.drexe = None
             for p in self.workdir.glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.name
+                    self.drexe = p.absolute()
                     break
         else:
             raise Exception('File {} does not exists.'.format(projfile))
