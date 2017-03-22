@@ -642,17 +642,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for ix, row in enumerate(data['invlist']):
                         progress.setValue(ix)
                         if 'cmd' in row[2]:
-                            tcout = runprog(self.tcexe, self.workdir, row[2]['cmd'])
-                            status, variance, pts, res, output = parse_logfile(self.logfile)
-                            if status == 'ok':
-                                r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
-                                         variance=variance, p=pts[0], T=pts[1], manual=False,
-                                         output=output, results=res)
-                                label = self.format_label(row[2]['phases'], row[2]['out'])
-                                isnew, id = self.getidinv(r)
-                                urow = self.invmodel.getRowFromId(id)
-                                urow[1] = label
-                                urow[2] = r
+                            if row[2]['cmd']:
+                                tcout = runprog(self.tcexe, self.workdir, row[2]['cmd'])
+                                status, variance, pts, res, output = parse_logfile(self.logfile)
+                                if status == 'ok':
+                                    r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                                             variance=variance, p=pts[0], T=pts[1], manual=False,
+                                             output=output, results=res)
+                                    label = self.format_label(row[2]['phases'], row[2]['out'])
+                                    isnew, id = self.getidinv(r)
+                                    urow = self.invmodel.getRowFromId(id)
+                                    urow[1] = label
+                                    urow[2] = r
                         if progress.wasCanceled():
                             break
                     progress.setValue(len(data['invlist']))
@@ -665,17 +666,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for ix, row in enumerate(data['unilist']):
                         progress.setValue(ix)
                         if 'cmd' in row[4]:
-                            tcout = runprog(self.tcexe, self.workdir, row[4]['cmd'])
-                            status, variance, pts, res, output = parse_logfile(self.logfile)
-                            if status == 'ok':
-                                r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
-                                         variance=variance, p=pts[0], T=pts[1], manual=False,
-                                         output=output, results=res)
-                                label = self.format_label(row[4]['phases'], row[4]['out'])
-                                isnew, id = self.getiduni(r)
-                                urow = self.unimodel.getRowFromId(id)
-                                urow[1] = label
-                                urow[4] = r
+                            if row[4]['cmd']:
+                                tcout = runprog(self.tcexe, self.workdir, row[4]['cmd'])
+                                status, variance, pts, res, output = parse_logfile(self.logfile)
+                                if status == 'ok':
+                                    r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                                             variance=variance, p=pts[0], T=pts[1], manual=False,
+                                             output=output, results=res)
+                                    label = self.format_label(row[4]['phases'], row[4]['out'])
+                                    isnew, id = self.getiduni(r)
+                                    urow = self.unimodel.getRowFromId(id)
+                                    urow[1] = label
+                                    urow[4] = r
                         if progress.wasCanceled():
                             break
                     progress.setValue(len(data['unilist']))
