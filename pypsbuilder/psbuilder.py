@@ -255,7 +255,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                           os.path.expanduser('~'),
                                           qd.ShowDirsOnly)
         if workdir:
-            self.workdir = workdir
+            self.workdir = Path(workdir)
             # init THERMOCALC
             if self.doInit():
                 self.initViewModels()
@@ -594,7 +594,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def import_from_prj(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', self.workdir,
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.workdir),
                                           'pypsbuilder project (*.psb)')[0]
             if Path(projfile).exists():
                 stream = gzip.open(projfile, 'rb')
