@@ -1671,11 +1671,16 @@ class InvModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
-        elif role == QtCore.Qt.ForegroundRole:
+        # elif role == QtCore.Qt.ForegroundRole:
+        #     if self.invlist[index.row()][self.header.index('Data')]['manual']:
+        #         brush = QtGui.QBrush()
+        #         brush.setColor(QtGui.QColor('red'))
+        #         return brush
+        elif role == QtCore.Qt.FontRole:
             if self.invlist[index.row()][self.header.index('Data')]['manual']:
-                brush = QtGui.QBrush()
-                brush.setColor(QtGui.QColor('red'))
-                return brush
+                font = QtGui.QFont()
+                font.setBold(True)
+                return font
         elif role != QtCore.Qt.DisplayRole:
             return None
         else:
@@ -1731,11 +1736,16 @@ class UniModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
-        elif role == QtCore.Qt.ForegroundRole:
+        # elif role == QtCore.Qt.ForegroundRole:
+        #     if self.unilist[index.row()][self.header.index('Data')]['manual']:
+        #         brush = QtGui.QBrush()
+        #         brush.setColor(QtGui.QColor('red'))
+        #         return brush
+        elif role == QtCore.Qt.FontRole:
             if self.unilist[index.row()][self.header.index('Data')]['manual']:
-                brush = QtGui.QBrush()
-                brush.setColor(QtGui.QColor('red'))
-                return brush
+                font = QtGui.QFont()
+                font.setBold(True)
+                return font
         elif role != QtCore.Qt.DisplayRole:
             return None
         else:

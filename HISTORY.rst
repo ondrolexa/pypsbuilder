@@ -61,10 +61,12 @@ History
 * Keyboard shortcuts added Ctrl-T and Ctrl-P for CalcTatP and CalcPatT
 * Ctrl-H Zoom home
 
-2.1.0 (XX YYY 2017)
+2.1.0 (23 Mar 2017)
 -------------------
 * Major update and refactoring
-* Starting guesses directly written to scriptfile (note that commented tags are needed)
+* Starting guesses directly written to scriptfile
+  (note that commented tags are needed in scriptfile)
 * Updated parsing include rbi data
-* Initial version of psexplorer(four cli scrips provided)
-* Manual unilines and invpoints highlighted in lists
+* Initial version of psexplorer to draw final pseudosections and isopleths
+  (cli scrips provided)
+* Manual unilines and invpoints shown in bold in lists

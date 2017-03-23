@@ -13,10 +13,16 @@ def main():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('--step', type=float,
+                        default=None, help='contour step')
+    parser.add_argument('--ncont', type=int,
+                        default=10, help='number of contours')
+    parser.add_argument('--smooth', type=float,
+                        default=0, help='smoothness of the approximation')
     args = parser.parse_args()
     print('Running psiso...')
     ps = PTPS(args.project)
-    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled))
+    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled, smooth=args.smooth, step=args.step, N=args.ncont))
 
 if __name__ == "__main__":
     main()

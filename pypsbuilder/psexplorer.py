@@ -100,11 +100,11 @@ class PTPS:
 
     @property
     def gridfile(self):
-        return self.prj.workdir.joinpath(self.prj.name + '.psi')
+        return self.prj.workdir.joinpath(self.prj.name).with_suffix('.psi')
 
     @property
     def saved(self):
-        return self.gridfile.exists()
+        return self.gridfile.is_file()
 
     def unidata(self, fid):
         return self.prj.unidata(fid)
@@ -541,13 +541,11 @@ class PTPS:
         self.show()
         return self.identify(*plt.ginput()[0])
 
-    def isopleths(self, phase, expr, which=7, smooth=0, filled=True, step=None, N=None, gradient=False, dt=True, only=None, refine=1):
-        if step is None and N is None:
-            N = 10
+    def isopleths(self, phase, expr, which=7, smooth=0, filled=True, step=None, N=10, gradient=False, dt=True, only=None, refine=1):
         if self.gridded:
             print('Collecting...')
         else:
-            print('Collecting onlu from uni lines and inv points. Not yet gridded...')
+            print('Collecting only from uni lines and inv points. Not yet gridded...')
         if only is not None:
             recs = OrderedDict()
             d = self.collect_data(only, phase, expr, which=which)
@@ -688,10 +686,16 @@ def ps_iso():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('--step', type=float,
+                        default=None, help='contour step')
+    parser.add_argument('--ncont', type=int,
+                        default=10, help='number of contours')
+    parser.add_argument('--smooth', type=float,
+                        default=0, help='smoothness of the approximation')
     args = parser.parse_args()
     print('Running psiso...')
     ps = PTPS(args.project)
-    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled))
+    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled, smooth=args.smooth, step=args.step, N=args.ncont))
 
 
 def ps_drawpd():

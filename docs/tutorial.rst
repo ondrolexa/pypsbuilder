@@ -59,7 +59,7 @@ When you need to calculate some short univariant lines you can zoom into this pa
 and hit **Calc** button. Active region will be used as computational P-T range. Moreover, you can manually
 add univariant line to simply connect two invariant points by straight line. For **Manual** addition
 of both invariant point or univariant line phases and zero modal proportion phase have to be properly selected.
-Manually added lines or points are show in red in lists.
+Manually added lines or points are shown in bold in lists.
 
 Double-clicking any univariant line in the list will highlight that line on diagram marked by
 calculated points.
@@ -67,7 +67,8 @@ calculated points.
 .. highlights::
 
    Note that double-click name of univariant (or invariant) line will populate `Modes` and
-   `Full output` panes at the bottom of application, so you can always check what is going on along lines.
+   `Full output` panes at the bottom of application, so you can always check what is going on along lines. Double-clicking of tabs heading open outputs
+   in separate window.
 
 .. image:: images/psbuilder_finished.png
 
@@ -145,18 +146,23 @@ For gridding pseudosection with grid 120x100 run following command::
 
 Once gridded you can draw isopleths diagrams using `psiso` command::
 
-    usage: psiso [-h] [-f] project phase expr
+    usage: psiso [-h] [-f] [--step STEP] [--ncont NCONT]
+                 [--smooth SMOOTH]
+                 project phase expr
 
     Draw isopleth diagrams
 
     positional arguments:
-      project       psbuilder project file
-      phase         phase used for contouring
-      expr          expression evaluated to calculate values
+      project          psbuilder project file
+      phase            phase used for contouring
+      expr             expression evaluated to calculate values
 
     optional arguments:
-      -h, --help    show this help message and exit
-      -f, --filled  filled contours
+      -h, --help       show this help message and exit
+      -f, --filled     filled contours
+      --step STEP      contour step
+      --ncont NCONT    number of contours
+      --smooth SMOOTH  smoothness of the approximation
 
 Following example shows isopleths of garnet mode::
 
