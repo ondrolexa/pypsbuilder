@@ -1231,15 +1231,19 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             if out.issubset(d['out']):
                                 invs.append(row[0])
                     if len(invs) > 1:
-                        adduni = AddUni(label, invs, self)
+                        r = dict(phases=phases, out=out, cmd='', variance=-1,
+                                 p=np.array([]), T=np.array([]), manual=True,
+                                 output='User-defined univariant line.')
+                        isnew, id = self.getiduni(r)
+                        if not isnew:
+                            ra = self.unimodel.getRowFromId(id)
+                            adduni = AddUni(label, invs, selected=(ra[2], ra[3]), parent=self)
+                        else:
+                            adduni = AddUni(label, invs, parent=self)
                         respond = adduni.exec()
                         if respond == QtWidgets.QDialog.Accepted:
                             b, e = adduni.getValues()
                             if b != e:
-                                r = dict(phases=phases, out=out, cmd='', variance=-1,
-                                         p=np.array([]), T=np.array([]), manual=True,
-                                         output='User-defined univariant line.')
-                                isnew, id = self.getiduni(r)
                                 if isnew:
                                     self.unimodel.appendRow((id, label, b, e, r))
                                 else:
@@ -1869,7 +1873,7 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
 class AddUni(QtWidgets.QDialog, Ui_AddUni):
     """Add uni dialog class
     """
-    def __init__(self, label, items, parent=None):
+    def __init__(self, label, items, selected=None, parent=None):
         super(AddUni, self).__init__(parent)
         self.setupUi(self)
         self.labelEdit.setText(label)
@@ -1880,6 +1884,11 @@ class AddUni(QtWidgets.QDialog, Ui_AddUni):
             self.combomodel.appendRow(it)
         self.comboBegin.setModel(self.combomodel)
         self.comboEnd.setModel(self.combomodel)
+        if selected:
+            if selected[0] in items:
+                self.comboBegin.setCurrentIndex(items.index(selected[0]))
+            if selected[1] in items:
+                self.comboEnd.setCurrentIndex(items.index(selected[1]))
 
     def getValues(self):
         b = self.comboBegin.currentData(1)
