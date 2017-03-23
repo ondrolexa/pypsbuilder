@@ -529,7 +529,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             projfile = qd.getOpenFileName(self, 'Open project',
                                           os.path.expanduser('~'),
                                           'pypsbuilder project (*.psb)')[0]
-        if Path(projfile).exists():
+        if Path(projfile).is_file():
             stream = gzip.open(projfile, 'rb')
             data = pickle.load(stream)
             stream.close()
@@ -619,6 +619,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.prange = data['prange']
                     # Import
                     for row in data['invlist']:
+                        row[2]['phases'] = row[2]['phases'].union(self.excess)
                         r = dict(phases=row[2]['phases'], out=row[2]['out'],
                                  cmd=row[2].get('cmd', ''), variance=-1,
                                  p=row[2]['p'], T=row[2]['T'], manual=True,
@@ -627,6 +628,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.invmodel.appendRow((row[0], label, r))
                     self.invview.resizeColumnsToContents()
                     for row in data['unilist']:
+                        row[4]['phases'] = row[4]['phases'].union(self.excess)
                         r = dict(phases=row[4]['phases'], out=row[4]['out'],
                                  cmd=row[4].get('cmd', ''), variance=-1,
                                  p=row[4]['p'], T=row[4]['T'], manual=True,
@@ -634,7 +636,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         label = self.format_label(row[4]['phases'], row[4]['out'])
                         self.unimodel.appendRow((row[0], label, row[2], row[3], r))
                     self.adapt_uniview()
-                    # try to recalc
+                    # # try to recalc
                     progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
                                                          0, len(data['invlist']), self)
                     progress.setWindowModality(QtCore.Qt.WindowModal)
@@ -669,7 +671,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             if row[4]['cmd']:
                                 tcout = runprog(self.tcexe, self.workdir, row[4]['cmd'])
                                 status, variance, pts, res, output = parse_logfile(self.logfile)
-                                if status == 'ok':
+                                if status == 'ok' and len(res) > 1:
                                     r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
                                              variance=variance, p=pts[0], T=pts[1], manual=False,
                                              output=output, results=res)
