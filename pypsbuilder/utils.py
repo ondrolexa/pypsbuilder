@@ -1,6 +1,9 @@
 import sys
 import os
-import pickle
+try:
+  import cPickle as pickle
+except ImportError:
+  import pickle
 import gzip
 import ast
 import subprocess
