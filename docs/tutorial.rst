@@ -147,22 +147,27 @@ For gridding pseudosection with grid 120x100 run following command::
 Once gridded you can draw isopleths diagrams using `psiso` command::
 
     usage: psiso [-h] [-f] [--step STEP] [--ncont NCONT]
-                 [--smooth SMOOTH]
+                 [--colors COLORS] [--cmap CMAP] [--smooth SMOOTH]
+                 [--clabel CLABEL [CLABEL ...]]
                  project phase expr
 
     Draw isopleth diagrams
 
     positional arguments:
-      project          psbuilder project file
-      phase            phase used for contouring
-      expr             expression evaluated to calculate values
+      project               psbuilder project file
+      phase                 phase used for contouring
+      expr                  expression evaluated to calculate values
 
     optional arguments:
-      -h, --help       show this help message and exit
-      -f, --filled     filled contours
-      --step STEP      contour step
-      --ncont NCONT    number of contours
-      --smooth SMOOTH  smoothness of the approximation
+      -h, --help            show this help message and exit
+      -f, --filled          filled contours
+      --step STEP           contour step
+      --ncont NCONT         number of contours
+      --colors COLORS       color for all levels
+      --cmap CMAP           name of the colormap
+      --smooth SMOOTH       smoothness of the approximation
+      --clabel CLABEL [CLABEL ...]
+                            label contours in field defined by set of phases
 
 Following example shows isopleths of garnet mode::
 
@@ -182,3 +187,11 @@ in muscovite::
     psiso '/path/to/project.psb' -f mu 'SiO2'
 
 .. image:: images/psiso_simu.png
+
+
+If you need to label contour lines, you can use clabel option to define field,
+where contour labels are plotted::
+
+    psiso '/path/to/project.psb' g mode --clabel g q mu pa ru chl bi H2O --step 0.015 --colors b
+
+.. image:: images/psiso_clabels.png

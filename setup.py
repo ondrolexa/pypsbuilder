@@ -19,7 +19,7 @@ requirements = [
 
 setup(
     name='pypsbuilder',
-    version='2.1.0',
+    version='2.1.1',
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + '\n\n' + history,
     author="Ondrej Lexa",
@@ -34,6 +34,7 @@ setup(
     psiso=pypsbuilder.psexplorer:ps_iso
     psgrid=pypsbuilder.psexplorer:ps_grid
     psdrawpd=pypsbuilder.psexplorer:ps_drawpd
+    psginput=pypsbuilder.psexplorer:ps_ginput
     """,
     install_requires=requirements,
     zip_safe=False,

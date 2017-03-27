@@ -70,3 +70,8 @@ History
 * Initial version of psexplorer to draw final pseudosections and isopleths
   (cli scrips provided)
 * Manual unilines and invpoints shown in bold in lists
+
+2.1.1 (28 Mar 2017)
+-------------------
+* colors and cmap args added to cli version of psiso
+* clabel of psiso specify field where contour labels will be placed

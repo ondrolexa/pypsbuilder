@@ -3,6 +3,7 @@ import sys
 import argparse
 from pypsbuilder.psexplorer import PTPS
 
+
 def main():
     parser = argparse.ArgumentParser(description='Calculate compositions in grid')
     parser.add_argument('project', type=str,
@@ -15,6 +16,7 @@ def main():
     print('Running psgrid...')
     ps = PTPS(args.project)
     sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
+
 
 if __name__ == "__main__":
     main()

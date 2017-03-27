@@ -5,15 +5,14 @@ from pypsbuilder.psexplorer import PTPS
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate drawpd file from project')
+    parser = argparse.ArgumentParser(description='Identify phases in field')
     parser.add_argument('project', type=str,
                         help='psbuilder project file')
-    parser.add_argument('-a', '--areas', action='store_true',
-                        help='export also areas', default=True)
     args = parser.parse_args()
-    print('Running psdrawpd...')
+    print('Running psginput...')
     ps = PTPS(args.project)
-    sys.exit(ps.gendrawpd(export_areas=args.areas))
+    print(' '.join(ps.ginput()))
+    sys.exit()
 
 
 if __name__ == "__main__":

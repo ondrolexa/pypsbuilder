@@ -2,7 +2,12 @@
 Installation
 ============
 
-For Anaconda distribution (for now only Linux64 and Win64 supported) you can install from personal channel::
+For Anaconda distribution (for now only Linux64, Win64 and Win32 supported) you can install dependencies using conda::
+
+    conda install numpy matplotlib scipy pyqt
+    conda install -c conda-forge shapely descartes tqdm
+
+and than install pypsbuilder from ondrolexa channel::
 
     conda install -c ondrolexa pypsbuilder
 
@@ -21,7 +26,6 @@ For upgrade use::
 
     pip install --upgrade --upgrade-strategy only-if-needed \
       https://github.com/ondrolexa/pypsbuilder/archive/master.zip
-
 
 To install most recent (and likely less stable) development version use::
 

@@ -3,6 +3,7 @@ import sys
 import argparse
 from pypsbuilder.psexplorer import PTPS
 
+
 def main():
     parser = argparse.ArgumentParser(description='Draw pseudosection from project file')
     parser.add_argument('project', type=str,
@@ -15,6 +16,7 @@ def main():
     print('Running psshow...')
     ps = PTPS(args.project)
     sys.exit(ps.show(out=args.out, label=args.label))
+
 
 if __name__ == "__main__":
     main()

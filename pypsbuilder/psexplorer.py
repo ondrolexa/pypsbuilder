@@ -541,7 +541,21 @@ class PTPS:
         self.show()
         return self.identify(*plt.ginput()[0])
 
-    def isopleths(self, phase, expr, which=7, smooth=0, filled=True, step=None, N=10, gradient=False, dt=True, only=None, refine=1):
+    def isopleths(self, phase, expr, **kwargs):
+        # parse kwargs
+        which = kwargs.get('which', 7)
+        smooth = kwargs.get('smooth', 0)
+        filled = kwargs.get('filled', True)
+        step = kwargs.get('step', None)
+        N = kwargs.get('N', 10)
+        gradient = kwargs.get('gradient', False)
+        dt = kwargs.get('dt', True)
+        only = kwargs.get('only', None)
+        refine = kwargs.get('refine', 1)
+        colors = kwargs.get('colors', None)
+        cmap = kwargs.get('cmap', 'viridis')
+        clabel = kwargs.get('clabel', [])
+
         if self.gridded:
             print('Collecting...')
         else:
@@ -558,7 +572,7 @@ class PTPS:
             recs, mn, mx = self.merge_data(phase, expr, which=which)
         if step:
             cntv = np.arange(0, mx + step, step)
-            cntv = cntv[cntv > mn - step]
+            cntv = cntv[cntv >= mn]
         else:
             cntv = np.linspace(mn, mx, N)
         # Thin-plate contouring of areas
@@ -588,13 +602,24 @@ class PTPS:
                         cntv = 10
                 # ------------
                 if filled:
-                    cont = ax.contourf(tg, pg, zg, cntv)
+                    cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
                 else:
-                    cont = ax.contour(tg, pg, zg, cntv)
+                    cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
                 patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
                 ax.add_patch(patch)
                 for col in cont.collections:
                     col.set_clip_path(patch)
+                # label if needed
+                if not filled and key == set(clabel):
+                    positions = []
+                    for col in cont.collections:
+                        for seg in col.get_segments():
+                            points = MultiPoint(list(zip(seg[:, 0], seg[:, 1])))
+                            inside = list(map(self.shapes[key].contains, points))
+                            if np.any(inside):
+                                positions.append(seg[inside].mean(axis=0))
+                    ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3)
+
             except Exception as e:
                 print('Error for {}: {}'.format(key, e))
         if only is None:
@@ -690,12 +715,21 @@ def ps_iso():
                         default=None, help='contour step')
     parser.add_argument('--ncont', type=int,
                         default=10, help='number of contours')
+    parser.add_argument('--colors', type=str,
+                        default=None, help='color for all levels')
+    parser.add_argument('--cmap', type=str,
+                        default=None, help='name of the colormap')
     parser.add_argument('--smooth', type=float,
                         default=0, help='smoothness of the approximation')
+    parser.add_argument('--clabel', nargs='+',
+                        default=[], help='label contours in field defined by set of phases')
     args = parser.parse_args()
     print('Running psiso...')
     ps = PTPS(args.project)
-    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled, smooth=args.smooth, step=args.step, N=args.ncont))
+    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
+                          smooth=args.smooth, step=args.step,
+                          N=args.ncont, clabel=args.clabel,
+                          colors=args.colors, cmap=args.cmap))
 
 
 def ps_drawpd():
@@ -708,6 +742,17 @@ def ps_drawpd():
     print('Running psdrawpd...')
     ps = PTPS(args.project)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
+
+
+def ps_ginput():
+    parser = argparse.ArgumentParser(description='Identify phases in field')
+    parser.add_argument('project', type=str,
+                        help='psbuilder project file')
+    args = parser.parse_args()
+    print('Running psginput...')
+    ps = PTPS(args.project)
+    print(' '.join(ps.ginput()))
+    sys.exit()
 
 
 if __name__ == "__main__":
