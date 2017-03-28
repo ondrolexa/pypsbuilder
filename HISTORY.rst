@@ -75,3 +75,7 @@ History
 -------------------
 * colors and cmap args added to cli version of psiso
 * clabel of psiso specify field where contour labels will be placed
+
+2.1.2 (XX YYY 2017)
+-------------------
+* Option to show bulk composition on psexplorer figures

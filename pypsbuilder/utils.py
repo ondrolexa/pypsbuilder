@@ -134,6 +134,13 @@ class ProjectFile(object):
                 T, p = [], []
         return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
 
+    def get_bulk_composition(self):
+        for inv in self.invlist:
+            if not inv[2]['manual']:
+                break
+        bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
+        return bc[0].split(), bc[1].split()
+
     def construct_areas(self):
         def area_exists(indexes):
             def dfs_visit(graph, u, found_cycle, pred_node, marked, path):

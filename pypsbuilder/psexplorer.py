@@ -444,11 +444,18 @@ class PTPS:
                     mx = max(mx, max(z))
         return recs, mn, mx
 
-    def show(self, out=None, cmap='viridis', alpha=1, label=False):
+    def show(self, **kwargs):
         def split_key(key):
             tl = list(key)
             wp = len(tl) // 4 + int(len(tl) % 4 > 1)
             return '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
+
+        out = kwargs.get('out', None)
+        cmap = kwargs.get('cmap', 'viridis')
+        alpha = kwargs.get('alpha', 1)
+        label = kwargs.get('label', False)
+        bulk = kwargs.get('bulk', False)
+
         if isinstance(out, str):
             out = [out]
         # check shapes created
@@ -475,24 +482,33 @@ class PTPS:
                     ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
                             np.hstack([(*seg[1], np.nan) for seg in lst]),
                             lw=2, label=o)
-            # Shrink current axis's height by 6% on the bottom
+            # Shrink current axis's width
             box = ax.get_position()
-            ax.set_position([box.x0 + box.width * 0.05, box.y0, box.width * 0.95, box.height])
+            ax.set_position([box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height])
             # Put a legend below current axis
-            ax.legend(loc='upper right', bbox_to_anchor=(-0.04, 1), title='Out', borderaxespad=0, frameon=False)
+            ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
         if label:
             for txt, xy in lbls:
-
                 ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='4%', pad=0.05)
         cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
         cb.set_label('Variance')
         ax.axis(self.prj.trange + self.prj.prange)
-        if label:
-            ax.set_title(self.prj.name + (len(exc) * ' +{}').format(*exc))
+        if bulk:
+            if label:
+                ax.set_xlabel(self.prj.name + (len(exc) * ' +{}').format(*exc))
+            else:
+                ax.set_xlabel(self.prj.name)
+            # bulk composition
+            ox, vals = self.prj.get_bulk_composition()
+            table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
+            plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
         else:
-            ax.set_title(self.prj.name)
+            if label:
+                ax.set_title(self.prj.name + (len(exc) * ' +{}').format(*exc))
+            else:
+                ax.set_title(self.prj.name)
         plt.show()
         return ax
 
@@ -546,6 +562,7 @@ class PTPS:
         which = kwargs.get('which', 7)
         smooth = kwargs.get('smooth', 0)
         filled = kwargs.get('filled', True)
+        bulk = kwargs.get('bulk', False)
         step = kwargs.get('step', None)
         N = kwargs.get('N', 10)
         gradient = kwargs.get('gradient', False)
@@ -625,11 +642,22 @@ class PTPS:
         if only is None:
             self.add_overlay(ax)
         plt.colorbar(cont)
-        if only is None:
-            ax.axis(self.prj.trange + self.prj.prange)
-            ax.set_title('{}({})'.format(phase, expr))
+        if bulk:
+            if only is None:
+                ax.axis(self.prj.trange + self.prj.prange)
+                ax.set_xlabel('{}({})'.format(phase, expr))
+            else:
+                ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
+            # bulk composition
+            ox, vals = self.prj.get_bulk_composition()
+            table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
+            plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
         else:
-            ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
+            if only is None:
+                ax.axis(self.prj.trange + self.prj.prange)
+                ax.set_title('{}({})'.format(phase, expr))
+            else:
+                ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
         plt.show()
 
     def get_gridded(self, phase, expr, which=7, smooth=0):
@@ -680,11 +708,13 @@ def ps_show():
     parser.add_argument('-o', '--out', nargs='+',
                         help='highlight out lines for given phases')
     parser.add_argument('-l', '--label', action='store_true',
-                        help='show alrea labels')
+                        help='show area labels')
+    parser.add_argument('-b', '--bulk', action='store_true',
+                        help='show bulk composition on figure')
     args = parser.parse_args()
     print('Running psshow...')
     ps = PTPS(args.project)
-    sys.exit(ps.show(out=args.out, label=args.label))
+    sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk))
 
 
 def ps_grid():
@@ -711,6 +741,8 @@ def ps_iso():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('-b', '--bulk', action='store_true',
+                        help='show bulk composition on figure')
     parser.add_argument('--step', type=float,
                         default=None, help='contour step')
     parser.add_argument('--ncont', type=int,
@@ -727,7 +759,7 @@ def ps_iso():
     print('Running psiso...')
     ps = PTPS(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
-                          smooth=args.smooth, step=args.step,
+                          smooth=args.smooth, step=args.step, bulk=args.bulk,
                           N=args.ncont, clabel=args.clabel,
                           colors=args.colors, cmap=args.cmap))
 
