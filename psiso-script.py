@@ -14,6 +14,8 @@ def main():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('--nosplit', action='store_true',
+                        help='controls whether the underlying contour is removed or not')
     parser.add_argument('-b', '--bulk', action='store_true',
                         help='show bulk composition on figure')
     parser.add_argument('--step', type=float,

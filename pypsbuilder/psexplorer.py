@@ -563,6 +563,7 @@ class PTPS:
         smooth = kwargs.get('smooth', 0)
         filled = kwargs.get('filled', True)
         bulk = kwargs.get('bulk', False)
+        nosplit = kwargs.get('nosplit', True)
         step = kwargs.get('step', None)
         N = kwargs.get('N', 10)
         gradient = kwargs.get('gradient', False)
@@ -635,7 +636,7 @@ class PTPS:
                             inside = list(map(self.shapes[key].contains, points))
                             if np.any(inside):
                                 positions.append(seg[inside].mean(axis=0))
-                    ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3)
+                    ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
 
             except Exception as e:
                 print('Error for {}: {}'.format(key, e))
@@ -741,6 +742,8 @@ def ps_iso():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('--nosplit', action='store_true',
+                        help='controls whether the underlying contour is removed or not')
     parser.add_argument('-b', '--bulk', action='store_true',
                         help='show bulk composition on figure')
     parser.add_argument('--step', type=float,
@@ -760,7 +763,7 @@ def ps_iso():
     ps = PTPS(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
-                          N=args.ncont, clabel=args.clabel,
+                          N=args.ncont, clabel=args.clabel, nosplit=args.nosplit,
                           colors=args.colors, cmap=args.cmap))
 
 

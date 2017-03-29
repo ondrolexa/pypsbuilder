@@ -306,11 +306,19 @@ class ProjectFile(object):
             if invalid:
                 bad_shapes[f] = e
         # Fix possible overlaps of partial areas
+        todel = set()
         for k1, k2 in itertools.combinations(shapes, 2):
             if shapes[k1].within(shapes[k2]):
                 shapes[k2] = shapes[k2].difference(shapes[k1])
+                if shapes[k2].is_empty:
+                    todel.add(k2)
             if shapes[k2].within(shapes[k1]):
                 shapes[k1] = shapes[k1].difference(shapes[k2])
+                if shapes[k1].is_empty:
+                    todel.add(k1)
+        # remove degenerated polygons
+        for k in todel:
+            shapes.pop(k)
         return shapes, shape_edges, bad_shapes
 
 
