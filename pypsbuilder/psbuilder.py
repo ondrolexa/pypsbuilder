@@ -281,7 +281,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 drpat = 'dr1*.exe'
             elif sys.platform.startswith('linux'):
                 tcpat = 'tc3*L'
-                drpat = 'dr1*L'
+                drpat = 'dr*L'
             else:
                 tcpat = 'tc3*'
                 drpat = 'dr1*'
