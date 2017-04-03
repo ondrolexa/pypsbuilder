@@ -18,8 +18,7 @@ from shapely.geometry import MultiPoint
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf
 from tqdm import tqdm, trange
-import warnings
-warnings.filterwarnings("error")
+
 
 class PTPS:
     def __init__(self, projfile):
@@ -518,6 +517,8 @@ class PTPS:
                 ax.set_title(self.prj.name + (len(exc) * ' +{}').format(*exc))
             else:
                 ax.set_title(self.prj.name)
+        # connect button press
+        cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
         plt.show()
         # return ax
 
@@ -561,10 +562,12 @@ class PTPS:
             if Point(T, p).intersects(self.shapes[key]):
                 return key
 
-    def ginput(self):
-        plt.ion()
-        self.show()
-        return self.identify(*plt.ginput()[0])
+    def onclick(self, event):
+        if event.button == 1:
+            if event.inaxes:
+                key = self.identify(event.xdata, event.ydata)
+                if key:
+                    print(' '.join(sorted(list(key))))
 
     def isopleths(self, phase, expr, **kwargs):
         # parse kwargs
@@ -673,6 +676,8 @@ class PTPS:
                 ax.set_title('{}({})'.format(phase, expr))
             else:
                 ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
+        # connect button press
+        cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
         plt.show()
 
     def get_gridded(self, phase, expr, which=7, smooth=0):
@@ -794,16 +799,6 @@ def ps_drawpd():
     args = parser.parse_args()
     ps = PTPS(args.project)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
-
-
-def ps_ginput():
-    parser = argparse.ArgumentParser(description='Identify phases in field')
-    parser.add_argument('project', type=str,
-                        help='psbuilder project file')
-    args = parser.parse_args()
-    ps = PTPS(args.project)
-    print(' '.join(ps.ginput()))
-    sys.exit()
 
 
 if __name__ == "__main__":
