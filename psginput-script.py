@@ -9,7 +9,6 @@ def main():
     parser.add_argument('project', type=str,
                         help='psbuilder project file')
     args = parser.parse_args()
-    print('Running psginput...')
     ps = PTPS(args.project)
     print(' '.join(ps.ginput()))
     sys.exit()

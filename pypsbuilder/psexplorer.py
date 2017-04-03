@@ -18,7 +18,8 @@ from shapely.geometry import MultiPoint
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf
 from tqdm import tqdm, trange
-
+import warnings
+warnings.filterwarnings("error")
 
 class PTPS:
     def __init__(self, projfile):
@@ -26,16 +27,17 @@ class PTPS:
         # Check prefs and scriptfile
         if not self.prefsfile.exists():
             raise Exception('No tc-prefs.txt file in working directory.')
-        for line in self.prefsfile.open():
-            kw = line.split()
-            if kw != []:
-                if kw[0] == 'scriptfile':
-                    self.bname = kw[1]
-                    if not self.scriptfile.exists():
-                        raise Exception('tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.')
-                if kw[0] == 'calcmode':
-                    if kw[1] != '1':
-                        raise Exception('tc-prefs: calcmode must be 1.')
+        with self.prefsfile.open() as tcpf:
+            for line in tcpf:
+                kw = line.split()
+                if kw != []:
+                    if kw[0] == 'scriptfile':
+                        self.bname = kw[1]
+                        if not self.scriptfile.exists():
+                            raise Exception('tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.')
+                    if kw[0] == 'calcmode':
+                        if kw[1] != '1':
+                            raise Exception('tc-prefs: calcmode must be 1.')
         if not hasattr(self, 'bname'):
             raise Exception('No scriptfile defined in tc-prefs.txt')
         if self.saved:
@@ -384,12 +386,13 @@ class PTPS:
         if self.ready:
             edges = self.edges[key]
             for i in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
-                T = self.invdata(i)['T'][0]
-                p = self.invdata(i)['p'][0]
-                res = self.invdata(i)['results'][0]
-                v = eval_expr(expr, res['data'][phase])
-                dt['pts'].append((T, p))
-                dt['data'].append(v)
+                if not self.invdata(i)['manual']:
+                    T = self.invdata(i)['T'][0]
+                    p = self.invdata(i)['p'][0]
+                    res = self.invdata(i)['results'][0]
+                    v = eval_expr(expr, res['data'][phase])
+                    dt['pts'].append((T, p))
+                    dt['data'].append(v)
         return dt
 
     def collect_edges_data(self, key, phase, expr):
@@ -516,7 +519,7 @@ class PTPS:
             else:
                 ax.set_title(self.prj.name)
         plt.show()
-        return ax
+        # return ax
 
     def add_overlay(self, ax, fc='none', ec='k'):
         for k in self:
@@ -568,6 +571,7 @@ class PTPS:
         which = kwargs.get('which', 7)
         smooth = kwargs.get('smooth', 0)
         filled = kwargs.get('filled', True)
+        out = kwargs.get('out', True)
         bulk = kwargs.get('bulk', False)
         nosplit = kwargs.get('nosplit', True)
         step = kwargs.get('step', None)
@@ -642,9 +646,16 @@ class PTPS:
                     ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
 
             except Exception as e:
-                print('Error for {}: {}'.format(key, e))
+                print('{} for {}'.format(e.__class__.__name__, key))
         if only is None:
             self.add_overlay(ax)
+            # zero mode line
+            if out:
+                lst = [self.prj.get_trimmed_uni(row[0]) for row in self.prj.unilist if phase in row[4]['out']]
+                if lst:
+                    ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
+                            np.hstack([(*seg[1], np.nan) for seg in lst]),
+                            lw=2)
         plt.colorbar(cont)
         if bulk:
             if only is None:
@@ -720,7 +731,6 @@ def ps_show():
     parser.add_argument('--alpha', type=float,
                         default=0.6, help='alpha of colormap')
     args = parser.parse_args()
-    print('Running psshow...')
     ps = PTPS(args.project)
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
                      cmap=args.cmap, alpha=args.alpha))
@@ -735,7 +745,6 @@ def ps_grid():
     parser.add_argument('--numP', type=int, default=51,
                         help='number of P steps')
     args = parser.parse_args()
-    print('Running psgrid...')
     ps = PTPS(args.project)
     sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
 
@@ -750,6 +759,8 @@ def ps_iso():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('-o', '--out', action='store_true',
+                        help='highlight out line for given phase')
     parser.add_argument('--nosplit', action='store_true',
                         help='controls whether the underlying contour is removed or not')
     parser.add_argument('-b', '--bulk', action='store_true',
@@ -767,12 +778,11 @@ def ps_iso():
     parser.add_argument('--clabel', nargs='+',
                         default=[], help='label contours in field defined by set of phases')
     args = parser.parse_args()
-    print('Running psiso...')
     ps = PTPS(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
                           N=args.ncont, clabel=args.clabel, nosplit=args.nosplit,
-                          colors=args.colors, cmap=args.cmap))
+                          colors=args.colors, cmap=args.cmap, out=args.out))
 
 
 def ps_drawpd():
@@ -782,7 +792,6 @@ def ps_drawpd():
     parser.add_argument('-a', '--areas', action='store_true',
                         help='export also areas', default=True)
     args = parser.parse_args()
-    print('Running psdrawpd...')
     ps = PTPS(args.project)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
 
@@ -792,7 +801,6 @@ def ps_ginput():
     parser.add_argument('project', type=str,
                         help='psbuilder project file')
     args = parser.parse_args()
-    print('Running psginput...')
     ps = PTPS(args.project)
     print(' '.join(ps.ginput()))
     sys.exit()

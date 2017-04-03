@@ -5,7 +5,6 @@ from pypsbuilder import psbuilder
 
 
 def main():
-    print('Running psbuilder...')
     sys.exit(psbuilder.main())
 
 

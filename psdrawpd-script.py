@@ -11,7 +11,6 @@ def main():
     parser.add_argument('-a', '--areas', action='store_true',
                         help='export also areas', default=True)
     args = parser.parse_args()
-    print('Running psdrawpd...')
     ps = PTPS(args.project)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
 

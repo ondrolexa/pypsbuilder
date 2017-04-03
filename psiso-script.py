@@ -14,6 +14,8 @@ def main():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours')
+    parser.add_argument('-o', '--out', action='store_true',
+                        help='highlight out line for given phase')
     parser.add_argument('--nosplit', action='store_true',
                         help='controls whether the underlying contour is removed or not')
     parser.add_argument('-b', '--bulk', action='store_true',
@@ -31,12 +33,11 @@ def main():
     parser.add_argument('--clabel', nargs='+',
                         default=[], help='label contours in field defined by set of phases')
     args = parser.parse_args()
-    print('Running psiso...')
     ps = PTPS(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
-                          N=args.ncont, clabel=args.clabel,
-                          colors=args.colors, cmap=args.cmap))
+                          N=args.ncont, clabel=args.clabel, nosplit=args.nosplit,
+                          colors=args.colors, cmap=args.cmap, out=args.out))
 
 
 if __name__ == "__main__":

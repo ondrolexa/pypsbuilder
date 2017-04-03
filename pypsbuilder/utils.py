@@ -19,6 +19,9 @@ popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
 
 TCenc = 'mac-roman'
+polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'},
+             {'q', 'coe'}, {'diam', 'gph'}, {'dio', 'o'},
+             {'gl', 'act'}, {'gl', 'hb'}, {'act', 'hb'}]
 
 
 class ProjectFile(object):
@@ -206,7 +209,7 @@ class ProjectFile(object):
             else:
                 faces[f2] = [ix]
             # topology of polymorphs is degenerated
-            for poly in [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]:
+            for poly in polymorphs:
                 if poly.issubset(uni[4]['phases']):
                     f2 = frozenset(uni[4]['phases'] - poly.difference(uni[4]['out']))
                     if f2 in faces:

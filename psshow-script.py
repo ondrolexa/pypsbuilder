@@ -19,7 +19,6 @@ def main():
     parser.add_argument('--alpha', type=float,
                         default=0.6, help='alpha of colormap')
     args = parser.parse_args()
-    print('Running psshow...')
     ps = PTPS(args.project)
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
                      cmap=args.cmap, alpha=args.alpha))

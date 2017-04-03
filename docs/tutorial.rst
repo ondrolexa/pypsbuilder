@@ -146,9 +146,9 @@ For gridding pseudosection with grid 120x100 run following command::
 
 Once gridded you can draw isopleths diagrams using `psiso` command::
 
-    usage: psiso [-h] [-f] [--step STEP] [--ncont NCONT]
-                 [--colors COLORS] [--cmap CMAP] [--smooth SMOOTH]
-                 [--clabel CLABEL [CLABEL ...]]
+    usage: psiso [-h] [-f] [-o] [--nosplit] [-b] [--step STEP]
+                 [--ncont NCONT] [--colors COLORS] [--cmap CMAP]
+                 [--smooth SMOOTH] [--clabel CLABEL [CLABEL ...]]
                  project phase expr
 
     Draw isopleth diagrams
@@ -161,6 +161,10 @@ Once gridded you can draw isopleths diagrams using `psiso` command::
     optional arguments:
       -h, --help            show this help message and exit
       -f, --filled          filled contours
+      -o, --out             highlight out line for given phase
+      --nosplit             controls whether the underlying contour is removed or
+                            not
+      -b, --bulk            show bulk composition on figure
       --step STEP           contour step
       --ncont NCONT         number of contours
       --colors COLORS       color for all levels

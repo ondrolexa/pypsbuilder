@@ -13,7 +13,6 @@ def main():
     parser.add_argument('--numP', type=int, default=51,
                         help='number of P steps')
     args = parser.parse_args()
-    print('Running psgrid...')
     ps = PTPS(args.project)
     sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
 
