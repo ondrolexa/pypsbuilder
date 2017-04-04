@@ -4,17 +4,19 @@ Installation
 
 For Anaconda distribution (for now only Linux64, Win64 and Win32 supported) you can install dependencies using conda::
 
-    conda install numpy matplotlib scipy pyqt
-    conda install -c conda-forge shapely descartes tqdm
+    conda install -c conda-forge numpy matplotlib scipy pyqt shapely descartes tqdm
 
 and than install pypsbuilder from ondrolexa channel::
 
     conda install -c ondrolexa pypsbuilder
 
+Alternatively you can install everything in one step::
+
+    conda install -c conda-forge -c ondrolexa pypsbuilder
+
 For other platforms install dependencies using conda::
 
-    conda install numpy matplotlib scipy pyqt
-    conda install -c conda-forge shapely descartes tqdm
+    conda install -c conda-forge numpy matplotlib scipy pyqt shapely descartes tqdm
 
 or by any other mechanism (see `Installing Scientific Packages <https://packaging.python.org/science/>`_).
 
