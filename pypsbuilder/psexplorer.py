@@ -601,7 +601,7 @@ class PTPS:
             recs, mn, mx = self.merge_data(phase, expr, which=which)
         if step:
             cntv = np.arange(0, mx + step, step)
-            cntv = cntv[cntv >= mn]
+            cntv = cntv[cntv >= mn - step]
         else:
             cntv = np.linspace(mn, mx, N)
         # Thin-plate contouring of areas
