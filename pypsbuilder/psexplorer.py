@@ -603,7 +603,8 @@ class PTPS:
             cntv = np.arange(0, mx + step, step)
             cntv = cntv[cntv >= mn - step]
         else:
-            cntv = np.linspace(mn, mx, N)
+            dm = (mx - mn) / 25
+            cntv = np.linspace(max(0, mn - dm), mx + dm, N)
         # Thin-plate contouring of areas
         fig, ax = plt.subplots()
         for key in recs:
