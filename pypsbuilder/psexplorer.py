@@ -642,8 +642,7 @@ class PTPS:
                     positions = []
                     for col in cont.collections:
                         for seg in col.get_segments():
-                            points = MultiPoint(list(zip(seg[:, 0], seg[:, 1])))
-                            inside = list(map(self.shapes[key].contains, points))
+                            inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
                             if np.any(inside):
                                 positions.append(seg[inside].mean(axis=0))
                     ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
