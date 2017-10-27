@@ -232,7 +232,8 @@ class ProjectFile(object):
                     vertices.append(vert)
                     phases.append(f)
                 else:
-                    raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
+                    #raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
+                    print('Topology error in path {}. Edges {}'.format(path, edge))
             else:
                 # loop not found, search for range crossing chain
                 for ppath in itertools.permutations(path):
