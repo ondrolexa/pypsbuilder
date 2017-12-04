@@ -9,6 +9,7 @@ source:
   git_tag: develop
 
 build:
+  noarch: python
   entry_points:
     - psbuilder = pypsbuilder.psbuilder:main
     - psshow = pypsbuilder.psexplorer:ps_show
@@ -22,7 +23,7 @@ build:
 
 requirements:
   build:
-    - python # [py35]
+    - python
     - setuptools
     - pyqt >=5
     - numpy
@@ -33,7 +34,7 @@ requirements:
     - tqdm
 
   run:
-    - python # [py35]
+    - python
     - pyqt >=5
     - numpy
     - matplotlib >=2

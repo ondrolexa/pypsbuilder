@@ -9,6 +9,7 @@ source:
   git_rev: {{ data.get('version') }}
 
 build:
+  noarch: python
   entry_points:
     - psbuilder = pypsbuilder.psbuilder:main
     - psshow = pypsbuilder.psexplorer:ps_show

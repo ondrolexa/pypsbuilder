@@ -82,3 +82,9 @@ History
 * psshow changed default color map to be darker for higher variance
 * manual or imported invariant points bub in psiso fixed
  * dio-o and gl-act-hb added to polymorphs
+
+2.1.4 (04 Dec 2017)
+-------------------
+* fix clabel positioning
+* fix for minimum contour level
+* silently ignore critical possible topology errors
