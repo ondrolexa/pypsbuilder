@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'psbuilder.ui'
 #
-# Created by: PyQt5 UI code generator 5.6
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -259,7 +259,6 @@ class Ui_PSBuilder(object):
         self.tabScript = QtWidgets.QWidget()
         self.tabScript.setObjectName("tabScript")
         self.verticalLayout_8 = QtWidgets.QVBoxLayout(self.tabScript)
-        self.verticalLayout_8.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_8.setObjectName("verticalLayout_8")
         self.outScript = QtWidgets.QPlainTextEdit(self.tabScript)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -297,7 +296,6 @@ class Ui_PSBuilder(object):
         self.tabLog = QtWidgets.QWidget()
         self.tabLog.setObjectName("tabLog")
         self.verticalLayout_9 = QtWidgets.QVBoxLayout(self.tabLog)
-        self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_9.setObjectName("verticalLayout_9")
         self.logText = QtWidgets.QPlainTextEdit(self.tabLog)
         self.logText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
@@ -310,7 +308,6 @@ class Ui_PSBuilder(object):
         self.tabModes = QtWidgets.QWidget()
         self.tabModes.setObjectName("tabModes")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.tabModes)
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.textOutput = QtWidgets.QPlainTextEdit(self.tabModes)
         self.textOutput.setObjectName("textOutput")
@@ -319,7 +316,6 @@ class Ui_PSBuilder(object):
         self.tabFull = QtWidgets.QWidget()
         self.tabFull.setObjectName("tabFull")
         self.horizontalLayout_8 = QtWidgets.QHBoxLayout(self.tabFull)
-        self.horizontalLayout_8.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_8.setObjectName("horizontalLayout_8")
         self.textFullOutput = QtWidgets.QPlainTextEdit(self.tabFull)
         self.textFullOutput.setObjectName("textFullOutput")
@@ -418,7 +414,7 @@ class Ui_PSBuilder(object):
         self.verticalLayout_4.addWidget(self.splitter_right)
         PSBuilder.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(PSBuilder)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1106, 19))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1106, 20))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -566,7 +562,7 @@ class Ui_PSBuilder(object):
         self.actionQuit.setShortcut(_translate("PSBuilder", "Ctrl+Q"))
         self.actionReload.setText(_translate("PSBuilder", "&Reload scriptfile"))
         self.actionAbout.setText(_translate("PSBuilder", "&About"))
-        self.actionGenerate.setText(_translate("PSBuilder", "&Generate from text file"))
+        self.actionGenerate.setText(_translate("PSBuilder", "&Generate from dr file"))
         self.actionSave_as.setText(_translate("PSBuilder", "Save project as"))
         self.actionImport_project.setText(_translate("PSBuilder", "&Import from project"))
         self.actionTest_topology.setText(_translate("PSBuilder", "&Test topology"))

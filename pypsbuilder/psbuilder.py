@@ -22,7 +22,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.1.3'
+__version__ = '2.1.4'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -839,8 +839,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            tpfile = qd.getOpenFileName(self, 'Open text file', str(self.workdir),
-                                        'Text files (*.txt);;All files (*.*)')[0]
+            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.workdir),
+                                        'Drawpd files (*.txt);;All files (*.*)')[0]
             if tpfile:
                 tp = []
                 tpok = True
@@ -848,10 +848,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for line in tfile:
                         n = line.split('%')[0].strip()
                         if n != '':
-                            if '-' not in n:
-                                tpok = False
-                            else:
-                                tp.append(n)
+                            if '-' in n:
+                                if n.startswith('i') or n.startswith('u'):
+                                    tp.append(n.split(' ', 1)[1].strip())
                 if tpok and tp:
                     for r in tp:
                         po = r.split('-')
@@ -1608,11 +1607,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                bbox=dict(facecolor='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size='small',
                                bbox=dict(facecolor='yellow', alpha=lalfa, pad=2))
-            if self.figure.axes == []:
-                cur = None
-            else:
+            axs = self.figure.get_axes()
+            if axs:
+                self.ax = axs[0]
                 cur = (self.ax.get_xlim(), self.ax.get_ylim())
-            self.ax = self.figure.add_subplot(111)
+            else:
+                cur = None
+                self.ax = self.figure.add_subplot(111)
             self.ax.cla()
             self.ax.format_coord = self.format_coord
             for k in self.unimodel.unilist:
