@@ -22,7 +22,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.1.5'
+__version__ = '2.2.0'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -258,40 +258,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prj = TCsettingsPT(workdir)
             if prj.OK:
                 self.prj = prj
+                self.refresh_gui()
                 self.initViewModels()
-                self.ready = True
-                self.project = None
-                self.changed = True
-                # update settings tab
-                self.apply_setting(4)
-                # read scriptfile
-                self.read_scriptfile()
-                # update plot
-                self.figure.clear()
-                self.plot()
-                # disconnect signals
-                try:
-                    self.phasemodel.itemChanged.disconnect(self.phase_changed)
-                except Exception:
-                    pass
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
-                self.phasemodel.clear()
-                self.outmodel.clear()
-                for p in self.prj.phases:
-                    if p not in self.prj.excess:
-                        item = QtGui.QStandardItem(p)
-                        item.setCheckable(True)
-                        item.setSizeHint(QtCore.QSize(40, 20))
-                        self.phasemodel.appendRow(item)
-                # connect signal
-                self.phasemodel.itemChanged.connect(self.phase_changed)
-                self.textOutput.clear()
-                self.textFullOutput.clear()
-                self.unihigh = None
-                self.invhigh = None
-                self.outhigh = None
-                self.pushUniZoom.setChecked(False)
-                self.statusBar().showMessage('Ready')
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Initialization error', prj.status, qb.Abort)
@@ -327,6 +295,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 prj = TCsettingsPT(Path(projfile).absolute().parent)
                 if prj.OK:
                     self.prj = prj
+                    self.refresh_gui()
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -431,8 +400,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     progress.setValue(ix)
                     if 'cmd' in row[2]:
                         if row[2]['cmd']:
-                            tcout = runprog(self.prj.tcexe, self.prj.workdir, row[2]['cmd'])
-                            status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                            tcout = self.prj.runtc(row[2]['cmd'])
+                            status, variance, pts, res, output = self.prj.parse_logfile()
                             if status == 'ok':
                                 r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
                                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -455,8 +424,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     progress.setValue(ix)
                     if 'cmd' in row[4]:
                         if row[4]['cmd']:
-                            tcout = runprog(self.prj.tcexe, self.prj.workdir, row[4]['cmd'])
-                            status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                            tcout = self.prj.runtc(row[4]['cmd'])
+                            status, variance, pts, res, output = self.prj.parse_logfile()
                             if status == 'ok' and len(res) > 1:
                                 r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
                                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -486,6 +455,41 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
 
+    def refresh_gui(self):
+        self.ready = True
+        self.project = None
+        self.changed = True
+        # update settings tab
+        self.apply_setting(4)
+        # read scriptfile
+        self.read_scriptfile()
+        # update plot
+        self.figure.clear()
+        self.plot()
+        # disconnect signals
+        try:
+            self.phasemodel.itemChanged.disconnect(self.phase_changed)
+        except Exception:
+            pass
+        self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + self.prj.tcout)
+        self.phasemodel.clear()
+        self.outmodel.clear()
+        for p in self.prj.phases:
+            if p not in self.prj.excess:
+                item = QtGui.QStandardItem(p)
+                item.setCheckable(True)
+                item.setSizeHint(QtCore.QSize(40, 20))
+                self.phasemodel.appendRow(item)
+        # connect signal
+        self.phasemodel.itemChanged.connect(self.phase_changed)
+        self.textOutput.clear()
+        self.textFullOutput.clear()
+        self.unihigh = None
+        self.invhigh = None
+        self.outhigh = None
+        self.pushUniZoom.setChecked(False)
+        self.statusBar().showMessage('Ready')
+
     def reinitialize(self):
         if self.ready:
             # collect info
@@ -501,35 +505,42 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     out.append(item.text())
             trange = self.prj.trange
             prange = self.prj.prange
-            self.doInit()
-            # select phases
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.text() in phases:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # select out
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.text() in out:
-                    item.setCheckState(QtCore.Qt.Checked)
-            # adapt names to excess changes
-            for row in self.unimodel.unilist:
-                row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.prj.excess)))) +
-                          ' - ' +
-                          ' '.join(sorted(list(row[4]['out']))))
-            self.adapt_uniview()
-            for row in self.invmodel.invlist[1:]:
-                row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.prj.excess)))) +
-                          ' - ' +
-                          ' '.join(sorted(list(row[2]['out']))))
-            self.invview.resizeColumnsToContents()
-            # settings
-            self.prj.trange = trange
-            self.prj.prange = prange
-            self.statusBar().showMessage('Project re-initialized from scriptfile.')
-            self.changed = True
+            # reread
+            prj = TCsettingsPT(self.prj.workdir)
+            if prj.OK:
+                self.prj = prj
+                self.refresh_gui()
+                # select phases
+                for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.text() in phases:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # select out
+                for i in range(self.outmodel.rowCount()):
+                    item = self.outmodel.item(i)
+                    if item.text() in out:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # adapt names to excess changes
+                for row in self.unimodel.unilist:
+                    row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.prj.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[4]['out']))))
+                self.adapt_uniview()
+                for row in self.invmodel.invlist[1:]:
+                    row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.prj.excess)))) +
+                              ' - ' +
+                              ' '.join(sorted(list(row[2]['out']))))
+                self.invview.resizeColumnsToContents()
+                # settings
+                self.prj.trange = trange
+                self.prj.prange = prange
+                self.statusBar().showMessage('Project re-initialized from scriptfile.')
+                self.changed = True
+            else:
+                qb = QtWidgets.QMessageBox
+                qb.critical(self, 'Initialization error', prj.status, qb.Abort)
         else:
-            self.statusBar().showMessage('Project is not yet initialized.')
+            self.statusBar().showMessage('Project is not ready.')
 
     def saveProject(self):
         """Open working directory and initialize project
@@ -594,9 +605,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.app_settings(write=True)
             self.statusBar().showMessage('Project saved.')
 
-    def reparse_outouts(self):
+    def reparse_outputs(self):
         for row in data['invlist']:
-            status, variance, pts, res, output = parse_logfile(self.prj.logfile, out=row[2]['output'])
+            status, variance, pts, res, output = self.prj.parse_logfile(output=row[2]['output'])
             if status == 'ok':
                 r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -608,7 +619,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 urow[2] = r
         self.invview.resizeColumnsToContents()
         for row in data['unilist']:
-            status, variance, pts, res, output = parse_logfile(self.prj.logfile, out=row[4]['output'])
+            status, variance, pts, res, output = self.prj.parse_logfile(output=row[4]['output'])
             if status == 'ok':
                 r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -630,7 +641,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if tpfile:
                 tp = []
                 tpok = True
-                with open(tpfile, 'r', encoding=TCenc) as tfile:
+                with open(tpfile, 'r', encoding=self.prj.TCenc) as tfile:
                     for line in tfile:
                         n = line.split('%')[0].strip()
                         if n != '':
@@ -723,7 +734,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             if not r['manual']:
-                update_guesses(self.prj.scriptfile, r['results'][0]['ptguess'])
+                self.prj.update_guesses(r['results'][0]['ptguess'])
                 self.read_scriptfile()
                 self.statusBar().showMessage('Guesses set.')
             else:
@@ -739,7 +750,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
-                    update_guesses(self.prj.scriptfile, r['results'][ix]['ptguess'])
+                    self.prj.update_guesses(r['results'][ix]['ptguess'])
                     self.read_scriptfile()
                     self.statusBar().showMessage('Guesses set.')
             else:
@@ -1056,12 +1067,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def read_scriptfile(self):
         if self.ready:
-            with self.prj.scriptfile.open('r', encoding=TCenc) as f:
+            with self.prj.scriptfile.open('r', encoding=self.prj.TCenc) as f:
                 self.outScript.setPlainText(f.read())
 
     def save_scriptfile(self):
         if self.ready:
-            with self.prj.scriptfile.open('w', encoding=TCenc) as f:
+            with self.prj.scriptfile.open('w', encoding=self.prj.TCenc) as f:
                 f.write(self.outScript.toPlainText())
             self.reinitialize()
             self.apply_setting(1)
@@ -1185,9 +1196,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     step = (trange[1] - trange[0]) / steps
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
-                tcout = runprog(self.prj.tcexe, self.prj.workdir, ans)
+                tcout = self.prj.runtc(ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
-                status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -1231,9 +1242,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
-                tcout = runprog(self.prj.tcexe, self.prj.workdir, ans)
+                tcout = self.prj.runtc(ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
-                status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -1398,7 +1409,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.ax.set_ylabel('Pressure [kbar]')
             ex = list(self.prj.excess)
             ex.insert(0, '')
-            self.ax.set_title(self.axname + ' +'.join(ex))
+            self.ax.set_title(self.prj.axname + ' +'.join(ex))
             if cur is None:
                 self.ax.set_xlim(self.prj.trange)
                 self.ax.set_ylim(self.prj.prange)

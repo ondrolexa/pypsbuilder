@@ -18,7 +18,6 @@ from shapely.ops import polygonize, linemerge, unary_union
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
 
-TCenc = 'mac-roman'
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'},
              {'q', 'coe'}, {'diam', 'gph'}, {'dio', 'o'},
              {'gl', 'act'}, {'gl', 'hb'}, {'act', 'hb'}]
@@ -34,14 +33,13 @@ class ScriptfileError(Exception):
 class TCError(Exception):
     pass
 
-class ProjectFile(object):
+class PSBFile(object):
     def __init__(self, projfile):
         prj = Path(projfile).absolute()
         if prj.exists():
             stream = gzip.open(str(prj), 'rb')
             self.data = pickle.load(stream)
             stream.close()
-            self.workdir = prj.parent
             self.name = prj.name
             self.unilookup = {}
             self.invlookup = {}
@@ -49,31 +47,6 @@ class ProjectFile(object):
                 self.unilookup[r[0]] = ix
             for ix, r in enumerate(self.invlist):
                 self.invlookup[r[0]] = ix
-            # default exe
-            if sys.platform.startswith('win'):
-                tcpat = 'tc3*.exe'
-                drpat = 'dr1*.exe'
-            elif sys.platform.startswith('linux'):
-                tcpat = 'tc3*L'
-                drpat = 'dr1*L'
-            else:
-                tcpat = 'tc3*'
-                drpat = 'dr1*'
-            # THERMOCALC exe
-            errtitle = 'Initialize project error!'
-            self.tcexe = None
-            for p in self.workdir.glob(tcpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.absolute()
-                    break
-            if not self.tcexe:
-                raise Exception('No THERMOCALC executable in working directory.')
-            # DRAWPD exe
-            self.drexe = None
-            for p in self.workdir.glob(drpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.absolute()
-                    break
         else:
             raise Exception('File {} does not exists.'.format(projfile))
 
@@ -286,7 +259,7 @@ class ProjectFile(object):
             pp = polygonize(lns)
             invalid = True
             for ppp in pp:
-                ppok = bnda.intersection(ppp)
+                ppok = bnda.intersection(ppp).buffer(0)
                 if ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
@@ -343,6 +316,7 @@ class TCsettingsPT(object):
 
     def __init__(self, workdir):
         self.workdir = Path(workdir)
+        self.TCenc = 'mac-roman'
         try:
             errinfo = 'Initialize project error!'
             # default exe
@@ -369,13 +343,13 @@ class TCsettingsPT(object):
                 if p.is_file() and os.access(str(p), os.X_OK):
                     self.drexe = p.absolute()
                     break
-            if not self.drexe:
-                InitError('No drawpd executable in working directory.')
+            #if not self.drexe:
+            #    InitError('No drawpd executable in working directory.')
             # tc-prefs file
             if not self.workdir.joinpath('tc-prefs.txt').exists():
                 raise InitError('No tc-prefs.txt file in working directory.')
             errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
-            for line in self.workdir.joinpath('tc-prefs.txt').open('r', encoding=TCenc):
+            for line in self.workdir.joinpath('tc-prefs.txt').open('r', encoding=self.TCenc):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == 'scriptfile':
@@ -393,7 +367,7 @@ class TCsettingsPT(object):
             check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
                      'setexcess': False, 'printxyz': False}
             errinfo = 'Check your scriptfile.'
-            with self.scriptfile.open('r', encoding=TCenc) as f:
+            with self.scriptfile.open('r', encoding=self.TCenc) as f:
                 lines = f.readlines()
             gsb, gse = False, False
             for line in lines:
@@ -505,15 +479,14 @@ class TCsettingsPT(object):
                 raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
 
             # TC
-            tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
-            if 'BOMBED' in tcout:
-                raise TCError(tcout.split('BOMBED')[1].split('\n')[0])
+            self.tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
+            if 'BOMBED' in self.tcout:
+                raise TCError(self.tcout.split('BOMBED')[1].split('\n')[0])
             else:
-                self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
+                self.phases = self.tcout.split('choose from:')[1].split('\n')[0].split()
                 self.phases.sort()
                 self.deftrange = self.trange
                 self.defprange = self.prange
-                self.tcversion = tcout.split('\n')[0]
             # OK
             self.status = 'Initial check done.'
             self.OK = True
@@ -560,76 +533,114 @@ class TCsettingsPT(object):
     def prefsfile(self):
         return self.workdir.joinpath('tc-prefs.txt')
 
+    @property
+    def tcversion(self):
+        return self.tcout.split('\n')[0]
 
-def parse_logfile(logfile, out=None):
-    # res is list of dicts with data and ptguess keys
-    # data is dict with keys of phases and each contain dict of values
-    # res[0]['data']['g']['mode']
-    # res[0]['data']['g']['z']
-    # res[0]['data']['g']['MnO']
-    if out is None:
-        with logfile.open('r', encoding=TCenc) as f:
-            out = f.read()
-    lines = [''.join([c for c in ln if ord(c) < 128]) for ln in out.splitlines() if ln != '']
-    pts = []
-    res = []
-    variance = -1
-    if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-        status = 'bombed'
-    else:
-        for ln in lines:
-            if 'variance of required equilibrium' in ln:
-                variance = int(ln[ln.index('(') + 1:ln.index('?')])
-                break
-        bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
-        bstarts.append(len(lines))
-        for bs, be in zip(bstarts[:-1], bstarts[1:]):
-            block = lines[bs:be]
-            pts.append([float(n) for n in block[1].split()[:2]])
-            xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-            gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
-            gixe = xyz[-1] + 2
-            ptguess = block[gixs:gixe]
-            data = {}
-            rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
-            phases = block[rbix - 1].split()[1:]
-            for phase, val in zip(phases, block[rbix].split()[2:]):
-                data[phase] = dict(mode=float(val))
-            for ix in xyz:
-                lbl = block[ix].split()[1]
-                phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
-                if phase not in data:
-                    raise Exception('Check model {} in your ax file. Commonly liq coded as L for starting guesses.'.format(phase))
-                data[phase][comp] = float(block[ix].split()[2])
-            rbiox = block[rbix + 1].split()[2:]
-            for delta in range(len(phases)):
-                rbi = {c: float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
-                rbi['H2O'] = float(block[rbix + 2 + delta].split()[1])
-                # data[phases[delta]]['rbi'] = comp
-                data[phases[delta]].update(rbi)
-            res.append(dict(data=data, ptguess=ptguess))
-        if res:
-            status = 'ok'
+    @property
+    def datasetfile(self):
+        return self.workdir.joinpath(self.tcout.split('using ')[1].split(' produced')[0])
+
+    @property
+    def dataset(self):
+        return self.tcout.split('using ')[1].split('\n')[0]
+
+    def parse_logfile(self, output=None):
+        # res is list of dicts with data and ptguess keys
+        # data is dict with keys of phases and each contain dict of values
+        # res[0]['data']['g']['mode']
+        # res[0]['data']['g']['z']
+        # res[0]['data']['g']['MnO']
+        if output is None:
+            with self.logfile.open('r', encoding=self.TCenc) as f:
+                output = f.read()
+        lines = [''.join([c for c in ln if ord(c) < 128]) for ln in output.splitlines() if ln != '']
+        pts = []
+        res = []
+        variance = -1
+        if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+            status = 'bombed'
         else:
-            status = 'nir'
-    return status, variance, np.array(pts).T, res, out
+            for ln in lines:
+                if 'variance of required equilibrium' in ln:
+                    variance = int(ln[ln.index('(') + 1:ln.index('?')])
+                    break
+            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
+            bstarts.append(len(lines))
+            for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                block = lines[bs:be]
+                pts.append([float(n) for n in block[1].split()[:2]])
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                gixe = xyz[-1] + 2
+                ptguess = block[gixs:gixe]
+                data = {}
+                rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
+                phases = block[rbix - 1].split()[1:]
+                for phase, val in zip(phases, block[rbix].split()[2:]):
+                    data[phase] = dict(mode=float(val))
+                for ix in xyz:
+                    lbl = block[ix].split()[1]
+                    phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
+                    if phase not in data:
+                        raise Exception('Check model {} in your ax file. Commonly liq coded as L for starting guesses.'.format(phase))
+                    data[phase][comp] = float(block[ix].split()[2])
+                rbiox = block[rbix + 1].split()[2:]
+                for delta in range(len(phases)):
+                    rbi = {c: float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
+                    rbi['H2O'] = float(block[rbix + 2 + delta].split()[1])
+                    # data[phases[delta]]['rbi'] = comp
+                    data[phases[delta]].update(rbi)
+                res.append(dict(data=data, ptguess=ptguess))
+            if res:
+                status = 'ok'
+            else:
+                status = 'nir'
+        return status, variance, np.array(pts).T, res, output
 
+    def update_guesses(self, guesses):
+        # Store scriptfile content and initialize dicts
+        with self.scriptfile.open('r', encoding=self.TCenc) as f:
+            sc = f.readlines()
+        gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
+        gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
+        if gsb and gse:
+            with self.scriptfile.open('w', encoding=self.TCenc) as f:
+                for ln in sc[:gsb[0] + 1]:
+                    f.write(ln)
+                for ln in guesses:
+                    f.write(ln)
+                    f.write('\n')
+                for ln in sc[gse[0]:]:
+                    f.write(ln)
 
-def update_guesses(scriptfile, guesses):
-    # Store scriptfile content and initialize dicts
-    with scriptfile.open('r', encoding=TCenc) as f:
-        sc = f.readlines()
-    gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
-    gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
-    if gsb and gse:
-        with scriptfile.open('w', encoding=TCenc) as f:
-            for ln in sc[:gsb[0] + 1]:
-                f.write(ln)
-            for ln in guesses:
-                f.write(ln)
-                f.write('\n')
-            for ln in sc[gse[0]:]:
-                f.write(ln)
+    def runtc(self, instr):
+        if sys.platform.startswith('win'):
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags = 1
+            startupinfo.wShowWindow = 0
+        else:
+            startupinfo = None
+        p = subprocess.Popen(str(self.tcexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw)
+        output = p.communicate(input=instr.encode(self.TCenc))[0].decode(self.TCenc)
+        sys.stdout.flush()
+        return output
+
+    def rundr(self):
+        if self.drexe:
+            instr = self.name + '\n'
+            if sys.platform.startswith('win'):
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags = 1
+                startupinfo.wShowWindow = 0
+            else:
+                startupinfo = None
+            p = subprocess.Popen(str(self.drexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw)
+            p.communicate(input=instr.encode(self.TCenc))
+            sys.stdout.flush()
+            return True
+        else:
+            return False
 
 
 def parse_variance(out):
@@ -639,7 +650,7 @@ def parse_variance(out):
     return int(ln[ln.index('(') + 1:ln.index('?')])
 
 
-def runprog(exe, workdir, instr):
+def runprog(exe, workdir, instr, TCenc='mac-roman'):
     if sys.platform.startswith('win'):
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags = 1
