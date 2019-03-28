@@ -276,7 +276,7 @@ class ProjectFile(object):
             pp = polygonize(lns)
             invalid = True
             for ppp in pp:
-                ppok = bnda.intersection(ppp)
+                ppok = bnda.intersection(ppp).buffer(0)
                 if ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
