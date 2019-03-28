@@ -154,7 +154,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.app_settings()
         self.populate_recent()
         self.ready = False
-        self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2016'. format(__version__))
+        self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2019'. format(__version__))
 
     def initViewModels(self):
         # INVVIEW
