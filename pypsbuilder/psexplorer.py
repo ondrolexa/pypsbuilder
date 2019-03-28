@@ -659,7 +659,10 @@ class PTPS:
                     ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
                             np.hstack([(*seg[1], np.nan) for seg in lst]),
                             lw=2)
-        plt.colorbar(cont)
+        try:
+            plt.colorbar(cont)
+        except:
+            print('There is trouble to draw colorbar. Sorry.')
         if bulk:
             if only is None:
                 ax.axis(self.prj.trange + self.prj.prange)
