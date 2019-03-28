@@ -255,9 +255,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                           os.path.expanduser('~'),
                                           qd.ShowDirsOnly)
         if workdir:
-            self.workdir = Path(workdir)
-            # init THERMOCALC
-            if self.doInit():
+            settings = check_settings(workdir)
+            if settings['OK']:
+                self.settings = settings
                 self.initViewModels()
                 self.ready = True
                 self.project = None
@@ -269,248 +269,32 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 # update plot
                 self.figure.clear()
                 self.plot()
+                # disconnect signals
+                try:
+                    self.phasemodel.itemChanged.disconnect(self.phase_changed)
+                except Exception:
+                    pass
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
+                self.phasemodel.clear()
+                self.outmodel.clear()
+                for p in self.phases:
+                    if p not in self.excess:
+                        item = QtGui.QStandardItem(p)
+                        item.setCheckable(True)
+                        item.setSizeHint(QtCore.QSize(40, 20))
+                        self.phasemodel.appendRow(item)
+                # connect signal
+                self.phasemodel.itemChanged.connect(self.phase_changed)
+                self.textOutput.clear()
+                self.textFullOutput.clear()
+                self.unihigh = None
+                self.invhigh = None
+                self.outhigh = None
+                self.pushUniZoom.setChecked(False)
                 self.statusBar().showMessage('Ready')
-
-    def doInit(self):
-        """Parse configs and test TC settings
-        """
-        try:
-            # default exe
-            if sys.platform.startswith('win'):
-                tcpat = 'tc3*.exe'
-                drpat = 'dr1*.exe'
-            elif sys.platform.startswith('linux'):
-                tcpat = 'tc3*L'
-                drpat = 'dr*L'
             else:
-                tcpat = 'tc3*'
-                drpat = 'dr1*'
-            # THERMOCALC exe
-            errtitle = 'Initialize project error!'
-            self.tcexe = None
-            for p in self.workdir.glob(tcpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.absolute()
-                    break
-            if not self.tcexe:
-                errinfo = 'No THERMOCALC executable in working directory.'
-                raise Exception()
-            # DRAWPD exe
-            self.drexe = None
-            for p in self.workdir.glob(drpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.absolute()
-                    break
-            if not self.drexe:
-                errinfo = 'No drawpd executable in working directory.'
-                raise Exception()
-            # tc-prefs file
-            if not self.prefsfile.exists():
-                errinfo = 'No tc-prefs.txt file in working directory.'
-                raise Exception()
-            errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
-            for line in self.prefsfile.open('r', encoding=TCenc):
-                kw = line.split()
-                if kw != []:
-                    if kw[0] == 'scriptfile':
-                        self.bname = kw[1]
-                        if not self.scriptfile.exists():
-                            errinfo = 'tc-prefs: scriptfile tc-' + self.bname + '.txt does not exists in your working directory.'
-                            raise Exception()
-                    if kw[0] == 'calcmode':
-                        if kw[1] != '1':
-                            errinfo = 'tc-prefs: calcmode must be 1.'
-                            raise Exception()
-
-            errtitle = 'Scriptfile error!'
-            self.excess = set()
-            self.trange = (200., 1000.)
-            self.prange = (0.1, 20.)
-            check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
-                     'setexcess': False, 'printxyz': False}
-            errinfo = 'Check your scriptfile.'
-            with self.scriptfile.open('r', encoding=TCenc) as f:
-                lines = f.readlines()
-            gsb, gse = False, False
-            for line in lines:
-                kw = line.split('%')[0].split()
-                if '{PSBGUESS-BEGIN}' in line:
-                    gsb = True
-                if '{PSBGUESS-END}' in line:
-                    gse = True
-                if kw == ['*']:
-                    break
-                if kw:
-                    if kw[0] == 'axfile':
-                        errinfo = 'Wrong argument for axfile keyword in scriptfile.'
-                        self.axname = kw[1]
-                        if not Path(self.axfile).exists():
-                            errinfo = 'Axfile tc-' + self.axname + '.txt does not exists in working directory'
-                            raise Exception()
-                        check['axfile'] = True
-                    elif kw[0] == 'setdefTwindow':
-                        errinfo = 'Wrong arguments for setdefTwindow keyword in scriptfile.'
-                        self.trange = (float(kw[-2]), float(kw[-1]))
-                    elif kw[0] == 'setdefPwindow':
-                        errinfo = 'Wrong arguments for setdefPwindow keyword in scriptfile.'
-                        self.prange = (float(kw[-2]), float(kw[-1]))
-                    elif kw[0] == 'setbulk':
-                        errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
-                        self.bulk = kw[1:]
-                        if 'yes' in self.bulk:
-                            self.bulk.remove('yes')
-                        check['setbulk'] = True
-                    elif kw[0] == 'setexcess':
-                        errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
-                        self.excess = set(kw[1:])
-                        if 'yes' in self.excess:
-                            self.excess.remove('yes')
-                        if 'no' in self.excess:
-                            self.excess = set()
-                        if 'ask' in self.excess:
-                            errinfo = 'Setexcess must not be set to ask.'
-                            raise Exception()
-                        check['setexcess'] = True
-                    elif kw[0] == 'calctatp':
-                        errinfo = 'Wrong argument for calctatp keyword in scriptfile.'
-                        if not kw[1] == 'ask':
-                            errinfo = 'Calctatp must be set to ask.'
-                            raise Exception()
-                    # elif kw[0] == 'drawpd':
-                    #     errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
-                    #     if kw[1] == 'no':
-                    #         errinfo = 'Drawpd must be set to yes.'
-                    #         raise Exception()
-                    #     check['drawpd'] = True
-                    elif kw[0] == 'printbulkinfo':
-                        errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
-                        if kw[1] == 'no':
-                            errinfo = 'Printbulkinfo must be set to yes.'
-                            raise Exception()
-                        check['printbulkinfo'] = True
-                    elif kw[0] == 'printxyz':
-                        errinfo = 'Wrong argument for printxyz keyword in scriptfile.'
-                        if kw[1] == 'no':
-                            errinfo = 'Printxyz must be set to yes.'
-                            raise Exception()
-                        check['printxyz'] = True
-                    elif kw[0] == 'dogmin':
-                        errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            errinfo = 'Dogmin must be set to no.'
-                            raise Exception()
-                    elif kw[0] == 'fluidpresent':
-                        errinfo = 'Fluidpresent must be deleted from scriptfile.'
-                        raise Exception()
-                    elif kw[0] == 'seta':
-                        errinfo = 'Wrong argument for seta keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            errinfo = 'Seta must be set to no.'
-                            raise Exception()
-                    elif kw[0] == 'setmu':
-                        errinfo = 'Wrong argument for setmu keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            errinfo = 'Setmu must be set to no.'
-                            raise Exception()
-                    elif kw[0] == 'usecalcq':
-                        errinfo = 'Wrong argument for usecalcq keyword in scriptfile.'
-                        if kw[1] == 'ask':
-                            errinfo = 'Usecalcq must be yes or no.'
-                            raise Exception()
-                    elif kw[0] == 'pseudosection':
-                        errinfo = 'Wrong argument for pseudosection keyword in scriptfile.'
-                        if kw[1] == 'ask':
-                            errinfo = 'Pseudosection must be yes or no.'
-                            raise Exception()
-                    elif kw[0] == 'zeromodeiso':
-                        errinfo = 'Wrong argument for zeromodeiso keyword in scriptfile.'
-                        if not kw[1] == 'yes':
-                            errinfo = 'Zeromodeiso must be set to yes.'
-                            raise Exception()
-                    elif kw[0] == 'setmodeiso':
-                        errinfo = 'Wrong argument for setmodeiso keyword in scriptfile.'
-                        if not kw[1] == 'yes':
-                            errinfo = 'Setmodeiso must be set to yes.'
-                            raise Exception()
-                    elif kw[0] == 'convliq':
-                        errinfo = 'Convliq not yet supported.'
-                        raise Exception()
-                    elif kw[0] == 'setiso':
-                        errinfo = 'Wrong argument for setiso keyword in scriptfile.'
-                        if kw[1] != 'no':
-                            errinfo = 'Setiso must be set to no.'
-                            raise Exception()
-
-            if not check['axfile']:
-                errinfo = 'Axfile name must be provided in scriptfile.'
-                raise Exception()
-            if not check['setbulk']:
-                errinfo = 'Setbulk must be provided in scriptfile.'
-                raise Exception()
-            if not check['setexcess']:
-                errinfo = 'Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.'
-                raise Exception()
-            # if not check['drawpd']:
-            #     errinfo = 'Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.'
-            #     raise Exception()
-            if not check['printbulkinfo']:
-                errinfo = 'Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.'
-                raise Exception()
-            if not check['printxyz']:
-                errinfo = 'Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.'
-                raise Exception()
-            if not (gsb and gse):
-                errinfo = 'There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.'
-                raise Exception()
-
-            # What???
-            nc = 0
-            for i in self.axname:
-                if i.isupper():
-                    nc += 1
-            self.nc = nc
-            # run tc to initialize
-            errtitle = 'Initial THERMOCALC run error!'
-            tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
-            self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
-            if 'BOMBED' in tcout:
-                errinfo = tcout.split('BOMBED')[1].split('\n')[0]
-                raise Exception()
-            else:
-                errinfo = 'Error parsing initial THERMOCALC output'
-                self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
-                self.phases.sort()
-                self.deftrange = self.trange
-                self.defprange = self.prange
-                self.tcversion = tcout.split('\n')[0]
-            # disconnect signals
-            try:
-                self.phasemodel.itemChanged.disconnect(self.phase_changed)
-            except Exception:
-                pass
-            errtitle = ''
-            errinfo = ''
-            self.phasemodel.clear()
-            self.outmodel.clear()
-            for p in self.phases:
-                if p not in self.excess:
-                    item = QtGui.QStandardItem(p)
-                    item.setCheckable(True)
-                    item.setSizeHint(QtCore.QSize(40, 20))
-                    self.phasemodel.appendRow(item)
-            # connect signal
-            self.phasemodel.itemChanged.connect(self.phase_changed)
-            self.textOutput.clear()
-            self.textFullOutput.clear()
-            self.unihigh = None
-            self.invhigh = None
-            self.outhigh = None
-            self.pushUniZoom.setChecked(False)
-            return True
-        except BaseException as e:
-            qb = QtWidgets.QMessageBox
-            qb.critical(self, errtitle, errinfo + '\n' + str(e), qb.Abort)
-            return False
+                qb = QtWidgets.QMessageBox
+                qb.critical(self, 'Initialization error', settings['status'], qb.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project

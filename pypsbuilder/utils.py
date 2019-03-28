@@ -31,6 +31,9 @@ class ScriptfileError(Exception):
     pass
 
 
+class TCError(Exception):
+    pass
+
 class ProjectFile(object):
     def __init__(self, projfile):
         prj = Path(projfile).absolute()
@@ -507,10 +510,28 @@ def check_settings(workdir):
             if i.isupper():
                 nc += 1
         settings["nc"] = nc
+
+        # TC
+        tcout = runprog(settings["tcexe"], settings["workdir"], '\nkill\n\n')
+        if 'BOMBED' in tcout:
+            raise TCError(tcout.split('BOMBED')[1].split('\n')[0])
+        else:
+            settings["phases"] = tcout.split('choose from:')[1].split('\n')[0].split()
+            settings["phases"].sort()
+            settings["deftrange"] = settings["trange"]
+            settings["defprange"] = settings["prange"]
+            settings["tcversion"] = tcout.split('\n')[0]
+        # OK
+        settings['status'] = 'Initial check done.'
+        settings['OK'] = True
         return settings
     except BaseException as e:
-        return (type(e).__name__, str(e))
-
+        if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
+            settings['status'] = '{}: {}'.format(type(e).__name__, str(e))
+        else:
+            settings['status'] = '{}: {} {}'.format(type(e).__name__, str(e), errinfo)
+        settings['OK'] = False
+        return settings
 
 def parse_logfile(logfile, out=None):
     # res is list of dicts with data and ptguess keys
