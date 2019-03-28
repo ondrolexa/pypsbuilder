@@ -1,8 +1,5 @@
 name: psbuilder
 
-channels:
-    - conda-forge
-
 dependencies:
 - python=3
 - pyqt=5

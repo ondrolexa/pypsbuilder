@@ -342,7 +342,6 @@ def parse_logfile(logfile, out=None):
     if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
         status = 'bombed'
     else:
-        correct = {'L': 'liq'}
         for ln in lines:
             if 'variance of required equilibrium' in ln:
                 variance = int(ln[ln.index('(') + 1:ln.index('?')])
@@ -364,7 +363,8 @@ def parse_logfile(logfile, out=None):
             for ix in xyz:
                 lbl = block[ix].split()[1]
                 phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
-                phase = correct.get(phase, phase)
+                if phase not in data:
+                    raise Exception('Check model {} in your ax file. Commonly liq coded as L for starting guesses.'.format(phase))
                 data[phase][comp] = float(block[ix].split()[2])
             rbiox = block[rbix + 1].split()[2:]
             for delta in range(len(phases)):

@@ -88,3 +88,20 @@ History
 * fix clabel positioning
 * fix for minimum contour level
 * silently ignore critical possible topology errors
+
+2.1.5 (25 Mar 2019)
+-------------------
+* autocorrection of liquid model named as liq but starting guesses using L removed.
+  User must check if liq model is coded properly. In case of tc-6xmn.txt it should be:
+  % =================================================
+  liq 8  1
+  
+     q(liq)          0.1814
+     fsp(liq)        0.3490
+     na(liq)         0.5840
+     an(liq)        0.01104
+     ol(liq)        0.01373
+     x(liq)          0.7333
+     h2o(liq)        0.4276
+  
+  % --------------------------------------------------
