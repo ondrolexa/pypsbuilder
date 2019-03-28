@@ -336,202 +336,230 @@ class ProjectFile(object):
         return shapes, shape_edges, bad_shapes
 
 
-def check_settings(workdir):
+class TCsettingsPT(object):
     """
-    Return settings dictionary or tuple with error details
-
-    Arg: workdir(str) - full working directory path
+    Class to store TC setting for given working directory
     """
-    settings = {'workdir':Path(workdir)}
-    try:
-        errinfo = 'Initialize project error!'
-        # default exe
-        if sys.platform.startswith('win'):
-            tcpat = 'tc3*.exe'
-            drpat = 'dr1*.exe'
-        elif sys.platform.startswith('linux'):
-            tcpat = 'tc3*L'
-            drpat = 'dr*L'
-        else:
-            tcpat = 'tc3*'
-            drpat = 'dr1*'
-        # THERMOCALC exe
-        settings["tcexe"] = None
-        for p in settings["workdir"].glob(tcpat):
-            if p.is_file() and os.access(str(p), os.X_OK):
-                settings["tcexe"] = p.absolute()
-                break
-        if not settings["tcexe"]:
-            raise InitError('No THERMOCALC executable in working directory.')
-        # DRAWPD exe
-        settings["drexe"] = None
-        for p in settings["workdir"].glob(drpat):
-            if p.is_file() and os.access(str(p), os.X_OK):
-                settings["drexe"] = p.absolute()
-                break
-        if not settings["drexe"]:
-            InitError('No drawpd executable in working directory.')
-        # tc-prefs file
-        if not settings["workdir"].joinpath('tc-prefs.txt').exists():
-            raise InitError('No tc-prefs.txt file in working directory.')
-        errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
-        for line in settings["workdir"].joinpath('tc-prefs.txt').open('r', encoding=TCenc):
-            kw = line.split()
-            if kw != []:
-                if kw[0] == 'scriptfile':
-                    settings["scriptfile"] = settings["workdir"].joinpath('tc-' + kw[1] + '.txt')
-                    if not settings["scriptfile"].exists():
-                        raise InitError('tc-prefs: scriptfile ' + str(settings["scriptfile"]) + ' does not exists in your working directory.')
-                if kw[0] == 'calcmode':
-                    if kw[1] != '1':
-                        raise InitError('tc-prefs: calcmode must be 1.')
 
-        errinfo = 'Scriptfile error!'
-        settings["excess"] = set()
-        settings["trange"] = (200., 1000.)
-        settings["prange"] = (0.1, 20.)
-        check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
-                 'setexcess': False, 'printxyz': False}
-        errinfo = 'Check your scriptfile.'
-        with settings["scriptfile"].open('r', encoding=TCenc) as f:
-            lines = f.readlines()
-        gsb, gse = False, False
-        for line in lines:
-            kw = line.split('%')[0].split()
-            if '{PSBGUESS-BEGIN}' in line:
-                gsb = True
-            if '{PSBGUESS-END}' in line:
-                gse = True
-            if kw == ['*']:
-                break
-            if kw:
-                if kw[0] == 'axfile':
-                    errinfo = 'Wrong argument for axfile keyword in scriptfile.'
-                    settings["axfile"] = settings["workdir"].joinpath('tc-' + kw[1] + '.txt')
-                    if not settings["axfile"].exists():
-                        raise ScriptfileError('Axfile ' + str(settings["axfile"]) + ' does not exists in working directory')
-                    check['axfile'] = True
-                elif kw[0] == 'setdefTwindow':
-                    errinfo = 'Wrong arguments for setdefTwindow keyword in scriptfile.'
-                    settings["trange"] = (float(kw[-2]), float(kw[-1]))
-                elif kw[0] == 'setdefPwindow':
-                    errinfo = 'Wrong arguments for setdefPwindow keyword in scriptfile.'
-                    settings["prange"] = (float(kw[-2]), float(kw[-1]))
-                elif kw[0] == 'setbulk':
-                    errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
-                    settings["bulk"] = kw[1:]
-                    if 'yes' in settings["bulk"]:
-                        settings["bulk"].remove('yes')
-                    check['setbulk'] = True
-                elif kw[0] == 'setexcess':
-                    errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
-                    settings["excess"] = set(kw[1:])
-                    if 'yes' in settings["excess"]:
-                        settings["excess"].remove('yes')
-                    if 'no' in settings["excess"]:
-                        settings["excess"] = set()
-                    if 'ask' in settings["excess"]:
-                        raise ScriptfileError('Setexcess must not be set to ask.')
-                    check['setexcess'] = True
-                elif kw[0] == 'calctatp':
-                    errinfo = 'Wrong argument for calctatp keyword in scriptfile.'
-                    if not kw[1] == 'ask':
-                        raise ScriptfileError('Calctatp must be set to ask.')
-                # elif kw[0] == 'drawpd':
-                #     errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
-                #     if kw[1] == 'no':
-                #         raise ScriptfileError('Drawpd must be set to yes.')
-                #     check['drawpd'] = True
-                elif kw[0] == 'printbulkinfo':
-                    errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
-                    if kw[1] == 'no':
-                        raise ScriptfileError('Printbulkinfo must be set to yes.')
-                    check['printbulkinfo'] = True
-                elif kw[0] == 'printxyz':
-                    errinfo = 'Wrong argument for printxyz keyword in scriptfile.'
-                    if kw[1] == 'no':
-                        raise ScriptfileError('Printxyz must be set to yes.')
-                    check['printxyz'] = True
-                elif kw[0] == 'dogmin':
-                    errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
-                    if not kw[1] == 'no':
-                        raise ScriptfileError('Dogmin must be set to no.')
-                elif kw[0] == 'fluidpresent':
-                    raise ScriptfileError('Fluidpresent must be deleted from scriptfile.')
-                elif kw[0] == 'seta':
-                    errinfo = 'Wrong argument for seta keyword in scriptfile.'
-                    if not kw[1] == 'no':
-                        raise ScriptfileError('Seta must be set to no.')
-                elif kw[0] == 'setmu':
-                    errinfo = 'Wrong argument for setmu keyword in scriptfile.'
-                    if not kw[1] == 'no':
-                        raise ScriptfileError('Setmu must be set to no.')
-                elif kw[0] == 'usecalcq':
-                    errinfo = 'Wrong argument for usecalcq keyword in scriptfile.'
-                    if kw[1] == 'ask':
-                        raise ScriptfileError('Usecalcq must be yes or no.')
-                elif kw[0] == 'pseudosection':
-                    errinfo = 'Wrong argument for pseudosection keyword in scriptfile.'
-                    if kw[1] == 'ask':
-                        raise ScriptfileError('Pseudosection must be yes or no.')
-                elif kw[0] == 'zeromodeiso':
-                    errinfo = 'Wrong argument for zeromodeiso keyword in scriptfile.'
-                    if not kw[1] == 'yes':
-                        raise ScriptfileError('Zeromodeiso must be set to yes.')
-                elif kw[0] == 'setmodeiso':
-                    errinfo = 'Wrong argument for setmodeiso keyword in scriptfile.'
-                    if not kw[1] == 'yes':
-                        raise ScriptfileError('Setmodeiso must be set to yes.')
-                elif kw[0] == 'convliq':
-                    raise ScriptfileError('Convliq not yet supported.')
-                elif kw[0] == 'setiso':
-                    errinfo = 'Wrong argument for setiso keyword in scriptfile.'
-                    if kw[1] != 'no':
-                        raise ScriptfileError('Setiso must be set to no.')
+    def __init__(self, workdir):
+        self.workdir = Path(workdir)
+        try:
+            errinfo = 'Initialize project error!'
+            # default exe
+            if sys.platform.startswith('win'):
+                tcpat = 'tc3*.exe'
+                drpat = 'dr1*.exe'
+            elif sys.platform.startswith('linux'):
+                tcpat = 'tc3*L'
+                drpat = 'dr*L'
+            else:
+                tcpat = 'tc3*'
+                drpat = 'dr1*'
+            # THERMOCALC exe
+            self.tcexe = None
+            for p in self.workdir.glob(tcpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    self.tcexe = p.absolute()
+                    break
+            if not self.tcexe:
+                raise InitError('No THERMOCALC executable in working directory.')
+            # DRAWPD exe
+            self.drexe = None
+            for p in self.workdir.glob(drpat):
+                if p.is_file() and os.access(str(p), os.X_OK):
+                    self.drexe = p.absolute()
+                    break
+            if not self.drexe:
+                InitError('No drawpd executable in working directory.')
+            # tc-prefs file
+            if not self.workdir.joinpath('tc-prefs.txt').exists():
+                raise InitError('No tc-prefs.txt file in working directory.')
+            errinfo = 'tc-prefs.txt file in working directory cannot be accessed.'
+            for line in self.workdir.joinpath('tc-prefs.txt').open('r', encoding=TCenc):
+                kw = line.split()
+                if kw != []:
+                    if kw[0] == 'scriptfile':
+                        self.name = kw[1]
+                        if not self.scriptfile.exists():
+                            raise InitError('tc-prefs: scriptfile tc-' + self.name + '.txt does not exists in your working directory.')
+                    if kw[0] == 'calcmode':
+                        if kw[1] != '1':
+                            raise InitError('tc-prefs: calcmode must be 1.')
 
-        if not check['axfile']:
-            raise ScriptfileError('Axfile name must be provided in scriptfile.')
-        if not check['setbulk']:
-            raise ScriptfileError('Setbulk must be provided in scriptfile.')
-        if not check['setexcess']:
-            raise ScriptfileError('Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.')
-        # if not check['drawpd']:
-        #     raise ScriptfileError('Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.')
-        if not check['printbulkinfo']:
-            raise ScriptfileError('Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.')
-        if not check['printxyz']:
-            raise ScriptfileError('Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.')
-        if not (gsb and gse):
-            raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
+            errinfo = 'Scriptfile error!'
+            self.excess = set()
+            self.trange = (200., 1000.)
+            self.prange = (0.1, 20.)
+            check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
+                     'setexcess': False, 'printxyz': False}
+            errinfo = 'Check your scriptfile.'
+            with self.scriptfile.open('r', encoding=TCenc) as f:
+                lines = f.readlines()
+            gsb, gse = False, False
+            for line in lines:
+                kw = line.split('%')[0].split()
+                if '{PSBGUESS-BEGIN}' in line:
+                    gsb = True
+                if '{PSBGUESS-END}' in line:
+                    gse = True
+                if kw == ['*']:
+                    break
+                if kw:
+                    if kw[0] == 'axfile':
+                        errinfo = 'Wrong argument for axfile keyword in scriptfile.'
+                        self.axname = kw[1]
+                        if not self.axfile.exists():
+                            raise ScriptfileError('Axfile ' + str(self.axfile) + ' does not exists in working directory')
+                        check['axfile'] = True
+                    elif kw[0] == 'setdefTwindow':
+                        errinfo = 'Wrong arguments for setdefTwindow keyword in scriptfile.'
+                        self.trange = (float(kw[-2]), float(kw[-1]))
+                    elif kw[0] == 'setdefPwindow':
+                        errinfo = 'Wrong arguments for setdefPwindow keyword in scriptfile.'
+                        self.prange = (float(kw[-2]), float(kw[-1]))
+                    elif kw[0] == 'setbulk':
+                        errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
+                        self.bulk = kw[1:]
+                        if 'yes' in self.bulk:
+                            self.bulk.remove('yes')
+                        check['setbulk'] = True
+                    elif kw[0] == 'setexcess':
+                        errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
+                        self.excess = set(kw[1:])
+                        if 'yes' in self.excess:
+                            self.excess.remove('yes')
+                        if 'no' in self.excess:
+                            self.excess = set()
+                        if 'ask' in self.excess:
+                            raise ScriptfileError('Setexcess must not be set to ask.')
+                        check['setexcess'] = True
+                    elif kw[0] == 'calctatp':
+                        errinfo = 'Wrong argument for calctatp keyword in scriptfile.'
+                        if not kw[1] == 'ask':
+                            raise ScriptfileError('Calctatp must be set to ask.')
+                    # elif kw[0] == 'drawpd':
+                    #     errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
+                    #     if kw[1] == 'no':
+                    #         raise ScriptfileError('Drawpd must be set to yes.')
+                    #     check['drawpd'] = True
+                    elif kw[0] == 'printbulkinfo':
+                        errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
+                        if kw[1] == 'no':
+                            raise ScriptfileError('Printbulkinfo must be set to yes.')
+                        check['printbulkinfo'] = True
+                    elif kw[0] == 'printxyz':
+                        errinfo = 'Wrong argument for printxyz keyword in scriptfile.'
+                        if kw[1] == 'no':
+                            raise ScriptfileError('Printxyz must be set to yes.')
+                        check['printxyz'] = True
+                    elif kw[0] == 'dogmin':
+                        errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            raise ScriptfileError('Dogmin must be set to no.')
+                    elif kw[0] == 'fluidpresent':
+                        raise ScriptfileError('Fluidpresent must be deleted from scriptfile.')
+                    elif kw[0] == 'seta':
+                        errinfo = 'Wrong argument for seta keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            raise ScriptfileError('Seta must be set to no.')
+                    elif kw[0] == 'setmu':
+                        errinfo = 'Wrong argument for setmu keyword in scriptfile.'
+                        if not kw[1] == 'no':
+                            raise ScriptfileError('Setmu must be set to no.')
+                    elif kw[0] == 'usecalcq':
+                        errinfo = 'Wrong argument for usecalcq keyword in scriptfile.'
+                        if kw[1] == 'ask':
+                            raise ScriptfileError('Usecalcq must be yes or no.')
+                    elif kw[0] == 'pseudosection':
+                        errinfo = 'Wrong argument for pseudosection keyword in scriptfile.'
+                        if kw[1] == 'ask':
+                            raise ScriptfileError('Pseudosection must be yes or no.')
+                    elif kw[0] == 'zeromodeiso':
+                        errinfo = 'Wrong argument for zeromodeiso keyword in scriptfile.'
+                        if not kw[1] == 'yes':
+                            raise ScriptfileError('Zeromodeiso must be set to yes.')
+                    elif kw[0] == 'setmodeiso':
+                        errinfo = 'Wrong argument for setmodeiso keyword in scriptfile.'
+                        if not kw[1] == 'yes':
+                            raise ScriptfileError('Setmodeiso must be set to yes.')
+                    elif kw[0] == 'convliq':
+                        raise ScriptfileError('Convliq not yet supported.')
+                    elif kw[0] == 'setiso':
+                        errinfo = 'Wrong argument for setiso keyword in scriptfile.'
+                        if kw[1] != 'no':
+                            raise ScriptfileError('Setiso must be set to no.')
 
-        # What???
-        nc = 0
-        for i in settings["axfile"].stem:
-            if i.isupper():
-                nc += 1
-        settings["nc"] = nc
+            if not check['axfile']:
+                raise ScriptfileError('Axfile name must be provided in scriptfile.')
+            if not check['setbulk']:
+                raise ScriptfileError('Setbulk must be provided in scriptfile.')
+            if not check['setexcess']:
+                raise ScriptfileError('Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.')
+            # if not check['drawpd']:
+            #     raise ScriptfileError('Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.')
+            if not check['printbulkinfo']:
+                raise ScriptfileError('Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.')
+            if not check['printxyz']:
+                raise ScriptfileError('Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.')
+            if not (gsb and gse):
+                raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
 
-        # TC
-        tcout = runprog(settings["tcexe"], settings["workdir"], '\nkill\n\n')
-        if 'BOMBED' in tcout:
-            raise TCError(tcout.split('BOMBED')[1].split('\n')[0])
-        else:
-            settings["phases"] = tcout.split('choose from:')[1].split('\n')[0].split()
-            settings["phases"].sort()
-            settings["deftrange"] = settings["trange"]
-            settings["defprange"] = settings["prange"]
-            settings["tcversion"] = tcout.split('\n')[0]
-        # OK
-        settings['status'] = 'Initial check done.'
-        settings['OK'] = True
-        return settings
-    except BaseException as e:
-        if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
-            settings['status'] = '{}: {}'.format(type(e).__name__, str(e))
-        else:
-            settings['status'] = '{}: {} {}'.format(type(e).__name__, str(e), errinfo)
-        settings['OK'] = False
-        return settings
+            # TC
+            tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
+            if 'BOMBED' in tcout:
+                raise TCError(tcout.split('BOMBED')[1].split('\n')[0])
+            else:
+                self.phases = tcout.split('choose from:')[1].split('\n')[0].split()
+                self.phases.sort()
+                self.deftrange = self.trange
+                self.defprange = self.prange
+                self.tcversion = tcout.split('\n')[0]
+            # OK
+            self.status = 'Initial check done.'
+            self.OK = True
+        except BaseException as e:
+            if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
+                self.status = '{}: {}'.format(type(e).__name__, str(e))
+            else:
+                self.status = '{}: {} {}'.format(type(e).__name__, str(e), errinfo)
+            self.OK = False
+
+    def __str__(self):
+        return str(self.workdir)
+
+    def __repr__(self):
+        return '\n'.join(['THERMOCALC settings',
+                          '===================',
+                          'Working directory: {}'.format(self.workdir),
+                          'TC version: {}'.format(self.tcversion),
+                          'Scriptfile: {}'.format('tc-' + self.name + '.txt'),
+                          'AX file: {}'.format('tc-' + self.axname + '.txt'),
+                          'Status: {}'.format(self.status)])
+
+    @property
+    def scriptfile(self):
+        return self.workdir.joinpath('tc-' + self.name + '.txt')
+
+    @property
+    def drfile(self):
+        return self.workdir.joinpath('tc-' + self.name + '-dr.txt')
+
+    @property
+    def logfile(self):
+        return self.workdir.joinpath('tc-log.txt')
+
+    @property
+    def drawpdfile(self):
+        return self.workdir.joinpath('dr-' + self.name + '.txt')
+
+    @property
+    def axfile(self):
+        return self.workdir.joinpath('tc-' + self.axname + '.txt')
+
+    @property
+    def prefsfile(self):
+        return self.workdir.joinpath('tc-prefs.txt')
+
 
 def parse_logfile(logfile, out=None):
     # res is list of dicts with data and ptguess keys

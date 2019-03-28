@@ -255,9 +255,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                           os.path.expanduser('~'),
                                           qd.ShowDirsOnly)
         if workdir:
-            settings = check_settings(workdir)
-            if settings['OK']:
-                self.settings = settings
+            prj = TCsettingsPT(workdir)
+            if prj.OK:
+                self.prj = prj
                 self.initViewModels()
                 self.ready = True
                 self.project = None
@@ -274,11 +274,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.phasemodel.itemChanged.disconnect(self.phase_changed)
                 except Exception:
                     pass
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 self.phasemodel.clear()
                 self.outmodel.clear()
-                for p in self.phases:
-                    if p not in self.excess:
+                for p in self.prj.phases:
+                    if p not in self.prj.excess:
                         item = QtGui.QStandardItem(p)
                         item.setCheckable(True)
                         item.setSizeHint(QtCore.QSize(40, 20))
@@ -294,7 +294,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Ready')
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Initialization error', settings['status'], qb.Abort)
+                qb.critical(self, 'Initialization error', prj.status, qb.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project
@@ -324,8 +324,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             qb.Abort)
             else:
                 # set actual working dir in case folder was moved
-                self.workdir = Path(projfile).absolute().parent
-                if self.doInit():
+                prj = TCsettingsPT(Path(projfile).absolute().parent)
+                if prj.OK:
+                    self.prj = prj
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -338,8 +339,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         if item.text() in data['out']:
                             item.setCheckState(QtCore.Qt.Checked)
                     # settings
-                    self.trange = data['trange']
-                    self.prange = data['prange']
+                    self.prj.trange = data['trange']
+                    self.prj.prange = data['prange']
                     # views
                     for row in data['unilist']:
                         self.unimodel.appendRow(row)
@@ -369,6 +370,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.figure.clear()
                     self.plot()
                     self.statusBar().showMessage('Project loaded.')
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', prj.status, qb.Abort)
         else:
             if projfile in self.recent:
                 self.recent.pop(self.recent.index(projfile))
@@ -378,111 +382,109 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def import_from_prj(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.workdir),
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.prj['workdir']),
                                           'pypsbuilder project (*.psb)')[0]
             if Path(projfile).exists():
                 stream = gzip.open(projfile, 'rb')
                 data = pickle.load(stream)
                 stream.close()
-                # set actual working dir in case folder was moved
-                self.workdir = Path(projfile).absolute().parent
-                if self.doInit():
-                    self.initViewModels()
-                    # select phases
-                    for i in range(self.phasemodel.rowCount()):
-                        item = self.phasemodel.item(i)
-                        if item.text() in data['selphases']:
-                            item.setCheckState(QtCore.Qt.Checked)
-                    # select out
-                    for i in range(self.outmodel.rowCount()):
-                        item = self.outmodel.item(i)
-                        if item.text() in data['out']:
-                            item.setCheckState(QtCore.Qt.Checked)
-                    # settings
-                    self.trange = data['trange']
-                    self.prange = data['prange']
-                    # Import
-                    for row in data['invlist']:
-                        row[2]['phases'] = row[2]['phases'].union(self.excess)
-                        r = dict(phases=row[2]['phases'], out=row[2]['out'],
-                                 cmd=row[2].get('cmd', ''), variance=-1,
-                                 p=row[2]['p'], T=row[2]['T'], manual=True,
-                                 output='Imported invariant point.')
-                        label = self.format_label(row[2]['phases'], row[2]['out'])
-                        self.invmodel.appendRow((row[0], label, r))
-                    self.invview.resizeColumnsToContents()
-                    for row in data['unilist']:
-                        row[4]['phases'] = row[4]['phases'].union(self.excess)
-                        r = dict(phases=row[4]['phases'], out=row[4]['out'],
-                                 cmd=row[4].get('cmd', ''), variance=-1,
-                                 p=row[4]['p'], T=row[4]['T'], manual=True,
-                                 output='Imported univariant line.')
-                        label = self.format_label(row[4]['phases'], row[4]['out'])
-                        self.unimodel.appendRow((row[0], label, row[2], row[3], r))
-                    self.adapt_uniview()
-                    # # try to recalc
-                    progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
-                                                         0, len(data['invlist']), self)
-                    progress.setWindowModality(QtCore.Qt.WindowModal)
-                    progress.setMinimumDuration(0)
-                    for ix, row in enumerate(data['invlist']):
-                        progress.setValue(ix)
-                        if 'cmd' in row[2]:
-                            if row[2]['cmd']:
-                                tcout = runprog(self.tcexe, self.workdir, row[2]['cmd'])
-                                status, variance, pts, res, output = parse_logfile(self.logfile)
-                                if status == 'ok':
-                                    r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
-                                             variance=variance, p=pts[0], T=pts[1], manual=False,
-                                             output=output, results=res)
-                                    label = self.format_label(row[2]['phases'], row[2]['out'])
-                                    isnew, id = self.getidinv(r)
-                                    urow = self.invmodel.getRowFromId(id)
-                                    urow[1] = label
-                                    urow[2] = r
-                        if progress.wasCanceled():
-                            break
-                    progress.setValue(len(data['invlist']))
-                    progress.deleteLater()
-                    self.invview.resizeColumnsToContents()
-                    progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel",
-                                                         0, len(data['unilist']), self)
-                    progress.setWindowModality(QtCore.Qt.WindowModal)
-                    progress.setMinimumDuration(0)
-                    for ix, row in enumerate(data['unilist']):
-                        progress.setValue(ix)
-                        if 'cmd' in row[4]:
-                            if row[4]['cmd']:
-                                tcout = runprog(self.tcexe, self.workdir, row[4]['cmd'])
-                                status, variance, pts, res, output = parse_logfile(self.logfile)
-                                if status == 'ok' and len(res) > 1:
-                                    r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
-                                             variance=variance, p=pts[0], T=pts[1], manual=False,
-                                             output=output, results=res)
-                                    label = self.format_label(row[4]['phases'], row[4]['out'])
-                                    isnew, id = self.getiduni(r)
-                                    urow = self.unimodel.getRowFromId(id)
-                                    urow[1] = label
-                                    urow[4] = r
-                        if progress.wasCanceled():
-                            break
-                    progress.setValue(len(data['unilist']))
-                    progress.deleteLater()
-                    self.adapt_uniview()
-                    # cutting
-                    for row in self.unimodel.unilist:
-                        self.trimuni(row)
-                    # all done
-                    self.changed = True
-                    self.app_settings(write=True)
-                    # read scriptfile
-                    self.read_scriptfile()
-                    # update settings tab
-                    self.apply_setting(4)
-                    # update plot
-                    self.figure.clear()
-                    self.plot()
-                    self.statusBar().showMessage('Project Imported.')
+                # do import
+                self.initViewModels()
+                # select phases
+                for i in range(self.phasemodel.rowCount()):
+                    item = self.phasemodel.item(i)
+                    if item.text() in data['selphases']:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # select out
+                for i in range(self.outmodel.rowCount()):
+                    item = self.outmodel.item(i)
+                    if item.text() in data['out']:
+                        item.setCheckState(QtCore.Qt.Checked)
+                # settings
+                self.prj.trange = data['trange']
+                self.prj.prange = data['prange']
+                # Import
+                for row in data['invlist']:
+                    row[2]['phases'] = row[2]['phases'].union(self.prj.excess)
+                    r = dict(phases=row[2]['phases'], out=row[2]['out'],
+                             cmd=row[2].get('cmd', ''), variance=-1,
+                             p=row[2]['p'], T=row[2]['T'], manual=True,
+                             output='Imported invariant point.')
+                    label = self.format_label(row[2]['phases'], row[2]['out'])
+                    self.invmodel.appendRow((row[0], label, r))
+                self.invview.resizeColumnsToContents()
+                for row in data['unilist']:
+                    row[4]['phases'] = row[4]['phases'].union(self.prj.excess)
+                    r = dict(phases=row[4]['phases'], out=row[4]['out'],
+                             cmd=row[4].get('cmd', ''), variance=-1,
+                             p=row[4]['p'], T=row[4]['T'], manual=True,
+                             output='Imported univariant line.')
+                    label = self.format_label(row[4]['phases'], row[4]['out'])
+                    self.unimodel.appendRow((row[0], label, row[2], row[3], r))
+                self.adapt_uniview()
+                # # try to recalc
+                progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
+                                                     0, len(data['invlist']), self)
+                progress.setWindowModality(QtCore.Qt.WindowModal)
+                progress.setMinimumDuration(0)
+                for ix, row in enumerate(data['invlist']):
+                    progress.setValue(ix)
+                    if 'cmd' in row[2]:
+                        if row[2]['cmd']:
+                            tcout = runprog(self.prj.tcexe, self.prj.workdir, row[2]['cmd'])
+                            status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                            if status == 'ok':
+                                r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
+                                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                                         output=output, results=res)
+                                label = self.format_label(row[2]['phases'], row[2]['out'])
+                                isnew, id = self.getidinv(r)
+                                urow = self.invmodel.getRowFromId(id)
+                                urow[1] = label
+                                urow[2] = r
+                    if progress.wasCanceled():
+                        break
+                progress.setValue(len(data['invlist']))
+                progress.deleteLater()
+                self.invview.resizeColumnsToContents()
+                progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel",
+                                                     0, len(data['unilist']), self)
+                progress.setWindowModality(QtCore.Qt.WindowModal)
+                progress.setMinimumDuration(0)
+                for ix, row in enumerate(data['unilist']):
+                    progress.setValue(ix)
+                    if 'cmd' in row[4]:
+                        if row[4]['cmd']:
+                            tcout = runprog(self.prj.tcexe, self.prj.workdir, row[4]['cmd'])
+                            status, variance, pts, res, output = parse_logfile(self.prj.logfile)
+                            if status == 'ok' and len(res) > 1:
+                                r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
+                                         variance=variance, p=pts[0], T=pts[1], manual=False,
+                                         output=output, results=res)
+                                label = self.format_label(row[4]['phases'], row[4]['out'])
+                                isnew, id = self.getiduni(r)
+                                urow = self.unimodel.getRowFromId(id)
+                                urow[1] = label
+                                urow[4] = r
+                    if progress.wasCanceled():
+                        break
+                progress.setValue(len(data['unilist']))
+                progress.deleteLater()
+                self.adapt_uniview()
+                # cutting
+                for row in self.unimodel.unilist:
+                    self.trimuni(row)
+                # all done
+                self.changed = True
+                self.app_settings(write=True)
+                # read scriptfile
+                self.read_scriptfile()
+                # update settings tab
+                self.apply_setting(4)
+                # update plot
+                self.figure.clear()
+                self.plot()
+                self.statusBar().showMessage('Project Imported.')
 
     def reinitialize(self):
         if self.ready:
@@ -497,8 +499,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item = self.outmodel.item(i)
                 if item.checkState() == QtCore.Qt.Checked:
                     out.append(item.text())
-            trange = self.trange
-            prange = self.prange
+            trange = self.prj.trange
+            prange = self.prj.prange
             self.doInit()
             # select phases
             for i in range(self.phasemodel.rowCount()):
@@ -512,18 +514,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     item.setCheckState(QtCore.Qt.Checked)
             # adapt names to excess changes
             for row in self.unimodel.unilist:
-                row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.excess)))) +
+                row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.prj.excess)))) +
                           ' - ' +
                           ' '.join(sorted(list(row[4]['out']))))
             self.adapt_uniview()
             for row in self.invmodel.invlist[1:]:
-                row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.excess)))) +
+                row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.prj.excess)))) +
                           ' - ' +
                           ' '.join(sorted(list(row[2]['out']))))
             self.invview.resizeColumnsToContents()
             # settings
-            self.trange = trange
-            self.prange = prange
+            self.prj.trange = trange
+            self.prj.prange = prange
             self.statusBar().showMessage('Project re-initialized from scriptfile.')
             self.changed = True
         else:
@@ -534,7 +536,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.ready:
             if self.project is None:
-                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.workdir), 'pypsbuilder project (*.psb)')[0]
+                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.prj['workdir']), 'pypsbuilder project (*.psb)')[0]
                 if filename:
                     if not filename.lower().endswith('.psb'):
                         filename = filename + '.psb'
@@ -547,7 +549,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """Open working directory and initialize project
         """
         if self.ready:
-            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', str(self.workdir), 'pypsbuilder project (*.psb)')[0]
+            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', str(self.prj.workdir), 'pypsbuilder project (*.psb)')[0]
             if filename:
                 if not filename.lower().endswith('.psb'):
                     filename = filename + '.psb'
@@ -572,11 +574,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             # put to dict
             data = {'selphases': selphases,
                     'out': out,
-                    'trange': self.trange,
-                    'prange': self.prange,
+                    'trange': self.prj.trange,
+                    'prange': self.prj.prange,
                     'unilist': self.unimodel.unilist,
                     'invlist': self.invmodel.invlist[1:],
-                    'tcversion': self.tcversion,
+                    'tcversion': self.prj.tcversion,
                     'version': __version__}
             # do save
             stream = gzip.open(self.project, 'wb')
@@ -594,7 +596,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def reparse_outouts(self):
         for row in data['invlist']:
-            status, variance, pts, res, output = parse_logfile(self.logfile, out=row[2]['output'])
+            status, variance, pts, res, output = parse_logfile(self.prj.logfile, out=row[2]['output'])
             if status == 'ok':
                 r = dict(phases=row[2]['phases'], out=row[2]['out'], cmd=row[2]['cmd'],
                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -606,7 +608,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 urow[2] = r
         self.invview.resizeColumnsToContents()
         for row in data['unilist']:
-            status, variance, pts, res, output = parse_logfile(self.logfile, out=row[4]['output'])
+            status, variance, pts, res, output = parse_logfile(self.prj.logfile, out=row[4]['output'])
             if status == 'ok':
                 r = dict(phases=row[4]['phases'], out=row[4]['out'], cmd=row[4]['cmd'],
                          variance=variance, p=pts[0], T=pts[1], manual=False,
@@ -623,7 +625,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.workdir),
+            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.prj['workdir']),
                                         'Drawpd files (*.txt);;All files (*.*)')[0]
             if tpfile:
                 tp = []
@@ -639,34 +641,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     for r in tp:
                         po = r.split('-')
                         out = set(po[1].split())
-                        phases = set(po[0].split()).union(out).union(self.excess)
+                        phases = set(po[0].split()).union(out).union(self.prj.excess)
                         self.do_calc(True, phases=phases, out=out)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-
-    @property
-    def scriptfile(self):
-        return self.workdir.joinpath('tc-' + self.bname + '.txt')
-
-    @property
-    def drfile(self):
-        return self.workdir.joinpath('tc-' + self.bname + '-dr.txt')
-
-    @property
-    def logfile(self):
-        return self.workdir.joinpath('tc-log.txt')
-
-    # @property
-    # def drawpdfile(self):
-    #     return os.path.join(self.workdir, 'dr-' + self.bname + '.txt')
-
-    @property
-    def axfile(self):
-        return self.workdir.joinpath('tc-' + self.axname + '.txt')
-
-    @property
-    def prefsfile(self):
-        return self.workdir.joinpath('tc-prefs.txt')
 
     @property
     def changed(self):
@@ -676,9 +654,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def changed(self, status):
         self.__changed = status
         if self.project is None:
-            title = 'PSbuilder - New project - {}'.format(self.tcversion)
+            title = 'PSbuilder - New project - {}'.format(self.prj.tcversion)
         else:
-            title = 'PSbuilder - {} - {}'.format(Path(self.project).name, self.tcversion)
+            title = 'PSbuilder - {} - {}'.format(Path(self.project).name, self.prj.tcversion)
         if status:
             title += '*'
         self.setWindowTitle(title)
@@ -745,7 +723,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             if not r['manual']:
-                update_guesses(self.scriptfile, r['results'][0]['ptguess'])
+                update_guesses(self.prj.scriptfile, r['results'][0]['ptguess'])
                 self.read_scriptfile()
                 self.statusBar().showMessage('Guesses set.')
             else:
@@ -761,7 +739,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
-                    update_guesses(self.scriptfile, r['results'][ix]['ptguess'])
+                    update_guesses(self.prj.scriptfile, r['results'][ix]['ptguess'])
                     self.read_scriptfile()
                     self.statusBar().showMessage('Guesses set.')
             else:
@@ -778,7 +756,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             item = self.outmodel.item(i)
             if item.checkState() == QtCore.Qt.Checked:
                 out.append(item.text())
-        return set(phases).union(self.excess), set(out)
+        return set(phases).union(self.prj.excess), set(out)
 
     def set_phaselist(self, r, show_output=True):
         for i in range(self.phasemodel.rowCount()):
@@ -923,8 +901,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.set_ylim([p.min() - dp, p.max() + dp])
                 self.canvas.draw()
         else:
-            self.ax.set_xlim(self.trange)
-            self.ax.set_ylim(self.prange)
+            self.ax.set_xlim(self.prj.trange)
+            self.ax.set_ylim(self.prj.prange)
             # clear navigation toolbar history
             self.toolbar.update()
             # self.plot()
@@ -1078,12 +1056,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def read_scriptfile(self):
         if self.ready:
-            with self.scriptfile.open('r', encoding=TCenc) as f:
+            with self.prj.scriptfile.open('r', encoding=TCenc) as f:
                 self.outScript.setPlainText(f.read())
 
     def save_scriptfile(self):
         if self.ready:
-            with self.scriptfile.open('w', encoding=TCenc) as f:
+            with self.prj.scriptfile.open('w', encoding=TCenc) as f:
                 f.write(self.outScript.toPlainText())
             self.reinitialize()
             self.apply_setting(1)
@@ -1139,12 +1117,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.ready:
             fmt = lambda x: '{:.{prec}f}'.format(x, prec=self.spinPrec.value())
             if (1 << 0) & bitopt:
-                self.trange = (float(self.tminEdit.text()),
-                               float(self.tmaxEdit.text()))
-                self.prange = (float(self.pminEdit.text()),
-                               float(self.pmaxEdit.text()))
-                self.ax.set_xlim(self.trange)
-                self.ax.set_ylim(self.prange)
+                self.prj.trange = (float(self.tminEdit.text()),
+                                   float(self.tmaxEdit.text()))
+                self.prj.prange = (float(self.pminEdit.text()),
+                                   float(self.pmaxEdit.text()))
+                self.ax.set_xlim(self.prj.trange)
+                self.ax.set_ylim(self.prj.prange)
                 # clear navigation toolbar history
                 self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
@@ -1157,15 +1135,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.pminEdit.setText(fmt(self.ax.get_ylim()[0]))
                 self.pmaxEdit.setText(fmt(self.ax.get_ylim()[1]))
             if (1 << 2) & bitopt:
-                self.tminEdit.setText(fmt(self.trange[0]))
-                self.tmaxEdit.setText(fmt(self.trange[1]))
-                self.pminEdit.setText(fmt(self.prange[0]))
-                self.pmaxEdit.setText(fmt(self.prange[1]))
+                self.tminEdit.setText(fmt(self.prj.trange[0]))
+                self.tmaxEdit.setText(fmt(self.prj.trange[1]))
+                self.pminEdit.setText(fmt(self.prj.prange[0]))
+                self.pmaxEdit.setText(fmt(self.prj.prange[1]))
             if (1 << 3) & bitopt:
-                self.tminEdit.setText(fmt(self.deftrange[0]))
-                self.tmaxEdit.setText(fmt(self.deftrange[1]))
-                self.pminEdit.setText(fmt(self.defprange[0]))
-                self.pmaxEdit.setText(fmt(self.defprange[1]))
+                self.tminEdit.setText(fmt(self.prj.deftrange[0]))
+                self.tmaxEdit.setText(fmt(self.prj.deftrange[1]))
+                self.pminEdit.setText(fmt(self.prj.defprange[0]))
+                self.pmaxEdit.setText(fmt(self.prj.defprange[1]))
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1182,7 +1160,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.outmodel.removeRow(it.row())
 
     def format_label(self, phases, out):
-        return (' '.join(sorted(list(phases.difference(self.excess)))) +
+        return (' '.join(sorted(list(phases.difference(self.prj.excess)))) +
                 ' - ' +
                 ' '.join(sorted(list(out))))
 
@@ -1197,7 +1175,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             steps = self.spinSteps.value()
             # prec = self.spinPrec.value()
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
-            var = self.nc + 2 - len(phases) - len(self.excess)
 
             if len(out) == 1:
                 if cT:
@@ -1208,9 +1185,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     step = (trange[1] - trange[0]) / steps
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
                     ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
-                tcout = runprog(self.tcexe, self.workdir, ans)
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
-                status, variance, pts, res, output = parse_logfile(self.logfile)
+                tcout = runprog(self.prj.tcexe, self.prj.workdir, ans)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
+                status, variance, pts, res, output = parse_logfile(self.prj.logfile)
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -1254,9 +1231,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             elif len(out) == 2:
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
                 ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
-                tcout = runprog(self.tcexe, self.workdir, ans)
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.workdir) + tcout)
-                status, variance, pts, res, output = parse_logfile(self.logfile)
+                tcout = runprog(self.prj.tcexe, self.prj.workdir, ans)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
+                status, variance, pts, res, output = parse_logfile(self.prj.logfile)
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -1324,7 +1301,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def trimuni(self, row):
         if not row[4]['manual']:
-            ratio = (self.trange[1] - self.trange[0]) / (self.prange[1] - self.prange[0])
+            ratio = (self.prj.trange[1] - self.prj.trange[0]) / (self.prj.prange[1] - self.prj.prange[0])
             xy = np.array([row[4]['T'], ratio * row[4]['p']]).T
             line = LineString(xy)
             if row[2] > 0:
@@ -1419,12 +1396,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.ax.text(T, p, str(k[0]), **invlabel_kw)
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
-            ex = list(self.excess)
+            ex = list(self.prj.excess)
             ex.insert(0, '')
             self.ax.set_title(self.axname + ' +'.join(ex))
             if cur is None:
-                self.ax.set_xlim(self.trange)
-                self.ax.set_ylim(self.prange)
+                self.ax.set_xlim(self.prj.trange)
+                self.ax.set_ylim(self.prj.prange)
             else:
                 self.ax.set_xlim(cur[0])
                 self.ax.set_ylim(cur[1])
