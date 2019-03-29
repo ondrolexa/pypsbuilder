@@ -17,6 +17,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from shapely.geometry import MultiPoint
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf
+from scipy.interpolate import interp1d
 from tqdm import tqdm, trange
 
 
@@ -112,7 +113,11 @@ class PTPS:
         self.variance = {}
         for key in self.shapes:
             ans = '{}\nkill\n\n'.format(' '.join(key))
-            self.variance[key] = parse_variance(self.prj.runtc(ans))
+            tcout = self.prj.runtc(ans)
+            for ln in tcout.splitlines():
+                if 'variance of required equilibrium' in ln:
+                    break
+            self.variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
         self.ready = True
 
     def gendrawpd(self, export_areas=True):
@@ -214,7 +219,7 @@ class PTPS:
         self.pspace = np.linspace(self.psb.prange[0], self.psb.prange[1], numP)
         self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
         self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
-        self.status = np.empty(self.tg.shape)
+        self.status = np.zeros(self.tg.shape, dtype=int)
         self.status[:] = np.nan
         self.delta = np.empty(self.tg.shape)
         self.delta[:] = np.nan
@@ -226,10 +231,9 @@ class PTPS:
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
             if k is not None:
-                self.status[r, c] = 0
                 ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
                 start_time = time.time()
-                self.prj.runtc(ans)
+                tcout = self.prj.runtc(ans)
                 delta = time.time() - start_time
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if len(res) == 1:
@@ -243,7 +247,7 @@ class PTPS:
                         if not self.invdata(inv)['manual']:
                             self.prj.update_guesses(self.invdata(inv)['results'][0]['ptguess'])
                             start_time = time.time()
-                            self.prj.runtc(ans)
+                            tcout = self.prj.runtc(ans)
                             delta = time.time() - start_time
                             status, variance, pts, res, output = self.prj.parse_logfile()
                             if len(res) == 1:
@@ -284,7 +288,7 @@ class PTPS:
                 for rn, cn in self.neighs(r, c):
                     if self.status[rn, cn] == 1:
                         start_time = time.time()
-                        self.prj.runtc(ans)
+                        tcout = self.prj.runtc(ans)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = self.prj.parse_logfile()
                         if len(res) == 1:
@@ -297,7 +301,7 @@ class PTPS:
                         else:
                             self.prj.update_guesses(self.gridcalcs[rn, cn]['ptguess'])
                         start_time = time.time()
-                        self.prj.runtc(ans)
+                        tcout = self.prj.runtc(ans)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = self.prj.parse_logfile()
                         if len(res) == 1:
@@ -325,6 +329,46 @@ class PTPS:
             m = m[:, :-1]
         return zip([i for i in m[:, :, 0].flat if i is not None],
                    [i for i in m[:, :, 1].flat if i is not None])
+
+    def calc_along_path(self, tpath, ppath, N=100, kind = 'quadratic'):
+        if self.gridded:
+            tpath, ppath = np.asarray(tpath), np.asarray(ppath)
+            assert tpath.shape == ppath.shape, 'Shape of temeratures and pressures should be same.'
+            assert tpath.ndim == 1, 'Temeratures and pressures should be 1D array like data.'
+            gpath = np.arange(tpath.shape[0], dtype=float)
+            gpath /= gpath[-1]
+            splt = interp1d(gpath, tpath, kind=kind)
+            splp = interp1d(gpath, ppath, kind=kind)
+            err = 0
+            dt = dict(pts=[], res=[])
+            for step in tqdm(np.linspace(0, 1, N), desc='Calculating'):
+                t, p = splt(step), splp(step)
+                key = self.identify(t, p)
+                mask = self.masks[key]
+                dst = (t - self.tg)**2 + (self.ratio*(p - self.pg))**2
+                dst[~mask] = np.nan
+                r, c = np.unravel_index(np.nanargmin(dst), self.tg.shape)
+                calc = None
+                if self.status[r, c] == 1:
+                    calc = self.gridcalcs[r, c]
+                else:
+                    for rn, cn in self.neighs(r, c):
+                        if self.status[rn, cn] == 1:
+                            calc = self.gridcalcs[rn, cn]
+                            break
+                if calc is not None:
+                    self.prj.update_guesses(calc['ptguess'])
+                    ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(key), p, t)
+                    tcout = self.prj.runtc(ans)
+                    status, variance, pts, res, output = self.prj.parse_logfile()
+                    if len(res) == 1:
+                        dt['pts'].append((t, p))
+                        dt['res'].append(res[0])
+                else:
+                    err += 1
+            if err > 0:
+                print('Solution not found on {} points'.format(err))
+            return dt
 
     def data_keys(self, key):
         data = dict()
@@ -421,11 +465,6 @@ class PTPS:
         return recs, mn, mx
 
     def show(self, **kwargs):
-        def split_key(key):
-            tl = list(key)
-            wp = len(tl) // 4 + int(len(tl) % 4 > 1)
-            return '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
-
         out = kwargs.get('out', None)
         cmap = kwargs.get('cmap', 'Purples')
         alpha = kwargs.get('alpha', 0.6)
@@ -444,12 +483,10 @@ class PTPS:
         pscmap = ListedColormap(pscolors)
         norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
         fig, ax = plt.subplots()
-        lbls = []
         for k in self:
-            lbls.append((split_key(k.difference(self.prj.excess)), self.shapes[k].representative_point().coords[0]))
             ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
         ax.autoscale_view()
-        self.add_overlay(ax)
+        self.add_overlay(ax, label=label)
         if out:
             for o in out:
                 lst = [self.psb.get_trimmed_uni(row[0]) for row in self.psb.unilist if o in row[4]['out']]
@@ -462,9 +499,6 @@ class PTPS:
             ax.set_position([box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height])
             # Put a legend below current axis
             ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
-        if label:
-            for txt, xy in lbls:
-                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='4%', pad=0.05)
         cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
@@ -489,9 +523,16 @@ class PTPS:
         plt.show()
         # return ax
 
-    def add_overlay(self, ax, fc='none', ec='k'):
+    def add_overlay(self, ax, fc='none', ec='k', label=False):
         for k in self:
             ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
+            if label:
+                # multiline for long labels
+                tl = list(k.difference(self.prj.excess))
+                wp = len(tl) // 4 + int(len(tl) % 4 > 1)
+                txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
+                xy = self.shapes[k].representative_point().coords[0]
+                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
 
     def show_data(self, key, phase, expr, which=7):
         dt = self.collect_data(key, phase, expr, which=which)
@@ -502,26 +543,50 @@ class PTPS:
         plt.colorbar(pts)
         plt.show()
 
-    def show_status(self):
+    def show_status(self, label=False):
         fig, ax = plt.subplots()
         extent = (self.psb.trange[0] - self.tstep / 2, self.psb.trange[1] + self.tstep / 2,
                   self.psb.prange[0] - self.pstep / 2, self.psb.prange[1] + self.pstep / 2)
         cmap = ListedColormap(['orangered', 'limegreen'])
         ax.imshow(self.status, extent=extent, aspect='auto', origin='lower', cmap=cmap)
-        self.add_overlay(ax)
+        self.add_overlay(ax, label=label)
         plt.axis(self.psb.trange + self.psb.prange)
+        plt.title('Gridding status - {}'.format(self.psb.name))
         plt.show()
 
-    def show_delta(self):
+    def show_delta(self, label=False):
         fig, ax = plt.subplots()
         extent = (self.psb.trange[0] - self.tstep / 2, self.psb.trange[1] + self.tstep / 2,
                   self.psb.prange[0] - self.pstep / 2, self.psb.prange[1] + self.pstep / 2)
         im = ax.imshow(self.delta, extent=extent, aspect='auto', origin='lower')
-        self.add_overlay(ax)
+        self.add_overlay(ax, label=label)
         cb = plt.colorbar(im)
         cb.set_label('sec/point')
-        plt.title('THERMOCALC execution time')
+        plt.title('THERMOCALC execution time - {}'.format(self.psb.name))
         plt.axis(self.psb.trange + self.psb.prange)
+        plt.show()
+
+    def show_path(self, dt, phase, expr, label=False, pathwidth=4):
+        from matplotlib.collections import LineCollection
+        from matplotlib.colors import ListedColormap, BoundaryNorm
+
+        t, p, ex = self.get_path_data(dt, phase, expr)
+        points = np.array([t, p]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+        fig, ax = plt.subplots()
+        # Create a continuous norm to map from data points to colors
+        norm = plt.Normalize(ex.min(), ex.max())
+        lc = LineCollection(segments, cmap='viridis', norm=norm)
+        # Set the values used for colormapping
+        lc.set_array(ex)
+        lc.set_linewidth(pathwidth)
+        line = ax.add_collection(lc)
+        self.add_overlay(ax, label=label)
+        cb = plt.colorbar(line, ax=ax)
+        cb.set_label('{}[{}]'.format(phase, expr))
+        plt.axis(self.psb.trange + self.psb.prange)
+        plt.title('PT path - {}'.format(self.psb.name))
         plt.show()
 
     def identify(self, T, p):
@@ -668,6 +733,11 @@ class PTPS:
             zg = rbf(tg, self.ratio * pg)
             gd[self.masks[key]] = zg[self.masks[key][slc]]
         return gd
+
+    def get_path_data(self, dt, phase, expr):
+        t, p = np.array(dt['pts']).T
+        ex = np.array([eval_expr(expr, res['data'][phase]) for res in dt['res'] if phase in res['data']])
+        return t, p, ex
 
     # Need FIX
     def save_tab(self, tabfile=None, comps=None):

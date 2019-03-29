@@ -643,13 +643,6 @@ class TCsettingsPT(object):
             return False
 
 
-def parse_variance(out):
-    for ln in out.splitlines():
-        if 'variance of required equilibrium' in ln:
-            break
-    return int(ln[ln.index('(') + 1:ln.index('?')])
-
-
 def runprog(exe, workdir, instr, TCenc='mac-roman'):
     if sys.platform.startswith('win'):
         startupinfo = subprocess.STARTUPINFO()
