@@ -445,9 +445,8 @@ class PTPS:
         norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
         fig, ax = plt.subplots()
         lbls = []
-        exc = frozenset.intersection(*self.keys)
         for k in self:
-            lbls.append((split_key(k.difference(exc)), self.shapes[k].representative_point().coords[0]))
+            lbls.append((split_key(k.difference(self.prj.excess)), self.shapes[k].representative_point().coords[0]))
             ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
         ax.autoscale_view()
         self.add_overlay(ax)
@@ -473,7 +472,7 @@ class PTPS:
         ax.axis(self.psb.trange + self.psb.prange)
         if bulk:
             if label:
-                ax.set_xlabel(self.psb.name + (len(exc) * ' +{}').format(*exc))
+                ax.set_xlabel(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
             else:
                 ax.set_xlabel(self.psb.name)
             # bulk composition
@@ -482,7 +481,7 @@ class PTPS:
             plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
         else:
             if label:
-                ax.set_title(self.psb.name + (len(exc) * ' +{}').format(*exc))
+                ax.set_title(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
             else:
                 ax.set_title(self.psb.name)
         # connect button press
