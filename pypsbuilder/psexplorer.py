@@ -566,23 +566,28 @@ class PTPS:
         plt.axis(self.psb.trange + self.psb.prange)
         plt.show()
 
-    def show_path(self, dt, phase, expr, label=False, pathwidth=4):
+    def show_path(self, dt, phase, expr, label=False, pathwidth=4, allpath=True):
         from matplotlib.collections import LineCollection
         from matplotlib.colors import ListedColormap, BoundaryNorm
 
         t, p, ex = self.get_path_data(dt, phase, expr)
-        points = np.array([t, p]).T.reshape(-1, 1, 2)
-        segments = np.concatenate([points[:-1], points[1:]], axis=1)
-
+        
         fig, ax = plt.subplots()
+        if allpath:
+            ax.plot(t, p, '--', color='grey', lw=1)
         # Create a continuous norm to map from data points to colors
-        norm = plt.Normalize(ex.min(), ex.max())
-        lc = LineCollection(segments, cmap='viridis', norm=norm)
-        # Set the values used for colormapping
-        lc.set_array(ex)
-        lc.set_linewidth(pathwidth)
-        line = ax.add_collection(lc)
-        self.add_overlay(ax, label=label)
+        norm = plt.Normalize(np.nanmin(ex), np.nanmax(ex))
+
+        for s in np.ma.clump_unmasked(np.ma.masked_invalid(ex)):
+            ts, ps, exs = t[s], p[s], ex[s]
+            points = np.array([ts, ps]).T.reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lc = LineCollection(segments, cmap='viridis', norm=norm)
+            # Set the values used for colormapping
+            lc.set_array(exs)
+            lc.set_linewidth(pathwidth)
+            line = ax.add_collection(lc)
+            self.add_overlay(ax, label=label)
         cb = plt.colorbar(line, ax=ax)
         cb.set_label('{}[{}]'.format(phase, expr))
         plt.axis(self.psb.trange + self.psb.prange)
@@ -736,7 +741,7 @@ class PTPS:
 
     def get_path_data(self, dt, phase, expr):
         t, p = np.array(dt['pts']).T
-        ex = np.array([eval_expr(expr, res['data'][phase]) for res in dt['res'] if phase in res['data']])
+        ex = np.array([eval_expr(expr, res['data'][phase]) if phase in res['data'] else np.nan for res in dt['res']])
         return t, p, ex
 
     # Need FIX
