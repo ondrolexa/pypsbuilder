@@ -566,7 +566,7 @@ class PTPS:
         plt.axis(self.psb.trange + self.psb.prange)
         plt.show()
 
-    def show_path(self, dt, phase, expr, label=False, pathwidth=4, allpath=True):
+    def show_path_data(self, dt, phase, expr, label=False, pathwidth=4, allpath=True):
         from matplotlib.collections import LineCollection
         from matplotlib.colors import ListedColormap, BoundaryNorm
 
@@ -592,6 +592,39 @@ class PTPS:
         cb.set_label('{}[{}]'.format(phase, expr))
         plt.axis(self.psb.trange + self.psb.prange)
         plt.title('PT path - {}'.format(self.psb.name))
+        plt.show()
+
+    def show_path_modes(self, dt, exclude=[], cmap='tab20'):
+        t, p = np.array(dt['pts']).T
+        steps = len(t)
+        nd = np.linspace(0, 1, steps)
+        splt = interp1d(nd, t, kind='quadratic')
+        splp = interp1d(nd, p, kind='quadratic')
+        pset = set()
+        for res in dt['res']:
+            pset.update(res['data'].keys())
+
+        pset = pset.difference(exclude)
+        phases = sorted(list(pset))
+        modes = []
+        for phase in phases:
+            modes.append(np.array([100*res['data'][phase]['mode'] if phase in res['data'] else 0 for res in dt['res']]))
+
+        cm = plt.get_cmap(cmap)
+        fig, ax = plt.subplots(figsize=(12, 5))
+        ax.set_prop_cycle(color=[cm(i/len(phases)) for i in range(len(phases))])
+        bottom = np.zeros_like(modes[0])
+        bars = []
+        for n, mode in enumerate(modes):
+            h = ax.bar(nd, mode, bottom=bottom, width=nd[1]-nd[0])
+            bars.append(h[0])
+            bottom += mode
+
+        ax.format_coord = lambda x, y: 'T={:.2f} p={:.2f}'.format(splt(x), splp(x))
+        ax.set_xlim(0, 1)
+        ax.set_xlabel('Normalized distance along path')
+        ax.set_ylabel('Mode [%]')
+        plt.legend(bars, phases, fancybox=True, loc='center right', bbox_to_anchor=(1.1,0.5))
         plt.show()
 
     def identify(self, T, p):

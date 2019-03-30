@@ -141,6 +141,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
         self.phaseview.doubleClicked.connect(self.show_out)
         self.uniview.doubleClicked.connect(self.show_uni)
+        self.uniview.customContextMenuRequested[QtCore.QPoint].connect(self.univiewRightClicked)
         self.invview.doubleClicked.connect(self.show_inv)
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
         # additional keyboard shortcuts
@@ -194,6 +195,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # edit trigger
         self.uniview.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked)
         self.uniview.viewport().installEventFilter(self)
+        self.uniview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # signals
         self.unimodel.dataChanged.connect(self.uni_edited)
         self.unisel = self.uniview.selectionModel()
@@ -351,7 +353,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def import_from_prj(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.prj['workdir']),
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.prj.workdir),
                                           'pypsbuilder project (*.psb)')[0]
             if Path(projfile).exists():
                 stream = gzip.open(projfile, 'rb')
@@ -547,7 +549,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         """
         if self.ready:
             if self.project is None:
-                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.prj['workdir']), 'pypsbuilder project (*.psb)')[0]
+                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.prj.workdir), 'pypsbuilder project (*.psb)')[0]
                 if filename:
                     if not filename.lower().endswith('.psb'):
                         filename = filename + '.psb'
@@ -636,7 +638,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def generate(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.prj['workdir']),
+            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.prj.workdir),
                                         'Drawpd files (*.txt);;All files (*.*)')[0]
             if tpfile:
                 tp = []
@@ -886,6 +888,58 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 show_menu = True
             if show_menu:
                 menu.exec(self.invview.mapToGlobal(QPos))
+
+    def univiewRightClicked(self, QPos):
+        if self.unisel.hasSelection():
+            idx = self.unisel.selectedIndexes()
+            r = self.unimodel.getRow(idx[4])
+            phases = r[4]['phases']
+            out = r[4]['out']
+            be = r[2:4]
+            miss = be.count(0)
+            if miss > 0:
+                candidates = []
+                for invrow in self.invmodel.invlist[1:]:
+                    if not invrow[0] in be:
+                        iphases = invrow[2]['phases']
+                        iout = invrow[2]['out']
+                        a, b = iout
+                        aset, bset = set([a]), set([b])
+                        aphases, bphases = iphases.difference(aset), iphases.difference(bset)
+                        if iphases == phases and len(iout.difference(out)) == 1:
+                            candidates.append(invrow[0])
+                        elif bphases == phases and aset == out:
+                            candidates.append(invrow[0])
+                        elif aphases == phases and bset == out:
+                            candidates.append(invrow[0])
+                if len(candidates) == miss:
+                    menu = QtWidgets.QMenu(self)
+                    menu_item = menu.addAction('autoconnect')
+                    menu_item.triggered.connect(lambda: self.auto_connect(r, candidates, idx))
+                    menu.exec(self.uniview.mapToGlobal(QPos))
+
+    def auto_connect(self, r, candidates, idx):
+        if len(candidates) == 1:
+            if r[2] == 0:
+                self.unimodel.setData(idx[2], candidates[0])
+            else:
+                self.unimodel.setData(idx[3], candidates[0])
+        else:
+            ratio = (self.prj.trange[1] - self.prj.trange[0]) / (self.prj.prange[1] - self.prj.prange[0])
+            xy = np.array([r[4]['T'], ratio * r[4]['p']]).T
+            line = LineString(xy)
+            dt = self.invmodel.getDataFromId(candidates[0])
+            p0 = Point(dt['T'][0], ratio * dt['p'][0])
+            dt = self.invmodel.getDataFromId(candidates[1])
+            p1 = Point(dt['T'][0], ratio * dt['p'][0])
+            d0 = line.project(p0)
+            d1 = line.project(p1)
+            if d0 < d1:
+                self.unimodel.setData(idx[2], candidates[0])
+                self.unimodel.setData(idx[3], candidates[1])
+            else:
+                self.unimodel.setData(idx[2], candidates[1])
+                self.unimodel.setData(idx[3], candidates[0])
 
     def auto_inv_calc(self):
         if self.invsel.hasSelection():
