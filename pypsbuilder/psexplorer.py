@@ -531,7 +531,7 @@ class PTPS:
             ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
             if label:
                 # multiline for long labels
-                tl = list(k.difference(self.prj.excess))
+                tl = sorted(list(k.difference(self.prj.excess)))
                 wp = len(tl) // 4 + int(len(tl) % 4 > 1)
                 txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
                 xy = self.shapes[k].representative_point().coords[0]

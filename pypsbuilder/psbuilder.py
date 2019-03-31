@@ -269,9 +269,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prj = TCsettingsPT(workdir)
             if prj.OK:
                 self.prj = prj
+                self.initViewModels()
                 self.refresh_gui()
                 self.project = None
-                self.initViewModels()
+                self.changed = False
+                self.statusBar().showMessage('Project initialized successfully.')
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Initialization error', prj.status, qb.Abort)
@@ -349,6 +351,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.apply_setting(4)
                     # update plot
                     self.figure.clear()
+                    self.actionTest_topology.setChecked(False)
                     self.plot()
                     self.statusBar().showMessage('Project loaded.')
                 else:
@@ -464,18 +467,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.apply_setting(4)
                 # update plot
                 self.figure.clear()
+                self.actionTest_topology.setChecked(False)
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
 
     def refresh_gui(self):
-        self.ready = True
-        self.changed = True
         # update settings tab
         self.apply_setting(4)
         # read scriptfile
         self.read_scriptfile()
         # update plot
         self.figure.clear()
+        self.actionTest_topology.setChecked(False)
         self.plot()
         # disconnect signals
         try:
@@ -1203,6 +1206,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
                 self.figure.clear()
+                self.actionTest_topology.setChecked(False)
                 self.plot()
             if (1 << 1) & bitopt:
                 self.tminEdit.setText(fmt(self.ax.get_xlim()[0]))
@@ -1508,11 +1512,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 quit_msg = 'Project have been changed. Save ?'
                 qb = QtWidgets.QMessageBox
                 reply = qb.question(self, 'Message', quit_msg,
-                                    qb.Cancel | qb.Discard | qb.Save, qb.Save)
+                                    qb.Cancel | qb.Save, qb.Save)
 
                 if reply == qb.Save:
                     self.do_save()
                 else:
+                    self.actionTest_topology.setChecked(False)
                     return
             if self.project:
                 from .psexplorer import PTPS
