@@ -360,7 +360,7 @@
               <item row="1" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
-                 <string>p-T values precision</string>
+                 <string>Coordinates p-T values precision</string>
                 </property>
                </widget>
               </item>
@@ -390,6 +390,13 @@
                 </property>
                </widget>
               </item>
+              <item row="2" column="1">
+               <widget class="QCheckBox" name="checkLabelInvText">
+                <property name="text">
+                 <string>Use zero phases instead numbers</string>
+                </property>
+               </widget>
+              </item>
               <item row="3" column="0">
                <widget class="QCheckBox" name="checkLabelUni">
                 <property name="text">
@@ -397,6 +404,13 @@
                 </property>
                 <property name="checked">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QCheckBox" name="checkLabelUniText">
+                <property name="text">
+                 <string>Use zero phase instead numbers</string>
                 </property>
                </widget>
               </item>
@@ -426,10 +440,32 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="0" colspan="2">
-               <widget class="QCheckBox" name="checkLabels">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_3">
                 <property name="text">
-                 <string>Use names instead numbers for labels</string>
+                 <string>Label fontisize</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QSpinBox" name="spinFontsize">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimum">
+                 <number>5</number>
+                </property>
+                <property name="maximum">
+                 <number>24</number>
+                </property>
+                <property name="singleStep">
+                 <number>1</number>
+                </property>
+                <property name="value">
+                 <number>8</number>
                 </property>
                </widget>
               </item>
@@ -437,6 +473,20 @@
                <widget class="QCheckBox" name="checkOverwrite">
                 <property name="text">
                  <string>Do not overwrite already calculated lines and points</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QCheckBox" name="checkStrict">
+                <property name="text">
+                 <string>Strict filtering of invariant points</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QCheckBox" name="checkAutoconnect">
+                <property name="text">
+                 <string>Automatically connect univariant lines if possible</string>
                 </property>
                </widget>
               </item>
@@ -892,6 +942,9 @@
    </property>
   </action>
   <action name="actionTest_topology">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>&amp;Test topology</string>
    </property>
@@ -917,7 +970,6 @@
   <tabstop>checkLabelInv</tabstop>
   <tabstop>checkLabelUni</tabstop>
   <tabstop>spinAlpha</tabstop>
-  <tabstop>checkLabels</tabstop>
   <tabstop>pushApplySettings</tabstop>
   <tabstop>outScript</tabstop>
   <tabstop>pushReadScript</tabstop>

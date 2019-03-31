@@ -116,7 +116,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
-        # self.actionTest_topology.triggered.connect()
+        self.actionTest_topology.triggered.connect(self.check_prj_areas)
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -155,6 +155,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.app_settings()
         self.populate_recent()
         self.ready = False
+        self.project = None
         self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2019'. format(__version__))
 
     def initViewModels(self):
@@ -185,8 +186,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.uniview.setSortingEnabled(False)
         # hide column
         self.uniview.setColumnHidden(4, True)
-        self.uniview.setItemDelegateForColumn(2, ComboDelegate(self, self.invmodel))
-        self.uniview.setItemDelegateForColumn(3, ComboDelegate(self, self.invmodel))
+        self.uniview.setItemDelegateForColumn(2, ComboDelegate(self, self.invmodel, self.checkStrict))
+        self.uniview.setItemDelegateForColumn(3, ComboDelegate(self, self.invmodel, self.checkStrict))
         # select rows
         self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -208,9 +209,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("label_uni", self.checkLabelUni.checkState())
+            builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
+            builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
-            builder_settings.setValue("label_usenames", self.checkLabels.checkState())
+            builder_settings.setValue("label_fontsize", self.spinFontsize.value())
+            builder_settings.setValue("strict_filtering", self.checkStrict.checkState())
+            builder_settings.setValue("autoconnect", self.checkAutoconnect.checkState())
             # builder_settings.setValue("export_areas", self.checkAreas.checkState())
             # builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
@@ -223,9 +228,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinSteps.setValue(builder_settings.value("steps", 50, type=int))
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
-            self.checkLabels.setCheckState(builder_settings.value("label_usenames", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
+            self.checkStrict.setCheckState(builder_settings.value("strict_filtering", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnect.setCheckState(builder_settings.value("autoconnect", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -261,6 +270,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if prj.OK:
                 self.prj = prj
                 self.refresh_gui()
+                self.project = None
                 self.initViewModels()
             else:
                 qb = QtWidgets.QMessageBox
@@ -459,7 +469,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def refresh_gui(self):
         self.ready = True
-        self.project = None
         self.changed = True
         # update settings tab
         self.apply_setting(4)
@@ -859,28 +868,28 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             show_menu = False
             menu = QtWidgets.QMenu(self)
             nr1 = dict(phases=phases, out=aset, output='User-defined')
-            lbl1 = ' '.join(nr1['phases']) + ' - ' + ' '.join(nr1['out'])
+            lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
             isnew, id = self.getiduni(nr1)
             if isnew:
                 menu_item1 = menu.addAction(lbl1)
                 menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
                 show_menu = True
             nr2 = dict(phases=phases, out=bset, output='User-defined')
-            lbl2 = ' '.join(nr2['phases']) + ' - ' + ' '.join(nr2['out'])
+            lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
             isnew, id = self.getiduni(nr2)
             if isnew:
                 menu_item2 = menu.addAction(lbl2)
                 menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
                 show_menu = True
             nr3 = dict(phases=bphases, out=aset, output='User-defined')
-            lbl3 = ' '.join(nr3['phases']) + ' - ' + ' '.join(nr3['out'])
+            lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
             isnew, id = self.getiduni(nr3)
             if isnew:
                 menu_item3 = menu.addAction(lbl3)
                 menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
                 show_menu = True
             nr4 = dict(phases=aphases, out=bset, output='User-defined')
-            lbl4 = ' '.join(nr4['phases']) + ' - ' + ' '.join(nr4['out'])
+            lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
             isnew, id = self.getiduni(nr4)
             if isnew:
                 menu_item4 = menu.addAction(lbl4)
@@ -893,25 +902,26 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             r = self.unimodel.getRow(idx[4])
-            phases = r[4]['phases']
-            out = r[4]['out']
+            #phases = r[4]['phases']
+            #out = r[4]['out']
             be = r[2:4]
             miss = be.count(0)
             if miss > 0:
                 candidates = []
                 for invrow in self.invmodel.invlist[1:]:
-                    if not invrow[0] in be:
-                        iphases = invrow[2]['phases']
-                        iout = invrow[2]['out']
-                        a, b = iout
-                        aset, bset = set([a]), set([b])
-                        aphases, bphases = iphases.difference(aset), iphases.difference(bset)
-                        if iphases == phases and len(iout.difference(out)) == 1:
-                            candidates.append(invrow[0])
-                        elif bphases == phases and aset == out:
-                            candidates.append(invrow[0])
-                        elif aphases == phases and bset == out:
-                            candidates.append(invrow[0])
+                    if (invrow[0] not in be) and inv_on_uni(r[4]['phases'], r[4]['out'], invrow[2]['phases'], invrow[2]['out']):
+                        candidates.append(invrow[0])
+                        # iphases = invrow[2]['phases']
+                        # iout = invrow[2]['out']
+                        # a, b = iout
+                        # aset, bset = set([a]), set([b])
+                        # aphases, bphases = iphases.difference(aset), iphases.difference(bset)
+                        # if iphases == phases and len(iout.difference(out)) == 1:
+                        #     candidates.append(invrow[0])
+                        # elif bphases == phases and aset == out:
+                        #     candidates.append(invrow[0])
+                        # elif aphases == phases and bset == out:
+                        #     candidates.append(invrow[0])
                 if len(candidates) == miss:
                     menu = QtWidgets.QMenu(self)
                     menu_item = menu.addAction('autoconnect')
@@ -1271,11 +1281,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.trimuni(row)
                         self.adapt_uniview()
                         self.changed = True
-                        self.plot()
                         # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
                         idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
+                        self.plot()
+                        if self.checkAutoconnect.isChecked():
+                            candidates = []
+                            for invrow in self.invmodel.invlist[1:]:
+                                if inv_on_uni(phases, out, invrow[2]['phases'], invrow[2]['out']):
+                                    candidates.append(invrow[0])
+                            if len(candidates) == 2:
+                                self.auto_connect(row, candidates, self.unisel.selectedIndexes())
                         self.show_uni(idx)
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
@@ -1429,10 +1446,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def plot(self):
         if self.ready:
             lalfa = self.spinAlpha.value() / 100
-            unilabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='cyan', alpha=lalfa, pad=2))
-            invlabel_kw = dict(ha='center', va='center', size='small',
-                               bbox=dict(facecolor='yellow', alpha=lalfa, pad=2))
+            fsize = self.spinFontsize.value()
+            unilabel_kw = dict(ha='center', va='center', size=fsize,
+                               bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
+            invlabel_kw = dict(ha='center', va='center', size=fsize,
+                               bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
             axs = self.figure.get_axes()
             if axs:
                 self.ax = axs[0]
@@ -1447,18 +1465,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.plot(T, p, 'k')
                 if self.checkLabelUni.isChecked():
                     Tl, pl = self.getunilabelpoint(T, p)
-                    if self.checkLabels.isChecked():
-                        self.ax.text(Tl, pl, k[1], **unilabel_kw)
+                    if self.checkLabelUniText.isChecked():
+                        self.ax.annotate(s='{} {}'.format(str(k[0]), ' '.join(k[4]['out'])), xy=(Tl, pl), **unilabel_kw)
                     else:
-                        self.ax.text(Tl, pl, str(k[0]), **unilabel_kw)
+                        self.ax.annotate(s=str(k[0]), xy=(Tl, pl), **unilabel_kw)
+                        #self.ax.text(Tl, pl, str(k[0]), **unilabel_kw)
             for k in self.invmodel.invlist[1:]:
                 T, p = k[2]['T'][0], k[2]['p'][0]
-                self.ax.plot(T, p, 'k.')
                 if self.checkLabelInv.isChecked():
-                    if self.checkLabels.isChecked():
-                        self.ax.text(T, p, k[1], **invlabel_kw)
+                    if self.checkLabelInvText.isChecked():
+                        self.ax.annotate(s='{} {}'.format(str(k[0]), ' '.join(k[2]['out'])), xy=(T, p), **invlabel_kw)
                     else:
-                        self.ax.text(T, p, str(k[0]), **invlabel_kw)
+                        self.ax.annotate(s=str(k[0]), xy=(T, p), **invlabel_kw)
+                        #self.ax.text(T, p, str(k[0]), **invlabel_kw)
+                else:
+                    self.ax.plot(T, p, 'k.')
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
             ex = list(self.prj.excess)
@@ -1480,6 +1501,41 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 dt = self.invmodel.getData(idx[0], 'Data')
                 self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
             self.canvas.draw()
+
+    def check_prj_areas(self):
+        if self.actionTest_topology.isChecked():
+            if self.changed:
+                quit_msg = 'Project have been changed. Save ?'
+                qb = QtWidgets.QMessageBox
+                reply = qb.question(self, 'Message', quit_msg,
+                                    qb.Cancel | qb.Discard | qb.Save, qb.Save)
+
+                if reply == qb.Save:
+                    self.do_save()
+                else:
+                    return
+            if self.project:
+                from .psexplorer import PTPS
+                from matplotlib import cm
+                from matplotlib.colors import ListedColormap, BoundaryNorm
+                from descartes import PolygonPatch
+                ps = PTPS(self.project)
+                ps.refresh_geometry()
+                if ps.shapes:
+                    vv = np.unique([ps.variance[k] for k in ps])
+                    pscolors = cm.get_cmap('Purples')(np.linspace(0, 1, vv.size))
+                    # Set alpha
+                    pscolors[:, -1] = 0.6 # alpha
+                    pscmap = ListedColormap(pscolors)
+                    norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
+                    for k in ps:
+                        self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
+                    self.canvas.draw()
+                else:
+                    self.statusBar().showMessage('No areas created.')
+        else:
+            self.figure.clear()
+            self.plot()
 
 
 class InvModel(QtCore.QAbstractTableModel):
@@ -1629,22 +1685,32 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     A delegate that places a fully functioning QtWidgets.QComboBox in every
     cell of the column to which it's applied
     """
-    def __init__(self, parent, invmodel):
+    def __init__(self, parent, invmodel, strict):
         super(ComboDelegate, self).__init__(parent)
         self.invmodel = invmodel
+        self.strict = strict
 
     def createEditor(self, parent, option, index):
-        r = index.model().getData(index, 'Data')
-        phases, out = r['phases'], r['out']
+        #r = index.model().getData(index, 'Data')
+        r = index.model().getRow(index)
+        if index.column() == 2:
+            other = r[3]
+        else:
+            other = r[2]
+        #phases, out = r[4]['phases'], r[4]['out']
         combomodel = QtGui.QStandardItemModel()
-        if not r['manual']:
+        if not r[4]['manual']:
             item = QtGui.QStandardItem('0')
             item.setData(0, 1)
             combomodel.appendRow(item)
         # filter possible candidates
         for row in self.invmodel.invlist[1:]:
-            d = row[2]
-            if phases.issubset(d['phases']): # if out.issubset(d['out']):
+            if self.strict.isChecked():
+                filtered = inv_on_uni(r[4]['phases'], r[4]['out'], row[2]['phases'], row[2]['out'])
+            else:
+                filtered = r[4]['phases'].issubset(row[2]['phases']) and r[4]['out'].issubset(row[2]['out'])
+            #if phases.issubset(d['phases']) and out.issubset(d['out']):
+            if row[0] != other and filtered:
                 item = QtGui.QStandardItem(str(row[0]))
                 item.setData(row[0], 1)
                 combomodel.appendRow(item)

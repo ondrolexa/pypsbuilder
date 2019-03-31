@@ -476,52 +476,55 @@ class PTPS:
         # check shapes created
         if not self.ready:
             self.refresh_geometry()
-        vv = np.unique([self.variance[k] for k in self])
-        pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
-        # Set alpha
-        pscolors[:, -1] = alpha
-        pscmap = ListedColormap(pscolors)
-        norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
-        fig, ax = plt.subplots()
-        for k in self:
-            ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
-        ax.autoscale_view()
-        self.add_overlay(ax, label=label)
-        if out:
-            for o in out:
-                lst = [self.psb.get_trimmed_uni(row[0]) for row in self.psb.unilist if o in row[4]['out']]
-                if lst:
-                    ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
-                            np.hstack([(*seg[1], np.nan) for seg in lst]),
-                            lw=2, label=o)
-            # Shrink current axis's width
-            box = ax.get_position()
-            ax.set_position([box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height])
-            # Put a legend below current axis
-            ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes('right', size='4%', pad=0.05)
-        cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
-        cb.set_label('Variance')
-        ax.axis(self.psb.trange + self.psb.prange)
-        if bulk:
-            if label:
-                ax.set_xlabel(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
+        if self.shapes:
+            vv = np.unique([self.variance[k] for k in self])
+            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
+            # Set alpha
+            pscolors[:, -1] = alpha
+            pscmap = ListedColormap(pscolors)
+            norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
+            fig, ax = plt.subplots()
+            for k in self:
+                ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
+            ax.autoscale_view()
+            self.add_overlay(ax, label=label)
+            if out:
+                for o in out:
+                    lst = [self.psb.get_trimmed_uni(row[0]) for row in self.psb.unilist if o in row[4]['out']]
+                    if lst:
+                        ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
+                                np.hstack([(*seg[1], np.nan) for seg in lst]),
+                                lw=2, label=o)
+                # Shrink current axis's width
+                box = ax.get_position()
+                ax.set_position([box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height])
+                # Put a legend below current axis
+                ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='4%', pad=0.05)
+            cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
+            cb.set_label('Variance')
+            ax.axis(self.psb.trange + self.psb.prange)
+            if bulk:
+                if label:
+                    ax.set_xlabel(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
+                else:
+                    ax.set_xlabel(self.psb.name)
+                # bulk composition
+                ox, vals = self.psb.get_bulk_composition()
+                table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
+                plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
             else:
-                ax.set_xlabel(self.psb.name)
-            # bulk composition
-            ox, vals = self.psb.get_bulk_composition()
-            table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
-            plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
+                if label:
+                    ax.set_title(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
+                else:
+                    ax.set_title(self.psb.name)
+            # connect button press
+            cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+            plt.show()
+            # return ax
         else:
-            if label:
-                ax.set_title(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
-            else:
-                ax.set_title(self.psb.name)
-        # connect button press
-        cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
-        plt.show()
-        # return ax
+            print('There is no single area defined in your pseudosection. Check topology.')
 
     def add_overlay(self, ax, fc='none', ec='k', label=False):
         for k in self:

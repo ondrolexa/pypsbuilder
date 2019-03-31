@@ -172,6 +172,7 @@ class PSBFile(object):
                 if found_cycle[0]:
                     break
             return found_cycle[0], path
+        # starts here
         uni_index = {}
         for r in self.unilist:
             uni_index[(r[2], r[3])] = r[0]
@@ -240,7 +241,7 @@ class PSBFile(object):
         shapes = OrderedDict()
         shape_edges = OrderedDict()
         bad_shapes = OrderedDict()
-        # traverse pseudosecton
+        # traverse pseudosection
         vertices, edges, phases, tedges, tphases = self.construct_areas()
         # default p-t range boundary
         bnd = [LineString([(self.trange[0], self.prange[0]),
@@ -259,7 +260,7 @@ class PSBFile(object):
             pp = polygonize(lns)
             invalid = True
             for ppp in pp:
-                ppok = bnda.intersection(ppp).buffer(0)
+                ppok = bnda.intersection(ppp).buffer(0)  # fix topologically correct but self-intersecting shapes
                 if ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
@@ -655,6 +656,18 @@ def runprog(exe, workdir, instr, TCenc='mac-roman'):
     sys.stdout.flush()
     return output
 
+def inv_on_uni(uphases, uout, iphases, iout):
+    candidate = False
+    a, b = iout
+    aset, bset = set([a]), set([b])
+    aphases, bphases = iphases.difference(aset), iphases.difference(bset)
+    if iphases == uphases and len(iout.difference(uout)) == 1:
+        candidate = True
+    if bphases == uphases and aset == uout:
+        candidate = True
+    if aphases == uphases and bset == uout:
+        candidate = True
+    return candidate
 
 def eval_expr(expr, dt):
     def eval_(node):
@@ -672,3 +685,51 @@ def eval_expr(expr, dt):
            ast.Mult: np.multiply, ast.Div: np.divide,
            ast.Pow: np.power}
     return eval_(ast.parse(expr, mode='eval').body)
+
+def label_line(ax, line, label, color='0.5', fs=14, halign='left'):
+    """Add an annotation to the given line with appropriate placement and rotation.
+    Based on code from:
+        [How to rotate matplotlib annotation to match a line?]
+        (http://stackoverflow.com/a/18800233/230468)
+        User: [Adam](http://stackoverflow.com/users/321772/adam)
+    Arguments
+    ---------
+    ax : `matplotlib.axes.Axes` object
+        Axes on which the label should be added.
+    line : `matplotlib.lines.Line2D` object
+        Line which is being labeled.
+    label : str
+        Text which should be drawn as the label.
+    ...
+    Returns
+    -------
+    text : `matplotlib.text.Text` object
+    """
+    xdata, ydata = line.get_data()
+    x1 = xdata[0]
+    x2 = xdata[-1]
+    y1 = ydata[0]
+    y2 = ydata[-1]
+
+    if halign.startswith('l'):
+        xx = x1
+        halign = 'left'
+    elif halign.startswith('r'):
+        xx = x2
+        halign = 'right'
+    elif halign.startswith('c'):
+        xx = 0.5*(x1 + x2)
+        halign = 'center'
+    else:
+        raise ValueError("Unrecogznied `halign` = '{}'.".format(halign))
+
+    yy = np.interp(xx, xdata, ydata)
+
+    ylim = ax.get_ylim()
+    # xytext = (10, 10)
+    xytext = (0, 0)
+    text = ax.annotate(label, xy=(xx, yy), xytext=xytext, textcoords='offset points',
+                       size=fs, color=color, zorder=1,
+                       horizontalalignment=halign, verticalalignment='center_baseline')
+
+    return text
