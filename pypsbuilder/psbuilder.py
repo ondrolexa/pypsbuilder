@@ -269,8 +269,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prj = TCsettingsPT(workdir)
             if prj.OK:
                 self.prj = prj
-                self.initViewModels()
+                self.ready = True
                 self.refresh_gui()
+                self.initViewModels()
                 self.project = None
                 self.changed = False
                 self.statusBar().showMessage('Project initialized successfully.')

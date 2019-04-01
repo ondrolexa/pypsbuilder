@@ -260,9 +260,9 @@ class PTPS:
             else:
                 self.gridcalcs[r, c] = None
         print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(self.status == 0))))
+        self.gridded = True
         self.fix_solutions()
         self.create_masks()
-        self.gridded = True
         # save
         self.save()
 
@@ -429,7 +429,7 @@ class PTPS:
                       self.gridcalcs[self.masks[key]],
                       self.status[self.masks[key]])
             for T, p, res, ok in gdt:
-                if ok:
+                if ok == 1:
                     v = eval_expr(expr, res['data'][phase])
                     dt['pts'].append((T, p))
                     dt['data'].append(v)
