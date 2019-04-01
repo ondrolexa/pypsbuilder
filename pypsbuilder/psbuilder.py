@@ -871,34 +871,105 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             aphases, bphases = phases.difference(aset), phases.difference(bset)
             show_menu = False
             menu = QtWidgets.QMenu(self)
-            nr1 = dict(phases=phases, out=aset, output='User-defined')
-            lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-            isnew, id = self.getiduni(nr1)
-            if isnew:
-                menu_item1 = menu.addAction(lbl1)
-                menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
-                show_menu = True
-            nr2 = dict(phases=phases, out=bset, output='User-defined')
-            lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-            isnew, id = self.getiduni(nr2)
-            if isnew:
-                menu_item2 = menu.addAction(lbl2)
-                menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
-                show_menu = True
-            nr3 = dict(phases=bphases, out=aset, output='User-defined')
-            lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
-            isnew, id = self.getiduni(nr3)
-            if isnew:
-                menu_item3 = menu.addAction(lbl3)
-                menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
-                show_menu = True
-            nr4 = dict(phases=aphases, out=bset, output='User-defined')
-            lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
-            isnew, id = self.getiduni(nr4)
-            if isnew:
-                menu_item4 = menu.addAction(lbl4)
-                menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
-                show_menu = True
+            # Check for polymorphs
+            fix = False
+            for poly in polymorphs:
+                if poly.issubset(phases):
+                    fix = True
+                    break
+            if fix:
+                if poly != r['out']: # on boundary
+                    usedpoly = r['out'].intersection(poly)
+                    usedother = r['out'].difference(usedpoly)
+                    menu = QtWidgets.QMenu(self)
+                    nr1 = dict(phases=phases, out=usedpoly, output='User-defined')
+                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
+                    isnewa, id = self.getiduni(nr1)
+                    nr1 = dict(phases=phases, out=poly.difference(usedpoly), output='User-defined')
+                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
+                    isnewb, id = self.getiduni(nr1)
+                    if isnewa and isnewb:
+                        menu_item1 = menu.addAction(lbl1)
+                        menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
+                        show_menu = True
+                    nr2 = dict(phases=phases.difference(usedother), out=usedpoly, output='User-defined')
+                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
+                    isnewa, id = self.getiduni(nr2)
+                    nr2 = dict(phases=phases.difference(usedother), out=poly.difference(usedpoly), output='User-defined')
+                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
+                    isnewb, id = self.getiduni(nr2)
+                    if isnewa and isnewb:
+                        menu_item2 = menu.addAction(lbl2)
+                        menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
+                        show_menu = True
+                    nr3 = dict(phases=phases.difference(usedpoly), out=usedother, output='User-defined')
+                    lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
+                    isnew, id = self.getiduni(nr3)
+                    if isnew:
+                        menu_item3 = menu.addAction(lbl3)
+                        menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
+                        show_menu = True
+                    nr4 = dict(phases=phases.difference(poly.difference(usedpoly)), out=usedother, output='User-defined')
+                    lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
+                    isnew, id = self.getiduni(nr4)
+                    if isnew:
+                        menu_item4 = menu.addAction(lbl4)
+                        menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
+                        show_menu = True
+                else:           # triple point
+                    nr1 = dict(phases=phases, out=aset, output='User-defined')
+                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
+                    isnewa, id = self.getiduni(nr1)
+                    nr1 = dict(phases=phases, out=bset, output='User-defined')
+                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
+                    isnewb, id = self.getiduni(nr1)
+                    if isnewa and isnewb:
+                        menu_item1 = menu.addAction(lbl1)
+                        menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
+                        show_menu = True
+                    nr2 = dict(phases=aphases, out=bset, output='User-defined')
+                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
+                    isnew, id = self.getiduni(nr2)
+                    if isnew:
+                        menu_item2 = menu.addAction(lbl2)
+                        menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
+                        show_menu = True
+                    nr3 = dict(phases=bphases, out=aset, output='User-defined')
+                    lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
+                    isnew, id = self.getiduni(nr3)
+                    if isnew:
+                        menu_item3 = menu.addAction(lbl3)
+                        menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
+                        show_menu = True
+            else:
+                nr1 = dict(phases=phases, out=aset, output='User-defined')
+                lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
+                isnew, id = self.getiduni(nr1)
+                if isnew:
+                    menu_item1 = menu.addAction(lbl1)
+                    menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
+                    show_menu = True
+                nr2 = dict(phases=phases, out=bset, output='User-defined')
+                lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
+                isnew, id = self.getiduni(nr2)
+                if isnew:
+                    menu_item2 = menu.addAction(lbl2)
+                    menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
+                    show_menu = True
+                nr3 = dict(phases=bphases, out=aset, output='User-defined')
+                lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
+                isnew, id = self.getiduni(nr3)
+                if isnew:
+                    menu_item3 = menu.addAction(lbl3)
+                    menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
+                    show_menu = True
+                nr4 = dict(phases=aphases, out=bset, output='User-defined')
+                lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
+                isnew, id = self.getiduni(nr4)
+                if isnew:
+                    menu_item4 = menu.addAction(lbl4)
+                    menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
+                    show_menu = True
             if show_menu:
                 menu.exec(self.invview.mapToGlobal(QPos))
 
@@ -1067,53 +1138,94 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     invs = []
                     for row in self.invmodel.invlist[1:]:
                         d = row[2]
-                        if phases.issubset(d['phases']):
-                            if out.issubset(d['out']):
-                                invs.append(row[0])
-                    if len(invs) > 1:
-                        r = dict(phases=phases, out=out, cmd='', variance=-1,
-                                 p=np.array([]), T=np.array([]), manual=True,
-                                 output='User-defined univariant line.')
-                        isnew, id = self.getiduni(r)
-                        if not isnew:
-                            ra = self.unimodel.getRowFromId(id)
-                            adduni = AddUni(label, invs, selected=(ra[2], ra[3]), parent=self)
+                        if self.checkStrict.isChecked() or self.checkAutoconnect.isChecked():
+                            filtered = inv_on_uni(phases, out, row[2]['phases'], row[2]['out'])
                         else:
-                            adduni = AddUni(label, invs, parent=self)
-                        respond = adduni.exec()
-                        if respond == QtWidgets.QDialog.Accepted:
-                            b, e = adduni.getValues()
-                            if b != e:
-                                if isnew:
-                                    self.unimodel.appendRow((id, label, b, e, r))
-                                else:
-                                    row = self.unimodel.getRowFromId(id)
-                                    row[2] = b
-                                    row[3] = e
-                                    row[4] = r
-                                    if label:
-                                        row[1] = label
+                            filtered = phases.issubset(row[2]['phases']) and out.issubset(row[2]['out'])
+                        #if phases.issubset(d['phases']) and out.issubset(d['out']):
+                        if filtered: 
+                           invs.append(row[0])
+                    r = dict(phases=phases, out=out, cmd='', variance=-1,
+                             p=np.array([]), T=np.array([]), manual=True,
+                             output='User-defined univariant line.')
+                    isnew, id = self.getiduni(r)
+                    if self.checkAutoconnect.isChecked():
+                        if len(invs) == 2:
+                            b, e = invs
+                            if isnew:
+                                self.unimodel.appendRow((id, label, b, e, r))
+                            else:
                                 row = self.unimodel.getRowFromId(id)
-                                self.trimuni(row)
-                                # if self.unihigh is not None:
-                                #     self.clean_high()
-                                #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
-                                self.adapt_uniview()
-                                self.changed = True
-                                self.plot()
-                                idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
-                                if isnew:
-                                    self.uniview.selectRow(idx.row())
-                                    self.uniview.scrollToBottom()
-                                self.show_uni(idx)
+                                row[2] = b
+                                row[3] = e
+                                row[4] = r
+                                if label:
+                                    row[1] = label
+                            row = self.unimodel.getRowFromId(id)
+                            self.trimuni(row)
+                            # if self.unihigh is not None:
+                            #     self.clean_high()
+                            #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
+                            self.adapt_uniview()
+                            self.changed = True
+                            self.plot()
+                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            if isnew:
+                                self.uniview.selectRow(idx.row())
+                                self.uniview.scrollToBottom()
                                 self.statusBar().showMessage('User-defined univariant line added.')
                             else:
-                                msg = 'Begin and end must be different.'
-                                qb = QtWidgets.QMessageBox
-                                qb.critical(self, 'Error!', msg, qb.Abort)
-                        self.pushManual.setChecked(False)
+                                self.statusBar().showMessage('Existing univariant line changed to user-defined one.')
+                            self.show_uni(idx)
+                        else:
+                            self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
                     else:
-                        self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
+                        if self.checkStrict.isChecked():
+                            okadd = len(invs) == 2
+                        else:
+                            okadd = len(invs) > 1
+                        if okadd:
+                            if not isnew:
+                                ra = self.unimodel.getRowFromId(id)
+                                adduni = AddUni(label, invs, selected=(ra[2], ra[3]), parent=self)
+                            else:
+                                adduni = AddUni(label, invs, selected=(invs[0], invs[1]), parent=self)
+                            respond = adduni.exec()
+                            if respond == QtWidgets.QDialog.Accepted:
+                                b, e = adduni.getValues()
+                                if b != e:
+                                    if isnew:
+                                        self.unimodel.appendRow((id, label, b, e, r))
+                                    else:
+                                        row = self.unimodel.getRowFromId(id)
+                                        row[2] = b
+                                        row[3] = e
+                                        row[4] = r
+                                        if label:
+                                            row[1] = label
+                                    row = self.unimodel.getRowFromId(id)
+                                    self.trimuni(row)
+                                    # if self.unihigh is not None:
+                                    #     self.clean_high()
+                                    #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
+                                    self.adapt_uniview()
+                                    self.changed = True
+                                    self.plot()
+                                    idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                                    if isnew:
+                                        self.uniview.selectRow(idx.row())
+                                        self.uniview.scrollToBottom()
+                                        self.statusBar().showMessage('User-defined univariant line added.')
+                                    else:
+                                        self.statusBar().showMessage('Existing univariant line changed to user-defined one.')
+                                    self.show_uni(idx)
+                                else:
+                                    msg = 'Begin and end must be different.'
+                                    qb = QtWidgets.QMessageBox
+                                    qb.critical(self, 'Error!', msg, qb.Abort)
+                        else:
+                            self.statusBar().showMessage('Not enough invariant points calculated for selected univariant line.')
+                    self.pushManual.setChecked(False)
             elif len(out) == 2:
                 if checked:
                     # cancle zoom and pan action on toolbar

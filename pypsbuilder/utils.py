@@ -260,7 +260,9 @@ class PSBFile(object):
             pp = polygonize(lns)
             invalid = True
             for ppp in pp:
-                ppok = bnda.intersection(ppp).buffer(0)  # fix topologically correct but self-intersecting shapes
+                if not ppp.is_valid:
+                    print('Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
+                ppok = bnda.intersection(ppp.buffer(0))  # fix topologically correct but self-intersecting shapes
                 if ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
