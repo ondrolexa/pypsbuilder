@@ -659,16 +659,32 @@ def runprog(exe, workdir, instr, TCenc='mac-roman'):
     return output
 
 def inv_on_uni(uphases, uout, iphases, iout):
-    candidate = False
-    a, b = iout
-    aset, bset = set([a]), set([b])
-    aphases, bphases = iphases.difference(aset), iphases.difference(bset)
-    if iphases == uphases and len(iout.difference(uout)) == 1:
-        candidate = True
-    if bphases == uphases and aset == uout:
-        candidate = True
-    if aphases == uphases and bset == uout:
-        candidate = True
+    def checkme(uphases, uout, iphases, iout):
+        a, b = iout
+        aset, bset = set([a]), set([b])
+        aphases, bphases = iphases.difference(aset), iphases.difference(bset)
+        candidate = False
+        if iphases == uphases and len(iout.difference(uout)) == 1:
+            candidate = True
+        if bphases == uphases and aset == uout:
+            candidate = True
+        if aphases == uphases and bset == uout:
+            candidate = True
+        return candidate
+    # Check for polymorphs
+    fixi, fixu = False, False
+    for poly in polymorphs:
+        if poly.issubset(iphases) and poly !=iout and not iout.isdisjoint(poly):
+            fixi = True
+            if poly.issubset(uphases) and not uout.isdisjoint(poly):
+                fixu = True
+            break
+    # check invs
+    candidate = checkme(uphases, uout, iphases, iout)
+    if fixi and not candidate:
+        candidate = checkme(uphases, uout, iphases, iout.difference(poly).union(poly.difference(iout)))
+    if fixu and not candidate:
+        candidate = checkme(uphases, poly.difference(uout), iphases, iout)
     return candidate
 
 def eval_expr(expr, dt):
