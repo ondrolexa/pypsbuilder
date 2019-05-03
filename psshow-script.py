@@ -20,6 +20,7 @@ def main():
                         default=0.6, help='alpha of colormap')
     args = parser.parse_args()
     ps = PTPS(args.project)
+    ps.refresh_geometry()
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
                      cmap=args.cmap, alpha=args.alpha))
 
