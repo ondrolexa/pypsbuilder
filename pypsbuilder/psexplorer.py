@@ -498,7 +498,7 @@ class PTPS:
             ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
         if label:
             for txt, xy in lbls:
-                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                ax.annotate(txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
         divider = make_axes_locatable(ax)
         cax = divider.append_axes('right', size='4%', pad=0.05)
         cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
@@ -742,6 +742,7 @@ def ps_show():
                         default=0.6, help='alpha of colormap')
     args = parser.parse_args()
     ps = PTPS(args.project)
+    ps.refresh_geometry()
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
                      cmap=args.cmap, alpha=args.alpha))
 
