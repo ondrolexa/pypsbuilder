@@ -479,8 +479,9 @@ class PTPS:
         lbls = []
         exc = frozenset.intersection(*self.keys)
         for k in self:
-            lbls.append((split_key(k.difference(exc)), self.shapes[k].representative_point().coords[0]))
-            ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
+            if not self.shapes[k].is_empty:
+                lbls.append((split_key(k.difference(exc)), self.shapes[k].representative_point().coords[0]))
+                ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
         ax.autoscale_view()
         self.add_overlay(ax)
         if out:
@@ -524,7 +525,8 @@ class PTPS:
 
     def add_overlay(self, ax, fc='none', ec='k'):
         for k in self:
-            ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
+            if not self.shapes[k].is_empty:
+                ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
 
     def show_data(self, key, phase, expr, which=7):
         dt = self.collect_data(key, phase, expr, which=which)
