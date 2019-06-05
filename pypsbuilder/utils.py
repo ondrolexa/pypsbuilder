@@ -277,7 +277,7 @@ class ProjectFile(object):
             invalid = True
             for ppp in pp:
                 ppok = bnda.intersection(ppp).buffer(0)
-                if ppok.geom_type == 'Polygon':
+                if ppok.geom_type == 'Polygon' and not ppok.is_empty:
                     invalid = False
                     shape_edges[f] = e
                     if f in shapes:
