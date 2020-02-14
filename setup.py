@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from os import path
 from setuptools import setup, find_packages
 
-with open('README.rst') as readme_file:
+CURRENT_PATH = path.abspath(path.dirname(__file__))
+
+with open(path.join(CURRENT_PATH, 'README.md')) as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
-    history = history_file.read().replace('.. :changelog:', '')
+with open(path.join(CURRENT_PATH, 'HISTORY.md')) as history_file:
+    history = history_file.read()
 
 requirements = [
     'numpy',
@@ -22,9 +25,12 @@ setup(
     version='2.2.0',
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + '\n\n' + history,
+    long_description_content_type="text/markdown",
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',
     url='https://github.com/ondrolexa/pypsbuilder',
+    license="MIT",
+    python_requires=">=3.6",
     packages=find_packages(),
     package_data={'pypsbuilder.images': ['*.png']},
     entry_points="""
