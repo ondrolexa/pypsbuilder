@@ -10,6 +10,8 @@
 
 * autocorrection of liquid model named as liq but starting guesses using L removed.
   User must check if liq model is coded properly. In case of tc-6xmn.txt it should be:
+
+```
   % =================================================
   liq 8  1
   
@@ -22,6 +24,7 @@
      h2o(liq)        0.4276
   
   % --------------------------------------------------
+```
 
 ### 2.1.4 (04 Dec 2017)
 
