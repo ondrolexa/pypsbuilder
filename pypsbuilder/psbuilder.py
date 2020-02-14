@@ -208,6 +208,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
+            builder_settings.setValue("extend_range", self.spinOver.value())
             builder_settings.setValue("label_uni", self.checkLabelUni.checkState())
             builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
@@ -227,6 +228,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             self.spinSteps.setValue(builder_settings.value("steps", 50, type=int))
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
+            self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -1362,10 +1364,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 phases, out = self.get_phases_out()
             self.statusBar().showMessage('Running THERMOCALC...')
             ###########
+            extend = self.spinOver.value()
             trange = self.ax.get_xlim()
+            ts = extend * (trange[1] - trange[0]) / 100
+            trange = (trange[0] - ts, trange[1] + ts)
             prange = self.ax.get_ylim()
+            ps = extend * (prange[1] - prange[0]) / 100
+            prange = (prange[0] - ps, prange[1] + ps)
             steps = self.spinSteps.value()
-            # prec = self.spinPrec.value()
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
 
             if len(out) == 1:

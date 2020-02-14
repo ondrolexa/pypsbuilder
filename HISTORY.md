@@ -5,6 +5,8 @@
 * Major update and refactoring
 * autoconnect implemented
 * calc along PT path implemented
+* option to extend calculation range to extend univariant lines
+  gently out of defined region
 
 ### 2.1.5 (25 Mar 2019)
 

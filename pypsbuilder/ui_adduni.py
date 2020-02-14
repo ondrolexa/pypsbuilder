@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'adduni.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_AddUni(object):
     def setupUi(self, AddUni):
@@ -58,4 +60,3 @@ class Ui_AddUni(object):
         self.label.setText(_translate("AddUni", "Label"))
         self.label_2.setText(_translate("AddUni", "Begin:"))
         self.label_3.setText(_translate("AddUni", "End:"))
-

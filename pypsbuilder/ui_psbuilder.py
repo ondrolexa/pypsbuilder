@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'psbuilder.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_PSBuilder(object):
     def setupUi(self, PSBuilder):
@@ -212,23 +214,36 @@ class Ui_PSBuilder(object):
         self.spinPrec.setProperty("value", 1)
         self.spinPrec.setObjectName("spinPrec")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.spinPrec)
+        self.label_4 = QtWidgets.QLabel(self.groupBox_2)
+        self.label_4.setObjectName("label_4")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_4)
+        self.spinOver = QtWidgets.QSpinBox(self.groupBox_2)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.spinOver.sizePolicy().hasHeightForWidth())
+        self.spinOver.setSizePolicy(sizePolicy)
+        self.spinOver.setMaximum(20)
+        self.spinOver.setProperty("value", 5)
+        self.spinOver.setObjectName("spinOver")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.spinOver)
         self.checkLabelInv = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelInv.setChecked(True)
         self.checkLabelInv.setObjectName("checkLabelInv")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.checkLabelInv)
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.checkLabelInv)
         self.checkLabelInvText = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelInvText.setObjectName("checkLabelInvText")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.checkLabelInvText)
+        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.checkLabelInvText)
         self.checkLabelUni = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelUni.setChecked(True)
         self.checkLabelUni.setObjectName("checkLabelUni")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.checkLabelUni)
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.checkLabelUni)
         self.checkLabelUniText = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelUniText.setObjectName("checkLabelUniText")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.checkLabelUniText)
+        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.checkLabelUniText)
         self.label_2 = QtWidgets.QLabel(self.groupBox_2)
         self.label_2.setObjectName("label_2")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.label_2)
         self.spinAlpha = QtWidgets.QSpinBox(self.groupBox_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -239,10 +254,10 @@ class Ui_PSBuilder(object):
         self.spinAlpha.setSingleStep(10)
         self.spinAlpha.setProperty("value", 50)
         self.spinAlpha.setObjectName("spinAlpha")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.spinAlpha)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.spinAlpha)
         self.label_3 = QtWidgets.QLabel(self.groupBox_2)
         self.label_3.setObjectName("label_3")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.label_3)
+        self.formLayout.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.label_3)
         self.spinFontsize = QtWidgets.QSpinBox(self.groupBox_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -254,16 +269,16 @@ class Ui_PSBuilder(object):
         self.spinFontsize.setSingleStep(1)
         self.spinFontsize.setProperty("value", 8)
         self.spinFontsize.setObjectName("spinFontsize")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.spinFontsize)
+        self.formLayout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.spinFontsize)
         self.checkOverwrite = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkOverwrite.setObjectName("checkOverwrite")
-        self.formLayout.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.checkOverwrite)
+        self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.checkOverwrite)
         self.checkStrict = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkStrict.setObjectName("checkStrict")
-        self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.checkStrict)
+        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.checkStrict)
         self.checkAutoconnect = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkAutoconnect.setObjectName("checkAutoconnect")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnect)
+        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnect)
         self.verticalLayout_3.addWidget(self.groupBox_2)
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
@@ -545,6 +560,7 @@ class Ui_PSBuilder(object):
         self.groupBox_2.setTitle(_translate("PSBuilder", "Other settings"))
         self.label_9.setText(_translate("PSBuilder", "Number of calculation steps:"))
         self.label.setText(_translate("PSBuilder", "Coordinates p-T values precision"))
+        self.label_4.setText(_translate("PSBuilder", "Extend view range to calculation range [%]"))
         self.checkLabelInv.setText(_translate("PSBuilder", "Label invariant points"))
         self.checkLabelInvText.setText(_translate("PSBuilder", "Use zero phases instead numbers"))
         self.checkLabelUni.setText(_translate("PSBuilder", "Label univariant lines"))
@@ -594,4 +610,3 @@ class Ui_PSBuilder(object):
         self.actionSave_as.setText(_translate("PSBuilder", "Save project as"))
         self.actionImport_project.setText(_translate("PSBuilder", "&Import from project"))
         self.actionTest_topology.setText(_translate("PSBuilder", "&Test topology"))
-

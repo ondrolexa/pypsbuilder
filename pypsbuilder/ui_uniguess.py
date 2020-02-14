@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'uniguess.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_UniGuess(object):
     def setupUi(self, UniGuess):
@@ -43,4 +45,3 @@ class Ui_UniGuess(object):
         _translate = QtCore.QCoreApplication.translate
         UniGuess.setWindowTitle(_translate("UniGuess", "Select point for guesses"))
         self.label_2.setText(_translate("UniGuess", "Choose p,T"))
-

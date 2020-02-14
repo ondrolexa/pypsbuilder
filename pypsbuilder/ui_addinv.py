@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'addinv.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_AddInv(object):
     def setupUi(self, AddInv):
@@ -56,4 +58,3 @@ class Ui_AddInv(object):
         self.label.setText(_translate("AddInv", "Label"))
         self.label_2.setText(_translate("AddInv", "T:"))
         self.label_3.setText(_translate("AddInv", "p:"))
-
