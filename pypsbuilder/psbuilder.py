@@ -169,6 +169,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # select rows
         self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.invview.horizontalHeader().setMinimumSectionSize(30)
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
@@ -191,6 +192,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # select rows
         self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.uniview.horizontalHeader().setMinimumSectionSize(30)
         self.uniview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.uniview.horizontalHeader().hide()
         # edit trigger
@@ -330,7 +332,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     # views
                     for row in data['unilist']:
                         self.unimodel.appendRow(row)
-                    self.adapt_uniview()
+                    self.uniview.resizeColumnsToContents()
                     for row in data['invlist']:
                         self.invmodel.appendRow(row)
                     self.invview.resizeColumnsToContents()
@@ -408,7 +410,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                              output='Imported univariant line.')
                     label = self.format_label(row[4]['phases'], row[4]['out'])
                     self.unimodel.appendRow((row[0], label, row[2], row[3], r))
-                self.adapt_uniview()
+                self.uniview.resizeColumnsToContents()
                 # # try to recalc
                 progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
                                                      0, len(data['invlist']), self)
@@ -457,7 +459,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         break
                 progress.setValue(len(data['unilist']))
                 progress.deleteLater()
-                self.adapt_uniview()
+                self.uniview.resizeColumnsToContents()
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
@@ -542,7 +544,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     row[1] = (' '.join(sorted(list(row[4]['phases'].difference(self.prj.excess)))) +
                               ' - ' +
                               ' '.join(sorted(list(row[4]['out']))))
-                self.adapt_uniview()
+                self.uniview.resizeColumnsToContents()
                 for row in self.invmodel.invlist[1:]:
                     row[1] = (' '.join(sorted(list(row[2]['phases'].difference(self.prj.excess)))) +
                               ' - ' +
@@ -646,7 +648,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 urow = self.unimodel.getRowFromId(id)
                 urow[1] = label
                 urow[4] = r
-        self.adapt_uniview()
+        self.uniview.resizeColumnsToContents()
         self.statusBar().showMessage('Outputs re-parsed.')
         self.changed = True
 
@@ -701,11 +703,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if int == 1:
                 dia = OutputDialog('TC output', self.textFullOutput.toPlainText())
                 dia.exec()
-
-    def adapt_uniview(self):
-        self.uniview.resizeColumnsToContents()
-        self.uniview.setColumnWidth(2, 40)
-        self.uniview.setColumnWidth(3, 40)
 
     def clean_high(self):
         if self.unihigh is not None:
@@ -1145,7 +1142,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         else:
                             filtered = phases.issubset(row[2]['phases']) and out.issubset(row[2]['out'])
                         #if phases.issubset(d['phases']) and out.issubset(d['out']):
-                        if filtered: 
+                        if filtered:
                            invs.append(row[0])
                     r = dict(phases=phases, out=out, cmd='', variance=-1,
                              p=np.array([]), T=np.array([]), manual=True,
@@ -1168,7 +1165,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             # if self.unihigh is not None:
                             #     self.clean_high()
                             #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
-                            self.adapt_uniview()
+                            self.uniview.resizeColumnsToContents()
                             self.changed = True
                             self.plot()
                             idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
@@ -1210,7 +1207,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     # if self.unihigh is not None:
                                     #     self.clean_high()
                                     #     self.unihigh.set_data(row[4]['fT'], row[4]['fp'])
-                                    self.adapt_uniview()
+                                    self.uniview.resizeColumnsToContents()
                                     self.changed = True
                                     self.plot()
                                     idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
@@ -1402,7 +1399,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.unimodel.appendRow((id, label, 0, 0, r))
                         row = self.unimodel.getRowFromId(id)
                         self.trimuni(row)
-                        self.adapt_uniview()
+                        self.uniview.resizeColumnsToContents()
                         self.changed = True
                         # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
                         idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
@@ -1425,7 +1422,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             row[4] = r
                             self.trimuni(row)
                             self.changed = True
-                            self.adapt_uniview()
+                            self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
                             self.unimodel.dataChanged.emit(idx, idx)
                             self.plot()
@@ -1646,12 +1643,13 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 ps = PTPS(self.project)
                 ps.refresh_geometry()
                 if ps.shapes:
-                    vv = np.unique([ps.variance[k] for k in ps])
-                    pscolors = cm.get_cmap('Purples')(np.linspace(0, 1, vv.size))
+                    vari = [ps.variance[k] for k in ps]
+                    poc = max(vari) - min(vari) + 1
+                    pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
                     # Set alpha
                     pscolors[:, -1] = 0.6 # alpha
                     pscmap = ListedColormap(pscolors)
-                    norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
+                    norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
                     for k in ps:
                         self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
                     self.canvas.draw()
