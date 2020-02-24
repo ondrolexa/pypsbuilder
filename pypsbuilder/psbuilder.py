@@ -43,7 +43,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         res = QtWidgets.QDesktopWidget().screenGeometry()
         self.resize(min(1024, res.width() - 10), min(768, res.height() - 10))
         self.setWindowTitle('PSBuilder')
-        window_icon = resource_filename(__name__, 'images/pypsbuilder.png')
+        window_icon = resource_filename('pypsbuilder', 'images/pypsbuilder.png')
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog(__version__)
@@ -156,7 +156,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.populate_recent()
         self.ready = False
         self.project = None
-        self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2019'. format(__version__))
+        self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2020'. format(__version__))
 
     def initViewModels(self):
         # INVVIEW
@@ -475,6 +475,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.actionTest_topology.setChecked(False)
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def refresh_gui(self):
         # update settings tab
@@ -559,7 +561,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Initialization error', prj.status, qb.Abort)
         else:
-            self.statusBar().showMessage('Project is not ready.')
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProject(self):
         """Open working directory and initialize project
@@ -574,6 +576,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.do_save()
             else:
                 self.do_save()
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProjectAs(self):
         """Open working directory and initialize project
@@ -585,6 +589,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     filename = filename + '.psb'
                 self.project = filename
                 self.do_save()
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def do_save(self):
         """Open working directory and initialize project
@@ -1039,23 +1045,27 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.do_calc(True, phases=aphases, out=bset)
 
     def zoom_to_uni(self, checked):
-        if checked:
-            if self.unisel.hasSelection():
-                idx = self.unisel.selectedIndexes()
-                row = self.unimodel.getRow(idx[0])
-                T, p = self.get_trimmed_uni(row)
-                dT = (T.max() - T.min()) / 5
-                dp = (p.max() - p.min()) / 5
-                self.ax.set_xlim([T.min() - dT, T.max() + dT])
-                self.ax.set_ylim([p.min() - dp, p.max() + dp])
+        if self.ready:
+            if checked:
+                if self.unisel.hasSelection():
+                    idx = self.unisel.selectedIndexes()
+                    row = self.unimodel.getRow(idx[0])
+                    T, p = self.get_trimmed_uni(row)
+                    dT = (T.max() - T.min()) / 5
+                    dp = (p.max() - p.min()) / 5
+                    self.ax.set_xlim([T.min() - dT, T.max() + dT])
+                    self.ax.set_ylim([p.min() - dp, p.max() + dp])
+                    self.canvas.draw()
+            else:
+                self.ax.set_xlim(self.prj.trange)
+                self.ax.set_ylim(self.prj.prange)
+                # clear navigation toolbar history
+                self.toolbar.update()
+                # self.plot()
                 self.canvas.draw()
         else:
-            self.ax.set_xlim(self.prj.trange)
-            self.ax.set_ylim(self.prj.prange)
-            # clear navigation toolbar history
-            self.toolbar.update()
-            # self.plot()
-            self.canvas.draw()
+            self.statusBar().showMessage('Project is not yet initialized.')
+            self.pushUniZoom.setChecked(False)
 
     def remove_inv(self):
         if self.invsel.hasSelection():
@@ -1243,11 +1253,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.pushManual.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+            self.pushManual.setChecked(False)
 
     def read_scriptfile(self):
         if self.ready:
             with self.prj.scriptfile.open('r', encoding=self.prj.TCenc) as f:
                 self.outScript.setPlainText(f.read())
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def save_scriptfile(self):
         if self.ready:
@@ -1623,41 +1636,45 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.canvas.draw()
 
     def check_prj_areas(self):
-        if self.actionTest_topology.isChecked():
-            if self.changed:
-                quit_msg = 'Project have been changed. Save ?'
-                qb = QtWidgets.QMessageBox
-                reply = qb.question(self, 'Message', quit_msg,
-                                    qb.Cancel | qb.Save, qb.Save)
+        if self.ready:
+            if self.actionTest_topology.isChecked():
+                if self.changed:
+                    quit_msg = 'Project have been changed. Save ?'
+                    qb = QtWidgets.QMessageBox
+                    reply = qb.question(self, 'Message', quit_msg,
+                                        qb.Cancel | qb.Save, qb.Save)
 
-                if reply == qb.Save:
-                    self.do_save()
-                else:
-                    self.actionTest_topology.setChecked(False)
-                    return
-            if self.project:
-                from .psexplorer import PTPS
-                from matplotlib import cm
-                from matplotlib.colors import ListedColormap, BoundaryNorm
-                from descartes import PolygonPatch
-                ps = PTPS(self.project)
-                ps.refresh_geometry()
-                if ps.shapes:
-                    vari = [ps.variance[k] for k in ps]
-                    poc = max(vari) - min(vari) + 1
-                    pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
-                    # Set alpha
-                    pscolors[:, -1] = 0.6 # alpha
-                    pscmap = ListedColormap(pscolors)
-                    norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
-                    for k in ps:
-                        self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
-                    self.canvas.draw()
-                else:
-                    self.statusBar().showMessage('No areas created.')
+                    if reply == qb.Save:
+                        self.do_save()
+                    else:
+                        self.actionTest_topology.setChecked(False)
+                        return
+                if self.project:
+                    from .psexplorer import PTPS
+                    from matplotlib import cm
+                    from matplotlib.colors import ListedColormap, BoundaryNorm
+                    from descartes import PolygonPatch
+                    ps = PTPS(self.project)
+                    ps.refresh_geometry()
+                    if ps.shapes:
+                        vari = [ps.variance[k] for k in ps]
+                        poc = max(vari) - min(vari) + 1
+                        pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
+                        # Set alpha
+                        pscolors[:, -1] = 0.6 # alpha
+                        pscmap = ListedColormap(pscolors)
+                        norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
+                        for k in ps:
+                            self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
+                        self.canvas.draw()
+                    else:
+                        self.statusBar().showMessage('No areas created.')
+            else:
+                self.figure.clear()
+                self.plot()
         else:
-            self.figure.clear()
-            self.plot()
+            self.statusBar().showMessage('Project is not yet initialized.')
+            self.actionTest_topology.setChecked(False)
 
 
 class InvModel(QtCore.QAbstractTableModel):
