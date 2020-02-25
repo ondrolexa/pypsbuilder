@@ -318,7 +318,7 @@ class TCsettingsPT(object):
     """
 
     def __init__(self, workdir):
-        self.workdir = Path(workdir)
+        self.workdir = Path(workdir).absolute()
         self.TCenc = 'mac-roman'
         try:
             errinfo = 'Initialize project error!'
