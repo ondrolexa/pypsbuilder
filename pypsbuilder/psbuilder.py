@@ -22,7 +22,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.2.0'
+__version__ = '2.3.0'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -169,7 +169,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # select rows
         self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.invview.horizontalHeader().setMinimumSectionSize(30)
+        self.invview.horizontalHeader().setMinimumSectionSize(40)
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
@@ -192,7 +192,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # select rows
         self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.uniview.horizontalHeader().setMinimumSectionSize(30)
+        self.uniview.horizontalHeader().setMinimumSectionSize(40)
         self.uniview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.uniview.horizontalHeader().hide()
         # edit trigger
@@ -805,16 +805,25 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 item.setCheckState(QtCore.Qt.Unchecked)
         if show_output:
             if not r['manual']:
-                mlabels = sorted(list(r['results'][0]['data'].keys()))
                 txt = ''
+                if 'modes' in r['results'][0]['data']:
+                    mlabels = sorted(list(r['results'][0]['data']['modes'].keys()))
+                else:
+                    mlabels = sorted(list(r['results'][0]['data'].keys()))
                 h_format = '{:>10}{:>10}' + '{:>8}' * len(mlabels)
                 n_format = '{:10.4f}{:10.4f}' + '{:8.5f}' * len(mlabels)
                 txt += h_format.format('p', 'T', *mlabels)
                 txt += '\n'
-                for p, T, res in zip(r['p'], r['T'], r['results']):
-                    row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
-                    txt += n_format.format(*row)
-                    txt += '\n'
+                if 'modes' in r['results'][0]['data']:
+                    for p, T, res in zip(r['p'], r['T'], r['results']):
+                        row = [p, T] + [res['data']['modes'][lbl] for lbl in mlabels]
+                        txt += n_format.format(*row)
+                        txt += '\n'
+                else:
+                    for p, T, res in zip(r['p'], r['T'], r['results']):
+                        row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
+                        txt += n_format.format(*row)
+                        txt += '\n'
                 if len(r['results']) > 5:
                     txt += h_format.format('p', 'T', *mlabels)
                 self.textOutput.setPlainText(txt)
@@ -1859,6 +1868,8 @@ class ComboDelegate(QtWidgets.QItemDelegate):
 
     def setEditorData(self, editor, index):
         editor.setCurrentText(str(index.model().data(index)))
+        # auto open combobox
+        #editor.showPopup()
 
     def setModelData(self, editor, model, index):
         if index.column() == 2:

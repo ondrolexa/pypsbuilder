@@ -8,6 +8,7 @@ import gzip
 import ast
 import subprocess
 import itertools
+import re
 from pathlib import Path
 from collections import OrderedDict
 import numpy as np
@@ -525,6 +526,22 @@ class TCsettingsPT(object):
         return self.workdir.joinpath('tc-log.txt')
 
     @property
+    def icfile(self):
+        return self.workdir.joinpath('tc-' + self.name + '-ic.txt')
+
+    @property
+    def itfile(self):
+        return self.workdir.joinpath('tc-' + self.name + '-it.txt')
+
+    @property
+    def ofile(self):
+        return self.workdir.joinpath('tc-' + self.name + '-o.txt')
+
+    @property
+    def csvfile(self):
+        return self.workdir.joinpath('tc-' + self.name + '-csv.txt')
+
+    @property
     def drawpdfile(self):
         return self.workdir.joinpath('dr-' + self.name + '.txt')
 
@@ -541,6 +558,10 @@ class TCsettingsPT(object):
         return self.tcout.split('\n')[0]
 
     @property
+    def tcnewversion(self):
+        return not float(self.tcversion.split()[1]) < 3.5
+
+    @property
     def datasetfile(self):
         return self.workdir.joinpath(self.tcout.split('using ')[1].split(' produced')[0])
 
@@ -548,7 +569,146 @@ class TCsettingsPT(object):
     def dataset(self):
         return self.tcout.split('using ')[1].split('\n')[0]
 
-    def parse_logfile(self, output=None):
+    def parse_logfile(self, **kwargs):
+        # coomon api for logfile parsing
+        if self.tcnewversion:
+            return self.parse_logfile_new()
+        else:
+            return self.parse_logfile_old(output=kwargs.get('output', None))
+
+    def parse_logfile_new(self):
+        # res is list of dicts with data and ptguess keys
+        # data is dict with keys ['axvars', 'sitefractions', 'oxides', 'modes', 'factors', 'tdprops', 'mu', 'endmembers']
+        # axvar and sitefractions contains keys of compound phases
+        # oxides contains keys of all phases plus 'bulk'
+        # modes contains keys of all phases
+        # factors contains keys of all phases
+        # tdprops contains keys of all phases plus 'sys'
+        # mu contains keys of all phases compunds, e.g g(alm) for compund phase and q for simple phase
+        # endmembers contains keys of all non-simple phases compunds, e.g. g(py)
+        with self.logfile.open('r', encoding=self.TCenc) as f:
+            output = f.read()
+        lines = [ln for ln in output.splitlines() if ln != '']
+        pts = []
+        res = []
+        alldata = []
+        ptguesses = []
+        variance = -1 
+        # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
+        ptpat = re.compile('(?<=\{)(.*?)(?=\})')
+        ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
+        varpat = re.compile('(?<= var = )(.*?)(?= )')
+        if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+            status = 'bombed'
+        else:
+            # parse ptguesses
+            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
+            bstarts.append(len(lines))
+            for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                block = lines[bs:be]
+                # pts.append([float(n) for n in block[1].split()[:2]])
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                gixe = xyz[-1] + 2
+                ptguesses.append(block[gixs:gixe])
+            # parse icfile
+            with self.icfile.open('r', encoding=self.TCenc) as f:
+                icfile = f.read()
+            for block in icfile.split('\n===========================================================\n\n')[1:]:
+                sections = block.split('\n\n')
+                ic = {}
+                pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
+                variance = int(ovarpat.search(sections[0]).group())
+                seenvariance = int(varpat.search(sections[0]).group())
+                # parse a-x variables
+                ax = {}
+                lns = sections[1].split('\n')
+                for l1, l2 in zip(lns[::2], lns[1::2]):
+                    phase, l1r = l1.split(maxsplit=1)
+                    axp = {}
+                    for cc, vv in zip(l1r.split(), l2.split()):
+                        axp[cc] = float(vv)
+                    ax[phase] = axp
+                # parse site fractions
+                sf = {}
+                lns = sections[2].split('\n')[1:]
+                for l1, l2 in zip(lns[::2], lns[1::2]):
+                    phase, l1r = l1.split(maxsplit=1)
+                    sfp = {}
+                    for cc, vv in zip(l1r.split(), l2.split()):
+                        sfp[cc] = float(vv)
+                    sf[phase] = sfp
+                # parse oxides
+                ox = {}
+                l1, l2 = sections[3].split('\n')[1:]
+                ccs = l1.split()
+                nccs = len(ccs)
+                bulk = {}
+                for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
+                    bulk[cc] = float(vv)
+                ox['bulk'] = bulk
+                for ln in sections[4].split('\n'):
+                    oxp = {}
+                    phase, lnr = ln.split(maxsplit=1)
+                    for cc, vv in zip(ccs, lnr.split()):
+                        oxp[cc] = float(vv)
+                    ox[phase] = oxp
+                # parse mode
+                mode = {}
+                l1, l2 = sections[5].split('\n')
+                for cc, vv in zip(l1.split()[1:], l2.split()):
+                    mode[cc] = float(vv)
+                # parse factor
+                factor = {}
+                l1, l2 = sections[6].split('\n')
+                for cc, vv in zip(l1.split()[1:], l2.split()):
+                    factor[cc] = float(vv)
+                # parse thermodynamic properties
+                tdp = {}
+                props, lr = sections[7].split('\n', maxsplit=1)
+                for ln in lr.split('\n'):
+                    tdpp = {}
+                    phase, lnr = ln.split(maxsplit=1)
+                    for cc, vv in zip(props.split(), lnr.split()):
+                        tdpp[cc] = float(vv)
+                    tdp[phase] = tdpp
+                    # sys
+                    tdpp = {}
+                    phase, lnr = sections[8].split(maxsplit=1)
+                    for cc, vv in zip(props.split(), lnr.split()):
+                        tdpp[cc] = float(vv)
+                    tdp[phase] = tdpp
+                # parse endmembers and chemical potential
+                mu = {}
+                em = {}
+                props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
+                for section in sections[9:-1]:
+                    lns = [ln for ln in section.split('\n') if ln != '                    ideal       gamma    activity        prop          µ0     RT ln a']
+                    phase, lnr = lns[0].split(maxsplit=1)
+                    lns[0] = lnr
+                    for ln in lns:
+                        phase_em, lnr = ln.split(maxsplit=1)
+                        emp = {}
+                        for cc, vv in zip(props, lnr.split()):
+                            if cc == 'mu':
+                                mu['{}({})'.format(phase, phase_em)] = float(vv)
+                            else:
+                                emp[cc] = float(vv)
+                        em['{}({})'.format(phase, phase_em)] = emp
+                for ln in sections[-1].split('\n')[:-1]:
+                    phase, vv = ln.split()
+                    mu[phase] = float(vv)
+                alldata.append(dict(axvars=ax, sitefractions=sf, oxides=ox, modes=mode,
+                                 factors=factor, tdprops=tdp, mu=mu, endmembers=em))
+
+            res = [dict(data=data, ptguess=ptguess) for data, ptguess in zip(alldata, ptguesses)]
+            if res:
+                status = 'ok'
+            else:
+                status = 'nir'
+        return status, variance, np.array(pts).T, res, output
+
+    def parse_logfile_old(self, output=None):
         # res is list of dicts with data and ptguess keys
         # data is dict with keys of phases and each contain dict of values
         # res[0]['data']['g']['mode']
