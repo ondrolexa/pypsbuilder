@@ -245,7 +245,7 @@ class PTPS:
                     edges = self.edges[k]
                     for inv in {self.unidata(ed)['begin'] for ed in edges}.union({self.unidata(ed)['end'] for ed in edges}).difference({0}):
                         if not self.invdata(inv)['manual']:
-                            self.prj.update_guesses(self.invdata(inv)['results'][0]['ptguess'])
+                            self.prj.update_scriptfile(guesses=self.invdata(inv)['results'][0]['ptguess'])
                             start_time = time.time()
                             tcout = self.prj.runtc(ans)
                             delta = time.time() - start_time
@@ -299,7 +299,7 @@ class PTPS:
                             tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                             break
                         else:
-                            self.prj.update_guesses(self.gridcalcs[rn, cn]['ptguess'])
+                            self.prj.update_scriptfile(guesses=self.gridcalcs[rn, cn]['ptguess'])
                         start_time = time.time()
                         tcout = self.prj.runtc(ans)
                         delta = time.time() - start_time
@@ -357,7 +357,7 @@ class PTPS:
                             calc = self.gridcalcs[rn, cn]
                             break
                 if calc is not None:
-                    self.prj.update_guesses(calc['ptguess'])
+                    self.prj.update_scriptfile(guesses=calc['ptguess'])
                     ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(key), p, t)
                     tcout = self.prj.runtc(ans)
                     status, variance, pts, res, output = self.prj.parse_logfile()

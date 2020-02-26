@@ -113,6 +113,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="pushDogmin">
+            <property name="text">
+             <string>Dogmin</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
         <widget class="QTabWidget" name="tabMain">

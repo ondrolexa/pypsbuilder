@@ -2,11 +2,13 @@
 
 ## 2.2 (XX YY 2019)
 
-* Major update and refactoring
-* autoconnect implemented
-* calc along PT path implemented
-* option to extend calculation range to extend univariant lines
-  gently out of defined region
+
+* psbuilder major update and refactoring
+  - Compatible with TC 3.50
+  - autoconnect implemented
+  - option to extend calculation range to extend univariant lines gently out of defined region
+* psexplorer updated
+  - calc along PT path implemented
 
 ### 2.1.5 (25 Mar 2019)
 

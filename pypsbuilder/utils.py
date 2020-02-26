@@ -374,12 +374,17 @@ class TCsettingsPT(object):
             with self.scriptfile.open('r', encoding=self.TCenc) as f:
                 lines = f.readlines()
             gsb, gse = False, False
+            dgb, dge = False, False
             for line in lines:
                 kw = line.split('%')[0].split()
                 if '{PSBGUESS-BEGIN}' in line:
                     gsb = True
                 if '{PSBGUESS-END}' in line:
                     gse = True
+                if '{PSBDOGMIN-BEGIN}' in line:
+                    dgb = True
+                if '{PSBDOGMIN-END}' in line:
+                    dge = True
                 if kw == ['*']:
                     break
                 if kw:
@@ -481,6 +486,8 @@ class TCsettingsPT(object):
                 raise ScriptfileError('Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.')
             if not (gsb and gse):
                 raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
+            if not (dgb and dge):
+                raise ScriptfileError('There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile.')
 
             # TC
             self.tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
@@ -761,20 +768,37 @@ class TCsettingsPT(object):
                 status = 'nir'
         return status, variance, np.array(pts).T, res, output
 
-    def update_guesses(self, guesses):
+    def update_scriptfile(self, **kwargs):
         # Store scriptfile content and initialize dicts
+        guesses = kwargs.get('guesses', None)
+        dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
+        which = kwargs.get('which', None)
+        p = kwargs.get('p', None)
+        T = kwargs.get('T', None)
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             sc = f.readlines()
-        gsb = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-BEGIN}' in ln]
-        gse = [ix for ix, ln in enumerate(sc) if '{PSBGUESS-END}' in ln]
-        if gsb and gse:
+        changed = False
+        if guesses is not None:
+            gsb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-BEGIN}')]
+            gse = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-END}')]
+            if gsb and gse:
+                sc = sc[:gsb[0] + 1] + [gln + '\n' for gln in guesses] + sc[gse[0]:]
+                changed = True
+        if dogmin is not None:
+            dgb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBDOGMIN-BEGIN}')]
+            dge = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBDOGMIN-END}')]
+            dglines = []
+            dglines.append('dogmin {}\n'.format(dogmin))
+            if which is not None:
+                dglines.append('which {}\n'.format(' '.join(which)))
+                dglines.append('setPwindow {} {}\n'.format(p, p))
+                dglines.append('setTwindow {} {}\n'.format(T, T))
+            if dgb and dge:
+                sc = sc[:dgb[0] + 1] + dglines + sc[dge[0]:]
+                changed = True
+        if changed:
             with self.scriptfile.open('w', encoding=self.TCenc) as f:
-                for ln in sc[:gsb[0] + 1]:
-                    f.write(ln)
-                for ln in guesses:
-                    f.write(ln)
-                    f.write('\n')
-                for ln in sc[gse[0]:]:
+                for ln in sc:
                     f.write(ln)
 
     def runtc(self, instr):

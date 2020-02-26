@@ -22,7 +22,7 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 
-__version__ = '2.3.0'
+__version__ = '2.2.0'
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
 
@@ -50,6 +50,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
+        self.cid = None
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -134,6 +135,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushUniZoom.setCheckable(True)
         self.pushManual.toggled.connect(self.add_userdefined)
         self.pushManual.setCheckable(True)
+        self.pushDogmin.toggled.connect(self.do_dogmin)
+        self.pushDogmin.setCheckable(True)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
@@ -754,7 +757,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             if not r['manual']:
-                self.prj.update_guesses(r['results'][0]['ptguess'])
+                self.prj.update_scriptfile(guesses=r['results'][0]['ptguess'])
                 self.read_scriptfile()
                 self.statusBar().showMessage('Guesses set.')
             else:
@@ -770,7 +773,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
-                    self.prj.update_guesses(r['results'][ix]['ptguess'])
+                    self.prj.update_scriptfile(guesses=r['results'][ix]['ptguess'])
                     self.read_scriptfile()
                     self.statusBar().showMessage('Guesses set.')
             else:
@@ -1254,15 +1257,66 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
                     self.tabMain.setCurrentIndex(0)
                     self.statusBar().showMessage('Click on canvas to add invariant point.')
+                    self.pushDogmin.toggled.disconnect()
+                    self.pushDogmin.setCheckable(False)
                 else:
                     self.canvas.mpl_disconnect(self.cid)
                     self.statusBar().showMessage('')
+                    self.pushDogmin.toggled.connect(self.do_dogmin)
+                    self.pushDogmin.setCheckable(True)
+                    self.cid = None
             else:
                 self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
                 self.pushManual.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushManual.setChecked(False)
+
+    def dogminer(self, event):
+        if event.inaxes is not None:
+            phases, out = self.get_phases_out()
+            which = phases.difference(self.prj.excess)
+            extend = self.spinOver.value()
+            trange = self.ax.get_xlim()
+            ts = extend * (trange[1] - trange[0]) / 100
+            trange = (trange[0] - ts, trange[1] + ts)
+            prange = self.ax.get_ylim()
+            ps = extend * (prange[1] - prange[0]) / 100
+            prange = (prange[0] - ps, prange[1] + ps)
+            steps = self.spinSteps.value()
+            prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
+            self.prj.update_scriptfile(dogmin='yes 1', which=which,
+                                       T='{:.{prec}f}'.format(event.xdata, prec=prec),
+                                       p='{:.{prec}f}'.format(event.ydata, prec=prec))
+            self.read_scriptfile()
+            self.statusBar().showMessage('Running dogmin...')
+            # here run dogmin
+            self.pushDogmin.setChecked(False)
+
+    def do_dogmin(self, checked=True):
+        if self.ready:
+            if checked:
+                # cancle zoom and pan action on toolbar
+                if self.toolbar._active == "PAN":
+                    self.toolbar.pan()
+                elif self.toolbar._active == "ZOOM":
+                    self.toolbar.zoom()
+                self.cid = self.canvas.mpl_connect('button_press_event', self.dogminer)
+                self.tabMain.setCurrentIndex(0)
+                self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
+                self.pushManual.toggled.disconnect()
+                self.pushManual.setCheckable(False)
+            else:
+                self.prj.update_scriptfile(dogmin='no')
+                self.read_scriptfile()
+                self.canvas.mpl_disconnect(self.cid)
+                self.statusBar().showMessage('')
+                self.pushManual.toggled.connect(self.add_userdefined)
+                self.pushManual.setCheckable(True)
+                self.cid = None
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+            self.pushDogmin.setChecked(False)
 
     def read_scriptfile(self):
         if self.ready:
