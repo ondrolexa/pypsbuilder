@@ -264,7 +264,7 @@ class PSBFile(object):
                 if not ppp.is_valid:
                     print('Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
                 ppok = bnda.intersection(ppp.buffer(0))  # fix topologically correct but self-intersecting shapes
-                if ppok.geom_type == 'Polygon':
+                if not ppok.is_empty and ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
                     if f in shapes:
@@ -605,7 +605,7 @@ class TCsettingsPT(object):
         ptpat = re.compile('(?<=\{)(.*?)(?=\})')
         ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
         varpat = re.compile('(?<= var = )(.*?)(?= )')
-        if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+        if not self.icfile.exists() or [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
             status = 'bombed'
         else:
             # parse ptguesses
@@ -767,6 +767,24 @@ class TCsettingsPT(object):
             else:
                 status = 'nir'
         return status, variance, np.array(pts).T, res, output
+
+    def parse_dogmin(self):
+        try:
+            with self.icfile.open('r', encoding=self.TCenc) as f:
+                resic = f.read()
+            with self.logfile.open('r', encoding=self.TCenc) as f:
+                output = f.read()
+            res = output.split('##########################################################\n')[-1]
+            block = [ln for ln in res.splitlines() if ln != '']
+            xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+            gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+            gixe = xyz[-1] + 2
+            ptguess = block[gixs:gixe]
+        except:
+            res = None
+            resic = None
+            ptguess = []
+        return res, resic, ptguess
 
     def update_scriptfile(self, **kwargs):
         # Store scriptfile content and initialize dicts

@@ -16,6 +16,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
+from matplotlib.widgets import Cursor
 
 from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
@@ -214,10 +215,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("extend_range", self.spinOver.value())
+            builder_settings.setValue("dogmin_level", self.spinDoglevel.value())
             builder_settings.setValue("label_uni", self.checkLabelUni.checkState())
             builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
+            builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("strict_filtering", self.checkStrict.checkState())
@@ -234,10 +237,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinSteps.setValue(builder_settings.value("steps", 50, type=int))
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
+            self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkStrict.setCheckState(builder_settings.value("strict_filtering", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -533,7 +538,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prj = TCsettingsPT(self.prj.workdir)
             if prj.OK:
                 self.prj = prj
-                self.refresh_gui()
                 # select phases
                 for i in range(self.phasemodel.rowCount()):
                     item = self.phasemodel.item(i)
@@ -558,6 +562,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 # settings
                 self.prj.trange = trange
                 self.prj.prange = prange
+                self.refresh_gui()
                 self.statusBar().showMessage('Project re-initialized from scriptfile.')
                 self.changed = True
             else:
@@ -746,8 +751,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.unisel.selectedIndexes()
             k = self.unimodel.getRow(idx[0])
             T, p = self.get_trimmed_uni(k)
-            dT = (T.max() - T.min()) / 5
-            dp = (p.max() - p.min()) / 5
+            dT = max((T.max() - T.min()) / 5, 0.01)
+            dp = max((p.max() - p.min()) / 5, 0.001)
             self.ax.set_xlim([T.min() - dT, T.max() + dT])
             self.ax.set_ylim([p.min() - dp, p.max() + dp])
             self.canvas.draw()
@@ -1063,8 +1068,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     idx = self.unisel.selectedIndexes()
                     row = self.unimodel.getRow(idx[0])
                     T, p = self.get_trimmed_uni(row)
-                    dT = (T.max() - T.min()) / 5
-                    dp = (p.max() - p.min()) / 5
+                    dT = max((T.max() - T.min()) / 5, 0.01)
+                    dp = max((p.max() - p.min()) / 5, 0.001)
                     self.ax.set_xlim([T.min() - dT, T.max() + dT])
                     self.ax.set_ylim([p.min() - dp, p.max() + dp])
                     self.canvas.draw()
@@ -1123,7 +1128,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Univariant line removed')
 
     def clicker(self, event):
+        self.cid.onmove(event)
         if event.inaxes is not None:
+            self.cid.clear(event)
             phases, out = self.get_phases_out()
             r = dict(phases=phases, out=out, cmd='', variance=-1, manual=True)
             label = self.format_label(phases, out)
@@ -1254,7 +1261,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.toolbar.pan()
                     elif self.toolbar._active == "ZOOM":
                         self.toolbar.zoom()
-                    self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
+                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
+                    self.cid.connect_event('button_press_event', self.clicker)
                     self.tabMain.setCurrentIndex(0)
                     self.statusBar().showMessage('Click on canvas to add invariant point.')
                     self.pushDogmin.toggled.disconnect()
@@ -1264,6 +1272,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.statusBar().showMessage('')
                     self.pushDogmin.toggled.connect(self.do_dogmin)
                     self.pushDogmin.setCheckable(True)
+                    self.cid.disconnect_events()
                     self.cid = None
             else:
                 self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
@@ -1273,7 +1282,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.pushManual.setChecked(False)
 
     def dogminer(self, event):
+        self.cid.onmove(event)
         if event.inaxes is not None:
+            self.cid.clear(event)
             phases, out = self.get_phases_out()
             which = phases.difference(self.prj.excess)
             extend = self.spinOver.value()
@@ -1284,13 +1295,27 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (prange[0] - ps, prange[1] + ps)
             steps = self.spinSteps.value()
+            variance = self.spinVariance.value()
+            doglevel = self.spinDoglevel.value()
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
-            self.prj.update_scriptfile(dogmin='yes 1', which=which,
+            self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
+            self.prj.update_scriptfile(dogmin='yes {}'.format(doglevel), which=which,
                                        T='{:.{prec}f}'.format(event.xdata, prec=prec),
                                        p='{:.{prec}f}'.format(event.ydata, prec=prec))
-            self.read_scriptfile()
-            self.statusBar().showMessage('Running dogmin...')
-            # here run dogmin
+            #self.read_scriptfile()
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            tcout = self.prj.runtc('{}\nn\n\n'.format(variance))
+            res, resic, ptguess = self.prj.parse_dogmin()
+            if res is not None:
+                self.textOutput.setPlainText(res)
+                self.textFullOutput.setPlainText(resic)
+                self.prj.update_scriptfile(guesses=ptguess)
+                #self.read_scriptfile()
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
+                self.statusBar().showMessage('Dogmin finished.')
+            else:
+                self.statusBar().showMessage('Dogmin failed.')
             self.pushDogmin.setChecked(False)
 
     def do_dogmin(self, checked=True):
@@ -1301,7 +1326,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.toolbar.pan()
                 elif self.toolbar._active == "ZOOM":
                     self.toolbar.zoom()
-                self.cid = self.canvas.mpl_connect('button_press_event', self.dogminer)
+                self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
+                self.cid.connect_event('button_press_event', self.dogminer)
                 self.tabMain.setCurrentIndex(0)
                 self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
                 self.pushManual.toggled.disconnect()
@@ -1309,10 +1335,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 self.prj.update_scriptfile(dogmin='no')
                 self.read_scriptfile()
-                self.canvas.mpl_disconnect(self.cid)
+                QtWidgets.QApplication.restoreOverrideCursor()
                 self.statusBar().showMessage('')
                 self.pushManual.toggled.connect(self.add_userdefined)
                 self.pushManual.setCheckable(True)
+                self.cid.disconnect_events()
                 self.cid = None
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -1445,7 +1472,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (prange[0] - ps, prange[1] + ps)
             steps = self.spinSteps.value()
-            prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
+            prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1
 
             if len(out) == 1:
                 if cT:
@@ -1675,7 +1702,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.ax.annotate(s=str(k[0]), xy=(T, p), **invlabel_kw)
                         #self.ax.text(T, p, str(k[0]), **invlabel_kw)
                 else:
-                    self.ax.plot(T, p, 'k.')
+                    if self.checkDotInv.isChecked():
+                        self.ax.plot(T, p, 'k.')
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
             ex = list(self.prj.excess)

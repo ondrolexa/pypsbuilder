@@ -2,9 +2,9 @@
 
 ## 2.2 (XX YY 2019)
 
-
 * psbuilder major update and refactoring
   - Compatible with TC 3.50
+  - Dogmin implemented
   - autoconnect implemented
   - option to extend calculation range to extend univariant lines gently out of defined region
 * psexplorer updated

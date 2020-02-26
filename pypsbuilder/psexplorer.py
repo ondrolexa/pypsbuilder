@@ -477,12 +477,13 @@ class PTPS:
         if not self.ready:
             self.refresh_geometry()
         if self.shapes:
-            vv = np.unique([self.variance[k] for k in self])
-            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, vv.size))
+            vari = [self.variance[k] for k in self]
+            poc = max(vari) - min(vari) + 1
+            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, poc))
             # Set alpha
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
-            norm = BoundaryNorm(np.arange(min(vv) - 0.5, max(vv) + 1), vv.size)
+            norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
             fig, ax = plt.subplots()
             for k in self:
                 ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
@@ -502,7 +503,7 @@ class PTPS:
                 ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='4%', pad=0.05)
-            cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=vv)
+            cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cb.set_label('Variance')
             ax.axis(self.psb.trange + self.psb.prange)
             if bulk:
