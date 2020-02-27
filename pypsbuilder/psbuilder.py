@@ -888,7 +888,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
             phases = r['phases']
-            a, b = r['out']
+            out = r['out']
+            a, b = out
             aset, bset = set([a]), set([b])
             aphases, bphases = phases.difference(aset), phases.difference(bset)
             show_menu = False
@@ -900,45 +901,40 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     fix = True
                     break
             if fix:
-                if poly != r['out']: # on boundary
-                    usedpoly = r['out'].intersection(poly)
-                    usedother = r['out'].difference(usedpoly)
-                    menu = QtWidgets.QMenu(self)
-                    nr1 = dict(phases=phases, out=usedpoly, output='User-defined')
+                if poly != out: # on boundary
+                    nopoly = out.difference(poly.intersection(out))
+                    aphases = phases.difference(poly.intersection(out))
+                    bphases = phases.difference(poly.difference(out))
+
+                    nr1 = dict(phases=aphases, out=nopoly, output='User-defined')
                     lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                    isnewa, id = self.getiduni(nr1)
-                    nr1 = dict(phases=phases, out=poly.difference(usedpoly), output='User-defined')
-                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                    isnewb, id = self.getiduni(nr1)
-                    if isnewa and isnewb:
+                    isnew, id = self.getiduni(nr1)
+                    if isnew:
                         menu_item1 = menu.addAction(lbl1)
                         menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
                         show_menu = True
-                    nr2 = dict(phases=phases.difference(usedother), out=usedpoly, output='User-defined')
+                    nr2 = dict(phases=bphases, out=nopoly, output='User-defined')
                     lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-                    isnewa, id = self.getiduni(nr2)
-                    nr2 = dict(phases=phases.difference(usedother), out=poly.difference(usedpoly), output='User-defined')
-                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-                    isnewb, id = self.getiduni(nr2)
-                    if isnewa and isnewb:
+                    isnew, id = self.getiduni(nr2)
+                    if isnew:
                         menu_item2 = menu.addAction(lbl2)
                         menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
                         show_menu = True
-                    nr3 = dict(phases=phases.difference(usedpoly), out=usedother, output='User-defined')
+                    nr3 = dict(phases=phases, out=poly.intersection(out), output='User-defined')
                     lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
                     isnew, id = self.getiduni(nr3)
                     if isnew:
                         menu_item3 = menu.addAction(lbl3)
                         menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
                         show_menu = True
-                    nr4 = dict(phases=phases.difference(poly.difference(usedpoly)), out=usedother, output='User-defined')
+                    nr4 = dict(phases=phases.difference(nopoly), out=poly.intersection(out), output='User-defined')
                     lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
                     isnew, id = self.getiduni(nr4)
                     if isnew:
                         menu_item4 = menu.addAction(lbl4)
                         menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
                         show_menu = True
-                else:           # triple point
+                else:           # triple point  NEED FIX
                     nr1 = dict(phases=phases, out=aset, output='User-defined')
                     lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
                     isnewa, id = self.getiduni(nr1)
@@ -1475,14 +1471,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1
 
             if len(out) == 1:
+                rt = dict(phases=phases, out=out, output='User-defined')
+                isnew, id = self.getiduni(rt)
                 if cT:
                     step = (prange[1] - prange[0]) / steps
                     tmpl = '{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-                    ans = tmpl.format(' '.join(phases), ' '.join(out), *prange, *trange, step, prec=prec)
+                    ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *prange, *trange, step, prec=prec)
                 else:
                     step = (trange[1] - trange[0]) / steps
                     tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-                    ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
+                    ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *trange, *prange, step, prec=prec)
                 tcout = self.prj.runtc(ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
@@ -1493,11 +1491,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 elif len(res) < 2:
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
-                    r = dict(phases=phases, out=out, cmd=ans, variance=variance,
+                    r = dict(phases=rt['phases'], out=rt['out'], cmd=ans, variance=variance,
                              p=pts[0], T=pts[1], manual=False,
                              output=output, results=res)
-                    label = self.format_label(phases, out)
-                    isnew, id = self.getiduni(r)
+                    label = self.format_label(r['phases'], r['out'])
                     if isnew:
                         self.unimodel.appendRow((id, label, 0, 0, r))
                         row = self.unimodel.getRowFromId(id)
@@ -1534,8 +1531,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
+                rt = dict(phases=phases, out=out, output='User-defined')
+                isnew, id = self.getidinv(rt)
                 tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
-                ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+                ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *trange, *prange, prec=prec)
                 tcout = self.prj.runtc(ans)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
@@ -1544,11 +1543,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 elif status == 'nir':
                     self.statusBar().showMessage('Nothing in range.')
                 else:
-                    r = dict(phases=phases, out=out, cmd=ans, variance=variance,
+                    r = dict(phases=rt['phases'], out=rt['out'], cmd=ans, variance=variance,
                              p=pts[0], T=pts[1], manual=False,
                              output=output, results=res)
-                    label = self.format_label(phases, out)
-                    isnew, id = self.getidinv(r)
+                    label = self.format_label(r['phases'], r['out'])
                     if isnew:
                         self.invmodel.appendRow((id, label, r))
                         self.invview.resizeColumnsToContents()
