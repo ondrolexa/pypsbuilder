@@ -1585,10 +1585,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def getiduni(self, zm=None):
         '''Return id of either new or existing univariant line'''
         ids = 0
+        # collect polymorphs identities
+        if zm is not None:
+            outs = [zm['out']]
+            for poly in polymorphs:
+                if poly.issubset(zm['phases']):
+                    outs.append(poly.difference(zm['out']))
+
         for r in self.unimodel.unilist:
             if zm is not None:
                 if r[4]['phases'] == zm['phases']:
-                    if r[4]['out'] == zm['out']:
+                    if r[4]['out'] in outs:
+                        zm['out'] = r[4]['out'] # switch to already used ??? Needed ???
                         return False, r[0]
             ids = max(ids, r[0])
         return True, ids + 1
@@ -1596,10 +1604,18 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def getidinv(self, zm=None):
         '''Return id of either new or existing invvariant point'''
         ids = 0
+        # collect polymorphs identities
+        if zm is not None:
+            outs = [zm['out']]
+            for poly in polymorphs:
+                if poly.issubset(zm['phases']):
+                    outs.append(zm['out'].difference(poly).union(poly.difference(zm['out'])))
+
         for r in self.invmodel.invlist[1:]:
             if zm is not None:
                 if r[2]['phases'] == zm['phases']:
-                    if r[2]['out'] == zm['out']:
+                    if r[2]['out'] in outs:
+                        zm['out'] = r[2]['out'] # switch to already used ??? Needed ???
                         return False, r[0]
             ids = max(ids, r[0])
         return True, ids + 1
