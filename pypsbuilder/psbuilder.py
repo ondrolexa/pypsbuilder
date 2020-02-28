@@ -98,7 +98,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pmaxEdit.textChanged.connect(self.check_validity)
         self.pmaxEdit.textChanged.emit(self.pmaxEdit.text())
 
-        # SET OUTPUT TEXT
+        # SET OUTPUT TEXT FIXED FONTS
         f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
         self.textOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.textOutput.setReadOnly(True)
@@ -106,6 +106,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.textFullOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.textFullOutput.setReadOnly(True)
         self.textFullOutput.setFont(f)
+        self.outScript.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.outScript.setFont(f)
+        self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.logDogmin.setReadOnly(True)
+        self.logDogmin.setFont(f)
+        self.logText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.logText.setReadOnly(True)
+        self.logText.setFont(f)
 
         self.initViewModels()
 
@@ -118,7 +126,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
-        self.actionTest_topology.triggered.connect(self.check_prj_areas)
+        self.actionShow_areas.triggered.connect(self.check_prj_areas)
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -138,6 +146,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushManual.setCheckable(True)
         self.pushDogmin.toggled.connect(self.do_dogmin)
         self.pushDogmin.setCheckable(True)
+        self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
+        self.pushDogmin_guesses.clicked.connect(self.dogmin_set_guesses)
         self.pushInvRemove.clicked.connect(self.remove_inv)
         self.pushUniRemove.clicked.connect(self.remove_uni)
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
@@ -282,10 +292,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if prj.OK:
                 self.prj = prj
                 self.ready = True
-                self.refresh_gui()
                 self.initViewModels()
                 self.project = None
                 self.changed = False
+                self.refresh_gui()
                 self.statusBar().showMessage('Project initialized successfully.')
             else:
                 qb = QtWidgets.QMessageBox
@@ -319,7 +329,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             qb.Abort)
             else:
                 # set actual working dir in case folder was moved
-                prj = TCsettingsPT(Path(projfile).absolute().parent)
+                prj = TCsettingsPT(Path(projfile).resolve().parent)
                 if prj.OK:
                     self.prj = prj
                     self.refresh_gui()
@@ -364,7 +374,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.apply_setting(4)
                     # update plot
                     self.figure.clear()
-                    self.actionTest_topology.setChecked(False)
+                    self.actionShow_areas.setChecked(False)
                     self.plot()
                     self.statusBar().showMessage('Project loaded.')
                 else:
@@ -480,7 +490,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.apply_setting(4)
                 # update plot
                 self.figure.clear()
-                self.actionTest_topology.setChecked(False)
+                self.actionShow_areas.setChecked(False)
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
         else:
@@ -493,7 +503,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.read_scriptfile()
         # update plot
         self.figure.clear()
-        self.actionTest_topology.setChecked(False)
+        self.actionShow_areas.setChecked(False)
         self.plot()
         # disconnect signals
         try:
@@ -764,7 +774,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if not r['manual']:
                 self.prj.update_scriptfile(guesses=r['results'][0]['ptguess'])
                 self.read_scriptfile()
-                self.statusBar().showMessage('Guesses set.')
+                self.statusBar().showMessage('Invariant point ptuess set.')
             else:
                 self.statusBar().showMessage('Guesses cannot be set from user-defined invariant point.')
 
@@ -780,7 +790,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     ix = uniguess.getValue()
                     self.prj.update_scriptfile(guesses=r['results'][ix]['ptguess'])
                     self.read_scriptfile()
-                    self.statusBar().showMessage('Guesses set.')
+                    self.statusBar().showMessage('Univariant line ptguess set.')
             else:
                 self.statusBar().showMessage('Guesses cannot be set from user-defined univariant line.')
 
@@ -1302,12 +1312,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.prj.runtc('{}\nn\n\n'.format(variance))
-            res, resic, ptguess = self.prj.parse_dogmin()
+            res, resic = self.prj.parse_dogmin()
             if res is not None:
                 self.textOutput.setPlainText(res)
                 self.textFullOutput.setPlainText(resic)
-                self.prj.update_scriptfile(guesses=ptguess)
-                #self.read_scriptfile()
+                self.logDogmin.setPlainText(res + resic)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 self.statusBar().showMessage('Dogmin finished.')
             else:
@@ -1340,6 +1349,35 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushDogmin.setChecked(False)
+
+    def dogmin_select_phases(self):
+        if self.ready:
+            dgtxt = self.logDogmin.toPlainText()
+            try:
+                phases = set(dgtxt.split('phases: ')[1].split(' (')[0].split())
+                r = dict(phases=phases, out=set(), output='User-defined')
+                self.set_phaselist(r, show_output=False)
+            except:
+                self.statusBar().showMessage('You need to run dogmin first.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+
+    def dogmin_set_guesses(self):
+        if self.ready:
+            dgtxt = self.logDogmin.toPlainText()
+            try:
+                block = [ln for ln in dgtxt.splitlines() if ln != '']
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+                gixe = xyz[-1] + 2
+                ptguess = block[gixs:gixe]
+                self.prj.update_scriptfile(guesses=ptguess)
+                self.read_scriptfile()
+                self.statusBar().showMessage('Dogmin ptuess set.')
+            except:
+                self.statusBar().showMessage('You need to run dogmin first.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def read_scriptfile(self):
         if self.ready:
@@ -1417,7 +1455,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
                 self.figure.clear()
-                self.actionTest_topology.setChecked(False)
+                self.actionShow_areas.setChecked(False)
                 self.plot()
             if (1 << 1) & bitopt:
                 self.tminEdit.setText(fmt(self.ax.get_xlim()[0]))
@@ -1524,6 +1562,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.changed = True
                             self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.uniview.selectRow(idx.row())
                             self.unimodel.dataChanged.emit(idx, idx)
                             self.plot()
                             self.show_uni(idx)
@@ -1568,6 +1607,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     self.trimuni(row)
                             self.changed = True
                             idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                            self.invview.selectRow(idx.row())
                             self.show_inv(idx)
                             self.plot()
                             self.invmodel.dataChanged.emit(idx, idx)
@@ -1742,7 +1782,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def check_prj_areas(self):
         if self.ready:
-            if self.actionTest_topology.isChecked():
+            if self.actionShow_areas.isChecked():
                 if self.changed:
                     quit_msg = 'Project have been changed. Save ?'
                     qb = QtWidgets.QMessageBox
@@ -1752,7 +1792,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     if reply == qb.Save:
                         self.do_save()
                     else:
-                        self.actionTest_topology.setChecked(False)
+                        self.actionShow_areas.setChecked(False)
                         return
                 if self.project:
                     from .psexplorer import PTPS
@@ -1779,7 +1819,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.plot()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-            self.actionTest_topology.setChecked(False)
+            self.actionShow_areas.setChecked(False)
 
 
 class InvModel(QtCore.QAbstractTableModel):

@@ -618,9 +618,6 @@
              <property name="lineWrapMode">
               <enum>QPlainTextEdit::NoWrap</enum>
              </property>
-             <property name="readOnly">
-              <bool>false</bool>
-             </property>
             </widget>
            </item>
            <item>
@@ -659,7 +656,7 @@
                 </sizepolicy>
                </property>
                <property name="text">
-                <string>Read</string>
+                <string>Reset</string>
                </property>
               </widget>
              </item>
@@ -673,6 +670,66 @@
                </property>
                <property name="text">
                 <string>Save</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="tabDogmin">
+          <attribute name="title">
+           <string>Dogmin</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <item>
+            <widget class="QPlainTextEdit" name="logDogmin">
+             <property name="lineWrapMode">
+              <enum>QPlainTextEdit::NoWrap</enum>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <item>
+              <spacer name="horizontalSpacer_5">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushDogmin_guesses">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Set ptguess</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushDogmin_select">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Select</string>
                </property>
               </widget>
              </item>
@@ -928,7 +985,7 @@
     <addaction name="actionReload"/>
     <addaction name="actionGenerate"/>
     <addaction name="actionImport_project"/>
-    <addaction name="actionTest_topology"/>
+    <addaction name="actionShow_areas"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1018,12 +1075,12 @@
     <string>&amp;Import from project</string>
    </property>
   </action>
-  <action name="actionTest_topology">
+  <action name="actionShow_areas">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Test topology</string>
+    <string>Show &amp;areas</string>
    </property>
   </action>
  </widget>

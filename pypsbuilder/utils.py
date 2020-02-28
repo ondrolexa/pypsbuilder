@@ -19,9 +19,7 @@ from shapely.ops import polygonize, linemerge, unary_union
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
 
-polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'},
-             {'q', 'coe'}, {'diam', 'gph'}, {'dio', 'o'},
-             {'gl', 'act'}, {'gl', 'hb'}, {'act', 'hb'}]
+polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
 
 class InitError(Exception):
     pass
@@ -36,7 +34,7 @@ class TCError(Exception):
 
 class PSBFile(object):
     def __init__(self, projfile):
-        prj = Path(projfile).absolute()
+        prj = Path(projfile).resolve()
         if prj.exists():
             stream = gzip.open(str(prj), 'rb')
             self.data = pickle.load(stream)
@@ -319,7 +317,7 @@ class TCsettingsPT(object):
     """
 
     def __init__(self, workdir):
-        self.workdir = Path(workdir).absolute()
+        self.workdir = Path(workdir).resolve()
         self.TCenc = 'mac-roman'
         try:
             errinfo = 'Initialize project error!'
@@ -327,9 +325,9 @@ class TCsettingsPT(object):
             if sys.platform.startswith('win'):
                 tcpat = 'tc3*.exe'
                 drpat = 'dr1*.exe'
-            elif sys.platform.startswith('linux'):
-                tcpat = 'tc3*L'
-                drpat = 'dr*L'
+            #elif sys.platform.startswith('linux'):
+            #    tcpat = 'tc3*L'
+            #    drpat = 'dr*L'
             else:
                 tcpat = 'tc3*'
                 drpat = 'dr1*'
@@ -337,7 +335,7 @@ class TCsettingsPT(object):
             self.tcexe = None
             for p in self.workdir.glob(tcpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.absolute()
+                    self.tcexe = p.resolve()
                     break
             if not self.tcexe:
                 raise InitError('No THERMOCALC executable in working directory.')
@@ -345,7 +343,7 @@ class TCsettingsPT(object):
             self.drexe = None
             for p in self.workdir.glob(drpat):
                 if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.absolute()
+                    self.drexe = p.resolve()
                     break
             #if not self.drexe:
             #    InitError('No drawpd executable in working directory.')
@@ -775,16 +773,10 @@ class TCsettingsPT(object):
             with self.logfile.open('r', encoding=self.TCenc) as f:
                 output = f.read()
             res = output.split('##########################################################\n')[-1]
-            block = [ln for ln in res.splitlines() if ln != '']
-            xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-            gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
-            gixe = xyz[-1] + 2
-            ptguess = block[gixs:gixe]
         except:
             res = None
             resic = None
-            ptguess = []
-        return res, resic, ptguess
+        return res, resic
 
     def update_scriptfile(self, **kwargs):
         # Store scriptfile content and initialize dicts
