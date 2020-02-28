@@ -601,10 +601,13 @@ class TCsettingsPT(object):
         variance = -1 
         # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
         ptpat = re.compile('(?<=\{)(.*?)(?=\})')
-        ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
-        varpat = re.compile('(?<= var = )(.*?)(?= )')
-        if not self.icfile.exists() or [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-            status = 'bombed'
+        #ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
+        varpat = re.compile('(?<=var = )(.*?)(?=\ )')
+        if not self.icfile.exists():
+            if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+                status = 'bombed'
+            else:
+                status = 'nir'
         else:
             # parse ptguesses
             bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
@@ -623,8 +626,8 @@ class TCsettingsPT(object):
                 sections = block.split('\n\n')
                 ic = {}
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
-                variance = int(ovarpat.search(sections[0]).group())
-                seenvariance = int(varpat.search(sections[0]).group())
+                variance = int(varpat.search(sections[0]).group().replace(';', ''))
+                #seenvariance = int(varpat.search(sections[0]).group())
                 # parse a-x variables
                 ax = {}
                 lns = sections[1].split('\n')

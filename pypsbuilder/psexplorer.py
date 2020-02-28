@@ -232,7 +232,7 @@ class PTPS:
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
             if k is not None:
-                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
+                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k.difference(self.prj.excess)), p, t)
                 start_time = time.time()
                 tcout = self.prj.runtc(ans)
                 delta = time.time() - start_time

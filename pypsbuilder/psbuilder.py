@@ -1501,10 +1501,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (trange[0] - ts, trange[1] + ts)
+            trange = (max(trange[0] - ts, 0), trange[1] + ts)
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (prange[0] - ps, prange[1] + ps)
+            prange = (max(prange[0] - ps, 0), prange[1] + ps)
             steps = self.spinSteps.value()
             prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1
 
