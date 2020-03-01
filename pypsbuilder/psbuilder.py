@@ -234,7 +234,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("strict_filtering", self.checkStrict.checkState())
-            builder_settings.setValue("autoconnect", self.checkAutoconnect.checkState())
+            builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
+            builder_settings.setValue("autoconnectinv", self.checkAutoconnectInv.checkState())
             # builder_settings.setValue("export_areas", self.checkAreas.checkState())
             # builder_settings.setValue("export_partial", self.checkPartial.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
@@ -256,7 +257,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkStrict.setCheckState(builder_settings.value("strict_filtering", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnect.setCheckState(builder_settings.value("autoconnect", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -761,8 +763,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             idx = self.unisel.selectedIndexes()
             k = self.unimodel.getRow(idx[0])
             T, p = self.get_trimmed_uni(k)
-            dT = max((T.max() - T.min()) / 5, 0.01)
-            dp = max((p.max() - p.min()) / 5, 0.001)
+            dT = max((T.max() - T.min()) / 10, 0.01)
+            dp = max((p.max() - p.min()) / 10, 0.001)
             self.ax.set_xlim([T.min() - dT, T.max() + dT])
             self.ax.set_ylim([p.min() - dp, p.max() + dp])
             self.canvas.draw()
@@ -1054,18 +1056,62 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.unimodel.setData(idx[2], candidates[1])
                 self.unimodel.setData(idx[3], candidates[0])
 
+    def auto_add_uni(self, phases, out):
+        nr = dict(phases=phases, out=out, output='User-defined')
+        isnew, id = self.getiduni(nr)
+        if isnew:
+            self.do_calc(True, phases=nr['phases'], out=nr['out'])
+        isnew, id = self.getiduni(nr)
+        if isnew:
+            self.do_calc(False, phases=nr['phases'], out=nr['out'])
+
     def auto_inv_calc(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
             r = self.invmodel.data(idx[2])
+            self.statusBar().showMessage('Running auto univariant lines calculations...')
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            self.prj.update_scriptfile(guesses=r['results'][0]['ptguess'])
             phases = r['phases']
-            a, b = r['out']
+            out = r['out']
+            a, b = out
             aset, bset = set([a]), set([b])
             aphases, bphases = phases.difference(aset), phases.difference(bset)
-            self.do_calc(True, phases=phases, out=aset)
-            self.do_calc(True, phases=phases, out=bset)
-            self.do_calc(True, phases=bphases, out=aset)
-            self.do_calc(True, phases=aphases, out=bset)
+            fix = False
+            for poly in polymorphs:
+                if poly.issubset(phases):
+                    fix = True
+                    break
+            if fix:
+                if poly != out: # on boudary
+                    nopoly = out.difference(poly.intersection(out))
+                    aphases = phases.difference(poly.intersection(out))
+                    bphases = phases.difference(poly.difference(out))
+                    self.auto_add_uni(aphases, nopoly)
+                    self.auto_add_uni(bphases, nopoly)
+                    self.auto_add_uni(phases, poly.intersection(out))
+                    self.auto_add_uni(phases.difference(nopoly), poly.intersection(out))
+                else:     # triple point  NEED FIX
+                    nr1 = dict(phases=phases, out=aset, output='User-defined')
+                    isnewa, id = self.getiduni(nr1)
+                    nr1 = dict(phases=phases, out=bset, output='User-defined')
+                    isnewb, id = self.getiduni(nr1)
+                    if isnewa and isnewb:
+                        self.auto_add_uni(phases, bset)
+
+                    self.auto_add_uni(aphases, bset)
+                    self.auto_add_uni(bphases, aset)
+            else:
+                self.auto_add_uni(phases, aset)
+                self.auto_add_uni(phases, bset)
+                self.auto_add_uni(bphases, aset)
+                self.auto_add_uni(aphases, bset)
+
+            self.read_scriptfile()
+            self.clean_high()
+            QtWidgets.QApplication.restoreOverrideCursor()
+            self.statusBar().showMessage('Auto calculations done.')
 
     def zoom_to_uni(self, checked):
         if self.ready:
@@ -1074,8 +1120,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     idx = self.unisel.selectedIndexes()
                     row = self.unimodel.getRow(idx[0])
                     T, p = self.get_trimmed_uni(row)
-                    dT = max((T.max() - T.min()) / 5, 0.01)
-                    dp = max((p.max() - p.min()) / 5, 0.001)
+                    dT = max((T.max() - T.min()) / 10, 0.01)
+                    dp = max((p.max() - p.min()) / 10, 0.001)
                     self.ax.set_xlim([T.min() - dT, T.max() + dT])
                     self.ax.set_ylim([p.min() - dp, p.max() + dp])
                     self.canvas.draw()
@@ -1083,7 +1129,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.set_xlim(self.prj.trange)
                 self.ax.set_ylim(self.prj.prange)
                 # clear navigation toolbar history
-                self.toolbar.update()
+                #self.toolbar.update()
                 # self.plot()
                 self.canvas.draw()
         else:
@@ -1149,6 +1195,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 r['T'], r['p'], r['output'] = np.array([T]), np.array([p]), 'User-defined invariant point.'
                 if isnew:
                     self.invmodel.appendRow((id, label, r))
+                    if self.checkAutoconnectInv.isChecked():
+                        for unirow in self.unimodel.unilist:
+                            if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], phases, out):
+                                candidates = [id]
+                                for invrow in self.invmodel.invlist[1:-1]:
+                                    if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], invrow[2]['phases'], invrow[2]['out']):
+                                        candidates.append(invrow[0])
+                                if len(candidates) == 2:
+                                    self.uniview.selectRow(self.unimodel.lookup[unirow[0]])
+                                    self.auto_connect(unirow, candidates, self.unisel.selectedIndexes())
                 else:
                     row = self.invmodel.getRowFromId(id)
                     row[2] = r
@@ -1172,7 +1228,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     invs = []
                     for row in self.invmodel.invlist[1:]:
                         d = row[2]
-                        if self.checkStrict.isChecked() or self.checkAutoconnect.isChecked():
+                        if self.checkStrict.isChecked() or self.checkAutoconnectUni.isChecked():
                             filtered = inv_on_uni(phases, out, row[2]['phases'], row[2]['out'])
                         else:
                             filtered = phases.issubset(row[2]['phases']) and out.issubset(row[2]['out'])
@@ -1183,7 +1239,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                              p=np.array([]), T=np.array([]), manual=True,
                              output='User-defined univariant line.')
                     isnew, id = self.getiduni(r)
-                    if self.checkAutoconnect.isChecked():
+                    if self.checkAutoconnectUni.isChecked():
                         if len(invs) == 2:
                             b, e = invs
                             if isnew:
@@ -1311,7 +1367,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            tcout = self.prj.runtc('{}\nn\n\n'.format(variance))
+            tcout = self.prj.tc_dogmin(variance)
             res, resic = self.prj.parse_dogmin()
             if res is not None:
                 self.textOutput.setPlainText(res)
@@ -1506,20 +1562,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (max(prange[0] - ps, 0), prange[1] + ps)
             steps = self.spinSteps.value()
-            prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1
 
             if len(out) == 1:
                 rt = dict(phases=phases, out=out, output='User-defined')
                 isnew, id = self.getiduni(rt)
                 if cT:
-                    step = (prange[1] - prange[0]) / steps
-                    tmpl = '{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-                    ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *prange, *trange, step, prec=prec)
+                    tcout, ans = self.prj.tc_calc_t(rt['phases'], rt['out'], prange = prange, trange=trange, steps=steps)
                 else:
-                    step = (trange[1] - trange[0]) / steps
-                    tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-                    ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *trange, *prange, step, prec=prec)
-                tcout = self.prj.runtc(ans)
+                    tcout, ans = self.prj.tc_calc_p(rt['phases'], rt['out'], prange = prange, trange=trange, steps=steps)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
@@ -1543,14 +1593,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
-                        self.plot()
-                        if self.checkAutoconnect.isChecked():
+                        if self.checkAutoconnectUni.isChecked():
                             candidates = []
                             for invrow in self.invmodel.invlist[1:]:
                                 if inv_on_uni(phases, out, invrow[2]['phases'], invrow[2]['out']):
                                     candidates.append(invrow[0])
                             if len(candidates) == 2:
                                 self.auto_connect(row, candidates, self.unisel.selectedIndexes())
+                        self.plot()
                         self.show_uni(idx)
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
@@ -1572,9 +1622,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             elif len(out) == 2:
                 rt = dict(phases=phases, out=out, output='User-defined')
                 isnew, id = self.getidinv(rt)
-                tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
-                ans = tmpl.format(' '.join(rt['phases']), ' '.join(rt['out']), *trange, *prange, prec=prec)
-                tcout = self.prj.runtc(ans)
+                tcout, ans = self.prj.tc_calc_pt(rt['phases'], rt['out'], prange = prange, trange=trange)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
@@ -1590,10 +1638,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         self.invmodel.appendRow((id, label, r))
                         self.invview.resizeColumnsToContents()
                         self.changed = True
-                        self.plot()
                         idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
                         self.invview.selectRow(idx.row())
                         self.invview.scrollToBottom()
+                        if self.checkAutoconnectInv.isChecked():
+                            for unirow in self.unimodel.unilist:
+                                if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], phases, out):
+                                    candidates = [id]
+                                    for invrow in self.invmodel.invlist[1:-1]:
+                                        if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], invrow[2]['phases'], invrow[2]['out']):
+                                            candidates.append(invrow[0])
+                                    if len(candidates) == 2:
+                                        self.uniview.selectRow(self.unimodel.lookup[unirow[0]])
+                                        self.auto_connect(unirow, candidates, self.unisel.selectedIndexes())
+                        self.plot()
                         self.show_inv(idx)
                         self.statusBar().showMessage('New invariant point calculated.')
                     else:

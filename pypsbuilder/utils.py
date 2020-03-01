@@ -32,6 +32,7 @@ class ScriptfileError(Exception):
 class TCError(Exception):
     pass
 
+
 class PSBFile(object):
     def __init__(self, projfile):
         prj = Path(projfile).resolve()
@@ -488,7 +489,7 @@ class TCsettingsPT(object):
                 raise ScriptfileError('There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile.')
 
             # TC
-            self.tcout = runprog(self.tcexe, self.workdir, '\nkill\n\n')
+            self.tcout = self.runtc('\nkill\n\n')
             if 'BOMBED' in self.tcout:
                 raise TCError(self.tcout.split('BOMBED')[1].split('\n')[0])
             else:
@@ -598,7 +599,7 @@ class TCsettingsPT(object):
         res = []
         alldata = []
         ptguesses = []
-        variance = -1 
+        variance = -1
         # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
         ptpat = re.compile('(?<=\{)(.*?)(?=\})')
         #ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
@@ -814,6 +815,48 @@ class TCsettingsPT(object):
                 for ln in sc:
                     f.write(ln)
 
+    def parse_kwargs(self, **kwargs):
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        steps = kwargs.get('steps', 50)
+        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
+        return prange, trange, steps, prec
+
+    def tc_calc_t(self, phases, out, **kwargs):
+        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        step = (prange[1] - prange[0]) / steps
+        tmpl = '{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
+        ans = tmpl.format(' '.join(phases), ' '.join(out), *prange, *trange, step, prec=prec)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def tc_calc_p(self, phases, out, **kwargs):
+        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        step = (trange[1] - trange[0]) / steps
+        tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
+        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def tc_calc_pt(self, phases, out, **kwargs):
+        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
+        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def tc_calc_assemblage(self, phases, p, t):
+        tmpl = '{}\n\n\n{}\n{}\nkill\n\n'
+        ans = tmpl.format(' '.join(phases), p, t)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def tc_dogmin(self, variance):
+        tmpl = '{}\nn\n\n'
+        ans = tmpl.format(variance)
+        tcout = self.runtc(ans)
+        return tcout
+
     def runtc(self, instr):
         if sys.platform.startswith('win'):
             startupinfo = subprocess.STARTUPINFO()
@@ -822,9 +865,11 @@ class TCsettingsPT(object):
         else:
             startupinfo = None
         p = subprocess.Popen(str(self.tcexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw)
-        output = p.communicate(input=instr.encode(self.TCenc))[0].decode(self.TCenc)
+        output, err = p.communicate(input=instr.encode(self.TCenc))
+        if err is not None:
+            print(err.decode('utf-8'))
         sys.stdout.flush()
-        return output
+        return output.decode(self.TCenc)
 
     def rundr(self):
         if self.drexe:
@@ -842,18 +887,6 @@ class TCsettingsPT(object):
         else:
             return False
 
-
-def runprog(exe, workdir, instr, TCenc='mac-roman'):
-    if sys.platform.startswith('win'):
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags = 1
-        startupinfo.wShowWindow = 0
-    else:
-        startupinfo = None
-    p = subprocess.Popen(str(exe), cwd=str(workdir), startupinfo=startupinfo, **popen_kw)
-    output = p.communicate(input=instr.encode(TCenc))[0].decode(TCenc)
-    sys.stdout.flush()
-    return output
 
 def inv_on_uni(uphases, uout, iphases, iout):
     def checkme(uphases, uout, iphases, iout):

@@ -232,9 +232,8 @@ class PTPS:
             t, p = self.tg[r, c], self.pg[r, c]
             k = self.identify(t, p)
             if k is not None:
-                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k.difference(self.prj.excess)), p, t)
                 start_time = time.time()
-                tcout = self.prj.runtc(ans)
+                tcout, ans = self.prj.tc_calc_assemblage(k.difference(self.prj.excess), p, t)
                 delta = time.time() - start_time
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if len(res) == 1:
@@ -284,12 +283,11 @@ class PTPS:
                 r, c = ri[ind], ci[ind]
                 t, p = self.tg[r, c], self.pg[r, c]
                 k = self.identify(t, p)
-                ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(k), p, t)
                 # search already done grid neighs
                 for rn, cn in self.neighs(r, c):
                     if self.status[rn, cn] == 1:
                         start_time = time.time()
-                        tcout = self.prj.runtc(ans)
+                        tcout, ans = self.prj.tc_calc_assemblage(k.difference(self.prj.excess), p, t)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = self.prj.parse_logfile()
                         if len(res) == 1:
@@ -302,7 +300,7 @@ class PTPS:
                         else:
                             self.prj.update_scriptfile(guesses=self.gridcalcs[rn, cn]['ptguess'])
                         start_time = time.time()
-                        tcout = self.prj.runtc(ans)
+                        tcout, ans = self.prj.tc_calc_assemblage(k.difference(self.prj.excess), p, t)
                         delta = time.time() - start_time
                         status, variance, pts, res, output = self.prj.parse_logfile()
                         if len(res) == 1:
@@ -359,8 +357,7 @@ class PTPS:
                             break
                 if calc is not None:
                     self.prj.update_scriptfile(guesses=calc['ptguess'])
-                    ans = '{}\n\n\n{}\n{}\nkill\n\n'.format(' '.join(key), p, t)
-                    tcout = self.prj.runtc(ans)
+                    tcout, ans = self.prj.tc_calc_assemblage(key.difference(self.prj.excess), p, t)
                     status, variance, pts, res, output = self.prj.parse_logfile()
                     if len(res) == 1:
                         dt['pts'].append((t, p))
@@ -576,7 +573,7 @@ class PTPS:
         from matplotlib.colors import ListedColormap, BoundaryNorm
 
         t, p, ex = self.get_path_data(dt, phase, expr)
-        
+
         fig, ax = plt.subplots()
         if allpath:
             ax.plot(t, p, '--', color='grey', lw=1)
