@@ -859,7 +859,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushUniZoom">
+            <widget class="QPushButton" name="pushUniSearch">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -867,7 +867,7 @@
               </sizepolicy>
              </property>
              <property name="text">
-              <string>Zoom</string>
+              <string>Search</string>
              </property>
             </widget>
            </item>
@@ -1119,7 +1119,7 @@
   <tabstop>uniview</tabstop>
   <tabstop>pushGuessUni</tabstop>
   <tabstop>pushUniRemove</tabstop>
-  <tabstop>pushUniZoom</tabstop>
+  <tabstop>pushUniSearch</tabstop>
   <tabstop>invview</tabstop>
   <tabstop>pushGuessInv</tabstop>
   <tabstop>pushInvRemove</tabstop>

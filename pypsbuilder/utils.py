@@ -35,12 +35,12 @@ class TCError(Exception):
 
 class PSBFile(object):
     def __init__(self, projfile):
-        prj = Path(projfile).resolve()
-        if prj.exists():
-            stream = gzip.open(str(prj), 'rb')
+        psb = Path(projfile).resolve()
+        if psb.exists():
+            stream = gzip.open(str(psb), 'rb')
             self.data = pickle.load(stream)
             stream.close()
-            self.name = prj.name
+            self.name = psb.name
             self.unilookup = {}
             self.invlookup = {}
             for ix, r in enumerate(self.unilist):
@@ -312,9 +312,9 @@ class PSBFile(object):
         return shapes, shape_edges, bad_shapes
 
 
-class TCsettingsPT(object):
+class TCAPI(object):
     """
-    Class to store TC setting for given working directory
+    Class to access TC functionality in given working directory
     """
 
     def __init__(self, workdir):
@@ -511,8 +511,8 @@ class TCsettingsPT(object):
         return str(self.workdir)
 
     def __repr__(self):
-        return '\n'.join(['THERMOCALC settings',
-                          '===================',
+        return '\n'.join(['THERMOCALC API',
+                          '==============',
                           'Working directory: {}'.format(self.workdir),
                           'TC version: {}'.format(self.tcversion),
                           'Scriptfile: {}'.format('tc-' + self.name + '.txt'),
@@ -785,6 +785,7 @@ class TCsettingsPT(object):
     def update_scriptfile(self, **kwargs):
         # Store scriptfile content and initialize dicts
         guesses = kwargs.get('guesses', None)
+        get_old_guesses = kwargs.get('get_old_guesses', False)
         dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
         which = kwargs.get('which', None)
         p = kwargs.get('p', None)
@@ -792,9 +793,12 @@ class TCsettingsPT(object):
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             sc = f.readlines()
         changed = False
+        gsb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-BEGIN}')]
+        gse = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-END}')]
+        if get_old_guesses:
+            if gsb and gse:
+                old_guesses = sc[gsb[0] + 1:gse[0]]
         if guesses is not None:
-            gsb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-BEGIN}')]
-            gse = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-END}')]
             if gsb and gse:
                 sc = sc[:gsb[0] + 1] + [gln + '\n' for gln in guesses] + sc[gse[0]:]
                 changed = True
@@ -814,6 +818,10 @@ class TCsettingsPT(object):
             with self.scriptfile.open('w', encoding=self.TCenc) as f:
                 for ln in sc:
                     f.write(ln)
+        if get_old_guesses:
+            return old_guesses
+        else:
+            return None
 
     def parse_kwargs(self, **kwargs):
         prange = kwargs.get('prange', self.prange)

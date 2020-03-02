@@ -140,8 +140,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.pushGuessUni.clicked.connect(self.unisel_guesses)
         self.pushGuessInv.clicked.connect(self.invsel_guesses)
         self.pushInvAuto.clicked.connect(self.auto_inv_calc)
-        self.pushUniZoom.clicked.connect(self.zoom_to_uni)
-        self.pushUniZoom.setCheckable(True)
+        self.pushUniSearch.clicked.connect(self.uni_explore)
         self.pushManual.toggled.connect(self.add_userdefined)
         self.pushManual.setCheckable(True)
         self.pushDogmin.toggled.connect(self.do_dogmin)
@@ -290,7 +289,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                           os.path.expanduser('~'),
                                           qd.ShowDirsOnly)
         if workdir:
-            prj = TCsettingsPT(workdir)
+            prj = TCAPI(workdir)
             if prj.OK:
                 self.prj = prj
                 self.ready = True
@@ -331,7 +330,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             qb.Abort)
             else:
                 # set actual working dir in case folder was moved
-                prj = TCsettingsPT(Path(projfile).resolve().parent)
+                prj = TCAPI(Path(projfile).resolve().parent)
                 if prj.OK:
                     self.prj = prj
                     self.refresh_gui()
@@ -528,7 +527,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
-        self.pushUniZoom.setChecked(False)
         self.statusBar().showMessage('Ready')
 
     def reinitialize(self):
@@ -547,7 +545,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             trange = self.prj.trange
             prange = self.prj.prange
             # reread
-            prj = TCsettingsPT(self.prj.workdir)
+            prj = TCAPI(self.prj.workdir)
             if prj.OK:
                 self.prj = prj
                 # select phases
@@ -759,15 +757,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def sel_changed(self):
         self.clean_high()
-        if self.pushUniZoom.isChecked():
-            idx = self.unisel.selectedIndexes()
-            k = self.unimodel.getRow(idx[0])
-            T, p = self.get_trimmed_uni(k)
-            dT = max((T.max() - T.min()) / 10, 0.01)
-            dp = max((p.max() - p.min()) / 10, 0.001)
-            self.ax.set_xlim([T.min() - dT, T.max() + dT])
-            self.ax.set_ylim([p.min() - dp, p.max() + dp])
-            self.canvas.draw()
 
     def invsel_guesses(self):
         if self.invsel.hasSelection():
@@ -858,8 +847,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         T, p = self.get_trimmed_uni(row)
         self.unihigh = self.ax.plot(T, p, '-', **unihigh_kw)
         self.canvas.draw()
-        # if self.pushUniZoom.isChecked():
-        #     self.zoom_to_uni(True)
 
     def uni_edited(self, index):
         row = self.unimodel.getRow(index)
@@ -868,8 +855,62 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.changed = True
         # update plot
         self.plot()
-        # if self.pushUniZoom.isChecked():
-        #     self.zoom_to_uni(True)
+
+    def uni_explore(self):
+        if self.unisel.hasSelection():
+            idx = self.unisel.selectedIndexes()
+            r = self.unimodel.data(idx[4])
+            phases = r['phases']
+            out = r['out']
+            self.statusBar().showMessage('Searching for invariant points...')
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            # set guesses temporarily
+            midix = len(r['results']) // 2
+            old_guesses = self.prj.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
+            # Try out from phases
+            cand = []
+            for ophase in phases.difference(out).difference(self.prj.excess):
+                nout = out.union(set([ophase]))
+                self.prj.tc_calc_pt(phases, nout)
+                status, variance, pts, res, output = self.prj.parse_logfile()
+                if status == 'ok':
+                    p, T = pts.flatten()
+                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
+                    exists, inv_id = '', ''
+                    for row in self.invmodel.invlist[1:]:
+                        if phases == row[2]['phases'] and nout == row[2]['out']:
+                            exists, inv_id = '*', str(row[0])
+                            break
+                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+
+            for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
+                nphases = phases.union(set([ophase]))
+                nout = out.union(set([ophase]))
+                self.prj.tc_calc_pt(nphases, nout)
+                status, variance, pts, res, output = self.prj.parse_logfile()
+                if status == 'ok':
+                    p, T = pts.flatten()
+                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
+                    exists, inv_id = '', ''
+                    for row in self.invmodel.invlist[1:]:
+                        if nphases == row[2]['phases'] and nout == row[2]['out']:
+                            exists, inv_id = '*', str(row[0])
+                            break
+                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+
+            self.prj.update_scriptfile(guesses=old_guesses)
+            QtWidgets.QApplication.restoreOverrideCursor()
+            if cand:
+                txt = '         p         T E     Out   Inv\n'
+                n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
+                for cc in sorted(cand):
+                    txt += n_format.format(*cc[1:])
+
+                self.textOutput.setPlainText(txt)
+                self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
+            else:
+                self.statusBar().showMessage('No invariant points found.')
 
     def show_inv(self, index):
         dt = self.invmodel.getData(index, 'Data')
@@ -1009,6 +1050,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             r = self.unimodel.getRow(idx[4])
             #phases = r[4]['phases']
             #out = r[4]['out']
+            menu = QtWidgets.QMenu(self)
+            menu_item1 = menu.addAction('Zoom')
+            menu_item1.triggered.connect(lambda: self.zoom_to_uni(r))
             be = r[2:4]
             miss = be.count(0)
             if miss > 0:
@@ -1028,10 +1072,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         # elif aphases == phases and bset == out:
                         #     candidates.append(invrow[0])
                 if len(candidates) == miss:
-                    menu = QtWidgets.QMenu(self)
-                    menu_item = menu.addAction('autoconnect')
-                    menu_item.triggered.connect(lambda: self.auto_connect(r, candidates, idx))
-                    menu.exec(self.uniview.mapToGlobal(QPos))
+                    menu_item2 = menu.addAction('Autoconnect')
+                    menu_item2.triggered.connect(lambda: self.auto_connect(r, candidates, idx))
+            menu.exec(self.uniview.mapToGlobal(QPos))
 
     def auto_connect(self, r, candidates, idx):
         if len(candidates) == 1:
@@ -1113,28 +1156,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             QtWidgets.QApplication.restoreOverrideCursor()
             self.statusBar().showMessage('Auto calculations done.')
 
-    def zoom_to_uni(self, checked):
-        if self.ready:
-            if checked:
-                if self.unisel.hasSelection():
-                    idx = self.unisel.selectedIndexes()
-                    row = self.unimodel.getRow(idx[0])
-                    T, p = self.get_trimmed_uni(row)
-                    dT = max((T.max() - T.min()) / 10, 0.01)
-                    dp = max((p.max() - p.min()) / 10, 0.001)
-                    self.ax.set_xlim([T.min() - dT, T.max() + dT])
-                    self.ax.set_ylim([p.min() - dp, p.max() + dp])
-                    self.canvas.draw()
-            else:
-                self.ax.set_xlim(self.prj.trange)
-                self.ax.set_ylim(self.prj.prange)
-                # clear navigation toolbar history
-                #self.toolbar.update()
-                # self.plot()
-                self.canvas.draw()
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
-            self.pushUniZoom.setChecked(False)
+    def zoom_to_uni(self, row):
+        self.canvas.toolbar.push_current()
+        T, p = self.get_trimmed_uni(row)
+        dT = max((T.max() - T.min()) / 10, 0.01)
+        dp = max((p.max() - p.min()) / 10, 0.001)
+        self.ax.set_xlim([T.min() - dT, T.max() + dT])
+        self.ax.set_ylim([p.min() - dp, p.max() + dp])
+        self.canvas.toolbar.push_current()
+        self.canvas.draw()
 
     def remove_inv(self):
         if self.invsel.hasSelection():

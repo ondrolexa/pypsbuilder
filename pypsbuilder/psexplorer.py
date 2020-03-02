@@ -24,7 +24,7 @@ from tqdm import tqdm, trange
 class PTPS:
     def __init__(self, projfile):
         self.psb = PSBFile(projfile)
-        prj = TCsettingsPT(Path(projfile).resolve().parent)
+        prj = TCAPI(Path(projfile).resolve().parent)
         if prj.OK:
             self.prj = prj
         else:

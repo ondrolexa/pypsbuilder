@@ -3,9 +3,11 @@
 ## 2.2 (XX YY 2019)
 
 * psbuilder major update and refactoring
-  - Compatible with TC 3.50
-  - Dogmin implemented
+  - compatible with TC 3.50
+  - dogmin implemented
   - autoconnect implemented
+  - invariant point search implemented
+  - zoom to uni added to context menu
   - option to extend calculation range to extend univariant lines gently out of defined region
 * psexplorer updated
   - calc along PT path implemented
