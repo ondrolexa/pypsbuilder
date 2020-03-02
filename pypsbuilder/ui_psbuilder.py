@@ -549,7 +549,6 @@ class Ui_PSBuilder(object):
         self.actionImport_project = QtWidgets.QAction(PSBuilder)
         self.actionImport_project.setObjectName("actionImport_project")
         self.actionShow_areas = QtWidgets.QAction(PSBuilder)
-        self.actionShow_areas.setCheckable(True)
         self.actionShow_areas.setObjectName("actionShow_areas")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)

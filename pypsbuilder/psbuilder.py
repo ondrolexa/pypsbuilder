@@ -164,6 +164,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.scCalcPatT.activated.connect(lambda: self.do_calc(False))
         self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
         self.scHome.activated.connect(self.toolbar.home)
+        self.showAreas = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
+        self.showAreas.activated.connect(self.check_prj_areas)
 
         self.app_settings()
         self.populate_recent()
@@ -375,7 +377,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.apply_setting(4)
                     # update plot
                     self.figure.clear()
-                    self.actionShow_areas.setChecked(False)
                     self.plot()
                     self.statusBar().showMessage('Project loaded.')
                 else:
@@ -491,7 +492,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.apply_setting(4)
                 # update plot
                 self.figure.clear()
-                self.actionShow_areas.setChecked(False)
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
         else:
@@ -504,7 +504,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.read_scriptfile()
         # update plot
         self.figure.clear()
-        self.actionShow_areas.setChecked(False)
         self.plot()
         # disconnect signals
         try:
@@ -613,7 +612,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def do_save(self):
         """Open working directory and initialize project
         """
-        if self.project:
+        if self.project is not None:
             # collect info
             selphases = []
             for i in range(self.phasemodel.rowCount()):
@@ -1541,7 +1540,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('Settings applied.')
                 self.changed = True
                 self.figure.clear()
-                self.actionShow_areas.setChecked(False)
                 self.plot()
             if (1 << 1) & bitopt:
                 self.tminEdit.setText(fmt(self.ax.get_xlim()[0]))
@@ -1870,7 +1868,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def check_prj_areas(self):
         if self.ready:
-            if self.actionShow_areas.isChecked():
+            if not hasattr(self.ax, 'areas_shown'):
                 if self.changed:
                     quit_msg = 'Project have been changed. Save ?'
                     qb = QtWidgets.QMessageBox
@@ -1880,9 +1878,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     if reply == qb.Save:
                         self.do_save()
                     else:
-                        self.actionShow_areas.setChecked(False)
                         return
-                if self.project:
+                if self.project is not None:
                     from .psexplorer import PTPS
                     from matplotlib import cm
                     from matplotlib.colors import ListedColormap, BoundaryNorm
@@ -1899,6 +1896,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                         norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
                         for k in ps:
                             self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
+                        self.ax.areas_shown = True
                         self.canvas.draw()
                     else:
                         self.statusBar().showMessage('No areas created.')
@@ -1907,7 +1905,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.plot()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-            self.actionShow_areas.setChecked(False)
 
 
 class InvModel(QtCore.QAbstractTableModel):

@@ -1083,9 +1083,6 @@
    </property>
   </action>
   <action name="actionShow_areas">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Show &amp;areas</string>
    </property>
