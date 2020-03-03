@@ -6,6 +6,7 @@ Visual pseudosection builder for THERMOCALC
 # website: petrol.natur.cuni.cz/~ondro
 
 from .utils import *
+from .psexplorer import PTPS
 
 from pkg_resources import resource_filename
 
@@ -17,11 +18,21 @@ from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.widgets import Cursor
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
+from descartes import PolygonPatch
+
+try:
+    import networkx as nx
+    NX_OK = TRUE
+except ImportError as e:
+    NX_OK = FALSE
 
 from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
+
 
 __version__ = '2.2.0'
 # Make sure that we are using QT5
@@ -127,6 +138,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
+        self.actionShow_topology.triggered.connect(self.show_topology)
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -322,17 +334,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                           os.path.expanduser('~'),
                                           'pypsbuilder project (*.psb)')[0]
         if Path(projfile).is_file():
-            stream = gzip.open(projfile, 'rb')
-            data = pickle.load(stream)
-            stream.close()
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            with gzip.open(projfile, 'rb') as stream:
+                data = pickle.load(stream)
             if data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Old version',
                             'This project is created in older version.\nUse import from project.',
                             qb.Abort)
             else:
-                # set actual working dir in case folder was moved
-                prj = TCAPI(Path(projfile).resolve().parent)
+                prj = TCAPI(data.get('workdir', Path(projfile).resolve().parent))
                 if prj.OK:
                     self.prj = prj
                     self.refresh_gui()
@@ -382,6 +394,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', prj.status, qb.Abort)
+            QtWidgets.QApplication.restoreOverrideCursor()
         else:
             if projfile in self.recent:
                 self.recent.pop(self.recent.index(projfile))
@@ -394,9 +407,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.prj.workdir),
                                           'pypsbuilder project (*.psb)')[0]
             if Path(projfile).exists():
-                stream = gzip.open(projfile, 'rb')
-                data = pickle.load(stream)
-                stream.close()
+                QtWidgets.QApplication.processEvents()
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                with gzip.open(projfile, 'rb') as stream:
+                    data = pickle.load(stream)
                 # do import
                 self.initViewModels()
                 # select phases
@@ -494,6 +508,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.figure.clear()
                 self.plot()
                 self.statusBar().showMessage('Project Imported.')
+                QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -609,34 +624,40 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
+    @property
+    def data(self):
+        # collect info
+        selphases = []
+        for i in range(self.phasemodel.rowCount()):
+            item = self.phasemodel.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                selphases.append(item.text())
+        out = []
+        for i in range(self.outmodel.rowCount()):
+            item = self.outmodel.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                out.append(item.text())
+        # put to dict
+        data = {'selphases': selphases,
+                'out': out,
+                'trange': self.prj.trange,
+                'prange': self.prj.prange,
+                'unilist': self.unimodel.unilist.copy(),
+                'invlist': self.invmodel.invlist[1:].copy(),
+                'tcversion': self.prj.tcversion,
+                'workdir': self.prj.workdir,
+                'version': __version__}
+        return data
+
     def do_save(self):
         """Open working directory and initialize project
         """
         if self.project is not None:
-            # collect info
-            selphases = []
-            for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    selphases.append(item.text())
-            out = []
-            for i in range(self.outmodel.rowCount()):
-                item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    out.append(item.text())
-            # put to dict
-            data = {'selphases': selphases,
-                    'out': out,
-                    'trange': self.prj.trange,
-                    'prange': self.prj.prange,
-                    'unilist': self.unimodel.unilist,
-                    'invlist': self.invmodel.invlist[1:],
-                    'tcversion': self.prj.tcversion,
-                    'version': __version__}
             # do save
-            stream = gzip.open(self.project, 'wb')
-            pickle.dump(data, stream)
-            stream.close()
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            with gzip.open(self.project, 'wb') as stream:
+                pickle.dump(self.data, stream)
             self.changed = False
             if self.project in self.recent:
                 self.recent.pop(self.recent.index(self.project))
@@ -646,6 +667,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.populate_recent()
             self.app_settings(write=True)
             self.statusBar().showMessage('Project saved.')
+            QtWidgets.QApplication.restoreOverrideCursor()
 
     def reparse_outputs(self):
         for row in data['invlist']:
@@ -1581,6 +1603,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             if phases == {} and out == {}:
                 phases, out = self.get_phases_out()
             self.statusBar().showMessage('Running THERMOCALC...')
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -1703,6 +1727,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
+            QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1869,40 +1894,37 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def check_prj_areas(self):
         if self.ready:
             if not hasattr(self.ax, 'areas_shown'):
-                if self.changed:
-                    quit_msg = 'Project have been changed. Save ?'
-                    qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, 'Message', quit_msg,
-                                        qb.Cancel | qb.Save, qb.Save)
-
-                    if reply == qb.Save:
-                        self.do_save()
-                    else:
-                        return
-                if self.project is not None:
-                    from .psexplorer import PTPS
-                    from matplotlib import cm
-                    from matplotlib.colors import ListedColormap, BoundaryNorm
-                    from descartes import PolygonPatch
-                    ps = PTPS(self.project)
-                    ps.refresh_geometry()
-                    if ps.shapes:
-                        vari = [ps.variance[k] for k in ps]
-                        poc = max(vari) - min(vari) + 1
-                        pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
-                        # Set alpha
-                        pscolors[:, -1] = 0.6 # alpha
-                        pscmap = ListedColormap(pscolors)
-                        norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
-                        for k in ps:
-                            self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
-                        self.ax.areas_shown = True
-                        self.canvas.draw()
-                    else:
-                        self.statusBar().showMessage('No areas created.')
+                QtWidgets.QApplication.processEvents()
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                ps = PTPS(PSB(self.data))
+                if ps.shapes:
+                    vari = [ps.variance[k] for k in ps]
+                    poc = max(vari) - min(vari) + 1
+                    pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
+                    # Set alpha
+                    pscolors[:, -1] = 0.6 # alpha
+                    pscmap = ListedColormap(pscolors)
+                    norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
+                    for k in ps:
+                        self.ax.add_patch(PolygonPatch(ps.shapes[k], fc=pscmap(norm(ps.variance[k])), ec='none'))
+                    self.ax.areas_shown = True
+                    self.canvas.draw()
+                else:
+                    self.statusBar().showMessage('No areas created.')
+                QtWidgets.QApplication.restoreOverrideCursor()
             else:
                 self.figure.clear()
                 self.plot()
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+
+    def show_topology(self):
+        if self.ready:
+            if NX_OK:
+                dia = TopologyGraph(PSB(self.data))
+                dia.show()
+            else:
+                self.statusBar().showMessage('Topology graph needs networkx to be installed')
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -2231,6 +2253,68 @@ class OutputDialog(QtWidgets.QDialog):
         self.layout.addWidget(self.plainText)
         self.setLayout(self.layout)
         self.plainText.setPlainText(txt)
+
+
+class TopologyGraph(QtWidgets.QDialog):
+    def __init__(self, psb, parent=None):
+        super(TopologyGraph, self).__init__(parent)
+        self.setWindowTitle('Topology graph')
+        window_icon = resource_filename('pypsbuilder', 'images/pypsbuilder.png')
+        self.setWindowIcon(QtGui.QIcon(window_icon))
+        self.setWindowFlags(QtCore.Qt.WindowMinMaxButtonsHint | QtCore.Qt.WindowCloseButtonHint)
+        self.figure = Figure(facecolor='white')
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.setParent(self)
+        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.canvas)
+        layout.addWidget(self.toolbar)
+        self.setLayout(layout)
+
+        import networkx as nx
+
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+
+        G = nx.Graph()
+        pos = {}
+        labels = {}
+        for inv in psb.invlist:
+            G.add_node(inv[0])
+            pos[inv[0]] = inv[2]['p'][0], inv[2]['T'][0]
+            labels[inv[0]] = str(inv[0])
+
+        edges = {}
+        for uni in psb.unilist:
+            if uni[2] != 0 and uni[3] != 0:
+                out = frozenset(uni[4]['out'])
+                G.add_edge(uni[2], uni[3], out=list(out)[0])
+                if out in edges:
+                    edges[out].append((uni[2], uni[3]))
+                else:
+                    edges[out] = [(uni[2], uni[3])]
+
+        #npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
+        npos = nx.kamada_kawai_layout(G, pos=pos)
+        widths = Normalize(vmin=0, vmax=len(edges))
+        color = cm.get_cmap('tab20', len(edges))
+        for ix, out in enumerate(edges):
+            nx.draw_networkx_edges(G, npos, ax=ax, edgelist=edges[out],
+                                   width=2 + 6*widths(ix), alpha=0.5, edge_color=len(edges[out]) * [color(ix)], label=list(out)[0])
+
+        nx.draw_networkx_nodes(G, npos, ax=ax, node_color='k')
+        nx.draw_networkx_labels(G, npos, labels, ax=ax, font_size=12, font_weight='bold', font_color='w')
+
+        # Shrink current axis by 20%
+        self.figure.tight_layout()
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.85, box.height])
+
+        # Put a legend to the right of the current axis
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        # refresh canvas
+        self.canvas.draw()
 
 
 def main():

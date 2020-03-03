@@ -4,6 +4,7 @@
 
 * psbuilder major update and refactoring
   - compatible with TC 3.50
+  - topology graph window added
   - dogmin implemented
   - autoconnect implemented
   - invariant point search implemented

@@ -33,20 +33,27 @@ class TCError(Exception):
     pass
 
 
-class PSBFile(object):
-    def __init__(self, projfile):
-        psb = Path(projfile).resolve()
+class PSB(object):
+    def __init__(self, data, name='tmp'):
+        self.data = data
+        self.name = name
+        self.unilookup = {}
+        self.invlookup = {}
+        for ix, r in enumerate(data['unilist']):
+            self.unilookup[r[0]] = ix
+        for ix, r in enumerate(data['invlist']):
+            self.invlookup[r[0]] = ix
+
+    @classmethod
+    def from_file(cls, projfile):
+        psb_file = Path(projfile).resolve()
         if psb.exists():
-            stream = gzip.open(str(psb), 'rb')
-            self.data = pickle.load(stream)
-            stream.close()
-            self.name = psb.name
-            self.unilookup = {}
-            self.invlookup = {}
-            for ix, r in enumerate(self.unilist):
-                self.unilookup[r[0]] = ix
-            for ix, r in enumerate(self.invlist):
-                self.invlookup[r[0]] = ix
+            with gzip.open(str(psb_file), 'rb') as stream:
+                data = pickle.load(stream)
+            # check
+            if not 'workdir' in data:
+                data['workdir'] = psb_file.parent
+            return cls(data, name=psb.name)
         else:
             raise Exception('File {} does not exists.'.format(projfile))
 

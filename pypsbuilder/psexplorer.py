@@ -22,17 +22,16 @@ from tqdm import tqdm, trange
 
 
 class PTPS:
-    def __init__(self, projfile):
-        self.psb = PSBFile(projfile)
-        prj = TCAPI(Path(projfile).resolve().parent)
+    def __init__(self, psb):
+        self.psb = psb
+        prj = TCAPI(psb.data.get('workdir'))
         if prj.OK:
             self.prj = prj
         else:
-            print('Error during openning', prj.status)
+            print('Error during initialization of {} directory'.format(psb.data.get('workdir')), prj.status)
         if self.gridfile.is_file():
-            stream = gzip.open(str(self.gridfile), 'rb')
-            data = pickle.load(stream)
-            stream.close()
+            with gzip.open(str(self.gridfile), 'rb') as stream:
+                data = pickle.load(stream)
             self.shapes = data['shapes']
             self.edges = data['edges']
             self.variance = data['variance']
@@ -50,6 +49,13 @@ class PTPS:
         else:
             self.ready = False
             self.gridded = False
+        # refresh shapes
+        self.refresh_geometry()
+
+    @classmethod
+    def from_file(cls, projfile):
+        psb = PSB.from_file(projfile)
+        return cls(psb)
 
     def __iter__(self):
         if self.ready:
@@ -816,8 +822,7 @@ def ps_show():
     parser.add_argument('--alpha', type=float,
                         default=0.6, help='alpha of colormap')
     args = parser.parse_args()
-    ps = PTPS(args.project)
-    ps.refresh_geometry()
+    ps = PTPS.from_file(args.project)
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
                      cmap=args.cmap, alpha=args.alpha))
 
@@ -831,7 +836,7 @@ def ps_grid():
     parser.add_argument('--numP', type=int, default=51,
                         help='number of P steps')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS.from_file(args.project)
     sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
 
 
@@ -864,7 +869,7 @@ def ps_iso():
     parser.add_argument('--clabel', nargs='+',
                         default=[], help='label contours in field defined by set of phases')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS.from_file(args.project)
     sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
                           N=args.ncont, clabel=args.clabel, nosplit=args.nosplit,
@@ -878,7 +883,7 @@ def ps_drawpd():
     parser.add_argument('-a', '--areas', action='store_true',
                         help='export also areas', default=True)
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS.from_file(args.project)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
 
 
