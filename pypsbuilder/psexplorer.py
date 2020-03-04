@@ -43,9 +43,12 @@ class PTPS:
             self.masks = data['masks']
             self.status = data['status']
             self.delta = data['delta']
+            self.uuid = data.get('uuid', '')
             self.ready = True
             self.gridded = True
-            # print('Compositions loaded.')
+            if self.uuid != self.psb.uuid:
+                self.refresh_geometry()
+                print('Project file changed from last gridding. Consider regridding.')
         else:
             self.gridded = False
             # refresh shapes
@@ -64,7 +67,11 @@ class PTPS:
 
     def __repr__(self):
         if self.gridded:
-            gtxt = '\n'.join(['Grid file: {}'.format(self.gridfile.name),
+            if self.uuid == self.psb.uuid:
+                gstatus = 'OK'
+            else:
+                gstatus = 'Need regridding'
+            gtxt = '\n'.join(['Grid file: {} [{}]'.format(self.gridfile.name, gstatus),
                               'T steps: {}'.format(len(self.tspace)),
                               'p steps: {}'.format(len(self.pspace))])
         else:
@@ -109,6 +116,7 @@ class PTPS:
     def save(self):
         if self.ready and self.gridded:
             # put to dict
+            self.uuid = self.psb.uuid
             data = {'shapes': self.shapes,
                     'edges': self.edges,
                     'variance': self.variance,
@@ -119,7 +127,8 @@ class PTPS:
                     'gridcalcs': self.gridcalcs,
                     'masks': self.masks,
                     'status': self.status,
-                    'delta': self.delta}
+                    'delta': self.delta,
+                    'uuid': self.uuid}
             # do save
             with gzip.open(str(self.gridfile), 'wb') as stream:
                 pickle.dump(data, stream)

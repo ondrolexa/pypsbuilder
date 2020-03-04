@@ -9,7 +9,6 @@ from .utils import *
 from .psexplorer import PTPS
 
 from pkg_resources import resource_filename
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 import matplotlib
@@ -21,12 +20,13 @@ from matplotlib.widgets import Cursor
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from descartes import PolygonPatch
+import uuid
 
 try:
     import networkx as nx
-    NX_OK = TRUE
+    NX_OK = True
 except ImportError as e:
-    NX_OK = FALSE
+    NX_OK = False
 
 from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
@@ -646,6 +646,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 'invlist': self.invmodel.invlist[1:].copy(),
                 'tcversion': self.prj.tcversion,
                 'workdir': self.prj.workdir,
+                'uuid': str(uuid.uuid4()),
                 'version': __version__}
         return data
 

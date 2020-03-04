@@ -39,6 +39,7 @@ class PSB(object):
         self.name = name
         self.unilookup = {}
         self.invlookup = {}
+        self.uuid = data['uuid']
         for ix, r in enumerate(data['unilist']):
             self.unilookup[r[0]] = ix
         for ix, r in enumerate(data['invlist']):
@@ -53,6 +54,8 @@ class PSB(object):
             # check
             if not 'workdir' in data:
                 data['workdir'] = psb_file.parent
+            if not 'uuid' in data:
+                data['uuid'] = ''
             return cls(data, name=psb_file.name)
         else:
             raise Exception('File {} does not exists.'.format(projfile))
