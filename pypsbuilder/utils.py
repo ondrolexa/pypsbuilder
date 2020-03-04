@@ -47,15 +47,25 @@ class PSB(object):
     @classmethod
     def from_file(cls, projfile):
         psb_file = Path(projfile).resolve()
-        if psb.exists():
+        if psb_file.exists():
             with gzip.open(str(psb_file), 'rb') as stream:
                 data = pickle.load(stream)
             # check
             if not 'workdir' in data:
                 data['workdir'] = psb_file.parent
-            return cls(data, name=psb.name)
+            return cls(data, name=psb_file.name)
         else:
             raise Exception('File {} does not exists.'.format(projfile))
+
+    def __repr__(self):
+        return '\n'.join(['============',
+                          'PSB datafile',
+                          '============',
+                          'Project file: {}'.format(self.name),
+                          'Univariant lines: {}'.format(len(self.unilist)),
+                          'Invariant point: {}'.format(len(self.invlist)),
+                          'T range: {} {}'.format(*self.trange),
+                          'p range: {} {}'.format(*self.prange)])
 
     @property
     def selphases(self):
@@ -518,7 +528,8 @@ class TCAPI(object):
         return str(self.workdir)
 
     def __repr__(self):
-        return '\n'.join(['THERMOCALC API',
+        return '\n'.join(['==============',
+                          'THERMOCALC API',
                           '==============',
                           'Working directory: {}'.format(self.workdir),
                           'TC version: {}'.format(self.tcversion),
