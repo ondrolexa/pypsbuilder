@@ -450,10 +450,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                                      0, len(data['invlist']), self)
                 progress.setWindowModality(QtCore.Qt.WindowModal)
                 progress.setMinimumDuration(0)
+                old_guesses = self.prj.update_scriptfile(get_old_guesses=True)
                 for ix, row in enumerate(data['invlist']):
                     progress.setValue(ix)
                     if 'cmd' in row[2]:
                         if row[2]['cmd']:
+                            self.prj.update_scriptfile(guesses=row[2]['results'][0]['ptguess'])
                             tcout = self.prj.runtc(row[2]['cmd'])
                             status, variance, pts, res, output = self.prj.parse_logfile()
                             if status == 'ok':
@@ -478,6 +480,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     progress.setValue(ix)
                     if 'cmd' in row[4]:
                         if row[4]['cmd']:
+                            midix = len(row[4]['results']) // 2
+                            self.prj.update_scriptfile(guesses=row[4]['results'][midix]['ptguess'])
                             tcout = self.prj.runtc(row[4]['cmd'])
                             status, variance, pts, res, output = self.prj.parse_logfile()
                             if status == 'ok' and len(res) > 1:
@@ -494,6 +498,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 progress.setValue(len(data['unilist']))
                 progress.deleteLater()
                 self.uniview.resizeColumnsToContents()
+                self.prj.update_scriptfile(guesses=old_guesses)
                 # cutting
                 for row in self.unimodel.unilist:
                     self.trimuni(row)
@@ -837,24 +842,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         if show_output:
             if not r['manual']:
                 txt = ''
-                if 'modes' in r['results'][0]['data']:
-                    mlabels = sorted(list(r['results'][0]['data']['modes'].keys()))
-                else:
-                    mlabels = sorted(list(r['results'][0]['data'].keys()))
+                mlabels = sorted(list(r['phases'].difference(self.prj.excess)))
                 h_format = '{:>10}{:>10}' + '{:>8}' * len(mlabels)
                 n_format = '{:10.4f}{:10.4f}' + '{:8.5f}' * len(mlabels)
                 txt += h_format.format('p', 'T', *mlabels)
                 txt += '\n'
-                if 'modes' in r['results'][0]['data']:
-                    for p, T, res in zip(r['p'], r['T'], r['results']):
-                        row = [p, T] + [res['data']['modes'][lbl] for lbl in mlabels]
-                        txt += n_format.format(*row)
-                        txt += '\n'
-                else:
-                    for p, T, res in zip(r['p'], r['T'], r['results']):
-                        row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
-                        txt += n_format.format(*row)
-                        txt += '\n'
+                for p, T, res in zip(r['p'], r['T'], r['results']):
+                    row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
+                    txt += n_format.format(*row)
+                    txt += '\n'
                 if len(r['results']) > 5:
                     txt += h_format.format('p', 'T', *mlabels)
                 self.textOutput.setPlainText(txt)

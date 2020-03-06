@@ -46,6 +46,8 @@ class PTPS:
             self.uuid = data.get('uuid', '')
             self.ready = True
             self.gridded = True
+            # update variable lookup table
+            self.collect_all_data_keys()
             if self.uuid != self.psb.uuid:
                 self.refresh_geometry()
                 print('Project file changed from last gridding. Consider regridding.')
@@ -291,6 +293,8 @@ class PTPS:
         self.gridded = True
         self.fix_solutions()
         self.create_masks()
+        # update variable lookup table
+        self.collect_all_data_keys()
         # save
         self.save()
 
@@ -385,27 +389,15 @@ class PTPS:
                 print('Solution not found on {} points'.format(err))
             return dt
 
-    def data_keys(self, key):
-        data = dict()
-        if self.ready and self.gridded:
-            res = self.gridcalcs[self.masks[key]]
-            if len(res) > 0:
-                dt = res[0]['data']
-                for k in key.difference({'H2O'}):
-                    data[k] = sorted(list(dt[k].keys()))
-        return data
-
-    @property
-    def all_data_keys(self):
+    def collect_all_data_keys(self):
         data = dict()
         if self.ready and self.gridded:
             for key in self:
                 res = self.gridcalcs[self.masks[key]]
                 if len(res) > 0:
-                    dt = res[0]['data']
-                    for k in key.difference({'H2O'}):
-                        data[k] = sorted(list(dt[k].keys()))
-        return data
+                    for k in res[0]['data'].keys():
+                        data[k] = list(res[0]['data'][k].keys())
+        self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
         dt = dict(pts=[], data=[])
@@ -467,16 +459,18 @@ class PTPS:
         return dt
 
     def merge_data(self, phase, expr, which=7):
-        mn, mx = sys.float_info.max, sys.float_info.min
+        mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
-            if phase in key:
-                d = self.collect_data(key, phase, expr, which=which)
-                z = d['data']
-                if z:
-                    recs[key] = d
-                    mn = min(mn, min(z))
-                    mx = max(mx, max(z))
+            res = self.gridcalcs[self.masks[key]]
+            if len(res) > 0:
+                if phase in res[0]['data']:
+                    d = self.collect_data(key, phase, expr, which=which)
+                    z = d['data']
+                    if z:
+                        recs[key] = d
+                        mn = min(mn, min(z))
+                        mx = max(mx, max(z))
         return recs, mn, mx
 
     def show(self, **kwargs):
@@ -693,7 +687,8 @@ class PTPS:
             cntv = cntv[cntv >= mn - step]
         else:
             dm = (mx - mn) / 25
-            cntv = np.linspace(max(0, mn - dm), mx + dm, N)
+            #cntv = np.linspace(max(0, mn - dm), mx + dm, N)
+            cntv = np.linspace(mn - dm, mx + dm, N)
         # Thin-plate contouring of areas
         fig, ax = plt.subplots()
         for key in recs:

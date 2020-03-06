@@ -144,7 +144,10 @@ class PSB(object):
         for inv in self.invlist:
             if not inv[2]['manual']:
                 break
-        bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
+        if 'composition (from setbulk script)\n' in inv[2]['output']:
+            bc = inv[2]['output'].split('composition (from setbulk script)\n')[1].split('\n')
+        else:
+            bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
         return bc[0].split(), bc[1].split()
 
     def construct_areas(self):
@@ -618,8 +621,6 @@ class TCAPI(object):
         lines = [ln for ln in output.splitlines() if ln != '']
         pts = []
         res = []
-        alldata = []
-        ptguesses = []
         variance = -1
         # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
         ptpat = re.compile('(?<=\{)(.*?)(?=\})')
@@ -634,6 +635,7 @@ class TCAPI(object):
             # parse ptguesses
             bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
             bstarts.append(len(lines))
+            ptguesses = []
             for bs, be in zip(bstarts[:-1], bstarts[1:]):
                 block = lines[bs:be]
                 # pts.append([float(n) for n in block[1].split()[:2]])
@@ -642,75 +644,82 @@ class TCAPI(object):
                 gixe = xyz[-1] + 2
                 ptguesses.append(block[gixs:gixe])
             # parse icfile
+            alldata = []
             with self.icfile.open('r', encoding=self.TCenc) as f:
                 icfile = f.read()
             for block in icfile.split('\n===========================================================\n\n')[1:]:
                 sections = block.split('\n\n')
-                ic = {}
+                data = {}
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
                 variance = int(varpat.search(sections[0]).group().replace(';', ''))
                 #seenvariance = int(varpat.search(sections[0]).group())
+                # parse mode
+                l1, l2 = sections[5].split('\n')
+                for phase, vv in zip(l1.split()[1:], l2.split()):
+                    dt = data.get(phase, {})
+                    dt['mode'] = float(vv)
+                    data[phase] = dt
                 # parse a-x variables
-                ax = {}
                 lns = sections[1].split('\n')
                 for l1, l2 in zip(lns[::2], lns[1::2]):
                     phase, l1r = l1.split(maxsplit=1)
                     axp = {}
                     for cc, vv in zip(l1r.split(), l2.split()):
-                        axp[cc] = float(vv)
-                    ax[phase] = axp
+                        axp[cc.replace('({})'.format(phase), '')] = float(vv)
+                    dt = data.get(phase, {})
+                    dt.update(axp)
+                    data[phase] = dt
                 # parse site fractions
-                sf = {}
                 lns = sections[2].split('\n')[1:]
                 for l1, l2 in zip(lns[::2], lns[1::2]):
                     phase, l1r = l1.split(maxsplit=1)
                     sfp = {}
                     for cc, vv in zip(l1r.split(), l2.split()):
                         sfp[cc] = float(vv)
-                    sf[phase] = sfp
+                    dt = data.get(phase, {})
+                    dt.update(sfp)
+                    data[phase] = dt
                 # parse oxides
-                ox = {}
                 l1, l2 = sections[3].split('\n')[1:]
                 ccs = l1.split()
                 nccs = len(ccs)
                 bulk = {}
                 for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
                     bulk[cc] = float(vv)
-                ox['bulk'] = bulk
+                data['bulk'] = bulk
                 for ln in sections[4].split('\n'):
                     oxp = {}
                     phase, lnr = ln.split(maxsplit=1)
                     for cc, vv in zip(ccs, lnr.split()):
                         oxp[cc] = float(vv)
-                    ox[phase] = oxp
-                # parse mode
-                mode = {}
-                l1, l2 = sections[5].split('\n')
-                for cc, vv in zip(l1.split()[1:], l2.split()):
-                    mode[cc] = float(vv)
+                    dt = data.get(phase, {})
+                    dt.update(oxp)
+                    data[phase] = dt
                 # parse factor
-                factor = {}
                 l1, l2 = sections[6].split('\n')
-                for cc, vv in zip(l1.split()[1:], l2.split()):
-                    factor[cc] = float(vv)
+                for phase, vv in zip(l1.split()[1:], l2.split()):
+                    dt = data.get(phase, {})
+                    dt.update(dict(factor=float(vv)))
+                    data[phase] = dt
                 # parse thermodynamic properties
-                tdp = {}
                 props, lr = sections[7].split('\n', maxsplit=1)
                 for ln in lr.split('\n'):
                     tdpp = {}
                     phase, lnr = ln.split(maxsplit=1)
                     for cc, vv in zip(props.split(), lnr.split()):
                         tdpp[cc] = float(vv)
-                    tdp[phase] = tdpp
+                    dt = data.get(phase, {})
+                    dt.update(tdpp)
+                    data[phase] = dt
                     # sys
-                    tdpp = {}
+                    tdps = {}
                     phase, lnr = sections[8].split(maxsplit=1)
                     for cc, vv in zip(props.split(), lnr.split()):
-                        tdpp[cc] = float(vv)
-                    tdp[phase] = tdpp
+                        tdps[cc] = float(vv)
+                    dt = data.get(phase, {})
+                    dt.update(tdps)
+                    data[phase] = dt
                 # parse endmembers and chemical potential
-                mu = {}
-                em = {}
                 props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
                 for section in sections[9:-1]:
                     lns = [ln for ln in section.split('\n') if ln != '                    ideal       gamma    activity        prop          µ0     RT ln a']
@@ -720,17 +729,17 @@ class TCAPI(object):
                         phase_em, lnr = ln.split(maxsplit=1)
                         emp = {}
                         for cc, vv in zip(props, lnr.split()):
-                            if cc == 'mu':
-                                mu['{}({})'.format(phase, phase_em)] = float(vv)
-                            else:
-                                emp[cc] = float(vv)
-                        em['{}({})'.format(phase, phase_em)] = emp
+                            emp[cc] = float(vv)
+                        phase_comb = '{}({})'.format(phase, phase_em)
+                        dt = data.get(phase_comb, {})
+                        dt.update(emp)
+                        data[phase_comb] = dt
                 for ln in sections[-1].split('\n')[:-1]:
                     phase, vv = ln.split()
-                    mu[phase] = float(vv)
-                alldata.append(dict(axvars=ax, sitefractions=sf, oxides=ox, modes=mode,
-                                 factors=factor, tdprops=tdp, mu=mu, endmembers=em))
-
+                    dt = data.get(phase, {})
+                    dt.update(dict(mu=float(vv)))
+                    data[phase] = dt
+                alldata.append(data)
             res = [dict(data=data, ptguess=ptguess) for data, ptguess in zip(alldata, ptguesses)]
             if res:
                 status = 'ok'
