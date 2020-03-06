@@ -827,7 +827,7 @@ class TCAPI(object):
         gse = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-END}')]
         if get_old_guesses:
             if gsb and gse:
-                old_guesses = sc[gsb[0] + 1:gse[0]]
+                old_guesses = [ln.strip() for ln in sc[gsb[0] + 1:gse[0]]]
         if guesses is not None:
             if gsb and gse:
                 sc = sc[:gsb[0] + 1] + [gln + '\n' for gln in guesses] + sc[gse[0]:]
