@@ -33,7 +33,7 @@ class TCError(Exception):
     pass
 
 
-class PSB(object):
+class ProjectStore(object):
     def __init__(self, data, name='tmp'):
         self.data = data
         self.name = name
@@ -59,16 +59,6 @@ class PSB(object):
             return cls(data, name=psb_file.name)
         else:
             raise Exception('File {} does not exists.'.format(projfile))
-
-    def __repr__(self):
-        return '\n'.join(['============',
-                          'PSB datafile',
-                          '============',
-                          'Project file: {}'.format(self.name),
-                          'Univariant lines: {}'.format(len(self.unilist)),
-                          'Invariant point: {}'.format(len(self.invlist)),
-                          'T range: {} {}'.format(*self.trange),
-                          'p range: {} {}'.format(*self.prange)])
 
     @property
     def selphases(self):
@@ -139,16 +129,6 @@ class PSB(object):
             else:
                 T, p = [], []
         return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
-
-    def get_bulk_composition(self):
-        for inv in self.invlist:
-            if not inv[2]['manual']:
-                break
-        if 'composition (from setbulk script)\n' in inv[2]['output']:
-            bc = inv[2]['output'].split('composition (from setbulk script)\n')[1].split('\n')
-        else:
-            bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
-        return bc[0].split(), bc[1].split()
 
     def construct_areas(self):
         def area_exists(indexes):
@@ -335,6 +315,54 @@ class PSB(object):
         return shapes, shape_edges, bad_shapes
 
 
+class PSB(ProjectStore):
+    def __repr__(self):
+        return '\n'.join(['============',
+                          'PSB datafile',
+                          '============',
+                          'Project file: {}'.format(self.name),
+                          'Univariant lines: {}'.format(len(self.unilist)),
+                          'Invariant point: {}'.format(len(self.invlist)),
+                          'T range: {} {}'.format(*self.trange),
+                          'p range: {} {}'.format(*self.prange)])
+
+    def get_bulk_composition(self):
+        for inv in self.invlist:
+            if not inv[2]['manual']:
+                break
+        bc = ['', '']
+        if 'composition (from setbulk script)\n' in inv[2]['output']:
+            bc = inv[2]['output'].split('composition (from setbulk script)\n')[1].split('\n')
+        if 'composition (from script)\n' in inv[2]['output']:
+            bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
+        return bc[0].split(), bc[1].split()
+
+
+class TXB(ProjectStore):
+    def __repr__(self):
+        return '\n'.join(['============',
+                          'TXB datafile',
+                          '============',
+                          'Project file: {}'.format(self.name),
+                          'Univariant lines: {}'.format(len(self.unilist)),
+                          'Invariant point: {}'.format(len(self.invlist)),
+                          'T range: {} {}'.format(*self.trange),
+                          'p: {}'.format((self.prange[0] + self.prange[1]) / 2)])
+
+    def get_bulk_composition(self):
+        for inv in self.invlist:
+            if not inv[2]['manual']:
+                break
+        bc = [[], []]
+        if 'composition (from script)\n' in inv[2]['output']:
+            tb = inv[2]['output'].split('composition (from script)\n')[1].split('<==================================================>')[0]
+            nested = [r.split() for r in tb.split('\n')[2:-1]]
+            bc = [[r[0] for r in nested],
+                  [r[1] for r in nested],
+                  [r[-1] for r in nested]]
+        return bc
+
+
 class TCAPI(object):
     """
     Class to access TC functionality in given working directory
@@ -390,6 +418,8 @@ class TCAPI(object):
             self.excess = set()
             self.trange = (200., 1000.)
             self.prange = (0.1, 20.)
+            self.bulk = []
+            self.ptx_steps = 20
             check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
                      'setexcess': False, 'printxyz': False}
             errinfo = 'Check your scriptfile.'
@@ -424,9 +454,14 @@ class TCAPI(object):
                         self.prange = (float(kw[-2]), float(kw[-1]))
                     elif kw[0] == 'setbulk':
                         errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
-                        self.bulk = kw[1:]
-                        if 'yes' in self.bulk:
-                            self.bulk.remove('yes')
+                        bulk = kw[1:]
+                        if 'yes' in bulk:
+                            bulk.remove('yes')
+                        if len(self.bulk) == 1:
+                            if len(self.bulk[0]) < len(bulk):
+                                self.ptx_steps = int(bulk[-1]) - 1
+                                bulk = bulk[:-1]
+                        self.bulk.append(bulk)
                         check['setbulk'] = True
                     elif kw[0] == 'setexcess':
                         errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
@@ -600,13 +635,13 @@ class TCAPI(object):
         return self.tcout.split('using ')[1].split('\n')[0]
 
     def parse_logfile(self, **kwargs):
-        # coomon api for logfile parsing
+        # common api for logfile parsing
         if self.tcnewversion:
-            return self.parse_logfile_new()
+            return self.parse_logfile_new(**kwargs)
         else:
             return self.parse_logfile_old(output=kwargs.get('output', None))
 
-    def parse_logfile_new(self):
+    def parse_logfile_new(self, **kwargs):
         # res is list of dicts with data and ptguess keys
         # data is dict with keys ['axvars', 'sitefractions', 'oxides', 'modes', 'factors', 'tdprops', 'mu', 'endmembers']
         # axvar and sitefractions contains keys of compound phases
@@ -616,11 +651,13 @@ class TCAPI(object):
         # tdprops contains keys of all phases plus 'sys'
         # mu contains keys of all phases compunds, e.g g(alm) for compund phase and q for simple phase
         # endmembers contains keys of all non-simple phases compunds, e.g. g(py)
+        tx = kwargs.get('tx', False)
         with self.logfile.open('r', encoding=self.TCenc) as f:
             output = f.read()
         lines = [ln for ln in output.splitlines() if ln != '']
         pts = []
         res = []
+        headers = []
         variance = -1
         # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
         ptpat = re.compile('(?<=\{)(.*?)(?=\})')
@@ -655,10 +692,16 @@ class TCAPI(object):
                 #seenvariance = int(varpat.search(sections[0]).group())
                 # parse mode
                 l1, l2 = sections[5].split('\n')
-                for phase, vv in zip(l1.split()[1:], l2.split()):
-                    dt = data.get(phase, {})
-                    dt['mode'] = float(vv)
-                    data[phase] = dt
+                if tx:
+                    for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
+                        dt = data.get(phase, {})
+                        dt['mode'] = float(vv)
+                        data[phase] = dt
+                else:
+                    for phase, vv in zip(l1.split()[1:], l2.split()):
+                        dt = data.get(phase, {})
+                        dt['mode'] = float(vv)
+                        data[phase] = dt
                 # parse a-x variables
                 lns = sections[1].split('\n')
                 for l1, l2 in zip(lns[::2], lns[1::2]):
@@ -697,10 +740,16 @@ class TCAPI(object):
                     data[phase] = dt
                 # parse factor
                 l1, l2 = sections[6].split('\n')
-                for phase, vv in zip(l1.split()[1:], l2.split()):
-                    dt = data.get(phase, {})
-                    dt.update(dict(factor=float(vv)))
-                    data[phase] = dt
+                if tx:
+                    for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
+                        dt = data.get(phase, {})
+                        dt.update(dict(factor=float(vv)))
+                        data[phase] = dt
+                else:
+                    for phase, vv in zip(l1.split()[1:], l2.split()):
+                        dt = data.get(phase, {})
+                        dt.update(dict(factor=float(vv)))
+                        data[phase] = dt
                 # parse thermodynamic properties
                 props, lr = sections[7].split('\n', maxsplit=1)
                 for ln in lr.split('\n'):
@@ -711,14 +760,16 @@ class TCAPI(object):
                     dt = data.get(phase, {})
                     dt.update(tdpp)
                     data[phase] = dt
-                    # sys
-                    tdps = {}
-                    phase, lnr = sections[8].split(maxsplit=1)
-                    for cc, vv in zip(props.split(), lnr.split()):
-                        tdps[cc] = float(vv)
-                    dt = data.get(phase, {})
-                    dt.update(tdps)
-                    data[phase] = dt
+                # sys
+                tdps = {}
+                header, lnr = sections[8].split(maxsplit=1)
+                for cc, vv in zip(props.split(), lnr.split()):
+                    tdps[cc] = float(vv)
+                dt = data.get('sys', {})
+                dt.update(tdps)
+                data[phase] = dt
+                if tx:
+                    headers.append(float(header))
                 # parse endmembers and chemical potential
                 props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
                 for section in sections[9:-1]:
@@ -745,7 +796,16 @@ class TCAPI(object):
                 status = 'ok'
             else:
                 status = 'nir'
-        return status, variance, np.array(pts).T, res, output
+        if tx:
+            if status == 'ok':
+                comps = [ix for ix, ln in enumerate(lines) if ln.startswith('composition (from script)')][0]
+                steps = int(lines[comps + 1].split()[-1]) - 1
+                txcoords = np.array(((np.array(headers) - 1) / steps, np.array(pts).T[1]))
+            else:
+                txcoords = None
+            return status, variance, txcoords, np.array(pts).T, res, output
+        else:
+            return status, variance, np.array(pts).T, res, output
 
     def parse_logfile_old(self, output=None):
         # res is list of dicts with data and ptguess keys
@@ -853,11 +913,52 @@ class TCAPI(object):
         else:
             return None
 
+    def update_ptxsteps(self, steps=None):
+        with self.scriptfile.open('r', encoding=self.TCenc) as f:
+            sc = f.readlines()
+        bix = [ix for ix, ln in enumerate(sc) if ln.strip().startswith('setbulk')]
+        changed = False
+        if len(bix) == 2:
+            bulk1 = sc[bix[0]].split('%')[0].split()[1:]
+            nox1 = len(bulk1)
+            if 'yes' in bulk1:
+                nox1 -= 1
+            oparts = sc[bix[1]].split('%')
+            bulk2 = oparts[0].split()[1:]
+            nox2 = len(bulk2)
+            if 'yes' in bulk2:
+                nox2 -= 1
+            if nox2 > nox1:
+                old_steps = int(bulk2[-1])
+                if steps is not None:
+                    oparts[0] = oparts[0][::-1].split(maxsplit=1)[1][::-1] + ' ' + str(steps) + ' '
+                else:
+                    oparts[0] = oparts[0][::-1].split(maxsplit=1)[1][::-1] + ' '
+            else:
+                old_steps = 20
+                if steps is not None:
+                    oparts[0] = oparts[0] + str(steps) + ' '
+            sc[bix[1]] = '%'.join(oparts)
+            if steps is not None:
+                if steps != old_steps:
+                    with self.scriptfile.open('w', encoding=self.TCenc) as f:
+                        for ln in sc:
+                            f.write(ln)
+                    changed = True
+            return old_steps, changed
+        else:
+            return None, changed
+
     def parse_kwargs(self, **kwargs):
         prange = kwargs.get('prange', self.prange)
         trange = kwargs.get('trange', self.trange)
         steps = kwargs.get('steps', 50)
-        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
+        if np.diff(prange)[0] < 0.001:
+            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1)
+        elif np.diff(trange)[0] < 0.001:
+            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1)
+        else:
+            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
         return prange, trange, steps, prec
 
     def tc_calc_t(self, phases, out, **kwargs):
@@ -879,6 +980,16 @@ class TCAPI(object):
     def tc_calc_pt(self, phases, out, **kwargs):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
+        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def tc_calc_tx(self, phases, out, **kwargs):
+        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        if len(out) > 1:
+            tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
+        else:
+            tmpl = '{}\n\n{}\ny\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n'
         ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
         tcout = self.runtc(ans)
         return tcout, ans

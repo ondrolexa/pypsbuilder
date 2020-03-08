@@ -36,6 +36,7 @@ setup(
     entry_points="""
     [console_scripts]
     psbuilder=pypsbuilder.psbuilder:main
+    txbuilder=pypsbuilder.txbuilder:main
     psshow=pypsbuilder.psexplorer:ps_show
     psiso=pypsbuilder.psexplorer:ps_iso
     psgrid=pypsbuilder.psexplorer:ps_grid
