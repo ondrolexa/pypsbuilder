@@ -881,8 +881,8 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 0), trange[1] + ts)
-            prange = (max(self.prj.prange[0] - 1, 0), self.prj.prange[1] + 1)
+            trange = (max(trange[0] - ts, 11), trange[1] + ts)
+            prange = (max(self.prj.prange[0] - 1, 0.01), self.prj.prange[1] + 1)
             total = len(phases.difference(out).difference(self.prj.excess)) + len(set(self.prj.phases).difference(self.prj.excess).difference(phases))
             done = 0
             progress = QtWidgets.QProgressDialog('Searching for solutions', 'Cancel',
@@ -905,16 +905,15 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
                         Tm = splt([pm])
                         X = splx([pm])
                         if np.isnan(Tm[0]):
-                            cand_out.append([-1, (min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''])
+                            cand_out.append(((min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''))
                         else:
-                            ix = ((r['p'] - X)**2 + (r['T'] - Tm)**2).argmin()
                             label = self.format_label(r['phases'], r['out'])
                             exists, inv_id = '', ''
                             for row in self.invmodel.invlist[1:]:
                                 if phases == row[2]['phases'] and nout == row[2]['out']:
                                     exists, inv_id = '*', str(row[0])
                                     break
-                            cand.append([ix, X[0], Tm[0], exists, ' '.join(nout), inv_id])
+                            cand.append((X[0], Tm[0], exists, ' '.join(nout), inv_id))
                 done += 1
 
             for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
@@ -935,16 +934,15 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
                         Tm = splt([pm])
                         X = splx([pm])
                         if np.isnan(Tm[0]):
-                            cand_out.append([-1, (min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''])
+                            cand_out.append(((min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''))
                         else:
-                            ix = ((r['p'] - X)**2 + (r['T'] - Tm)**2).argmin()
                             label = self.format_label(r['phases'], r['out'])
                             exists, inv_id = '', ''
                             for row in self.invmodel.invlist[1:]:
                                 if nphases == row[2]['phases'] and nout == row[2]['out']:
                                     exists, inv_id = '*', str(row[0])
                                     break
-                            cand.append([ix, X[0], Tm[0], exists, ' '.join(nout), inv_id])
+                            cand.append((X[0], Tm[0], exists, ' '.join(nout), inv_id))
                 done += 1
 
             #self.prj.update_scriptfile(guesses=old_guesses)
@@ -954,14 +952,14 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             if cand:
                 txt = '         X         T E     Out   Inv\n'
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
-                for cc in sorted(cand):
-                    txt += n_format.format(*cc[1:])
+                for cc in sorted(cand, reverse=True):
+                    txt += n_format.format(*cc)
                 if cand_out:
                     txt += 'Out of TX section solutions\n'
                     txt += '         p         T E     Out   Inv\n'
                     n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
-                    for cc in sorted(cand_out):
-                        txt += n_format.format(*cc[1:])
+                    for cc in sorted(cand_out, reverse=True):
+                        txt += n_format.format(*cc)
                 self.textOutput.setPlainText(txt)
                 self.statusBar().showMessage('Searching done. Found {} solutions and out of plane solutions {}.'.format(len(cand), len(cand_out)))
             else:
@@ -1549,11 +1547,11 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 0), trange[1] + ts)
+            trange = (max(trange[0] - ts, 11), trange[1] + ts)
             #prange = self.ax.get_ylim()
             #ps = extend * (prange[1] - prange[0]) / 100
             #prange = (max(prange[0] - ps, 0), prange[1] + ps)
-            prange = (max(self.prj.prange[0] - 1, 0), self.prj.prange[1] + 1)
+            prange = (max(self.prj.prange[0] - 1, 0.01), self.prj.prange[1] + 1)
             _, changed = self.prj.update_ptxsteps(steps=self.spinSteps.value())
             if changed:
                 self.read_scriptfile()
@@ -2278,4 +2276,3 @@ def main():
     window.show()
     window.move(int(width), int(height))
     sys.exit(application.exec_())
-

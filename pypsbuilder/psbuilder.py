@@ -901,10 +901,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 0), trange[1] + ts)
+            trange = (max(trange[0] - ts, 11), trange[1] + ts)
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0), prange[1] + ps)
+            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
             cand = []
             for ophase in phases.difference(out).difference(self.prj.excess):
                 nout = out.union(set([ophase]))
@@ -912,13 +912,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
                     p, T = pts.flatten()
-                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
                     exists, inv_id = '', ''
                     for row in self.invmodel.invlist[1:]:
                         if phases == row[2]['phases'] and nout == row[2]['out']:
                             exists, inv_id = '*', str(row[0])
                             break
-                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+                    cand.append((p, T, exists, ' '.join(nout), inv_id))
 
             for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
@@ -927,21 +926,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
                     p, T = pts.flatten()
-                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
                     exists, inv_id = '', ''
                     for row in self.invmodel.invlist[1:]:
                         if nphases == row[2]['phases'] and nout == row[2]['out']:
                             exists, inv_id = '*', str(row[0])
                             break
-                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+                    cand.append((p, T, exists, ' '.join(nout), inv_id))
 
             #self.prj.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
                 txt = '         p         T E     Out   Inv\n'
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
-                for cc in sorted(cand):
-                    txt += n_format.format(*cc[1:])
+                for cc in sorted(cand, reverse=True):
+                    txt += n_format.format(*cc)
 
                 self.textOutput.setPlainText(txt)
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
@@ -1624,10 +1622,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 0), trange[1] + ts)
+            trange = (max(trange[0] - ts, 11), trange[1] + ts)
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0), prange[1] + ps)
+            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
             steps = self.spinSteps.value()
 
             if len(out) == 1:
@@ -2341,4 +2339,3 @@ def main():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
-
