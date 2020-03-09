@@ -22,13 +22,13 @@ from tqdm import tqdm, trange
 
 
 class PTPS:
-    def __init__(self, psb):
-        self.psb = psb
-        prj = TCAPI(psb.data.get('workdir'))
+    def __init__(self, store):
+        self.store = store
+        prj = TCAPI(store.data.get('workdir'))
         if prj.OK:
             self.prj = prj
         else:
-            print('Error during initialization of {} directory'.format(psb.data.get('workdir')), prj.status)
+            print('Error during initialization of {} directory'.format(store.data.get('workdir')), prj.status)
         if self.gridfile.is_file():
             with gzip.open(str(self.gridfile), 'rb') as stream:
                 data = pickle.load(stream)
@@ -48,7 +48,7 @@ class PTPS:
             self.gridded = True
             # update variable lookup table
             self.collect_all_data_keys()
-            if self.uuid != self.psb.uuid:
+            if self.uuid != self.store.uuid:
                 self.refresh_geometry()
                 print('Project file changed from last gridding. Consider regridding.')
         else:
@@ -58,8 +58,11 @@ class PTPS:
 
     @classmethod
     def from_file(cls, projfile):
-        psb = PSB.from_file(projfile)
-        return cls(psb)
+        if '.psb' in projfile:
+            store = PSB.from_file(projfile)
+        elif '.txb' in projfile:
+            store = TXB.from_file(projfile)
+        return cls(store)
 
     def __iter__(self):
         if self.ready:
@@ -69,7 +72,7 @@ class PTPS:
 
     def __repr__(self):
         if self.gridded:
-            if self.uuid == self.psb.uuid:
+            if self.uuid == self.store.uuid:
                 gstatus = 'OK'
             else:
                 gstatus = 'Need regridding'
@@ -78,7 +81,7 @@ class PTPS:
                               'p steps: {}'.format(len(self.pspace))])
         else:
             gtxt = 'Not yet gridded'
-        return '\n'.join([repr(self.psb),
+        return '\n'.join([repr(self.store),
                           '============',
                           'Gridded data',
                           '============',
@@ -103,22 +106,22 @@ class PTPS:
 
     @property
     def ratio(self):
-        return (self.psb.trange[1] - self.psb.trange[0]) / (self.psb.prange[1] - self.psb.prange[0])
+        return (self.store.trange[1] - self.store.trange[0]) / (self.store.prange[1] - self.store.prange[0])
 
     @property
     def gridfile(self):
-        return self.prj.workdir.joinpath(self.psb.name).with_suffix('.psi')
+        return self.prj.workdir.joinpath(self.store.name).with_suffix('.psi')
 
     def unidata(self, fid):
-        return self.psb.unidata(fid)
+        return self.store.unidata(fid)
 
     def invdata(self, fid):
-        return self.psb.invdata(fid)
+        return self.store.invdata(fid)
 
     def save(self):
         if self.ready and self.gridded:
             # put to dict
-            self.uuid = self.psb.uuid
+            self.uuid = self.store.uuid
             data = {'shapes': self.shapes,
                     'edges': self.edges,
                     'variance': self.variance,
@@ -137,7 +140,7 @@ class PTPS:
 
     def refresh_geometry(self):
         # Create shapes
-        self.shapes, self.edges, self.bad_shapes = self.psb.create_shapes()
+        self.shapes, self.edges, self.bad_shapes = self.store.create_shapes()
         # calculate variance
         self.variance = {}
         for key in self.shapes:
@@ -161,14 +164,14 @@ class PTPS:
             output.write('2 1  %% which columns to be x,y in phase diagram\n')
             output.write('\n')
             output.write('% Points\n')
-            for i in self.psb.invlist:
+            for i in self.store.invlist:
                 output.write('% ------------------------------\n')
                 output.write('i%s   %s\n' % (i[0], i[1]))
                 output.write('\n')
                 output.write('%s %s\n' % (i[2]['p'][0], i[2]['T'][0]))
                 output.write('\n')
             output.write('% Lines\n')
-            for u in self.psb.unilist:
+            for u in self.store.unilist:
                 output.write('% ------------------------------\n')
                 output.write('u%s   %s\n' % (u[0], u[1]))
                 output.write('\n')
@@ -192,17 +195,17 @@ class PTPS:
             if export_areas:
                 # phases in areas for TC-Investigator
                 with self.prj.workdir.joinpath('assemblages.txt').open('w') as tcinv:
-                    vertices, edges, phases, tedges, tphases = self.psb.construct_areas()
+                    vertices, edges, phases, tedges, tphases = self.store.construct_areas()
                     # write output
                     output.write('% Areas\n')
                     output.write('% ------------------------------\n')
                     maxpf = max([len(p) for p in phases]) + 1
                     for ed, ph, ve in zip(edges, phases, vertices):
                         v = np.array(ve)
-                        if not (np.all(v[:, 0] < self.psb.trange[0]) or
-                                np.all(v[:, 0] > self.psb.trange[1]) or
-                                np.all(v[:, 1] < self.psb.prange[0]) or
-                                np.all(v[:, 1] > self.psb.prange[1])):
+                        if not (np.all(v[:, 0] < self.store.trange[0]) or
+                                np.all(v[:, 0] > self.store.trange[1]) or
+                                np.all(v[:, 1] < self.store.prange[0]) or
+                                np.all(v[:, 1] > self.store.prange[1])):
                             d = ('{:.2f} '.format(len(ph) / maxpf) +
                                  ' '.join(['u{}'.format(e) for e in ed]) +
                                  ' % ' + ' '.join(ph) + '\n')
@@ -217,17 +220,17 @@ class PTPS:
             output.write('\n')
             output.write('*\n')
             output.write('\n')
-            output.write('window {} {} '.format(*self.psb.trange) +
-                         '{} {}\n\n'.format(*self.psb.prange))
+            output.write('window {} {} '.format(*self.store.trange) +
+                         '{} {}\n\n'.format(*self.store.prange))
             output.write('darkcolour  56 16 101\n\n')
-            dt = self.psb.trange[1] - self.psb.trange[0]
-            dp = self.psb.prange[1] - self.psb.prange[0]
+            dt = self.store.trange[1] - self.store.trange[0]
+            dp = self.store.prange[1] - self.store.prange[0]
             ts = np.power(10, np.int(np.log10(dt)))
             ps = np.power(10, np.int(np.log10(dp)))
-            tg = np.arange(0, self.psb.trange[1] + ts, ts)
-            tg = tg[tg >= self.psb.trange[0]]
-            pg = np.arange(0, self.psb.prange[1] + ps, ps)
-            pg = pg[pg >= self.psb.prange[0]]
+            tg = np.arange(0, self.store.trange[1] + ts, ts)
+            tg = tg[tg >= self.store.trange[0]]
+            pg = np.arange(0, self.store.prange[1] + ps, ps)
+            pg = pg[pg >= self.store.prange[0]]
             output.write('bigticks ' +
                          '{} {} '.format(tg[1] - tg[0], tg[0]) +
                          '{} {}\n\n'.format(pg[1] - pg[0], pg[0]))
@@ -245,8 +248,8 @@ class PTPS:
             print('Drawpd error!', str(err))
 
     def calculate_composition(self, numT=51, numP=51):
-        self.tspace = np.linspace(self.psb.trange[0], self.psb.trange[1], numT)
-        self.pspace = np.linspace(self.psb.prange[0], self.psb.prange[1], numP)
+        self.tspace = np.linspace(self.store.trange[0], self.store.trange[1], numT)
+        self.pspace = np.linspace(self.store.prange[0], self.store.prange[1], numP)
         self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
         self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
         self.status = np.empty(self.tg.shape)
@@ -500,7 +503,7 @@ class PTPS:
             self.add_overlay(ax, label=label)
             if out:
                 for o in out:
-                    lst = [self.psb.get_trimmed_uni(row[0]) for row in self.psb.unilist if o in row[4]['out']]
+                    lst = [self.store.get_trimmed_uni(row[0]) for row in self.store.unilist if o in row[4]['out']]
                     if lst:
                         ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
                                 np.hstack([(*seg[1], np.nan) for seg in lst]),
@@ -514,21 +517,21 @@ class PTPS:
             cax = divider.append_axes('right', size='4%', pad=0.05)
             cb = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cb.set_label('Variance')
-            ax.axis(self.psb.trange + self.psb.prange)
+            ax.axis(self.store.trange + self.store.prange)
             if bulk:
                 if label:
-                    ax.set_xlabel(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
+                    ax.set_xlabel(self.store.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
                 else:
-                    ax.set_xlabel(self.psb.name)
+                    ax.set_xlabel(self.store.name)
                 # bulk composition
-                ox, vals = self.psb.get_bulk_composition()
+                ox, vals = self.store.get_bulk_composition()
                 table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
                 plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
             else:
                 if label:
-                    ax.set_title(self.psb.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
+                    ax.set_title(self.store.name + (len(self.prj.excess) * ' +{}').format(*self.prj.excess))
                 else:
-                    ax.set_title(self.psb.name)
+                    ax.set_title(self.store.name)
             # connect button press
             cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
@@ -558,25 +561,25 @@ class PTPS:
 
     def show_status(self, label=False):
         fig, ax = plt.subplots()
-        extent = (self.psb.trange[0] - self.tstep / 2, self.psb.trange[1] + self.tstep / 2,
-                  self.psb.prange[0] - self.pstep / 2, self.psb.prange[1] + self.pstep / 2)
+        extent = (self.store.trange[0] - self.tstep / 2, self.store.trange[1] + self.tstep / 2,
+                  self.store.prange[0] - self.pstep / 2, self.store.prange[1] + self.pstep / 2)
         cmap = ListedColormap(['orangered', 'limegreen'])
         ax.imshow(self.status, extent=extent, aspect='auto', origin='lower', cmap=cmap)
         self.add_overlay(ax, label=label)
-        plt.axis(self.psb.trange + self.psb.prange)
-        plt.title('Gridding status - {}'.format(self.psb.name))
+        plt.axis(self.store.trange + self.store.prange)
+        plt.title('Gridding status - {}'.format(self.store.name))
         plt.show()
 
     def show_delta(self, label=False):
         fig, ax = plt.subplots()
-        extent = (self.psb.trange[0] - self.tstep / 2, self.psb.trange[1] + self.tstep / 2,
-                  self.psb.prange[0] - self.pstep / 2, self.psb.prange[1] + self.pstep / 2)
+        extent = (self.store.trange[0] - self.tstep / 2, self.store.trange[1] + self.tstep / 2,
+                  self.store.prange[0] - self.pstep / 2, self.store.prange[1] + self.pstep / 2)
         im = ax.imshow(self.delta, extent=extent, aspect='auto', origin='lower')
         self.add_overlay(ax, label=label)
         cb = plt.colorbar(im)
         cb.set_label('sec/point')
-        plt.title('THERMOCALC execution time - {}'.format(self.psb.name))
-        plt.axis(self.psb.trange + self.psb.prange)
+        plt.title('THERMOCALC execution time - {}'.format(self.store.name))
+        plt.axis(self.store.trange + self.store.prange)
         plt.show()
 
     def show_path_data(self, dt, phase, expr, label=False, pathwidth=4, allpath=True):
@@ -603,8 +606,8 @@ class PTPS:
             self.add_overlay(ax, label=label)
         cb = plt.colorbar(line, ax=ax)
         cb.set_label('{}[{}]'.format(phase, expr))
-        plt.axis(self.psb.trange + self.psb.prange)
-        plt.title('PT path - {}'.format(self.psb.name))
+        plt.axis(self.store.trange + self.store.prange)
+        plt.title('PT path - {}'.format(self.store.name))
         plt.show()
 
     def show_path_modes(self, dt, exclude=[], cmap='tab20'):
@@ -738,7 +741,7 @@ class PTPS:
             self.add_overlay(ax)
             # zero mode line
             if out:
-                lst = [self.psb.get_trimmed_uni(row[0]) for row in self.psb.unilist if phase in row[4]['out']]
+                lst = [self.store.get_trimmed_uni(row[0]) for row in self.store.unilist if phase in row[4]['out']]
                 if lst:
                     ax.plot(np.hstack([(*seg[0], np.nan) for seg in lst]),
                             np.hstack([(*seg[1], np.nan) for seg in lst]),
@@ -749,17 +752,17 @@ class PTPS:
             print('There is trouble to draw colorbar. Sorry.')
         if bulk:
             if only is None:
-                ax.axis(self.psb.trange + self.psb.prange)
+                ax.axis(self.store.trange + self.store.prange)
                 ax.set_xlabel('{}({})'.format(phase, expr))
             else:
                 ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
             # bulk composition
-            ox, vals = self.psb.get_bulk_composition()
+            ox, vals = self.store.get_bulk_composition()
             table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
             plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
         else:
             if only is None:
-                ax.axis(self.psb.trange + self.psb.prange)
+                ax.axis(self.store.trange + self.store.prange)
                 ax.set_title('{}({})'.format(phase, expr))
             else:
                 ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
@@ -794,17 +797,17 @@ class PTPS:
     # Need FIX
     def save_tab(self, tabfile=None, comps=None):
         if not tabfile:
-            tabfile = self.psb.name + '.tab'
+            tabfile = self.store.name + '.tab'
         if not comps:
             comps = self.all_data_keys
         data = []
         for comp in tqdm(comps, desc='Exporting'):
             data.append(self.get_gridded(comp).flatten())
         with Path(tabfile).open('wb') as f:
-            head = ['psbuilder', self.psb.name + '.tab', '{:12d}'.format(2),
-                    'T(°C)', '   {:16.16f}'.format(self.psb.trange[0])[:19],
+            head = ['psbuilder', self.store.name + '.tab', '{:12d}'.format(2),
+                    'T(°C)', '   {:16.16f}'.format(self.store.trange[0])[:19],
                     '   {:16.16f}'.format(self.tstep)[:19], '{:12d}'.format(len(self.tspace)),
-                    'p(kbar)', '   {:16.16f}'.format(self.psb.prange[0])[:19],
+                    'p(kbar)', '   {:16.16f}'.format(self.store.prange[0])[:19],
                     '   {:16.16f}'.format(self.pstep)[:19], '{:12d}'.format(len(self.pspace)),
                     '{:12d}'.format(len(data)), (len(data) * '{:15s}').format(*comps)]
             for ln in head:
@@ -816,7 +819,7 @@ class PTPS:
 def ps_show():
     parser = argparse.ArgumentParser(description='Draw pseudosection from project file')
     parser.add_argument('project', type=str,
-                        help='psbuilder project file')
+                        help='builder project file')
     parser.add_argument('-o', '--out', nargs='+',
                         help='highlight out lines for given phases')
     parser.add_argument('-l', '--label', action='store_true',
@@ -836,7 +839,7 @@ def ps_show():
 def ps_grid():
     parser = argparse.ArgumentParser(description='Calculate compositions in grid')
     parser.add_argument('project', type=str,
-                        help='psbuilder project file')
+                        help='builder project file')
     parser.add_argument('--numT', type=int, default=51,
                         help='number of T steps')
     parser.add_argument('--numP', type=int, default=51,
@@ -849,7 +852,7 @@ def ps_grid():
 def ps_iso():
     parser = argparse.ArgumentParser(description='Draw isopleth diagrams')
     parser.add_argument('project', type=str,
-                        help='psbuilder project file')
+                        help='builder project file')
     parser.add_argument('phase', type=str,
                         help='phase used for contouring')
     parser.add_argument('expr', type=str,

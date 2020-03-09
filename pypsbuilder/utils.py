@@ -340,6 +340,7 @@ class PSB(ProjectStore):
 
 class TXB(ProjectStore):
     def __repr__(self):
+        preal = super(TXB, self).prange
         return '\n'.join(['============',
                           'TXB datafile',
                           '============',
@@ -347,7 +348,11 @@ class TXB(ProjectStore):
                           'Univariant lines: {}'.format(len(self.unilist)),
                           'Invariant point: {}'.format(len(self.invlist)),
                           'T range: {} {}'.format(*self.trange),
-                          'p: {}'.format((self.prange[0] + self.prange[1]) / 2)])
+                          'p: {}'.format((preal[0] + preal[1]) / 2)])
+
+    @property
+    def prange(self):
+        return (0, 1)
 
     def get_bulk_composition(self):
         for inv in self.invlist:
@@ -767,7 +772,7 @@ class TCAPI(object):
                     tdps[cc] = float(vv)
                 dt = data.get('sys', {})
                 dt.update(tdps)
-                data[phase] = dt
+                data['sys'] = dt
                 if tx:
                     headers.append(float(header))
                 # parse endmembers and chemical potential

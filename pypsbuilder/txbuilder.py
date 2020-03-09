@@ -224,7 +224,7 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings('LX', 'pypsbuilder')
+        builder_settings = QtCore.QSettings('LX', 'txbuilder')
         if write:
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("extend_range", self.spinOver.value())
@@ -272,9 +272,7 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
     def populate_recent(self):
         self.menuOpen_recent.clear()
         for f in self.recent:
-            p = Path(f)
-            if p.suffix == '.txb':
-                self.menuOpen_recent.addAction(p.name, lambda f=f: self.openProject(False, projfile=f))
+            self.menuOpen_recent.addAction(Path(f).name, lambda f=f: self.openProject(False, projfile=f))
 
     def initProject(self, workdir=False):
         """Open working directory and initialize project
@@ -875,51 +873,99 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             # set guesses temporarily
-            midix = len(r['results']) // 2
-            old_guesses = self.prj.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
+            #midix = len(r['results']) // 2
+            #old_guesses = self.prj.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
             # Try out from phases
             cand = []
+            cand_out = []
+            extend = self.spinOver.value()
+            trange = self.ax.get_xlim()
+            ts = extend * (trange[1] - trange[0]) / 100
+            trange = (max(trange[0] - ts, 0), trange[1] + ts)
+            prange = (max(self.prj.prange[0] - 1, 0), self.prj.prange[1] + 1)
+            total = len(phases.difference(out).difference(self.prj.excess)) + len(set(self.prj.phases).difference(self.prj.excess).difference(phases))
+            done = 0
+            progress = QtWidgets.QProgressDialog('Searching for solutions', 'Cancel',
+                                                 0, total, self)
+            progress.setWindowModality(QtCore.Qt.WindowModal)
+            progress.setMinimumDuration(0)
             for ophase in phases.difference(out).difference(self.prj.excess):
+                progress.setValue(done)
+                QtWidgets.QApplication.processEvents()
                 nout = out.union(set([ophase]))
-                self.prj.tc_calc_pt(phases, nout)
-                status, variance, pts, res, output = self.prj.parse_logfile()
+                self.prj.tc_calc_tx(phases, nout, prange = prange, trange=trange)
+                status, variance, pts, ptcoords, res, output = self.prj.parse_logfile(tx=True)
                 if status == 'ok':
-                    p, T = pts.flatten()
-                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
-                    exists, inv_id = '', ''
-                    for row in self.invmodel.invlist[1:]:
-                        if phases == row[2]['phases'] and nout == row[2]['out']:
-                            exists, inv_id = '*', str(row[0])
-                            break
-                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+                    if len(res) < 2:
+                        cand_out.append([-2, ptcoords[0][0], ptcoords[1][0], '-', ' '.join(nout), ''])
+                    else:
+                        pm = (self.prj.prange[0] + self.prj.prange[1]) / 2
+                        splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
+                        splx = interp1d(ptcoords[0], pts[0], bounds_error=False, fill_value=np.nan)
+                        Tm = splt([pm])
+                        X = splx([pm])
+                        if np.isnan(Tm[0]):
+                            cand_out.append([-1, (min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''])
+                        else:
+                            ix = ((r['p'] - X)**2 + (r['T'] - Tm)**2).argmin()
+                            label = self.format_label(r['phases'], r['out'])
+                            exists, inv_id = '', ''
+                            for row in self.invmodel.invlist[1:]:
+                                if phases == row[2]['phases'] and nout == row[2]['out']:
+                                    exists, inv_id = '*', str(row[0])
+                                    break
+                            cand.append([ix, X[0], Tm[0], exists, ' '.join(nout), inv_id])
+                done += 1
 
             for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
+                progress.setValue(done)
+                QtWidgets.QApplication.processEvents()
                 nphases = phases.union(set([ophase]))
                 nout = out.union(set([ophase]))
-                self.prj.tc_calc_pt(nphases, nout)
-                status, variance, pts, res, output = self.prj.parse_logfile()
+                self.prj.tc_calc_tx(nphases, nout)
+                self.prj.tc_calc_tx(nphases, nout, prange = prange, trange=trange)
+                status, variance, pts, ptcoords, res, output = self.prj.parse_logfile(tx=True)
                 if status == 'ok':
-                    p, T = pts.flatten()
-                    ix = ((r['p'] - p)**2 + (r['T'] - T)**2).argmin()
-                    exists, inv_id = '', ''
-                    for row in self.invmodel.invlist[1:]:
-                        if nphases == row[2]['phases'] and nout == row[2]['out']:
-                            exists, inv_id = '*', str(row[0])
-                            break
-                    cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
+                    if len(res) < 2:
+                        cand_out.append([-2, ptcoords[0][0], ptcoords[1][0], '-', ' '.join(nout), ''])
+                    else:
+                        pm = (self.prj.prange[0] + self.prj.prange[1]) / 2
+                        splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
+                        splx = interp1d(ptcoords[0], pts[0], bounds_error=False, fill_value=np.nan)
+                        Tm = splt([pm])
+                        X = splx([pm])
+                        if np.isnan(Tm[0]):
+                            cand_out.append([-1, (min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''])
+                        else:
+                            ix = ((r['p'] - X)**2 + (r['T'] - Tm)**2).argmin()
+                            label = self.format_label(r['phases'], r['out'])
+                            exists, inv_id = '', ''
+                            for row in self.invmodel.invlist[1:]:
+                                if nphases == row[2]['phases'] and nout == row[2]['out']:
+                                    exists, inv_id = '*', str(row[0])
+                                    break
+                            cand.append([ix, X[0], Tm[0], exists, ' '.join(nout), inv_id])
+                done += 1
 
-            self.prj.update_scriptfile(guesses=old_guesses)
+            #self.prj.update_scriptfile(guesses=old_guesses)
+            progress.setValue(total)
+            progress.deleteLater()
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
-                txt = '         p         T E     Out   Inv\n'
+                txt = '         X         T E     Out   Inv\n'
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
                 for cc in sorted(cand):
                     txt += n_format.format(*cc[1:])
-
+                if cand_out:
+                    txt += 'Out of TX section solutions\n'
+                    txt += '         p         T E     Out   Inv\n'
+                    n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
+                    for cc in sorted(cand_out):
+                        txt += n_format.format(*cc[1:])
                 self.textOutput.setPlainText(txt)
-                self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
+                self.statusBar().showMessage('Searching done. Found {} solutions and out of plane solutions {}.'.format(len(cand), len(cand_out)))
             else:
-                self.statusBar().showMessage('No invariant points found.')
+                self.statusBar().showMessage('No solutions found.')
 
     def show_inv(self, index):
         dt = self.invmodel.getData(index, 'Data')
@@ -1802,7 +1848,7 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             if not hasattr(self.ax, 'areas_shown'):
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                ps = PTPS(PSB(self.data))
+                ps = PTPS(TXB(self.data))
                 if ps.shapes:
                     vari = [ps.variance[k] for k in ps]
                     poc = max(vari) - min(vari) + 1

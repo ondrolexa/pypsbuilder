@@ -233,7 +233,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings('LX', 'pypsbuilder')
+        builder_settings = QtCore.QSettings('LX', 'psbuilder')
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
@@ -285,9 +285,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def populate_recent(self):
         self.menuOpen_recent.clear()
         for f in self.recent:
-            p = Path(f)
-            if p.suffix == '.psb':
-                self.menuOpen_recent.addAction(p.name, lambda f=f: self.openProject(False, projfile=f))
+            self.menuOpen_recent.addAction(Path(f).name, lambda f=f: self.openProject(False, projfile=f))
 
     def initProject(self, workdir=False):
         """Open working directory and initialize project
@@ -897,13 +895,20 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             # set guesses temporarily
-            midix = len(r['results']) // 2
-            old_guesses = self.prj.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
+            #midix = len(r['results']) // 2
+            #old_guesses = self.prj.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
             # Try out from phases
+            extend = self.spinOver.value()
+            trange = self.ax.get_xlim()
+            ts = extend * (trange[1] - trange[0]) / 100
+            trange = (max(trange[0] - ts, 0), trange[1] + ts)
+            prange = self.ax.get_ylim()
+            ps = extend * (prange[1] - prange[0]) / 100
+            prange = (max(prange[0] - ps, 0), prange[1] + ps)
             cand = []
             for ophase in phases.difference(out).difference(self.prj.excess):
                 nout = out.union(set([ophase]))
-                self.prj.tc_calc_pt(phases, nout)
+                self.prj.tc_calc_pt(phases, nout, prange = prange, trange=trange)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
                     p, T = pts.flatten()
@@ -918,7 +923,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
                 nout = out.union(set([ophase]))
-                self.prj.tc_calc_pt(nphases, nout)
+                self.prj.tc_calc_pt(nphases, nout, prange = prange, trange=trange)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
                     p, T = pts.flatten()
@@ -930,7 +935,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             break
                     cand.append([ix, p, T, exists, ' '.join(nout), inv_id])
 
-            self.prj.update_scriptfile(guesses=old_guesses)
+            #self.prj.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
                 txt = '         p         T E     Out   Inv\n'
