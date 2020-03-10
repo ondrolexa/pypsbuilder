@@ -1058,7 +1058,7 @@ def inv_on_uni(uphases, uout, iphases, iout):
     # Check for polymorphs
     fixi, fixu = False, False
     for poly in polymorphs:
-        if poly.issubset(iphases) and poly !=iout and not iout.isdisjoint(poly):
+        if poly.issubset(iphases) and (poly != iout) and (not iout.isdisjoint(poly)):
             fixi = True
             if poly.issubset(uphases) and not uout.isdisjoint(poly):
                 fixu = True

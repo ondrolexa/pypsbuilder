@@ -45,6 +45,7 @@ matplotlib.rcParams['ytick.direction'] = 'out'
 unihigh_kw = dict(lw=3, alpha=1, marker='o', ms=4, color='red', zorder=10)
 invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
+presenthigh_kw = dict(lw=9, alpha=0.6, marker=None, ms=4, color='grey', zorder=-10)
 
 
 class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
@@ -63,6 +64,7 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
+        self.presenthigh = None
         self.cid = None
 
         # Create figure
@@ -535,6 +537,7 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
+        self.presenthigh = None
         self.statusBar().showMessage('Ready')
 
     def reinitialize(self):
@@ -753,7 +756,6 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             self.unihigh = None
             self.textOutput.clear()
             self.textFullOutput.clear()
-            self.canvas.draw()
         if self.invhigh is not None:
             try:
                 self.invhigh[0].remove()
@@ -762,14 +764,19 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
             self.invhigh = None
             self.textOutput.clear()
             self.textFullOutput.clear()
-            self.canvas.draw()
         if self.outhigh is not None:
             try:
                 self.outhigh[0].remove()
             except:
                 pass
             self.outhigh = None
-            self.canvas.draw()
+        if self.presenthigh is not None:
+            try:
+                self.presenthigh[0].remove()
+            except:
+                pass
+            self.presenthigh = None
+        self.canvas.draw()
 
     def sel_changed(self):
         self.clean_high()
@@ -907,12 +914,12 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
                         if np.isnan(Tm[0]):
                             cand_out.append(((min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''))
                         else:
-                            label = self.format_label(r['phases'], r['out'])
-                            exists, inv_id = '', ''
-                            for row in self.invmodel.invlist[1:]:
-                                if phases == row[2]['phases'] and nout == row[2]['out']:
-                                    exists, inv_id = '*', str(row[0])
-                                    break
+                            rt = dict(phases=phases, out=nout, output='User-defined')
+                            isnew, id = self.getidinv(rt)
+                            if isnew:
+                                exists, inv_id = '', ''
+                            else:
+                                exists, inv_id = '*', str(id)
                             cand.append((X[0], Tm[0], exists, ' '.join(nout), inv_id))
                 done += 1
 
@@ -921,7 +928,6 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
                 QtWidgets.QApplication.processEvents()
                 nphases = phases.union(set([ophase]))
                 nout = out.union(set([ophase]))
-                self.prj.tc_calc_tx(nphases, nout)
                 self.prj.tc_calc_tx(nphases, nout, prange = prange, trange=trange)
                 status, variance, pts, ptcoords, res, output = self.prj.parse_logfile(tx=True)
                 if status == 'ok':
@@ -936,12 +942,12 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
                         if np.isnan(Tm[0]):
                             cand_out.append(((min(ptcoords[0]) + max(ptcoords[0])) / 2, (min(ptcoords[1]) + max(ptcoords[1])) / 2, '-', ' '.join(nout), ''))
                         else:
-                            label = self.format_label(r['phases'], r['out'])
-                            exists, inv_id = '', ''
-                            for row in self.invmodel.invlist[1:]:
-                                if nphases == row[2]['phases'] and nout == row[2]['out']:
-                                    exists, inv_id = '*', str(row[0])
-                                    break
+                            rt = dict(phases=nphases, out=nout, output='User-defined')
+                            isnew, id = self.getidinv(rt)
+                            if isnew:
+                                exists, inv_id = '', ''
+                            else:
+                                exists, inv_id = '*', str(id)
                             cand.append((X[0], Tm[0], exists, ' '.join(nout), inv_id))
                 done += 1
 
@@ -975,19 +981,40 @@ class TXBuilder(QtWidgets.QMainWindow, Ui_TXBuilder):
     def show_out(self, index):
         out = self.phasemodel.itemFromIndex(index).text()
         self.clean_high()
-        oT = []
-        op = []
+        oT, op = [], []
+        pT, pp = [], []
         for r in self.unimodel.unilist:
+            not_out = True
             if out in r[4]['out']:
                 T, p = self.get_trimmed_uni(r)
                 oT.append(T)
                 oT.append([np.nan])
                 op.append(p)
                 op.append([np.nan])
+                not_out = False
+            for poly in polymorphs:
+                if poly.issubset(r[4]['phases']):
+                    if out in poly:
+                        if poly.difference({out}).issubset(r[4]['out']):
+                            T, p = self.get_trimmed_uni(r)
+                            oT.append(T)
+                            oT.append([np.nan])
+                            op.append(p)
+                            op.append([np.nan])
+                            not_out = False
+            if not_out and (out in r[4]['phases']):
+                T, p = self.get_trimmed_uni(r)
+                pT.append(T)
+                pT.append([np.nan])
+                pp.append(p)
+                pp.append([np.nan])
         if oT:
             self.outhigh = self.ax.plot(np.concatenate(oT), np.concatenate(op),
                                         '-', **outhigh_kw)
-            self.canvas.draw()
+        if pT:
+            self.presenthigh = self.ax.plot(np.concatenate(pT), np.concatenate(pp),
+                                            '-', **presenthigh_kw)
+        self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
