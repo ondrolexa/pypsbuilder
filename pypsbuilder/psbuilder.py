@@ -2338,8 +2338,12 @@ class TopologyGraph(QtWidgets.QDialog):
                 else:
                     edges[out] = [(uni[2], uni[3])]
 
-        #npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
-        npos = nx.kamada_kawai_layout(G, pos=pos)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",category=FutureWarning)
+            npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
+        #npos = nx.planar_layout(G)
+        #npos = nx.kamada_kawai_layout(G, pos=pos)
         widths = Normalize(vmin=0, vmax=len(edges))
         color = cm.get_cmap('tab20', len(edges))
         for ix, out in enumerate(edges):
