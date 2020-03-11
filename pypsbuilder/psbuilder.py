@@ -5,12 +5,19 @@ Visual pseudosection builder for THERMOCALC
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
 
-from .utils import *
-from .psexplorer import PTPS
+import sys
+import os
+try:
+  import cPickle as pickle
+except ImportError:
+  import pickle
+import gzip
+from pathlib import Path
 
 from pkg_resources import resource_filename
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+import numpy as np
 import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
@@ -32,7 +39,8 @@ from .ui_psbuilder import Ui_PSBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-
+from .psclasses import *
+from .utils import TCAPI
 from . import __version__
 
 # Make sure that we are using QT5
@@ -54,7 +62,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         super(PSBuilder, self).__init__(parent)
         self.setupUi(self)
         res = QtWidgets.QDesktopWidget().screenGeometry()
-        self.resize(min(1024, res.width() - 10), min(768, res.height() - 10))
+        self.resize(min(1280, res.width() - 10), min(720, res.height() - 10))
         self.setWindowTitle('PSBuilder')
         window_icon = resource_filename('pypsbuilder', 'images/pypsbuilder.png')
         self.setWindowIcon(QtGui.QIcon(window_icon))
@@ -65,6 +73,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.outhigh = None
         self.presenthigh = None
         self.cid = None
+        self.ps = PTsection()
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -189,12 +198,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
     def initViewModels(self):
         # INVVIEW
-        self.invmodel = InvModel(self.invview)
+        self.invmodel = InvModel(self.ps, self.invview)
         self.invview.setModel(self.invmodel)
         # enable sorting
         self.invview.setSortingEnabled(False)
         # hide column
-        self.invview.setColumnHidden(2, True)
+        #self.invview.setColumnHidden(2, True)
         # select rows
         self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -203,21 +212,21 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
         # default unconnected ghost
-        self.invmodel.appendRow([0, 'Unconnected', {}])
-        self.invview.setRowHidden(0, True)
+        #self.invmodel.appendRow([0, 'Unconnected', {}])
+        #self.invview.setRowHidden(0, True)
         self.invview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # signals
         self.invsel.selectionChanged.connect(self.sel_changed)
 
         # UNIVIEW
-        self.unimodel = UniModel(self.uniview)
+        self.unimodel = UniModel(self.ps, self.uniview)
         self.uniview.setModel(self.unimodel)
         # enable sorting
         self.uniview.setSortingEnabled(False)
         # hide column
         self.uniview.setColumnHidden(4, True)
-        self.uniview.setItemDelegateForColumn(2, ComboDelegate(self, self.invmodel, self.checkStrict))
-        self.uniview.setItemDelegateForColumn(3, ComboDelegate(self, self.invmodel, self.checkStrict))
+        self.uniview.setItemDelegateForColumn(2, ComboDelegate(self.ps, self.invmodel, self.uniview))
+        self.uniview.setItemDelegateForColumn(3, ComboDelegate(self.ps, self.invmodel, self.uniview))
         # select rows
         self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -309,6 +318,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             prj = TCAPI(workdir)
             if prj.OK:
                 self.prj = prj
+                self.ps = PTsection(trange=self.prj.trange,
+                                    prange=self.prj.prange,
+                                    excess=self.prj.excess)
                 self.ready = True
                 self.initViewModels()
                 self.project = None
@@ -344,7 +356,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 qb.critical(self, 'Old version',
                             'This project is created in older version.\nUse import from project.',
                             qb.Abort)
-            else:
+            elif data.get('version', '1.0.0') < '2.3.0':
                 workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
                 if workdir != Path(projfile).resolve().parent:
                     move_msg = 'Project have been moved. Change working directory ?'
@@ -360,6 +372,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 prj = TCAPI(workdir)
                 if prj.OK:
                     self.prj = prj
+                    self.ps = PTsection(trange=self.prj.trange,
+                                        prange=self.prj.prange,
+                                        excess=self.prj.excess)
                     self.refresh_gui()
                     self.initViewModels()
                     # select phases
@@ -376,15 +391,32 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                     self.prj.trange = data['trange']
                     self.prj.prange = data['prange']
                     # views
-                    for row in data['unilist']:
-                        self.unimodel.appendRow(row)
-                    self.uniview.resizeColumnsToContents()
                     for row in data['invlist']:
-                        self.invmodel.appendRow(row)
+                        inv = InvPoint(id=row[0],
+                                       phases=row[2]['phases'],
+                                       out=row[2]['out'],
+                                       p=row[2]['p'],
+                                       T=row[2]['T'],
+                                       results=row[2]['results'],
+                                       output=row[2]['output'])
+                        self.invmodel.appendRow(row[0], inv)
                     self.invview.resizeColumnsToContents()
+                    for row in data['unilist']:
+                        uni = UniLine(id=row[0],
+                                      phases=row[4]['phases'],
+                                      out=row[4]['out'],
+                                      p=row[4]['p'],
+                                      T=row[4]['T'],
+                                      results=row[4]['results'],
+                                      output=row[4]['output'],
+                                      begin=row[2],
+                                      end=row[3])
+                        self.unimodel.appendRow(row[0], uni)
+                        self.ps.trim_uni(row[0])
+                    self.uniview.resizeColumnsToContents()
                     # cutting
-                    for row in self.unimodel.unilist:
-                        self.trimuni(row)
+                    #for row in self.unimodel.unilist:
+                    #    self.trimuni(row)
                     # all done
                     self.ready = True
                     self.project = projfile
@@ -407,6 +439,8 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', prj.status, qb.Abort)
+            else:
+                pass # New version open
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             if projfile in self.recent:
@@ -414,7 +448,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.app_settings(write=True)
                 self.populate_recent()
 
-    def import_from_prj(self):
+    def import_from_prj(self): # TODO:
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.prj.workdir),
@@ -562,7 +596,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.presenthigh = None
         self.statusBar().showMessage('Ready')
 
-    def reinitialize(self):
+    def reinitialize(self): # TODO:
         if self.ready:
             # collect info
             phases = []
@@ -644,7 +678,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     @property
-    def data(self):
+    def data(self): # TODO:
         # collect info
         selphases = []
         for i in range(self.phasemodel.rowCount()):
@@ -689,7 +723,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project saved.')
             QtWidgets.QApplication.restoreOverrideCursor()
 
-    def reparse_outputs(self):
+    def reparse_outputs(self): # TODO:
         for row in data['invlist']:
             status, variance, pts, res, output = self.prj.parse_logfile(output=row[2]['output'])
             if status == 'ok':
@@ -717,7 +751,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.statusBar().showMessage('Outputs re-parsed.')
         self.changed = True
 
-    def generate(self):
+    def generate(self):  # TODO:
         if self.ready:
             qd = QtWidgets.QFileDialog
             tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.prj.workdir),
@@ -806,9 +840,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def invsel_guesses(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
-            r = self.invmodel.data(idx[2])
-            if not r['manual']:
-                self.prj.update_scriptfile(guesses=r['results'][0]['ptguess'])
+            inv = self.ps.invpoints[self.invmodel.data(idx[0])]
+            if not inv.manual:
+                self.prj.update_scriptfile(guesses=inv.ptguess())
                 self.read_scriptfile()
                 self.statusBar().showMessage('Invariant point ptuess set.')
             else:
@@ -817,16 +851,16 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def unisel_guesses(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
-            r = self.unimodel.data(idx[4])
-            if not r['manual']:
-                lbl = ['p = {}, T = {}'.format(p, T) for p, T in zip(r['p'], r['T'])]
+            uni = self.ps.unilines[self.unimodel.data(idx[0])]
+            if not uni.manual:
+                lbl = ['p = {}, T = {}'.format(p, T) for p, T in zip(uni._p, uni._T)]
                 uniguess = UniGuess(lbl, self)
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
                     ix = uniguess.getValue()
-                    self.prj.update_scriptfile(guesses=r['results'][ix]['ptguess'])
+                    self.prj.update_scriptfile(guesses=uni.ptguess(idx=ix))
                     self.read_scriptfile()
-                    self.statusBar().showMessage('Univariant line ptguess set.')
+                    self.statusBar().showMessage('Univariant line ptguess set for p = {} and T = {}'.format(uni._p[ix], uni._T[ix]))
             else:
                 self.statusBar().showMessage('Guesses cannot be set from user-defined univariant line.')
 
@@ -846,48 +880,45 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def set_phaselist(self, r, show_output=True):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
-            if item.text() in r['phases'] or item.text() in r['out']:
+            if item.text() in r.phases:   # or item.text() in r.out:
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
         # select out
         for i in range(self.outmodel.rowCount()):
             item = self.outmodel.item(i)
-            if item.text() in r['out']:
+            if item.text() in r.out:
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
         if show_output:
-            if not r['manual']:
+            if not r.manual:
                 txt = ''
-                mlabels = sorted(list(r['phases'].difference(self.prj.excess)))
+                mlabels = sorted(list(r.phases.difference(self.ps.excess)))
                 h_format = '{:>10}{:>10}' + '{:>8}' * len(mlabels)
                 n_format = '{:10.4f}{:10.4f}' + '{:8.5f}' * len(mlabels)
                 txt += h_format.format('p', 'T', *mlabels)
                 txt += '\n'
-                for p, T, res in zip(r['p'], r['T'], r['results']):
+                for p, T, res in zip(r.p, r.T, r.results):
                     row = [p, T] + [res['data'][lbl]['mode'] for lbl in mlabels]
                     txt += n_format.format(*row)
                     txt += '\n'
-                if len(r['results']) > 5:
+                if len(r.results) > 5:
                     txt += h_format.format('p', 'T', *mlabels)
                 self.textOutput.setPlainText(txt)
             else:
-                self.textOutput.setPlainText(r['output'])
-            self.textFullOutput.setPlainText(r['output'])
+                self.textOutput.setPlainText(r.output)
+            self.textFullOutput.setPlainText(r.output)
 
     def show_uni(self, index):
-        row = self.unimodel.getRow(index)
+        uni = self.ps.unilines[self.unimodel.getRowID(index)]
         self.clean_high()
-        self.set_phaselist(row[4], show_output=True)
-        T, p = self.get_trimmed_uni(row)
-        self.unihigh = self.ax.plot(T, p, '-', **unihigh_kw)
+        self.set_phaselist(uni, show_output=True)
+        self.unihigh = self.ax.plot(uni.T, uni.p, '-', **unihigh_kw)
         self.canvas.draw()
 
     def uni_edited(self, index):
-        row = self.unimodel.getRow(index)
-        # self.set_phaselist(row[4])
-        self.trimuni(row)
+        self.ps.trim_uni(self.unimodel.getRowID(index))
         self.changed = True
         # update plot
         self.plot()
@@ -895,9 +926,9 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def uni_explore(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
-            r = self.unimodel.data(idx[4])
-            phases = r['phases']
-            out = r['out']
+            uni = self.ps.unilines[self.unimodel.data(idx[0])]
+            phases = uni.phases
+            out = uni.out
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -918,14 +949,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.prj.tc_calc_pt(phases, nout, prange = prange, trange=trange)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
-                    p, T = pts.flatten()
-                    rt = dict(phases=phases, out=nout, output='User-defined')
-                    isnew, id = self.getidinv(rt)
+                    inv = InvPoint(phases=phases, out=nout, variance=variance,
+                                   p=pts[0], T=pts[1], output=output, results=res)
+                    isnew, id = self.ps.getidinv(inv)
                     if isnew:
                         exists, inv_id = '', ''
                     else:
-                        exists, inv_id = '*', str(id)
-                    cand.append((p, T, exists, ' '.join(nout), inv_id))
+                        exists, inv_id = '*', inv.annotation()
+                    cand.append((inv._p, inv._T, exists, ' '.join(inv.out), inv_id))
 
             for ophase in set(self.prj.phases).difference(self.prj.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
@@ -933,14 +964,14 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.prj.tc_calc_pt(nphases, nout, prange = prange, trange=trange)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'ok':
-                    p, T = pts.flatten()
-                    rt = dict(phases=nphases, out=nout, output='User-defined')
-                    isnew, id = self.getidinv(rt)
+                    inv = InvPoint(phases=phases, out=nout, variance=variance,
+                                   p=pts[0], T=pts[1], output=output, results=res)
+                    isnew, id = self.ps.getidinv(inv)
                     if isnew:
                         exists, inv_id = '', ''
                     else:
-                        exists, inv_id = '*', str(id)
-                    cand.append((p, T, exists, ' '.join(nout), inv_id))
+                        exists, inv_id = '*', inv.annotation()
+                    cand.append((inv._p, inv._T, exists, ' '.join(inv.out), inv_id))
 
             #self.prj.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -956,10 +987,10 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def show_inv(self, index):
-        dt = self.invmodel.getData(index, 'Data')
+        inv = self.ps.invpoints[self.invmodel.getRowID(index)]
         self.clean_high()
-        self.set_phaselist(dt, show_output=True)
-        self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
+        self.set_phaselist(inv, show_output=True)
+        self.invhigh = self.ax.plot(inv.T, inv.p, 'o', **invhigh_kw)
         self.canvas.draw()
 
     def show_out(self, index):
@@ -967,30 +998,27 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         self.clean_high()
         oT, op = [], []
         pT, pp = [], []
-        for r in self.unimodel.unilist:
+        for uni in self.ps.unilines.values():
             not_out = True
-            if out in r[4]['out']:
-                T, p = self.get_trimmed_uni(r)
-                oT.append(T)
+            if out in uni.out:
+                oT.append(uni.T)
                 oT.append([np.nan])
-                op.append(p)
+                op.append(uni.p)
                 op.append([np.nan])
                 not_out = False
             for poly in polymorphs:
-                if poly.issubset(r[4]['phases']):
+                if poly.issubset(r.phases):
                     if out in poly:
-                        if poly.difference({out}).issubset(r[4]['out']):
-                            T, p = self.get_trimmed_uni(r)
-                            oT.append(T)
+                        if poly.difference({out}).issubset(uni.out):
+                            oT.append(uni.T)
                             oT.append([np.nan])
-                            op.append(p)
+                            op.append(uni.p)
                             op.append([np.nan])
                             not_out = False
-            if not_out and (out in r[4]['phases']):
-                T, p = self.get_trimmed_uni(r)
-                pT.append(T)
+            if not_out and (out in r.phases):
+                pT.append(uni.T)
                 pT.append([np.nan])
-                pp.append(p)
+                pp.append(uni.p)
                 pp.append([np.nan])
         if oT:
             self.outhigh = self.ax.plot(np.concatenate(oT), np.concatenate(op),
@@ -1003,242 +1031,104 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
-            r = self.invmodel.data(idx[2])
-            phases = r['phases']
-            out = r['out']
-            a, b = out
-            aset, bset = set([a]), set([b])
-            aphases, bphases = phases.difference(aset), phases.difference(bset)
+            inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
+            all_uni = inv.all_unilines()
             show_menu = False
-            menu = QtWidgets.QMenu(self)
-            # Check for polymorphs
-            fix = False
-            for poly in polymorphs:
-                if poly.issubset(phases):
-                    fix = True
-                    break
-            if fix:
-                if poly != out: # on boundary
-                    nopoly = out.difference(poly.intersection(out))
-                    aphases = phases.difference(poly.intersection(out))
-                    bphases = phases.difference(poly.difference(out))
-
-                    nr1 = dict(phases=aphases, out=nopoly, output='User-defined')
-                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                    isnew, id = self.getiduni(nr1)
-                    if isnew:
-                        menu_item1 = menu.addAction(lbl1)
-                        menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
-                        show_menu = True
-                    nr2 = dict(phases=bphases, out=nopoly, output='User-defined')
-                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-                    isnew, id = self.getiduni(nr2)
-                    if isnew:
-                        menu_item2 = menu.addAction(lbl2)
-                        menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
-                        show_menu = True
-                    nr3 = dict(phases=phases, out=poly.intersection(out), output='User-defined')
-                    lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
-                    isnew, id = self.getiduni(nr3)
-                    if isnew:
-                        menu_item3 = menu.addAction(lbl3)
-                        menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
-                        show_menu = True
-                    nr4 = dict(phases=phases.difference(nopoly), out=poly.intersection(out), output='User-defined')
-                    lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
-                    isnew, id = self.getiduni(nr4)
-                    if isnew:
-                        menu_item4 = menu.addAction(lbl4)
-                        menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
-                        show_menu = True
-                else:           # triple point  NEED FIX
-                    nr1 = dict(phases=phases, out=aset, output='User-defined')
-                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                    isnewa, id = self.getiduni(nr1)
-                    nr1 = dict(phases=phases, out=bset, output='User-defined')
-                    lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                    isnewb, id = self.getiduni(nr1)
-                    if isnewa and isnewb:
-                        menu_item1 = menu.addAction(lbl1)
-                        menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
-                        show_menu = True
-                    nr2 = dict(phases=aphases, out=bset, output='User-defined')
-                    lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-                    isnew, id = self.getiduni(nr2)
-                    if isnew:
-                        menu_item2 = menu.addAction(lbl2)
-                        menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
-                        show_menu = True
-                    nr3 = dict(phases=bphases, out=aset, output='User-defined')
-                    lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
-                    isnew, id = self.getiduni(nr3)
-                    if isnew:
-                        menu_item3 = menu.addAction(lbl3)
-                        menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
-                        show_menu = True
-            else:
-                nr1 = dict(phases=phases, out=aset, output='User-defined')
-                lbl1 = ' '.join(sorted(list(nr1['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr1['out'])
-                isnew, id = self.getiduni(nr1)
-                if isnew:
-                    menu_item1 = menu.addAction(lbl1)
-                    menu_item1.triggered.connect(lambda: self.set_phaselist(nr1, show_output=False))
-                    show_menu = True
-                nr2 = dict(phases=phases, out=bset, output='User-defined')
-                lbl2 = ' '.join(sorted(list(nr2['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr2['out'])
-                isnew, id = self.getiduni(nr2)
-                if isnew:
-                    menu_item2 = menu.addAction(lbl2)
-                    menu_item2.triggered.connect(lambda: self.set_phaselist(nr2, show_output=False))
-                    show_menu = True
-                nr3 = dict(phases=bphases, out=aset, output='User-defined')
-                lbl3 = ' '.join(sorted(list(nr3['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr3['out'])
-                isnew, id = self.getiduni(nr3)
-                if isnew:
-                    menu_item3 = menu.addAction(lbl3)
-                    menu_item3.triggered.connect(lambda: self.set_phaselist(nr3, show_output=False))
-                    show_menu = True
-                nr4 = dict(phases=aphases, out=bset, output='User-defined')
-                lbl4 = ' '.join(sorted(list(nr4['phases'].difference(self.prj.excess)))) + ' - ' + ' '.join(nr4['out'])
-                isnew, id = self.getiduni(nr4)
-                if isnew:
-                    menu_item4 = menu.addAction(lbl4)
-                    menu_item4.triggered.connect(lambda: self.set_phaselist(nr4, show_output=False))
-                    show_menu = True
+            menu = QtWidgets.QMenu(self.uniview)
+            u1 = UniLine(phases=all_uni[0][0], out=all_uni[0][1])
+            isnew, id = self.ps.getiduni(u1)
+            if isnew:
+                menu_item1 = menu.addAction(u1.label(excess=self.ps.excess))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u1, show_output=False))
+                show_menu = True
+            u2 = UniLine(phases=all_uni[1][0], out=all_uni[1][1])
+            isnew, id = self.ps.getiduni(u2)
+            if isnew:
+                menu_item2 = menu.addAction(u2.label(excess=self.ps.excess))
+                menu_item2.triggered.connect(lambda: self.set_phaselist(u2, show_output=False))
+                show_menu = True
+            u3 = UniLine(phases=all_uni[2][0], out=all_uni[2][1])
+            isnew, id = self.ps.getiduni(u3)
+            if isnew:
+                menu_item1 = menu.addAction(u3.label(excess=self.ps.excess))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u3, show_output=False))
+                show_menu = True
+            u4 = UniLine(phases=all_uni[3][0], out=all_uni[3][1])
+            isnew, id = self.ps.getiduni(u4)
+            if isnew:
+                menu_item1 = menu.addAction(u4.label(excess=self.ps.excess))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u4, show_output=False))
+                show_menu = True
             if show_menu:
                 menu.exec(self.invview.mapToGlobal(QPos))
 
     def univiewRightClicked(self, QPos):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
-            r = self.unimodel.getRow(idx[4])
-            #phases = r[4]['phases']
-            #out = r[4]['out']
+            id = self.unimodel.getRowID(idx[0])
+            uni = self.ps.unilines[id]
             menu = QtWidgets.QMenu(self)
             menu_item1 = menu.addAction('Zoom')
-            menu_item1.triggered.connect(lambda: self.zoom_to_uni(r))
-            be = r[2:4]
-            miss = be.count(0)
-            if miss > 0:
-                candidates = []
-                for invrow in self.invmodel.invlist[1:]:
-                    if (invrow[0] not in be) and inv_on_uni(r[4]['phases'], r[4]['out'], invrow[2]['phases'], invrow[2]['out']):
-                        candidates.append(invrow[0])
-                        # iphases = invrow[2]['phases']
-                        # iout = invrow[2]['out']
-                        # a, b = iout
-                        # aset, bset = set([a]), set([b])
-                        # aphases, bphases = iphases.difference(aset), iphases.difference(bset)
-                        # if iphases == phases and len(iout.difference(out)) == 1:
-                        #     candidates.append(invrow[0])
-                        # elif bphases == phases and aset == out:
-                        #     candidates.append(invrow[0])
-                        # elif aphases == phases and bset == out:
-                        #     candidates.append(invrow[0])
-                if len(candidates) == miss:
+            menu_item1.triggered.connect(lambda: self.zoom_to_uni(uni))
+            miss = uni.begin == 0 or uni.end == 0
+            if miss:
+                candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
+                if len(candidates) == 2:
                     menu_item2 = menu.addAction('Autoconnect')
-                    menu_item2.triggered.connect(lambda: self.auto_connect(r, candidates, idx))
+                    menu_item2.triggered.connect(lambda: self.auto_connect(id, candidates, plot=True))
             menu.exec(self.uniview.mapToGlobal(QPos))
 
-    def auto_connect(self, r, candidates, idx):
-        if len(candidates) == 1:
-            if r[2] == 0:
-                self.unimodel.setData(idx[2], candidates[0])
-            else:
-                self.unimodel.setData(idx[3], candidates[0])
-        else:
-            ratio = (self.prj.trange[1] - self.prj.trange[0]) / (self.prj.prange[1] - self.prj.prange[0])
-            xy = np.array([r[4]['T'], ratio * r[4]['p']]).T
-            line = LineString(xy)
-            dt = self.invmodel.getDataFromId(candidates[0])
-            p0 = Point(dt['T'][0], ratio * dt['p'][0])
-            dt = self.invmodel.getDataFromId(candidates[1])
-            p1 = Point(dt['T'][0], ratio * dt['p'][0])
-            d0 = line.project(p0)
-            d1 = line.project(p1)
-            if d0 < d1:
-                self.unimodel.setData(idx[2], candidates[0])
-                self.unimodel.setData(idx[3], candidates[1])
-            else:
-                self.unimodel.setData(idx[2], candidates[1])
-                self.unimodel.setData(idx[3], candidates[0])
+    def auto_connect(self, id, candidates, plot=False):
+        self.ps.unilines[id].begin = candidates[0].id
+        self.ps.unilines[id].end = candidates[1].id
+        self.ps.trim_uni(id)
+        self.changed = True
+        if plot:
+            self.plot()
 
     def auto_add_uni(self, phases, out):
-        nr = dict(phases=phases, out=out, output='User-defined')
-        isnew, id = self.getiduni(nr)
+        uni = UniLine(phases=phases, out=out)
+        isnew, id = self.ps.getiduni(uni)
         if isnew:
-            self.do_calc(True, phases=nr['phases'], out=nr['out'])
-        isnew, id = self.getiduni(nr)
+            self.do_calc(True, phases=uni.phases, out=uni.out)
+        isnew, id = self.ps.getiduni(uni)
         if isnew:
-            self.do_calc(False, phases=nr['phases'], out=nr['out'])
+            self.do_calc(False, phases=uni.phases, out=uni.out)
 
     def auto_inv_calc(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
-            r = self.invmodel.data(idx[2])
+            inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
             self.statusBar().showMessage('Running auto univariant lines calculations...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            self.prj.update_scriptfile(guesses=r['results'][0]['ptguess'])
-            phases = r['phases']
-            out = r['out']
-            a, b = out
-            aset, bset = set([a]), set([b])
-            aphases, bphases = phases.difference(aset), phases.difference(bset)
-            fix = False
-            for poly in polymorphs:
-                if poly.issubset(phases):
-                    fix = True
-                    break
-            if fix:
-                if poly != out: # on boudary
-                    nopoly = out.difference(poly.intersection(out))
-                    aphases = phases.difference(poly.intersection(out))
-                    bphases = phases.difference(poly.difference(out))
-                    self.auto_add_uni(aphases, nopoly)
-                    self.auto_add_uni(bphases, nopoly)
-                    self.auto_add_uni(phases, poly.intersection(out))
-                    self.auto_add_uni(phases.difference(nopoly), poly.intersection(out))
-                else:     # triple point  NEED FIX
-                    nr1 = dict(phases=phases, out=aset, output='User-defined')
-                    isnewa, id = self.getiduni(nr1)
-                    nr1 = dict(phases=phases, out=bset, output='User-defined')
-                    isnewb, id = self.getiduni(nr1)
-                    if isnewa and isnewb:
-                        self.auto_add_uni(phases, bset)
-
-                    self.auto_add_uni(aphases, bset)
-                    self.auto_add_uni(bphases, aset)
-            else:
-                self.auto_add_uni(phases, aset)
-                self.auto_add_uni(phases, bset)
-                self.auto_add_uni(bphases, aset)
-                self.auto_add_uni(aphases, bset)
+            self.prj.update_scriptfile(guesses=inv.ptguess())
+            for phases, out in inv.all_unilines():
+                self.auto_add_uni(phases, out)
 
             self.read_scriptfile()
             self.clean_high()
             QtWidgets.QApplication.restoreOverrideCursor()
             self.statusBar().showMessage('Auto calculations done.')
 
-    def zoom_to_uni(self, row):
+    def zoom_to_uni(self, uni):
         self.canvas.toolbar.push_current()
-        T, p = self.get_trimmed_uni(row)
-        dT = max((T.max() - T.min()) / 10, 0.01)
-        dp = max((p.max() - p.min()) / 10, 0.001)
-        self.ax.set_xlim([T.min() - dT, T.max() + dT])
-        self.ax.set_ylim([p.min() - dp, p.max() + dp])
+        dT = max((uni.T.max() - uni.T.min()) / 10, 0.01)
+        dp = max((uni.p.max() - uni.p.min()) / 10, 0.001)
+        self.ax.set_xlim([uni.T.min() - dT, uni.T.max() + dT])
+        self.ax.set_ylim([uni.p.min() - dp, uni.p.max() + dp])
         self.canvas.toolbar.push_current()
         self.canvas.draw()
 
     def remove_inv(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
-            invnum = self.invmodel.data(idx[0])
+            inv_id = self.invmodel.data(idx[0])
             todel = True
             # Check ability to delete
-            for row in self.unimodel.unilist:
-                if row[2] == invnum or row[3] == invnum:
-                    if row[4]['manual']:
+            for uni in self.ps.unilines.values():
+                if uni.begin == inv_id or uni.end == inv_id:
+                    if uni.manual:
                         todel = False
             if todel:
                 msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
@@ -1248,11 +1138,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 if reply == qb.Yes:
 
                     # Check unilines begins and ends
-                    for row in self.unimodel.unilist:
-                        if row[2] == invnum:
-                            row[2] = 0
-                        if row[3] == invnum:
-                            row[3] = 0
+                    for uni in self.ps.unilines.values():
+                        if uni.begin == inv_id:
+                            uni.begin = 0
+                        if uni.end == inv_id:
+                            uni.end = 0
                     self.invmodel.removeRow(idx[0])
                     self.changed = True
                     self.plot()
@@ -1273,7 +1163,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.plot()
                 self.statusBar().showMessage('Univariant line removed')
 
-    def clicker(self, event):
+    def clicker(self, event): # TODO:
         self.cid.onmove(event)
         if event.inaxes is not None:
             self.cid.clear(event)
@@ -1308,12 +1198,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.trimuni(row)
                 self.invview.resizeColumnsToContents()
                 self.plot()
-                idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                idx = self.invmodel.getIndexID(id)
                 self.show_inv(idx)
                 self.statusBar().showMessage('User-defined invariant point added.')
             self.pushManual.setChecked(False)
 
-    def add_userdefined(self, checked=True):
+    def add_userdefined(self, checked=True): # TODO:
         if self.ready:
             phases, out = self.get_phases_out()
             if len(out) == 1:
@@ -1353,7 +1243,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                             self.uniview.resizeColumnsToContents()
                             self.changed = True
                             self.plot()
-                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            idx = self.unimodel.getIndexID(id)
                             if isnew:
                                 self.uniview.selectRow(idx.row())
                                 self.uniview.scrollToBottom()
@@ -1395,7 +1285,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                                     self.uniview.resizeColumnsToContents()
                                     self.changed = True
                                     self.plot()
-                                    idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                                    idx = self.unimodel.getIndexID(id)
                                     if isnew:
                                         self.uniview.selectRow(idx.row())
                                         self.uniview.scrollToBottom()
@@ -1437,7 +1327,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushManual.setChecked(False)
 
-    def dogminer(self, event):
+    def dogminer(self, event): # TODO:
         self.cid.onmove(event)
         if event.inaxes is not None:
             self.cid.clear(event)
@@ -1500,7 +1390,7 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushDogmin.setChecked(False)
 
-    def dogmin_select_phases(self):
+    def dogmin_select_phases(self): # TODO:
         if self.ready:
             dgtxt = self.logDogmin.toPlainText()
             try:
@@ -1636,11 +1526,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
-    def format_label(self, phases, out):
-        return (' '.join(sorted(list(phases.difference(self.prj.excess)))) +
-                ' - ' +
-                ' '.join(sorted(list(out))))
-
     def do_calc(self, cT, phases={}, out={}):
         if self.ready:
             if phases == {} and out == {}:
@@ -1659,12 +1544,12 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             steps = self.spinSteps.value()
 
             if len(out) == 1:
-                rt = dict(phases=phases, out=out, output='User-defined')
-                isnew, id = self.getiduni(rt)
+                uni_tmp = UniLine(phases=phases, out=out)
+                isnew, id_uni = self.ps.getiduni(uni_tmp)
                 if cT:
-                    tcout, ans = self.prj.tc_calc_t(rt['phases'], rt['out'], prange = prange, trange=trange, steps=steps)
+                    tcout, ans = self.prj.tc_calc_t(uni_tmp.phases, uni_tmp.out, prange = prange, trange=trange, steps=steps)
                 else:
-                    tcout, ans = self.prj.tc_calc_p(rt['phases'], rt['out'], prange = prange, trange=trange, steps=steps)
+                    tcout, ans = self.prj.tc_calc_p(uni_tmp.phases, uni_tmp.out, prange = prange, trange=trange, steps=steps)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
@@ -1674,50 +1559,43 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 elif len(res) < 2:
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
-                    r = dict(phases=rt['phases'], out=rt['out'], cmd=ans, variance=variance,
-                             p=pts[0], T=pts[1], manual=False,
-                             output=output, results=res)
-                    label = self.format_label(r['phases'], r['out'])
+                    uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
+                                  variance=variance, p=pts[0], T=pts[1], output=output, results=res)
                     if isnew:
-                        self.unimodel.appendRow((id, label, 0, 0, r))
-                        row = self.unimodel.getRowFromId(id)
-                        self.trimuni(row)
+                        self.unimodel.appendRow(id_uni, uni)
                         self.uniview.resizeColumnsToContents()
                         self.changed = True
                         # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
-                        idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                        idx = self.unimodel.getIndexID(id_uni)
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
                         if self.checkAutoconnectUni.isChecked():
-                            candidates = []
-                            for invrow in self.invmodel.invlist[1:]:
-                                if inv_on_uni(phases, out, invrow[2]['phases'], invrow[2]['out']):
-                                    candidates.append(invrow[0])
+                            candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
                             if len(candidates) == 2:
-                                self.auto_connect(row, candidates, self.unisel.selectedIndexes())
+                                self.auto_connect(id_uni, candidates)
                         self.plot()
                         self.show_uni(idx)
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
-                            row = self.unimodel.getRowFromId(id)
-                            row[1] = label
-                            row[4] = r
-                            self.trimuni(row)
-                            self.changed = True
+                            self.ps.unilines[id_uni].cmd = ans
+                            self.ps.unilines[id_uni].variance = variance
+                            self.ps.unilines[id_uni]._p = pts[0]
+                            self.ps.unilines[id_uni]._T = pts[1]
+                            self.ps.unilines[id_uni].output = output
+                            self.ps.unilines[id_uni].results = res
                             self.uniview.resizeColumnsToContents()
-                            idx = self.unimodel.index(self.unimodel.lookup[id], 0, QtCore.QModelIndex())
+                            idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())
                             self.unimodel.dataChanged.emit(idx, idx)
-                            self.plot()
                             self.show_uni(idx)
-                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id))
+                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
-                rt = dict(phases=phases, out=out, output='User-defined')
-                isnew, id = self.getidinv(rt)
-                tcout, ans = self.prj.tc_calc_pt(rt['phases'], rt['out'], prange = prange, trange=trange)
+                inv_tmp = InvPoint(phases=phases, out=out)
+                isnew, id_inv = self.ps.getidinv(inv_tmp)
+                tcout, ans = self.prj.tc_calc_pt(inv_tmp.phases, inv_tmp.out, prange = prange, trange=trange)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.prj.workdir) + tcout)
                 status, variance, pts, res, output = self.prj.parse_logfile()
                 if status == 'bombed':
@@ -1725,46 +1603,46 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 elif status == 'nir':
                     self.statusBar().showMessage('Nothing in range.')
                 else:
-                    r = dict(phases=rt['phases'], out=rt['out'], cmd=ans, variance=variance,
-                             p=pts[0], T=pts[1], manual=False,
-                             output=output, results=res)
-                    label = self.format_label(r['phases'], r['out'])
+                    inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
+                                   variance=variance, p=pts[0], T=pts[1], output=output, results=res)
                     if isnew:
-                        self.invmodel.appendRow((id, label, r))
+                        self.invmodel.appendRow(id_inv, inv)
                         self.invview.resizeColumnsToContents()
                         self.changed = True
-                        idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
+                        idx = self.invmodel.getIndexID(id_inv)
                         self.invview.selectRow(idx.row())
                         self.invview.scrollToBottom()
                         if self.checkAutoconnectInv.isChecked():
-                            for unirow in self.unimodel.unilist:
-                                if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], phases, out):
-                                    candidates = [id]
-                                    for invrow in self.invmodel.invlist[1:-1]:
-                                        if inv_on_uni(unirow[4]['phases'], unirow[4]['out'], invrow[2]['phases'], invrow[2]['out']):
-                                            candidates.append(invrow[0])
+                            for uni in self.ps.unilines.values():
+                                if uni.contains_inv(inv):
+                                    candidates = [inv]
+                                    for other_inv in self.ps.invpoints.values():
+                                        if other_inv.id != id_inv:
+                                            if uni.contains_inv(other_inv):
+                                                candidates.append(other_inv)
                                     if len(candidates) == 2:
-                                        self.uniview.selectRow(self.unimodel.lookup[unirow[0]])
-                                        self.auto_connect(unirow, candidates, self.unisel.selectedIndexes())
+                                        self.auto_connect(uni.id, candidates)
+                                        self.uniview.resizeColumnsToContents()
                         self.plot()
                         self.show_inv(idx)
                         self.statusBar().showMessage('New invariant point calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
-                            row = self.invmodel.getRowFromId(id)
-                            row[1] = label
-                            row[2] = r
-                            # retrim affected
-                            for row in self.unimodel.unilist:
-                                if row[2] == id or row[3] == id:
-                                    self.trimuni(row)
+                            self.ps.invpoints[id_inv].cmd = ans
+                            self.ps.invpoints[id_inv].variance = variance
+                            self.ps.invpoints[id_inv].p = pts[0]
+                            self.ps.invpoints[id_inv].T = pts[1]
+                            self.ps.invpoints[id_inv].output = output
+                            self.ps.invpoints[id_inv].results = res
+                            for uni in self.ps.unilines.values():
+                                if uni.begin == id_inv or uni.end == id_inv:
+                                    self.ps.trim_uni(uni.id)
                             self.changed = True
-                            idx = self.invmodel.index(self.invmodel.lookup[id], 0, QtCore.QModelIndex())
-                            self.invview.selectRow(idx.row())
-                            self.show_inv(idx)
+                            self.invview.resizeColumnsToContents()
+                            idx = self.invmodel.getIndexID(id_inv)
                             self.plot()
-                            self.invmodel.dataChanged.emit(idx, idx)
-                            self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id))
+                            self.show_inv(idx)
+                            self.statusBar().showMessage('Invariant point {} re-calculated.'.format(id_inv))
                         else:
                             self.statusBar().showMessage('Invariant point already exists.')
             else:
@@ -1773,106 +1651,6 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
-
-    def getiduni(self, zm=None):
-        '''Return id of either new or existing univariant line'''
-        ids = 0
-        # collect polymorphs identities
-        if zm is not None:
-            outs = [zm['out']]
-            for poly in polymorphs:
-                if poly.issubset(zm['phases']):
-                    outs.append(poly.difference(zm['out']))
-
-        for r in self.unimodel.unilist:
-            if zm is not None:
-                if r[4]['phases'] == zm['phases']:
-                    if r[4]['out'] in outs:
-                        zm['out'] = r[4]['out'] # switch to already used ??? Needed ???
-                        return False, r[0]
-            ids = max(ids, r[0])
-        return True, ids + 1
-
-    def getidinv(self, zm=None):
-        '''Return id of either new or existing invvariant point'''
-        ids = 0
-        # collect polymorphs identities
-        if zm is not None:
-            outs = [zm['out']]
-            for poly in polymorphs:
-                if poly.issubset(zm['phases']):
-                    outs.append(zm['out'].difference(poly).union(poly.difference(zm['out'])))
-
-        for r in self.invmodel.invlist[1:]:
-            if zm is not None:
-                if r[2]['phases'] == zm['phases']:
-                    if r[2]['out'] in outs:
-                        zm['out'] = r[2]['out'] # switch to already used ??? Needed ???
-                        return False, r[0]
-            ids = max(ids, r[0])
-        return True, ids + 1
-
-    def trimuni(self, row):
-        if not row[4]['manual']:
-            ratio = (self.prj.trange[1] - self.prj.trange[0]) / (self.prj.prange[1] - self.prj.prange[0])
-            xy = np.array([row[4]['T'], ratio * row[4]['p']]).T
-            line = LineString(xy)
-            if row[2] > 0:
-                dt = self.invmodel.getDataFromId(row[2])
-                p1 = Point(dt['T'][0], ratio * dt['p'][0])
-            else:
-                p1 = Point(row[4]['T'][0], ratio * row[4]['p'][0])
-            if row[3] > 0:
-                dt = self.invmodel.getDataFromId(row[3])
-                p2 = Point(dt['T'][0], ratio * dt['p'][0])
-            else:
-                p2 = Point(row[4]['T'][-1], ratio * row[4]['p'][-1])
-            # vertex distances
-            vdst = np.array([line.project(Point(*v)) for v in xy])
-            d1 = line.project(p1)
-            d2 = line.project(p2)
-            if d1 > d2:
-                d1, d2 = d2, d1
-                row[2], row[3] = row[3], row[2]
-            # get indexex of points to keep
-            row[4]['begix'] = np.flatnonzero(vdst >= d1)[0]
-            row[4]['endix'] = np.flatnonzero(vdst <= d2)[-1]
-
-    def get_trimmed_uni(self, row):
-        if row[2] > 0:
-            dt = self.invmodel.getDataFromId(row[2])
-            T1, p1 = dt['T'][0], dt['p'][0]
-        else:
-            T1, p1 = [], []
-        if row[3] > 0:
-            dt = self.invmodel.getDataFromId(row[3])
-            T2, p2 = dt['T'][0], dt['p'][0]
-        else:
-            T2, p2 = [], []
-        if not row[4]['manual']:
-            T = row[4]['T'][row[4]['begix']:row[4]['endix'] + 1]
-            p = row[4]['p'][row[4]['begix']:row[4]['endix'] + 1]
-        else:
-            if row[2] == 0 and row[3] == 0:
-                T, p = row[4]['T'], row[4]['p']
-            else:
-                T, p = [], []
-        return np.hstack((T1, T, T2)), np.hstack((p1, p, p2))
-
-    def getunilabelpoint(self, T, p):
-        if len(T) > 1:
-            dT = np.diff(T)
-            dp = np.diff(p)
-            d = np.sqrt(dT**2 + dp**2)
-            if np.sum(d) > 0:
-                cl = np.append([0], np.cumsum(d))
-                ix = np.interp(np.sum(d) / 2, cl, range(len(cl)))
-                cix = int(ix)
-                return T[cix] + (ix - cix) * dT[cix], p[cix] + (ix - cix) * dp[cix]
-            else:
-                return T[0], p[0]
-        else:
-            return T[0], p[0]
 
     def plot(self):
         if self.ready:
@@ -1891,27 +1669,17 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax = self.figure.add_subplot(111)
             self.ax.cla()
             self.ax.format_coord = self.format_coord
-            for k in self.unimodel.unilist:
-                T, p = self.get_trimmed_uni(k)
-                self.ax.plot(T, p, 'k')
+            for uni in self.ps.unilines.values():
+                self.ax.plot(uni.T, uni.p, 'k')
                 if self.checkLabelUni.isChecked():
-                    Tl, pl = self.getunilabelpoint(T, p)
-                    if self.checkLabelUniText.isChecked():
-                        self.ax.annotate(s='{} {}'.format(str(k[0]), ' '.join(k[4]['out'])), xy=(Tl, pl), **unilabel_kw)
-                    else:
-                        self.ax.annotate(s=str(k[0]), xy=(Tl, pl), **unilabel_kw)
-                        #self.ax.text(Tl, pl, str(k[0]), **unilabel_kw)
-            for k in self.invmodel.invlist[1:]:
-                T, p = k[2]['T'][0], k[2]['p'][0]
+                    Tl, pl = uni.get_label_point()
+                    self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(Tl, pl), **unilabel_kw)
+            for inv in self.ps.invpoints.values():
                 if self.checkLabelInv.isChecked():
-                    if self.checkLabelInvText.isChecked():
-                        self.ax.annotate(s='{} {}'.format(str(k[0]), ' '.join(k[2]['out'])), xy=(T, p), **invlabel_kw)
-                    else:
-                        self.ax.annotate(s=str(k[0]), xy=(T, p), **invlabel_kw)
-                        #self.ax.text(T, p, str(k[0]), **invlabel_kw)
+                    self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.T, inv.p), **invlabel_kw)
                 else:
                     if self.checkDotInv.isChecked():
-                        self.ax.plot(T, p, 'k.')
+                        self.ax.plot(inv.T, inv.p, 'k.')
             self.ax.set_xlabel('Temperature [C]')
             self.ax.set_ylabel('Pressure [kbar]')
             ex = list(self.prj.excess)
@@ -1925,16 +1693,15 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
                 self.ax.set_ylim(cur[1])
             if self.unihigh is not None and self.unisel.hasSelection():
                 idx = self.unisel.selectedIndexes()
-                row = self.unimodel.getRow(idx[0])
-                T, p = self.get_trimmed_uni(row)
-                self.unihigh = self.ax.plot(T, p, '-', **unihigh_kw)
+                uni = self.ps.unilines[self.unimodel.getRowID(idx[0])]
+                self.unihigh = self.ax.plot(uni.T, uni.p, '-', **unihigh_kw)
             if self.invhigh is not None and self.invsel.hasSelection():
                 idx = self.invsel.selectedIndexes()
-                dt = self.invmodel.getData(idx[0], 'Data')
-                self.invhigh = self.ax.plot(dt['T'], dt['p'], 'o', **invhigh_kw)
+                inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
+                self.invhigh = self.ax.plot(inv.T, inv.p, 'o', **invhigh_kw)
             self.canvas.draw()
 
-    def check_prj_areas(self):
+    def check_prj_areas(self): # TODO:
         if self.ready:
             if not hasattr(self.ax, 'areas_shown'):
                 QtWidgets.QApplication.processEvents()
@@ -1961,11 +1728,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
-    def show_topology(self):
+    def show_topology(self): # TODO: 
         if self.ready:
             if NX_OK:
                 dia = TopologyGraph(PSB(self.data))
-                dia.show()
+                dia.exec_()
             else:
                 self.statusBar().showMessage('Topology graph needs networkx to be installed')
         else:
@@ -1973,11 +1740,11 @@ class PSBuilder(QtWidgets.QMainWindow, Ui_PSBuilder):
 
 
 class InvModel(QtCore.QAbstractTableModel):
-    def __init__(self, parent, *args):
+    def __init__(self, ps, parent, *args):
         super(InvModel, self).__init__(parent, *args)
+        self.ps = ps
         self.invlist = []
-        self.header = ['ID', 'Label', 'Data']
-        self.lookup = {}
+        self.header = ['ID', 'Label']
 
     def rowCount(self, parent=None):
         return len(self.invlist)
@@ -1988,61 +1755,59 @@ class InvModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
+        inv = self.ps.invpoints[self.invlist[index.row()]]
         # elif role == QtCore.Qt.ForegroundRole:
         #     if self.invlist[index.row()][self.header.index('Data')]['manual']:
         #         brush = QtGui.QBrush()
         #         brush.setColor(QtGui.QColor('red'))
         #         return brush
-        elif role == QtCore.Qt.FontRole:
-            if self.invlist[index.row()][self.header.index('Data')]['manual']:
+        if role == QtCore.Qt.FontRole:
+            if inv.manual:
                 font = QtGui.QFont()
                 font.setBold(True)
                 return font
         elif role != QtCore.Qt.DisplayRole:
             return None
         else:
-            return self.invlist[index.row()][index.column()]
+            if index.column() == 0:
+                return self.invlist[index.row()]
+            else:
+                return inv.label(excess=self.ps.excess)
 
-    def appendRow(self, datarow):
+    def appendRow(self, id, inv):
         """ Append model row. """
         self.beginInsertRows(QtCore.QModelIndex(),
                              len(self.invlist), len(self.invlist))
-        self.invlist.append(list(datarow))
+        self.invlist.append(id)
+        self.ps.add_inv(id, inv)
         self.endInsertRows()
-        self.lookup[datarow[0]] = self.rowCount() - 1
 
     def removeRow(self, index):
         """ Remove model row. """
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
+        id = self.invlist[index.row()]
         del self.invlist[index.row()]
+        del self.ps.invpoints[id]
         self.endRemoveRows()
-        self.lookup = {dt[0]: ix + 1 for ix, dt in enumerate(self.invlist[1:])}
 
     def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
             return self.header[col]
         return None
 
-    def getData(self, index, what='Data'):
-        return self.invlist[index.row()][self.header.index(what)]
-
-    def getRow(self, index):
+    def getRowID(self, index):
         return self.invlist[index.row()]
 
-    def getDataFromId(self, id, what='Data'):
-        # print(id, self.rowCount(), what, self.lookup)
-        return self.invlist[self.lookup[id]][self.header.index(what)]
-
-    def getRowFromId(self, id):
-        return self.invlist[self.lookup[id]]
+    def getIndexID(self, id):
+        return self.index(self.invlist.index(id), 0, QtCore.QModelIndex())
 
 
 class UniModel(QtCore.QAbstractTableModel):
-    def __init__(self, parent, *args):
+    def __init__(self, ps, parent, *args):
         super(UniModel, self).__init__(parent, *args)
+        self.ps = ps
         self.unilist = []
-        self.header = ['ID', 'Label', 'Begin', 'End', 'Data']
-        self.lookup = {}
+        self.header = ['ID', 'Label', 'Begin', 'End']
 
     def rowCount(self, parent=None):
         return len(self.unilist)
@@ -2053,42 +1818,55 @@ class UniModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
+        uni = self.ps.unilines[self.unilist[index.row()]]
         # elif role == QtCore.Qt.ForegroundRole:
         #     if self.unilist[index.row()][self.header.index('Data')]['manual']:
         #         brush = QtGui.QBrush()
         #         brush.setColor(QtGui.QColor('red'))
         #         return brush
-        elif role == QtCore.Qt.FontRole:
-            if self.unilist[index.row()][self.header.index('Data')]['manual']:
+        if role == QtCore.Qt.FontRole:
+            if uni.manual:
                 font = QtGui.QFont()
                 font.setBold(True)
                 return font
         elif role != QtCore.Qt.DisplayRole:
             return None
         else:
-            return self.unilist[index.row()][index.column()]
+            if index.column() == 0:
+                return self.unilist[index.row()]
+            if index.column() == 2:
+                return uni.begin
+            if index.column() == 3:
+                return uni.end
+            else:
+                return uni.label(excess=self.ps.excess)
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         # DO change and emit plot
         if role == QtCore.Qt.EditRole:
-            self.unilist[index.row()][index.column()] = value
+            uni = self.ps.unilines[self.unilist[index.row()]]
+            if index.column() == 2:
+                uni.begin = value
+            if index.column() == 3:
+                uni.end = value
             self.dataChanged.emit(index, index)
         return False
 
-    def appendRow(self, datarow):
+    def appendRow(self, id, uni):
         """ Append model row. """
         self.beginInsertRows(QtCore.QModelIndex(),
                              len(self.unilist), len(self.unilist))
-        self.unilist.append(list(datarow))
+        self.unilist.append(id)
+        self.ps.add_uni(id, uni)
         self.endInsertRows()
-        self.lookup[datarow[0]] = self.rowCount() - 1
 
     def removeRow(self, index):
         """ Remove model row. """
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
+        id = self.unilist[index.row()]
         del self.unilist[index.row()]
+        del self.ps.unilines[id]
         self.endRemoveRows()
-        self.lookup = {dt[0]: ix for ix, dt in enumerate(self.unilist)}
 
     def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
         if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
@@ -2101,17 +1879,11 @@ class UniModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    def getData(self, index, what='Data'):
-        return self.unilist[index.row()][self.header.index(what)]
-
-    def getRow(self, index):
+    def getRowID(self, index):
         return self.unilist[index.row()]
 
-    def getDataFromId(self, id, what='Data'):
-        return self.unilist[self.lookup[id]][self.header.index(what)]
-
-    def getRowFromId(self, id):
-        return self.unilist[self.lookup[id]]
+    def getIndexID(self, id):
+        return self.index(self.unilist.index(id), 0, QtCore.QModelIndex())
 
 
 class ComboDelegate(QtWidgets.QItemDelegate):
@@ -2119,34 +1891,29 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     A delegate that places a fully functioning QtWidgets.QComboBox in every
     cell of the column to which it's applied
     """
-    def __init__(self, parent, invmodel, strict):
+    def __init__(self, ps, invmodel, parent):
         super(ComboDelegate, self).__init__(parent)
+        self.ps = ps
         self.invmodel = invmodel
-        self.strict = strict
 
     def createEditor(self, parent, option, index):
         #r = index.model().getData(index, 'Data')
-        r = index.model().getRow(index)
+        uni = self.ps.unilines[index.model().getRowID(index)]
         if index.column() == 2:
-            other = r[3]
+            other = uni.end
         else:
-            other = r[2]
+            other = uni.begin
         #phases, out = r[4]['phases'], r[4]['out']
         combomodel = QtGui.QStandardItemModel()
-        if not r[4]['manual']:
+        if not uni.manual:
             item = QtGui.QStandardItem('0')
             item.setData(0, 1)
             combomodel.appendRow(item)
         # filter possible candidates
-        for row in self.invmodel.invlist[1:]:
-            if self.strict.isChecked():
-                filtered = inv_on_uni(r[4]['phases'], r[4]['out'], row[2]['phases'], row[2]['out'])
-            else:
-                filtered = r[4]['phases'].issubset(row[2]['phases']) and r[4]['out'].issubset(row[2]['out'])
-            #if phases.issubset(d['phases']) and out.issubset(d['out']):
-            if row[0] != other and filtered:
-                item = QtGui.QStandardItem(str(row[0]))
-                item.setData(row[0], 1)
+        for inv in self.ps.invpoints.values():
+            if inv.id != other and uni.contains_inv(inv):
+                item = QtGui.QStandardItem(inv.annotation())
+                item.setData(inv.id, 1)
                 combomodel.appendRow(item)
         combo = QtWidgets.QComboBox(parent)
         combo.setModel(combomodel)
@@ -2158,16 +1925,17 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         #editor.showPopup()
 
     def setModelData(self, editor, model, index):
-        if index.column() == 2:
-            other = model.getData(index, 'End')
-        else:
-            other = model.getData(index, 'Begin')
+        #if index.column() == 2:
+        #    other = model.getData(index, 'End')
+        #else:
+        #    other = model.getData(index, 'Begin')
         new = editor.currentData(1)
-        if other == new and new != 0:
-            editor.setCurrentText(str(model.data(index)))
-            self.parent().statusBar().showMessage('Begin and end must be different.')
-        else:
-            model.setData(index, new)
+        #if other == new and new != 0:
+        #    editor.setCurrentText(str(model.data(index)))
+        #    self.parent().statusBar().showMessage('Begin and end must be different.')
+        #else:
+        #    model.setData(index, new)
+        model.setData(index, int(new))
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
