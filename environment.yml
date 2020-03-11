@@ -1,11 +1,12 @@
 name: psbuilder
 
 dependencies:
-- python=3
+- python=3.8
 - pyqt=5
 - numpy
 - matplotlib
 - scipy
+- networkx
 - shapely
 - descartes
 - tqdm
