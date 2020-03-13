@@ -427,6 +427,29 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="text">
+                 <string>Dogmin doglevel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QSpinBox" name="spinDoglevel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximum">
+                 <number>2</number>
+                </property>
+                <property name="value">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
               <item row="4" column="0">
                <widget class="QCheckBox" name="checkLabelInv">
                 <property name="text">
@@ -516,6 +539,13 @@
                 </property>
                </widget>
               </item>
+              <item row="8" column="0">
+               <widget class="QCheckBox" name="checkDotInv">
+                <property name="text">
+                 <string>Show dot at invariant point when not labelled</string>
+                </property>
+               </widget>
+              </item>
               <item row="9" column="0">
                <widget class="QCheckBox" name="checkOverwrite">
                 <property name="text">
@@ -524,50 +554,13 @@
                </widget>
               </item>
               <item row="10" column="0">
-               <widget class="QCheckBox" name="checkStrict">
-                <property name="text">
-                 <string>Strict filtering of invariant points</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
                <widget class="QCheckBox" name="checkAutoconnectUni">
                 <property name="text">
                  <string>Automatically connect new univariant lines if possible</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
-               <widget class="QCheckBox" name="checkDotInv">
-                <property name="text">
-                 <string>Show dot at invariant point when not labelled</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Dogmin doglevel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QSpinBox" name="spinDoglevel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="maximum">
-                 <number>2</number>
-                </property>
-                <property name="value">
-                 <number>1</number>
-                </property>
-               </widget>
-              </item>
-              <item row="12" column="0">
+              <item row="11" column="0">
                <widget class="QCheckBox" name="checkAutoconnectInv">
                 <property name="text">
                  <string>Automatically connect new invariant points if possible</string>
@@ -990,7 +983,7 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionReload"/>
-    <addaction name="actionGenerate"/>
+    <addaction name="actionImport_drfile"/>
     <addaction name="actionImport_project"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
@@ -1068,9 +1061,9 @@
     <string>&amp;About</string>
    </property>
   </action>
-  <action name="actionGenerate">
+  <action name="actionImport_drfile">
    <property name="text">
-    <string>&amp;Generate from dr file</string>
+    <string>Import from drfile</string>
    </property>
   </action>
   <action name="actionSave_as">

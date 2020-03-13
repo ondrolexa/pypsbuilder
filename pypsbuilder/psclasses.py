@@ -1,6 +1,10 @@
+from collections import OrderedDict
+import itertools
+
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point
+from shapely.ops import polygonize, linemerge, unary_union
 
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
 
@@ -36,8 +40,8 @@ class InvPoint(PseudoBase):
         self.out = kwargs.get('out')
         self.cmd = kwargs.get('cmd', '')
         self.variance = kwargs.get('variance', 0)
-        self.p = kwargs.get('p', [])
-        self.T = kwargs.get('T', [])
+        self.x = kwargs.get('x', [])
+        self.y = kwargs.get('y', [])
         self.results = kwargs.get('results', [dict(data=None, ptguess=None)])
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
@@ -50,12 +54,12 @@ class InvPoint(PseudoBase):
         return 0
 
     @property
-    def _p(self):
-        return self.p[0]
+    def _x(self):
+        return self.x[0]
 
     @property
-    def _T(self):
-        return self.T[0]
+    def _y(self):
+        return self.y[0]
 
     def all_unilines(self):
         a, b = self.out
@@ -94,15 +98,16 @@ class UniLine(PseudoBase):
         self.out = kwargs.get('out')
         self.cmd = kwargs.get('cmd', '')
         self.variance = kwargs.get('variance', 0)
-        self._p = kwargs.get('p', [])
-        self._T = kwargs.get('T', [])
+        self._x = kwargs.get('x', [])
+        self._y = kwargs.get('y', [])
         self.results = kwargs.get('results', [dict(data=None, ptguess=None)])
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
         self.begin = kwargs.get('begin', 0)
         self.end = kwargs.get('end', 0)
-        self.p = self._p.copy()
-        self.T = self._T.copy()
+        self.used = slice(0, len(self._x))
+        self.x = self._x.copy()
+        self.y = self._y.copy()
 
     def __repr__(self):
         return 'Uni: {}'.format(self.label())
@@ -141,38 +146,39 @@ class UniLine(PseudoBase):
         return candidate
 
     def get_label_point(self):
-        if len(self.T) > 1:
-            dT = np.diff(self.T)
-            dp = np.diff(self.p)
-            d = np.sqrt(dT**2 + dp**2)
-            if np.sum(d) > 0:
+        if len(self.x) > 1:
+            dx = np.diff(self.x)
+            dy = np.diff(self.y)
+            d = np.sqrt(dx**2 + dy**2)
+            sd = np.sum(d)
+            if sd > 0:
                 cl = np.append([0], np.cumsum(d))
-                ix = np.interp(np.sum(d) / 2, cl, range(len(cl)))
+                ix = np.interp(sd / 2, cl, range(len(cl)))
                 cix = int(ix)
-                return self.T[cix] + (ix - cix) * dT[cix], self.p[cix] + (ix - cix) * dp[cix]
+                return self.x[cix] + (ix - cix) * dx[cix], self.y[cix] + (ix - cix) * dy[cix]
             else:
-                return self.T[0], self.p[0]
+                return self.x[0], self.y[0]
         else:
-            return self.T[0], self.p[0]
+            return self.x[0], self.y[0]
 
 
-class PTsection:
+class SectionBase:
     def __init__(self, **kwargs):
-        self.trange = kwargs.get('trange', (450, 700))
-        self.prange = kwargs.get('prange', (7, 16))
         self.excess = kwargs.get('excess', set())
         self.invpoints = {}
         self.unilines = {}
 
     @property
     def ratio(self):
-        return (self.trange[1] - self.trange[0]) / (self.prange[1] - self.prange[0])
+        return (self.xrange[1] - self.xrange[0]) / (self.yrange[1] - self.yrange[0])
 
     def add_inv(self, id, inv):
         self.invpoints[id] = inv
+        self.invpoints[id].id = id
 
     def add_uni(self, id, uni):
         self.unilines[id] = uni
+        self.unilines[id].id = id
 
     def getidinv(self, inv=None):
         '''Return id of either new or existing invariant point'''
@@ -217,17 +223,17 @@ class PTsection:
     def trim_uni(self, id):
         uni = self.unilines[id]
         if uni.begin > 0:
-            p1 = Point(self.invpoints[uni.begin].T,
-                       self.ratio * self.invpoints[uni.begin].p)
+            p1 = Point(self.invpoints[uni.begin].x,
+                       self.ratio * self.invpoints[uni.begin].y)
         else:
-            p1 = Point(uni._T[0], self.ratio * uni._p[0])
+            p1 = Point(uni._x[0], self.ratio * uni._y[0])
         if uni.end > 0:
-            p2 = Point(self.invpoints[uni.end].T,
-                       self.ratio * self.invpoints[uni.end].p)
+            p2 = Point(self.invpoints[uni.end].x,
+                       self.ratio * self.invpoints[uni.end].y)
         else:
-            p2 = Point(uni._T[-1], self.ratio * uni._p[-1])
+            p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
         if not uni.manual:
-            xy = np.array([uni._T, self.ratio * uni._p]).T
+            xy = np.array([uni._x, self.ratio * uni._y]).T
             line = LineString(xy)
             # vertex distances
             vdst = np.array([line.project(Point(*v)) for v in xy])
@@ -238,38 +244,247 @@ class PTsection:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            keep = slice(np.flatnonzero(vdst >= d1)[0], np.flatnonzero(vdst <= d2)[-1] + 1)
+            uni.used = slice(np.flatnonzero(vdst >= d1)[0],
+                             np.flatnonzero(vdst <= d2)[-1] + 1)
 
         # concatenate begin, keep, end
         if uni.begin > 0:
-            T1, p1 = self.invpoints[uni.begin].T, self.invpoints[uni.begin].p
+            x1, y1 = self.invpoints[uni.begin].x, self.invpoints[uni.begin].y
         else:
-            T1, p1 = [], []
+            x1, y1 = [], []
         if uni.end > 0:
-            T2, p2 = self.invpoints[uni.end].T, self.invpoints[uni.end].p
+            x2, y2 = self.invpoints[uni.end].x, self.invpoints[uni.end].y
         else:
-            T2, p2 = [], []
+            x2, y2 = [], []
         if not uni.manual:
-            T = uni._T[keep]
-            p = uni._p[keep]
+            xx = uni._x[uni.used]
+            yy = uni._y[uni.used]
         else:
-            if uni.begin == 0 and uni.end == 0:
-                T, p = uni._T, uni._p
-            else:
-                T, p = [], []
+            xx, yy = [], []
 
         # store trimmed
-        uni.T = np.hstack((T1, T, T2))
-        uni.p = np.hstack((p1, p, p2))
+        uni.x = np.hstack((x1, xx, x2))
+        uni.y = np.hstack((y1, yy, y2))
 
+    def construct_areas(self, shrink=0):
+        def area_exists(indexes):
+            def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
+                if found_cycle[0]:
+                    return
+                marked[u] = True
+                path.append(u)
+                for v in graph[u]:
+                    if marked[v] and v != pred_node:
+                        found_cycle[0] = True
+                        return
+                    if not marked[v]:
+                        dfs_visit(graph, v, found_cycle, u, marked, path)
+            # create graph
+            graph = {}
+            for ix in indexes:
+                b, e = self.unilines[ix].begin, self.unilines[ix].end
+                if b == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unilines[ix].x[0], self.unilines[ix].y[0]
+                    b = nix
+                if e == 0:
+                    nix = max(list(inv_coords.keys())) + 1
+                    inv_coords[nix] = self.unilines[ix].x[-1], self.unilines[ix].y[-1]
+                    e = nix
+                if b in graph:
+                    graph[b] = graph[b] + (e,)
+                else:
+                    graph[b] = (e,)
+                if e in graph:
+                    graph[e] = graph[e] + (b,)
+                else:
+                    graph[e] = (b,)
+                uni_index[(b, e)] = self.unilines[ix].id
+                uni_index[(e, b)] = self.unilines[ix].id
+            # do search
+            path = []
+            marked = {u: False for u in graph}
+            found_cycle = [False]
+            for u in graph:
+                if not marked[u]:
+                    dfs_visit(graph, u, found_cycle, u, marked, path)
+                if found_cycle[0]:
+                    break
+            return found_cycle[0], path
+        # starts here
+        vertices, edges, phases = [], [], []
+        tedges, tphases = [], []
+        uni_index = {}
+        for uni in self.unilines.values():
+            uni_index[(uni.begin, uni.end)] = uni.id
+            uni_index[(uni.end, uni.begin)] = uni.id
+        inv_coords = {}
+        for inv in self.invpoints.values():
+            inv_coords[inv.id] = inv._x, inv._y
+        faces = {}
+        for ix, uni in self.unilines.items():
+            f1 = frozenset(uni.phases)
+            f2 = frozenset(uni.phases.difference(uni.out))
+            if f1 in faces:
+                faces[f1].append(ix)
+            else:
+                faces[f1] = [ix]
+            if f2 in faces:
+                faces[f2].append(ix)
+            else:
+                faces[f2] = [ix]
+            # topology of polymorphs is degenerated
+            for poly in polymorphs:
+                if poly.issubset(uni.phases):
+                    f2 = frozenset(uni.phases.difference(poly.difference(uni.out)))
+                    if f2 in faces:
+                        faces[f2].append(ix)
+                    else:
+                        faces[f2] = [ix]
+        if uni_index and inv_coords and faces:
+            for f in faces:
+                exists, path = area_exists(faces[f])
+                if exists:
+                    edge = []
+                    vert = []
+                    for b, e in zip(path, path[1:] + path[:1]):
+                        edge.append(uni_index.get((b, e), None))
+                        vert.append(inv_coords[b])
+                    # check for bad topology
+                    if None not in edge:
+                        edges.append(edge)
+                        vertices.append(vert)
+                        phases.append(f)
+                    else:
+                        #raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
+                        print('Topology error in path {}. Edges {}'.format(path, edge))
+                else:
+                    # loop not found, search for range crossing chain
+                    for ppath in itertools.permutations(path):
+                        edge = []
+                        vert = []
+                        for b, e in zip(ppath[:-1], ppath[1:]):
+                            edge.append(uni_index.get((b, e), None))
+                            vert.append(inv_coords[b])
+                        vert.append(inv_coords[e])
+                        if None not in edge:
+                            x, y = vert[0]
+                            if x < self.xrange[0] + shrink or x > self.xrange[1] - shrink or y < self.yrange[0] + shrink or y > self.yrange[1] - shrink:
+                                x, y = vert[-1]
+                                if x < self.xrange[0] + shrink or x > self.xrange[1] - shrink or y < self.yrange[0] + shrink or y > self.yrange[1] - shrink:
+                                    tedges.append(edge)
+                                    tphases.append(f)
+                            break
+        return vertices, edges, phases, tedges, tphases
+
+    def create_shapes(self, shrink=0):
+        shapes = OrderedDict()
+        shape_edges = OrderedDict()
+        bad_shapes = OrderedDict()
+        # traverse pseudosection
+        vertices, edges, phases, tedges, tphases = self.construct_areas(shrink)
+        # default p-t range boundary
+        bnd = [LineString([(self.xrange[0] + shrink, self.yrange[0] + shrink),
+                          (self.xrange[1] - shrink, self.yrange[0] + shrink)]),
+               LineString([(self.xrange[1] - shrink, self.yrange[0] + shrink),
+                          (self.xrange[1] - shrink, self.yrange[1] - shrink)]),
+               LineString([(self.xrange[1] - shrink, self.yrange[1] - shrink),
+                          (self.xrange[0] + shrink, self.yrange[1] - shrink)]),
+               LineString([(self.xrange[0] + shrink, self.yrange[1] - shrink),
+                          (self.xrange[0] + shrink, self.yrange[0] + shrink)])]
+        bnda = list(polygonize(bnd))[0]
+        # Create all full areas
+        for ind in range(len(edges)):
+            e, f = edges[ind], phases[ind]
+            lns = [LineString(np.c_[self.unilines[fid].x, self.unilines[fid].y]) for fid in e]
+            pp = polygonize(lns)
+            invalid = True
+            for ppp in pp:
+                if not ppp.is_valid:
+                    print('Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
+                ppok = bnda.intersection(ppp.buffer(0))  # fix topologically correct but self-intersecting shapes
+                if not ppok.is_empty and ppok.geom_type == 'Polygon':
+                    invalid = False
+                    shape_edges[f] = e
+                    if f in shapes:
+                        shapes[f] = shapes[f].union(ppok)
+                    else:
+                        shapes[f] = ppok
+            if invalid:
+                bad_shapes[f] = e
+        # Create all partial areas
+        for ind in range(len(tedges)):
+            e, f = tedges[ind], tphases[ind]
+            lns = [LineString(np.c_[self.unilines[fid].x, self.unilines[fid].y]) for fid in e]
+            pp = linemerge(lns)
+            invalid = True
+            if pp.geom_type == 'LineString':
+                bndu = unary_union([s for s in bnd if pp.crosses(s)])
+                if not bndu.is_empty:
+                    pps = pp.difference(bndu)
+                    bnds = bndu.difference(pp)
+                    pp = polygonize(pps.union(bnds))
+                    for ppp in pp:
+                        ppok = bnda.intersection(ppp)
+                        if ppok.geom_type == 'Polygon':
+                            invalid = False
+                            shape_edges[f] = e
+                            if f in shapes:
+                                shapes[f] = shapes[f].union(ppok)
+                            else:
+                                shapes[f] = ppok
+            if invalid:
+                bad_shapes[f] = e
+        # Fix possible overlaps of partial areas
+        todel = set()
+        for k1, k2 in itertools.combinations(shapes, 2):
+            if shapes[k1].within(shapes[k2]):
+                shapes[k2] = shapes[k2].difference(shapes[k1])
+                if shapes[k2].is_empty:
+                    todel.add(k2)
+            if shapes[k2].within(shapes[k1]):
+                shapes[k1] = shapes[k1].difference(shapes[k2])
+                if shapes[k1].is_empty:
+                    todel.add(k1)
+        # remove degenerated polygons
+        for k in todel:
+            shapes.pop(k)
+        return shapes, shape_edges, bad_shapes
 
     def show(self):
-        for ln in pt.unilines.values():
-            plt.plot(ln.T, ln.p, 'k-')
+        for ln in self.unilines.values():
+            plt.plot(ln.x, ln.y, 'k-')
 
-        for ln in pt.invpoints.values():
-            plt.plot(ln.T, ln.p, 'ro')
+        for ln in self.invpoints.values():
+            plt.plot(ln.x, ln.y, 'ro')
 
-        plt.xlim(self.trange)
-        plt.ylim(self.prange)
+        plt.xlim(self.xrange)
+        plt.ylim(self.yrange)
+        plt.xlabel(self.x_var_label)
+        plt.xlabel(self.y_var_label)
         plt.show()
+
+
+class PTsection(SectionBase):
+    def __init__(self, **kwargs):
+        self.xrange = kwargs.get('trange', (200., 1000.))
+        self.yrange = kwargs.get('prange', (0.1, 20.))
+        self.x_var = 'T'
+        self.x_var_label = 'Temperature [C]'
+        self.x_var_res = 0.01
+        self.y_var = 'p'
+        self.y_var_label = 'Pressure [kbar]'
+        self.y_var_res = 0.001
+        super(PTsection, self).__init__(**kwargs)
+
+class TXsection(SectionBase):
+    def __init__(self, **kwargs):
+        self.xrange = kwargs.get('trange', (200., 1000.))
+        self.yrange = (0., 1.)
+        self.x_var = 'T'
+        self.x_var_label = 'Temperature [C]'
+        self.x_var_res = 0.01
+        self.y_var = 'C'
+        self.y_var_label = 'Composition'
+        self.y_var_res = 0.001
+        super(TXsection, self).__init__(**kwargs)

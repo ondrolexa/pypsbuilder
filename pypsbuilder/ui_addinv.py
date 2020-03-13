@@ -2,18 +2,16 @@
 
 # Form implementation generated from reading ui file 'addinv.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 
 class Ui_AddInv(object):
     def setupUi(self, AddInv):
         AddInv.setObjectName("AddInv")
-        AddInv.resize(300, 100)
+        AddInv.resize(300, 104)
         self.verticalLayout = QtWidgets.QVBoxLayout(AddInv)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
@@ -28,18 +26,18 @@ class Ui_AddInv(object):
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.label_2 = QtWidgets.QLabel(AddInv)
-        self.label_2.setObjectName("label_2")
-        self.horizontalLayout.addWidget(self.label_2)
-        self.tEdit = QtWidgets.QLineEdit(AddInv)
-        self.tEdit.setObjectName("tEdit")
-        self.horizontalLayout.addWidget(self.tEdit)
-        self.label_3 = QtWidgets.QLabel(AddInv)
-        self.label_3.setObjectName("label_3")
-        self.horizontalLayout.addWidget(self.label_3)
-        self.pEdit = QtWidgets.QLineEdit(AddInv)
-        self.pEdit.setObjectName("pEdit")
-        self.horizontalLayout.addWidget(self.pEdit)
+        self.x_label = QtWidgets.QLabel(AddInv)
+        self.x_label.setObjectName("x_label")
+        self.horizontalLayout.addWidget(self.x_label)
+        self.xEdit = QtWidgets.QLineEdit(AddInv)
+        self.xEdit.setObjectName("xEdit")
+        self.horizontalLayout.addWidget(self.xEdit)
+        self.y_label = QtWidgets.QLabel(AddInv)
+        self.y_label.setObjectName("y_label")
+        self.horizontalLayout.addWidget(self.y_label)
+        self.yEdit = QtWidgets.QLineEdit(AddInv)
+        self.yEdit.setObjectName("yEdit")
+        self.horizontalLayout.addWidget(self.yEdit)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.buttonBox = QtWidgets.QDialogButtonBox(AddInv)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -56,5 +54,6 @@ class Ui_AddInv(object):
         _translate = QtCore.QCoreApplication.translate
         AddInv.setWindowTitle(_translate("AddInv", "Add invariant point"))
         self.label.setText(_translate("AddInv", "Label"))
-        self.label_2.setText(_translate("AddInv", "T:"))
-        self.label_3.setText(_translate("AddInv", "p:"))
+        self.x_label.setText(_translate("AddInv", "X"))
+        self.y_label.setText(_translate("AddInv", "Y"))
+

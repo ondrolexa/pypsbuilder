@@ -2,13 +2,11 @@
 
 # Form implementation generated from reading ui file 'txbuilder.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
-
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 
 class Ui_TXBuilder(object):
     def setupUi(self, TXBuilder):
@@ -264,15 +262,12 @@ class Ui_TXBuilder(object):
         self.checkOverwrite = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkOverwrite.setObjectName("checkOverwrite")
         self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.checkOverwrite)
-        self.checkStrict = QtWidgets.QCheckBox(self.groupBox_2)
-        self.checkStrict.setObjectName("checkStrict")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.checkStrict)
         self.checkAutoconnectUni = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkAutoconnectUni.setObjectName("checkAutoconnectUni")
-        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectUni)
+        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectUni)
         self.checkAutoconnectInv = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkAutoconnectInv.setObjectName("checkAutoconnectInv")
-        self.formLayout.setWidget(10, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectInv)
+        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectInv)
         self.verticalLayout_3.addWidget(self.groupBox_2)
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
@@ -474,8 +469,8 @@ class Ui_TXBuilder(object):
         self.actionReload.setObjectName("actionReload")
         self.actionAbout = QtWidgets.QAction(TXBuilder)
         self.actionAbout.setObjectName("actionAbout")
-        self.actionGenerate = QtWidgets.QAction(TXBuilder)
-        self.actionGenerate.setObjectName("actionGenerate")
+        self.actionImport_drfile = QtWidgets.QAction(TXBuilder)
+        self.actionImport_drfile.setObjectName("actionImport_drfile")
         self.actionSave_as = QtWidgets.QAction(TXBuilder)
         self.actionSave_as.setObjectName("actionSave_as")
         self.actionImport_project = QtWidgets.QAction(TXBuilder)
@@ -492,7 +487,6 @@ class Ui_TXBuilder(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuTools.addAction(self.actionReload)
-        self.menuTools.addAction(self.actionGenerate)
         self.menuTools.addAction(self.actionImport_project)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
@@ -560,7 +554,6 @@ class Ui_TXBuilder(object):
         self.label_3.setText(_translate("TXBuilder", "Label fontsize"))
         self.checkDotInv.setText(_translate("TXBuilder", "Show dot at invariant point when not labelled"))
         self.checkOverwrite.setText(_translate("TXBuilder", "Do not overwrite already calculated lines and points"))
-        self.checkStrict.setText(_translate("TXBuilder", "Strict filtering of invariant points"))
         self.checkAutoconnectUni.setText(_translate("TXBuilder", "Automatically connect new univariant lines if possible"))
         self.checkAutoconnectInv.setText(_translate("TXBuilder", "Automatically connect new invariant points if possible"))
         self.pushApplySettings.setText(_translate("TXBuilder", "Apply"))
@@ -599,8 +592,9 @@ class Ui_TXBuilder(object):
         self.actionQuit.setShortcut(_translate("TXBuilder", "Ctrl+Q"))
         self.actionReload.setText(_translate("TXBuilder", "&Reload scriptfile"))
         self.actionAbout.setText(_translate("TXBuilder", "&About"))
-        self.actionGenerate.setText(_translate("TXBuilder", "&Generate from dr file"))
+        self.actionImport_drfile.setText(_translate("TXBuilder", "Import from drfile"))
         self.actionSave_as.setText(_translate("TXBuilder", "Save project as"))
         self.actionImport_project.setText(_translate("TXBuilder", "&Import from project"))
         self.actionShow_areas.setText(_translate("TXBuilder", "Show &areas"))
         self.actionShow_topology.setText(_translate("TXBuilder", "Show &topology"))
+
