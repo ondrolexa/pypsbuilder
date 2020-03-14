@@ -2080,6 +2080,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 inv = InvPoint(phases=phases, out=nout)
                 isnew, id = self.ps.getidinv(inv)
                 if status == 'ok':
+                    if isnew:
+                        exists, inv_id = '', ''
+                    else:
+                        exists, inv_id = '*', str(id)
                     if len(res) > 1:
                         pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                         splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
@@ -2087,17 +2091,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            if isnew:
-                                exists, inv_id = '', ''
-                            else:
-                                exists, inv_id = '*', str(id)
                             cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
-                    else:
-                        if isnew:
-                            exists, inv_id = '', ''
                         else:
-                            exists, inv_id = '*', str(id)
-                        out_section.append((pts[1][0], pts[0][0], exists, ' '.join(inv.out), inv_id))
+                            ix = abs(ptcoords[1] - pm).argmin()
+                            out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
+                    else:
+                        out_section.append((ptcoords[1][0], ptcoords[0][0], exists, ' '.join(inv.out), inv_id))
 
             for ophase in set(self.tc.phases).difference(self.ps.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
@@ -2107,6 +2106,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 inv = InvPoint(phases=nphases, out=nout)
                 isnew, id = self.ps.getidinv(inv)
                 if status == 'ok':
+                    if isnew:
+                        exists, inv_id = '', ''
+                    else:
+                        exists, inv_id = '*', str(id)
                     if len(res) > 1:
                         pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                         splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
@@ -2114,17 +2117,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            if isnew:
-                                exists, inv_id = '', ''
-                            else:
-                                exists, inv_id = '*', str(id)
-                            cand.append((inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
-                    else:
-                        if isnew:
-                            exists, inv_id = '', ''
+                            cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
                         else:
-                            exists, inv_id = '*', str(id)
-                        out_section.append((pts[1][0], pts[0][0], exists, ' '.join(inv.out), inv_id))
+                            ix = abs(ptcoords[1] - pm).argmin()
+                            out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
+                    else:
+                        out_section.append((ptcoords[1][0], ptcoords[0][0], exists, ' '.join(inv.out), inv_id))
             #self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
@@ -2138,7 +2136,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
             elif out_section:
                 txt += 'Solutions with single point (need increase number of steps)\n'
-                txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
+                txt += '         T         p E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 for cc in out_section:
                     txt += n_format.format(*cc)
 
