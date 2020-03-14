@@ -168,6 +168,12 @@ class SectionBase:
         self.invpoints = {}
         self.unilines = {}
 
+    def __repr__(self):
+        return '\n'.join(['{}'.format(type(self).__name__),
+                          'Univariant lines: {}'.format(len(self.unilines)),
+                          'Invariant points: {}'.format(len(self.invpoints)),
+                          '{} range: {} {}'.format(self.x_var, *self.xrange),
+                          '{} range: {} {}'.format(self.y_var, *self.yrange)])
     @property
     def ratio(self):
         return (self.xrange[1] - self.xrange[0]) / (self.yrange[1] - self.yrange[0])
@@ -377,10 +383,16 @@ class SectionBase:
                             break
         return vertices, edges, phases, tedges, tphases
 
-    def create_shapes(self, shrink=0):
+    def create_shapes(self):
+        if not isinstance(self, PTsection):
+            shrink = 0.0001
+        else:
+            shrink = 0
         shapes = OrderedDict()
         shape_edges = OrderedDict()
         bad_shapes = OrderedDict()
+        ignored_shapes = OrderedDict()
+        log = []
         # traverse pseudosection
         vertices, edges, phases, tedges, tphases = self.construct_areas(shrink)
         # default p-t range boundary
@@ -401,7 +413,7 @@ class SectionBase:
             invalid = True
             for ppp in pp:
                 if not ppp.is_valid:
-                    print('Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
+                    log.append('WARNING: Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
                 ppok = bnda.intersection(ppp.buffer(0))  # fix topologically correct but self-intersecting shapes
                 if not ppok.is_empty and ppok.geom_type == 'Polygon':
                     invalid = False
@@ -411,6 +423,7 @@ class SectionBase:
                     else:
                         shapes[f] = ppok
             if invalid:
+                log.append('ERROR: Area defined by edges {} is not valid.'.format(e))
                 bad_shapes[f] = e
         # Create all partial areas
         for ind in range(len(tedges)):
@@ -434,7 +447,7 @@ class SectionBase:
                             else:
                                 shapes[f] = ppok
             if invalid:
-                bad_shapes[f] = e
+                ignored_shapes[f] = e
         # Fix possible overlaps of partial areas
         todel = set()
         for k1, k2 in itertools.combinations(shapes, 2):
@@ -449,7 +462,7 @@ class SectionBase:
         # remove degenerated polygons
         for k in todel:
             shapes.pop(k)
-        return shapes, shape_edges, bad_shapes
+        return shapes, shape_edges, bad_shapes, ignored_shapes, log
 
     def show(self):
         for ln in self.unilines.values():
@@ -477,6 +490,17 @@ class PTsection(SectionBase):
         self.y_var_res = 0.001
         super(PTsection, self).__init__(**kwargs)
 
+    def get_bulk_composition(self):
+        for inv in self.invpoints.values():
+            if not inv.manual:
+                break
+        bc = ['', '']
+        if 'composition (from setbulk script)\n' in inv.output:
+            bc = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
+        if 'composition (from script)\n' in inv.output:
+            bc = inv.output.split('composition (from script)\n')[1].split('\n')
+        return bc[0].split(), bc[1].split()
+
 class TXsection(SectionBase):
     def __init__(self, **kwargs):
         self.xrange = kwargs.get('trange', (200., 1000.))
@@ -488,3 +512,16 @@ class TXsection(SectionBase):
         self.y_var_label = 'Composition'
         self.y_var_res = 0.001
         super(TXsection, self).__init__(**kwargs)
+
+    def get_bulk_composition(self):
+        for inv in self.invpoints.values():
+            if not inv.manual:
+                break
+        bc = [[], []]
+        if 'composition (from script)\n' in inv.output:
+            tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
+            nested = [r.split() for r in tb.split('\n')[2:-1]]
+            bc = [[r[0] for r in nested],
+                  [r[1] for r in nested],
+                  [r[-1] for r in nested]]
+        return bc

@@ -1,9 +1,9 @@
 import sys
 import os
 try:
-  import cPickle as pickle
+    import cPickle as pickle
 except ImportError:
-  import pickle
+    import pickle
 import gzip
 import ast
 import subprocess
@@ -31,135 +31,6 @@ class ScriptfileError(Exception):
 
 class TCError(Exception):
     pass
-
-
-class ProjectStore(object):
-    def __init__(self, data, name='tmp'):
-        self.data = data
-        self.name = name
-        self.unilookup = {}
-        self.invlookup = {}
-        self.uuid = data['uuid']
-        for ix, r in enumerate(data['unilist']):
-            self.unilookup[r[0]] = ix
-        for ix, r in enumerate(data['invlist']):
-            self.invlookup[r[0]] = ix
-
-    @classmethod
-    def from_file(cls, projfile):
-        psb_file = Path(projfile).resolve()
-        if psb_file.exists():
-            with gzip.open(str(psb_file), 'rb') as stream:
-                data = pickle.load(stream)
-            # check
-            if not 'workdir' in data:
-                data['workdir'] = psb_file.parent
-            if not 'uuid' in data:
-                data['uuid'] = ''
-            return cls(data, name=psb_file.name)
-        else:
-            raise Exception('File {} does not exists.'.format(projfile))
-
-    @property
-    def selphases(self):
-        return self.data['selphases']
-
-    @property
-    def out(self):
-        return self.data['out']
-
-    @property
-    def trange(self):
-        return self.data['trange']
-
-    @property
-    def prange(self):
-        return self.data['prange']
-
-    @property
-    def unilist(self):
-        return self.data['unilist']
-
-    @property
-    def invlist(self):
-        return self.data['invlist']
-
-    @property
-    def tcversion(self):
-        if 'tcversion' in self.data:
-            return self.data['tcversion']
-        else:
-            print('Old format. No tcversion.')
-
-    @property
-    def version(self):
-        if 'version' in self.data:
-            return self.data['version']
-        else:
-            print('Old format. No version.')
-
-    def unidata(self, fid):
-        uni = self.unilist[self.unilookup[fid]]
-        dt = uni[4]
-        dt['begin'] = uni[2]
-        dt['end'] = uni[3]
-        return dt
-
-    def invdata(self, fid):
-        return self.invlist[self.invlookup[fid]][2]
-
-
-class PSB(ProjectStore):
-    def __repr__(self):
-        return '\n'.join(['============',
-                          'PSB datafile',
-                          '============',
-                          'Project file: {}'.format(self.name),
-                          'Univariant lines: {}'.format(len(self.unilist)),
-                          'Invariant point: {}'.format(len(self.invlist)),
-                          'T range: {} {}'.format(*self.trange),
-                          'p range: {} {}'.format(*self.prange)])
-
-    def get_bulk_composition(self):
-        for inv in self.invlist:
-            if not inv[2]['manual']:
-                break
-        bc = ['', '']
-        if 'composition (from setbulk script)\n' in inv[2]['output']:
-            bc = inv[2]['output'].split('composition (from setbulk script)\n')[1].split('\n')
-        if 'composition (from script)\n' in inv[2]['output']:
-            bc = inv[2]['output'].split('composition (from script)\n')[1].split('\n')
-        return bc[0].split(), bc[1].split()
-
-
-class TXB(ProjectStore):
-    def __repr__(self):
-        preal = super(TXB, self).prange
-        return '\n'.join(['============',
-                          'TXB datafile',
-                          '============',
-                          'Project file: {}'.format(self.name),
-                          'Univariant lines: {}'.format(len(self.unilist)),
-                          'Invariant point: {}'.format(len(self.invlist)),
-                          'T range: {} {}'.format(*self.trange),
-                          'p: {}'.format((preal[0] + preal[1]) / 2)])
-
-    @property
-    def prange(self):
-        return (0, 1)
-
-    def get_bulk_composition(self):
-        for inv in self.invlist:
-            if not inv[2]['manual']:
-                break
-        bc = [[], []]
-        if 'composition (from script)\n' in inv[2]['output']:
-            tb = inv[2]['output'].split('composition (from script)\n')[1].split('<==================================================>')[0]
-            nested = [r.split() for r in tb.split('\n')[2:-1]]
-            bc = [[r[0] for r in nested],
-                  [r[1] for r in nested],
-                  [r[-1] for r in nested]]
-        return bc
 
 
 class TCAPI(object):
@@ -366,11 +237,8 @@ class TCAPI(object):
         return str(self.workdir)
 
     def __repr__(self):
-        return '\n'.join(['==============',
-                          'THERMOCALC API',
-                          '==============',
+        return '\n'.join(['{}'.format(self.tcversion),
                           'Working directory: {}'.format(self.workdir),
-                          'TC version: {}'.format(self.tcversion),
                           'Scriptfile: {}'.format('tc-' + self.name + '.txt'),
                           'AX file: {}'.format('tc-' + self.axname + '.txt'),
                           'Status: {}'.format(self.status)])

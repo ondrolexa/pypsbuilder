@@ -32,7 +32,6 @@ from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from descartes import PolygonPatch
 from shapely.geometry import Point
 from scipy.interpolate import interp1d
-import uuid
 
 try:
     import networkx as nx
@@ -60,8 +59,9 @@ invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
 presenthigh_kw = dict(lw=9, alpha=0.6, marker=None, ms=4, color='grey', zorder=-10)
 
-app_icons = dict(PSBuilder='images/pypsbuilder.png',
-                 TXBuilder='images/pypsbuilder.png')
+app_icons = dict(PSBuilder='images/psbuilder.png',
+                 TXBuilder='images/txbuilder.png',
+                 PXBuilder='images/pxbuilder.png')
 
 
 class BuildersBase(QtWidgets.QMainWindow):
@@ -465,7 +465,6 @@ class BuildersBase(QtWidgets.QMainWindow):
                 'tcversion': self.tc.tcversion,
                 'workdir': self.tc.workdir,
                 'datetime': datetime.now(),
-                'uuid': str(uuid.uuid4()),
                 'version': __version__}
         return data
 
@@ -1077,12 +1076,14 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.invhigh = self.ax.plot(inv.x, inv.y, 'o', **invhigh_kw)
             self.canvas.draw()
 
-    def check_prj_areas(self): # TODO:
+    def check_prj_areas(self):
         if self.ready:
             if not hasattr(self.ax, 'areas_shown'):
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                shapes, shape_edges, bad_shapes = self.ps.create_shapes(self.area_outer_buffer)
+                shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes()
+                if log:
+                    self.textOutput.setPlainText(' '.join(log))
                 if shapes:
                     vari = [-len(key) for key in shapes]
                     poc = max(vari) - min(vari) + 1
@@ -1099,6 +1100,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.statusBar().showMessage('No areas created.')
                 QtWidgets.QApplication.restoreOverrideCursor()
             else:
+                self.textOutput.clear()
                 self.figure.clear()
                 self.plot()
         else:
@@ -1121,7 +1123,6 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
     def __init__(self, parent=None):
         self.builder_name = 'PSBuilder'
         self.builder_extension = '.psb'
-        self.area_outer_buffer = 0
         self.ps = PTsection()
         super(PSBuilder, self).__init__(parent)
 
@@ -1750,7 +1751,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
     def __init__(self, parent=None):
         self.builder_name = 'TXBuilder'
         self.builder_extension = '.txb'
-        self.area_outer_buffer = 0.001
         self.ps = TXsection()
         super(TXBuilder, self).__init__(parent)
 
