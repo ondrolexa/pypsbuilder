@@ -12,9 +12,8 @@ Welcome to PyPSbuilder documentation!
    tutorial
    installation
    usage
-   contributing
+   api
    authors
-   history
 
 THERMOCALC is a thermodynamic calculation program (Powell & Holland 1988) that
 uses an internally-consistent thermodynamic dataset (Holland & Powell, 1998, 2011)

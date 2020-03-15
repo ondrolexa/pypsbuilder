@@ -44,8 +44,7 @@ from .ui_txbuilder import Ui_TXBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-from .psclasses import *
-from .utils import TCAPI
+from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
 from . import __version__
 
 # Make sure that we are using QT5

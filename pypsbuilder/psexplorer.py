@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Visual pseudosection explorer for THERMOCALC
 """
@@ -13,22 +12,26 @@ try:
 except ImportError:
     import pickle
 import gzip
+import ast
 import time
 from pathlib import Path
+from collections import OrderedDict
+
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, Point
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf
 from scipy.interpolate import interp1d
 from tqdm import tqdm, trange
 
-from .psclasses import *
-from .utils import TCAPI, eval_expr
+from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
+
 
 class GridData:
     def __init__(self, ps, nx, ny):
@@ -909,6 +912,22 @@ class PTPS:
                 gd[self.grid.masks[key]] = zg[self.grid.masks[key][slc]]
             return gd
 
+def eval_expr(expr, dt):
+    def eval_(node):
+        if isinstance(node, ast.Num):  # number
+            return node.n
+        if isinstance(node, ast.Name):  # variable
+            return dt[node.id]
+        elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
+            return ops[type(node.op)](eval_(node.left), eval_(node.right))
+        elif isinstance(node, ast.UnaryOp):  # <operator> <operand> e.g., -1
+            return ops[type(node.op)](eval_(node.operand))
+        else:
+            raise TypeError(node)
+    ops = {ast.Add: np.add, ast.Sub: np.subtract,
+           ast.Mult: np.multiply, ast.Div: np.divide,
+           ast.Pow: np.power}
+    return eval_(ast.parse(expr, mode='eval').body)
 
 def ps_show():
     parser = argparse.ArgumentParser(description='Draw pseudosection from project file')

@@ -15,6 +15,7 @@ requirements = [
     'numpy',
     'matplotlib',
     'scipy',
+    'networkx',
     'shapely',
     'descartes',
     'tqdm'

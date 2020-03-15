@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from pypsbuilder.psexplorer import PTPS
-from pypsbuilder.utils import TCAPI
-from pypsbuilder.psclasses import InvPoint, UniLine, PTsection, PTsection
+from pypsbuilder.psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection
 
 __all__ = ('InvPoint', 'UniLine', 'PTsection', 'PTsection', 'PTPS', 'TCAPI')
 
