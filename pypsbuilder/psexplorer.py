@@ -14,6 +14,7 @@ except ImportError:
 import gzip
 import ast
 import time
+import re
 from pathlib import Path
 from collections import OrderedDict
 
@@ -286,8 +287,9 @@ class PTPS:
         for id_inv in self.invs_from_edges(self.edges[key]):
             inv = self.ps.invpoints[id_inv]
             if not inv.manual:
-                dt['pts'].append((inv._x, inv._y))
-                dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
+                if phase in inv.results[0]['data']:
+                    dt['pts'].append((inv._x, inv._y))
+                    dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
         return dt
 
     def collect_edges_data(self, key, phase, expr):
@@ -295,56 +297,68 @@ class PTPS:
         for id_uni in self.edges[key]:
             uni = self.ps.unilines[id_uni]
             if not uni.manual:
-                edt = zip(uni._x[uni.used],
-                          uni._y[uni.used],
-                          uni.results[uni.used],)
-                for x, y, res in edt:
-                    dt['pts'].append((x, y))
-                    dt['data'].append(eval_expr(expr, res['data'][phase]))
+                if phase in uni.results[uni.midix]['data']:
+                    edt = zip(uni._x[uni.used],
+                              uni._y[uni.used],
+                              uni.results[uni.used],)
+                    for x, y, res in edt:
+                        dt['pts'].append((x, y))
+                        dt['data'].append(eval_expr(expr, res['data'][phase]))
         return dt
 
     def collect_grid_data(self, key, phase, expr):
         dt = dict(pts=[], data=[])
         if self.gridded:
-            gdt = zip(self.grid.tg[self.grid.masks[key]],
-                      self.grid.pg[self.grid.masks[key]],
-                      self.grid.gridcalcs[self.grid.masks[key]],
-                      self.grid.status[self.grid.masks[key]])
-            for x, y, res, ok in gdt:
-                if ok == 1:
-                    dt['pts'].append((x, y))
-                    dt['data'].append(eval_expr(expr, res['data'][phase]))
+            results = self.grid.gridcalcs[self.grid.masks[key]]
+            if len(results) > 0:
+                if phase in results[0]['data']:
+                    gdt = zip(self.grid.tg[self.grid.masks[key]],
+                              self.grid.pg[self.grid.masks[key]],
+                              results,
+                              self.grid.status[self.grid.masks[key]])
+                    for x, y, res, ok in gdt:
+                        if ok == 1:
+                            dt['pts'].append((x, y))
+                            dt['data'].append(eval_expr(expr, res['data'][phase]))
         return dt
 
     def collect_data(self, key, phase, expr, which=7):
         dt = dict(pts=[], data=[])
-        if which & (1 << 0):
-            d = self.collect_inv_data(key, phase, expr)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
-        if which & (1 << 1):
-            d = self.collect_edges_data(key, phase, expr)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
-        if which & (1 << 2):
-            d = self.collect_grid_data(key, phase, expr)
-            dt['pts'].extend(d['pts'])
-            dt['data'].extend(d['data'])
+        # check if phase or end-member is in assemblage
+        if re.sub('[\(].*?[\)]', '', phase) in key:
+            if which & (1 << 0):
+                d = self.collect_inv_data(key, phase, expr)
+                dt['pts'].extend(d['pts'])
+                dt['data'].extend(d['data'])
+            if which & (1 << 1):
+                d = self.collect_edges_data(key, phase, expr)
+                dt['pts'].extend(d['pts'])
+                dt['data'].extend(d['data'])
+            if which & (1 << 2):
+                d = self.collect_grid_data(key, phase, expr)
+                dt['pts'].extend(d['pts'])
+                dt['data'].extend(d['data'])
         return dt
 
     def merge_data(self, phase, expr, which=7):
         mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
-            res = self.grid.gridcalcs[self.grid.masks[key]]
-            if len(res) > 0:
-                if phase in res[0]['data']:
-                    d = self.collect_data(key, phase, expr, which=which)
-                    z = d['data']
-                    if z:
-                        recs[key] = d
-                        mn = min(mn, min(z))
-                        mx = max(mx, max(z))
+            d = self.collect_data(key, phase, expr, which=which)
+            z = d['data']
+            if z:
+                recs[key] = d
+                mn = min(mn, min(z))
+                mx = max(mx, max(z))
+            # res = self.grid.gridcalcs[self.grid.masks[key]]
+            # if len(res) > 0:
+            #     if phase in res[0]['data']:
+            #         d = self.collect_data(key, phase, expr, which=which)
+            #         z = d['data']
+            #         if z:
+            #             recs[key] = d
+            #             mn = min(mn, min(z))
+            #             mx = max(mx, max(z))
         return recs, mn, mx
 
     def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'): # TODO:
@@ -392,6 +406,7 @@ class PTPS:
         alpha = kwargs.get('alpha', 0.6)
         label = kwargs.get('label', False)
         bulk = kwargs.get('bulk', False)
+        high = kwargs.get('high', [])
 
         if isinstance(out, str):
             out = [out]
@@ -436,7 +451,14 @@ class PTPS:
             #cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar.set_label('Variance')
-            ax.axis(self.ps.xrange + self.ps.yrange)
+            ax.set_xlim(self.ps.xrange)
+            ax.set_ylim(self.ps.yrange)
+            # Show highlight. Change to list if only single key
+            if isinstance(high, frozenset):
+                high = [high]
+            for k in high:
+                ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+            # Show bulk
             if bulk:
                 if label:
                     ax.set_xlabel(self.name + (len(self.ps.excess) * ' +{}').format(*self.ps.excess))
@@ -466,7 +488,7 @@ class PTPS:
         phases = ''
         for key in self.shapes:
             if self.shapes[key].contains(point):
-                phases = ' '.join(key.difference(self.ps.excess))
+                phases = ' '.join(sorted(list(key.difference(self.ps.excess))))
                 break
         return '{}={:.{prec}f} {}={:.{prec}f} {}'.format(self.ps.x_var, x, self.ps.y_var, y, phases, prec=prec)
 
