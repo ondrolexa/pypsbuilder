@@ -1,5 +1,11 @@
-"""
-Visual pseudosection explorer for THERMOCALC
+"""Module to postprocess pseudocestions constructed with builders.
+
+This module contains tools to postprocess and explore pseudosections
+calculated by available builders.
+
+Todo:
+    * TXPS and PXPS needs to be implemented as soon as TXsection and PXsection
+      will be ready.
 """
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
@@ -34,68 +40,48 @@ from tqdm import tqdm, trange
 from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
 
 
-class GridData:
-    def __init__(self, ps, nx, ny):
-        dx = (ps.xrange[1] - ps.xrange[0]) / nx
-        self.tspace = np.linspace(ps.xrange[0] + dx/2, ps.xrange[1] - dx/2, nx)
-        dy = (ps.yrange[1] - ps.yrange[0]) / ny
-        self.pspace = np.linspace(ps.yrange[0] + dy/2, ps.yrange[1] - dy/2, ny)
-        self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
-        self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
-        self.status = np.empty(self.tg.shape)
-        self.status[:] = np.nan
-        self.delta = np.empty(self.tg.shape)
-        self.delta[:] = np.nan
-        self.masks = OrderedDict()
-
-    def __repr__(self):
-        tmpl = 'Grid {}x{} with ok/failed/none solutions {}/{}/{}'
-        ok = len(np.flatnonzero(self.status == 1))
-        fail = len(np.flatnonzero(self.status == 0))
-        return tmpl.format(len(self.tspace), len(self.pspace),
-                           ok, fail, np.prod(self.tg.shape) - ok - fail)
-
-    def neighs(self, r, c):
-        m = np.array([[(r - 1, c - 1), (r - 1, c), (r - 1, c + 1)],
-                      [(r, c - 1), (None, None), (r, c + 1)],
-                      [(r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]])
-        if r < 1:
-            m = m[1:, :]
-        if r > len(self.pspace) - 2:
-            m = m[:-1, :]
-        if c < 1:
-            m = m[:, 1:]
-        if c > len(self.tspace) - 2:
-            m = m[:, :-1]
-        return zip([i for i in m[:, :, 0].flat if i is not None],
-                   [i for i in m[:, :, 1].flat if i is not None])
-
-    @property
-    def tstep(self):
-        return self.tspace[1] - self.tspace[0]
-
-    @property
-    def pstep(self):
-        return self.pspace[1] - self.pspace[0]
-
-    @property
-    def extent(self):
-        return (self.tspace[0] - self.tstep / 2, self.tspace[-1] + self.tstep / 2,
-                self.pspace[0] - self.pstep / 2, self.pspace[-1] + self.pstep / 2)
-
-
-class PTpath:
-    def __init__(self, points, results):
-        self.t, self.p = np.array(points).T
-        self.results = results
-
-    def get_path_data(self, phase, expr):
-        ex = np.array([eval_expr(expr, res['data'][phase]) if phase in res['data'] else np.nan for res in self.results])
-        return ex
-
-
 class PTPS:
+    """PTPS - class to postprocess psbuilder project file
+
+    The PTPS provides a tools to visualize pseudosections constructed with
+    psbuilder, calculate compositional variations with divariant fields, and
+    plot compositional isopleths.
+
+    It provides four command line scipts `psgrid`, `psdrawpd`, `psshow` and `psiso`,
+    or could be used interactively, e.g. within jupyter notebooks.
+
+    Example:
+        Use of command line scripts::
+
+            $ psshow myproject.psb
+
+        Interctive use::
+
+            >>> from pypsbuilder import PTPS
+            >>> pt = PTPS('/path/to/myproject.psb')
+
+    Attributes:
+        tc (TCAPI): THERMOCALC API to working directory
+        ps (PTsection): Pseudosection storage class
+        grid (GridData): Store for THERMOCALC calculations on grid
+        all_data_keys (dict): Dictionary of phases, end-members and variables
+        shapes (dict): Divariant field key based dictionary of shapely.Polygon
+            representation of areas
+        variance (dict): Divariant field key based dictionary of variances
+        edges (dict): Divariant field key based dictionary of lists of
+            univariant lines IDs surrounding each field.
+        bad_shapes (dict): Divariant field key based dictionary of lists of
+            univariant lines IDs which do not form valid area
+        ignored_shapes (dict): Divariant field key based dictionary of lists of
+            univariant lines IDs which are either out of range or incomplete.
+
+    """
     def __init__(self, projfile):
+        """Create PTPS class instance from builder project file.
+
+        Args:
+            projfile (str, Path): psbuilder project file
+        """
         self.projfile = Path(projfile).resolve()
         if self.projfile.exists():
             with gzip.open(str(self.projfile), 'rb') as stream:
@@ -108,7 +94,7 @@ class PTPS:
             if tc.OK:
                 self.tc = tc
                 self.shapes, self.edges, self.bad_shapes, self.ignored_shapes, log = self.ps.create_shapes()
-                print(' '.join(log))
+                print('\n'.join(log))
                 if 'variance' in data:
                     self.variance = data['variance']
                 else:
@@ -143,24 +129,45 @@ class PTPS:
 
     @property
     def name(self):
+        """Get project filename without extension."""
         return self.projfile.stem
 
     @property
     def gridded(self):
+        """True when compositional grid is calculated, otherwise False"""
         return hasattr(self, 'grid')
 
     @property
     def phases(self):
+        """Return set of all phases present in pseudosection"""
         return {phase for key in self for phase in key}
 
     @property
     def keys(self):
+        """Returns list of all existing divariant fields. Fields are identified
+        by frozenset of present phases called key."""
         return list(self.shapes.keys())
 
     def invs_from_edges(self, edges):
+        """Return set of IDs of invariant points associated with univariant
+        lines.
+
+        Args:
+            edges (iterable): IDs of univariant lines
+
+        Returns:
+            set: IDs of associated invariant lines
+        """
         return {self.ps.unilines[ed].begin for ed in edges}.union({self.ps.unilines[ed].end for ed in edges}).difference({0})
 
-    def save(self): # TODO:
+    def save(self):
+        """Save gridded copositions and constructed divariant fields into
+        psbuilder project file.
+
+        Note that once project is edited with psbuilder, calculated compositions
+        are removed and need to be recalculated using `PTPS.calculate_composition`
+        method.
+        """
         if self.gridded:
             # put to dict
             # put to dict
@@ -175,8 +182,27 @@ class PTPS:
             # do save
             with gzip.open(str(self.projfile), 'wb') as stream:
                 pickle.dump(data, stream)
+        else:
+            print('Not yet gridded...')
 
     def calculate_composition(self, nx=50, ny=50):
+        """Method to calculate compositional variations on grid.
+
+        A compositions are calculated for stable assemblages in regular grid
+        covering pT range of pseudosection. A stable assemblage is identified
+        from constructed divariant fields. Results are stored in `grid` property
+        as `GridData` instance. A property `all_data_keys` is updated.
+
+        Before any grid point calculation, ptguesses are updated from nearest
+        invariant point. If calculation fails, nearest solution from univariant
+        line is used to update ptguesses. Finally, if solution is still not found,
+        the method `fix_solutions` is called and neigbouring grid calculations are
+        used to provide ptguess.
+
+        Args:
+            nx (int): Number of grid points along x direction (T)
+            ny (int): Number of grid points along y direction (p)
+        """
         grid = GridData(self.ps, nx=nx, ny=ny)
         last_inv = 0
         for (r, c) in tqdm(np.ndindex(grid.tg.shape), desc='Gridding', total=np.prod(grid.tg.shape)):
@@ -229,7 +255,8 @@ class PTPS:
                 grid.gridcalcs[r, c] = None
         print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
         self.grid = grid
-        self.fix_solutions()
+        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+            self.fix_solutions()
         self.create_masks()
         # update variable lookup table
         self.collect_all_data_keys()
@@ -237,7 +264,13 @@ class PTPS:
         self.save()
 
     def fix_solutions(self):
+        """Method try to find solution for grid points with failed status.
+
+        Ptguesses are used from successfully calculated neighboring points until
+        solution is find. Otherwise ststus remains failed.
+        """
         if self.gridded:
+            log = []
             ri, ci = np.nonzero(self.grid.status == 0)
             fixed, ftot = 0, len(ri)
             tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
@@ -262,17 +295,39 @@ class PTPS:
                                 tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
                                 break
                 if self.grid.status[r, c] == 0:
-                    tqdm.write('No solution find for {}, {}'.format(x, y))
-            print('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
+                    log.append('No solution find for {}, {}'.format(x, y))
+            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
+            print('\n'.join(log))
+        else:
+            print('Not yet gridded...')
 
     def create_masks(self):
+        """Update grid masks from existing divariant fields"""
         if self.gridded:
             # Create data masks
             points = MultiPoint(list(zip(self.grid.tg.flatten(), self.grid.pg.flatten())))
-            for key in tqdm(self, desc='Masking', total=len(self.shapes)):
+            for key in self:
                 self.grid.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.grid.tg.shape)
+        else:
+            print('Not yet gridded...')
 
     def collect_all_data_keys(self):
+        """Collect all phases and variables calculated on grid.
+
+        Result is stored in `all_data_keys` property as dictionary of
+        dictionaries.
+
+        Example:
+            To get list of all variables calculated for phase 'g' or end-member
+            'g(alm)' use::
+
+                >>> pt.all_data_keys['g']
+                ['mode', 'x', 'z', 'm', 'f', 'xMgX', 'xFeX', 'xMnX', 'xCaX', 'xAlY',
+                'xFe3Y', 'H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O',
+                'TiO2', 'MnO', 'O', 'factor', 'G', 'H', 'S', 'V', 'rho']
+                >>> pt.all_data_keys['g(alm)']
+                ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
+        """
         data = dict()
         if self.gridded:
             for key in self:
@@ -283,6 +338,20 @@ class PTPS:
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
+        """Retrieve value of variables based expression for given phase for
+        all invariant points surrounding divariant field identified by key.
+
+        Args:
+            key (frozenset): Key identifying divariant field
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         dt = dict(pts=[], data=[])
         for id_inv in self.invs_from_edges(self.edges[key]):
             inv = self.ps.invpoints[id_inv]
@@ -293,6 +362,20 @@ class PTPS:
         return dt
 
     def collect_edges_data(self, key, phase, expr):
+        """Retrieve values of expression for given phase for
+        all univariant lines surrounding divariant field identified by key.
+
+        Args:
+            key (frozenset): Key identifying divariant field
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         dt = dict(pts=[], data=[])
         for id_uni in self.edges[key]:
             uni = self.ps.unilines[id_uni]
@@ -307,6 +390,20 @@ class PTPS:
         return dt
 
     def collect_grid_data(self, key, phase, expr):
+        """Retrieve values of expression for given phase for
+        all GridData points within divariant field identified by key.
+
+        Args:
+            key (frozenset): Key identifying divariant field
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         dt = dict(pts=[], data=[])
         if self.gridded:
             results = self.grid.gridcalcs[self.grid.masks[key]]
@@ -320,9 +417,30 @@ class PTPS:
                         if ok == 1:
                             dt['pts'].append((x, y))
                             dt['data'].append(eval_expr(expr, res['data'][phase]))
+        else:
+            print('Not yet gridded...')
         return dt
 
     def collect_data(self, key, phase, expr, which=7):
+        """Convinient function to retrieve values of expression
+        for given phase for user-defined combination of results of divariant
+        field identified by key.
+
+        Args:
+            key (frozenset): Key identifying divariant field
+
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         dt = dict(pts=[], data=[])
         # check if phase or end-member is in assemblage
         if re.sub('[\(].*?[\)]', '', phase) in key:
@@ -341,6 +459,22 @@ class PTPS:
         return dt
 
     def merge_data(self, phase, expr, which=7):
+        """Returns merged data obtained by `collect_data` method for all
+        divariant fields.
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
@@ -361,7 +495,23 @@ class PTPS:
             #             mx = max(mx, max(z))
         return recs, mn, mx
 
-    def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'): # TODO:
+    def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
+        """Method to collect THERMOCALC calculations along defined PT path.
+
+        PT path is interpolated from provided points using defined method. For
+        each point THERMOCALC seek for solution using ptguess from nearest
+        `GridData` point.
+
+        Args:
+            tpath (numpy.array): 1D array of temperatures for given PT path
+            ppath (numpy.array): 1D array of pressures for given PT path
+            N (int): Number of calculation steps. Default 100.
+            kind (str): Kind of interpolation. See scipy.interpolate.interp1d
+
+        Returns:
+            PTpath: returns instance of PTpath class storing all calculations
+                along PT path.
+        """
         if self.gridded:
             tpath, ppath = np.asarray(tpath), np.asarray(ppath)
             assert tpath.shape == ppath.shape, 'Shape of temperatures and pressures should be same.'
@@ -399,8 +549,23 @@ class PTPS:
             if err > 0:
                 print('Solution not found on {} points'.format(err))
             return PTpath(points, results)
+        else:
+            print('Not yet gridded...')
 
     def show(self, **kwargs):
+        """Method to draw PT pseudosection.
+
+        Args:
+            label (bool): Whether to label divariant fields. Default False.
+            out (str or list): Highligt zero-mode lines for given phases.
+            high (frozenset or list): Highlight divariant fields identified
+                by key(s).
+            cmap (str): matplotlib colormap used to divariant fields coloring.
+                Colors are based on variance. Default 'Purples'.
+            bulk (bool): Whether to show bulk composition on top of diagram.
+                Default False.
+            alpha (float): alpha value for colors. Default 0.6
+        """
         out = kwargs.get('out', None)
         cmap = kwargs.get('cmap', 'Purples')
         alpha = kwargs.get('alpha', 0.6)
@@ -416,7 +581,8 @@ class PTPS:
         if self.shapes:
             vari = [self.variance[k] for k in self]
             poc = max(vari) - min(vari) + 1
-            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, poc))
+            # skip extreme values to visually differs from empty areas
+            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, poc + 2))[1:-1,:]
             # Set alpha
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
@@ -504,6 +670,24 @@ class PTPS:
                 ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
 
     def show_data(self, key, phase, expr=None, which=7):
+        """Convinient function to show values of expression
+        for given phase for user-defined combination of results of divariant
+        field identified by key.
+
+        Args:
+            key (frozenset): Key identifying divariant field
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points
+
+         Returns:
+            Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
+            'data' key  storing list of thermocalc results.
+        """
         if expr is None:
             msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
@@ -517,68 +701,111 @@ class PTPS:
             plt.show()
 
     def show_grid(self, phase, expr=None, interpolation=None, label=False):
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+        """Convinient function to show values of expression for given phase only
+        from Grid Data.
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            interpolation (str): matplotlib imshow interpolation method.
+                Default None.
+            label (bool): Whether to label divariant fields. Default False.
+        """
+        if self.gridded:
+            if expr is None:
+                msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
+                print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+            else:
+                gd = np.empty(self.grid.tg.shape)
+                gd[:] = np.nan
+                for key in self:
+                    res = self.grid.gridcalcs[self.grid.masks[key]]
+                    if len(res) > 0:
+                        if phase in res[0]['data']:
+                            rows, cols = np.nonzero(self.grid.masks[key])
+                            for r, c in zip(rows, cols):
+                                if self.grid.status[r, c] == 1:
+                                    gd[r, c] = eval_expr(expr, self.grid.gridcalcs[r, c]['data'][phase])
+                fig, ax = plt.subplots()
+                im = ax.imshow(gd, extent=self.grid.extent, interpolation=interpolation,
+                               aspect='auto', origin='lower')
+                self.add_overlay(ax, label=label)
+                ax.set_xlim(self.ps.xrange)
+                ax.set_ylim(self.ps.yrange)
+                cbar = fig.colorbar(im)
+                ax.set_title('{}({})'.format(phase, expr))
+                fig.tight_layout()
+                plt.show()
         else:
-            gd = np.empty(self.grid.tg.shape)
-            gd[:] = np.nan
-            for key in self:
-                res = self.grid.gridcalcs[self.grid.masks[key]]
-                if len(res) > 0:
-                    if phase in res[0]['data']:
-                        rows, cols = np.nonzero(self.grid.masks[key])
-                        for r, c in zip(rows, cols):
-                            if self.grid.status[r, c] == 1:
-                                gd[r, c] = eval_expr(expr, self.grid.gridcalcs[r, c]['data'][phase])
+            print('Not yet gridded...')
+
+    def show_status(self, label=False):
+        """Shows status of grid calculations"""
+        if self.gridded:
             fig, ax = plt.subplots()
-            im = ax.imshow(gd, extent=self.grid.extent, interpolation=interpolation,
-                           aspect='auto', origin='lower')
+            cmap = ListedColormap(['orangered', 'limegreen'])
+            bounds = [-0.5, 0.5, 1.5]
+            norm = BoundaryNorm(bounds, cmap.N)
+            im = ax.imshow(self.grid.status, extent=self.grid.extent,
+                           aspect='auto', origin='lower', cmap=cmap, norm=norm)
+            self.add_overlay(ax, label=label)
+            ax.set_xlim(self.ps.xrange)
+            ax.set_ylim(self.ps.yrange)
+            ax.set_title('Gridding status - {}'.format(self.name))
+            cbar = fig.colorbar(im, cmap=cmap, norm=norm, boundaries=bounds, ticks=[0, 1])
+            cbar.ax.set_yticklabels(['Failed', 'OK'])
+            fig.tight_layout()
+            plt.show()
+        else:
+            print('Not yet gridded...')
+
+    def show_delta(self, label=False, pointsec=False):
+        """Shows THERMOCALC execution time for all grid points.
+
+        Args:
+            pointsec (bool): Whether to show points/sec or secs/point. Default False.
+            label (bool): Whether to label divariant fields. Default False.
+        """
+        if self.gridded:
+            if pointsec:
+                val = 1 / self.grid.delta
+                lbl = 'points/sec'
+                tit = 'THERMOCALC calculation rate - {}'
+            else:
+                val = self.grid.delta
+                lbl = 'secs/point'
+                tit = 'THERMOCALC execution time - {}'
+            fig, ax = plt.subplots()
+            im = ax.imshow(val, extent=self.grid.extent, aspect='auto', origin='lower')
             self.add_overlay(ax, label=label)
             ax.set_xlim(self.ps.xrange)
             ax.set_ylim(self.ps.yrange)
             cbar = fig.colorbar(im)
-            ax.set_title('{}({})'.format(phase, expr))
+            cbar.set_label(lbl)
+            ax.set_title(tit.format(self.name))
             fig.tight_layout()
             plt.show()
-
-    def show_status(self, label=False):
-        fig, ax = plt.subplots()
-        cmap = ListedColormap(['orangered', 'limegreen'])
-        bounds = [-0.5, 0.5, 1.5]
-        norm = BoundaryNorm(bounds, cmap.N)
-        im = ax.imshow(self.grid.status, extent=self.grid.extent,
-                       aspect='auto', origin='lower', cmap=cmap, norm=norm)
-        self.add_overlay(ax, label=label)
-        ax.set_xlim(self.ps.xrange)
-        ax.set_ylim(self.ps.yrange)
-        ax.set_title('Gridding status - {}'.format(self.name))
-        cbar = fig.colorbar(im, cmap=cmap, norm=norm, boundaries=bounds, ticks=[0, 1])
-        cbar.ax.set_yticklabels(['Failed', 'OK'])
-        fig.tight_layout()
-        plt.show()
-
-    def show_delta(self, label=False, pointsec=False):
-        if pointsec:
-            val = 1 / self.grid.delta
-            lbl = 'points/sec'
-            tit = 'THERMOCALC calculation rate - {}'
         else:
-            val = self.grid.delta
-            lbl = 'secs/point'
-            tit = 'THERMOCALC execution time - {}'
-        fig, ax = plt.subplots()
-        im = ax.imshow(val, extent=self.grid.extent, aspect='auto', origin='lower')
-        self.add_overlay(ax, label=label)
-        ax.set_xlim(self.ps.xrange)
-        ax.set_ylim(self.ps.yrange)
-        cbar = fig.colorbar(im)
-        cbar.set_label(lbl)
-        ax.set_title(tit.format(self.name))
-        fig.tight_layout()
-        plt.show()
+            print('Not yet gridded...')
 
     def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
+        """Show values of expression for given phase calculated along PTpath.
+
+        It plots colored strip on PT space. Strips arenot drawn accross fields,
+        where 'phase' is not present.
+
+        Args:
+            ptpath (PTpath): Results obtained by `collect_ptpath` method.
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            label (bool): Whether to label divariant fields. Default False.
+            pathwidth (int): Width of colored strip. Default 4.
+            allpath (bool): Whether to plot full PT path (dashed line).
+        """
         if expr is None:
             msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
@@ -608,6 +835,16 @@ class PTPS:
             plt.show()
 
     def show_path_modes(self, ptpath, exclude=[], cmap='tab20'):
+        """Show stacked area diagram of phase modes along PT path
+
+        Args:
+            ptpath (PTpath): Results obtained by `collect_ptpath` method.
+            exclude (list): List of phases to exclude. Included phases area
+                normalized to 100%.
+            cmap (str): matplotlib colormap. Default 'tab20'
+        """
+        if not isinstance(exclude, list):
+            exclude = [exclude]
         steps = len(ptpath.t)
         nd = np.linspace(0, 1, steps)
         splt = interp1d(nd, ptpath.t, kind='quadratic')
@@ -645,11 +882,22 @@ class PTPS:
         plt.show()
 
     def identify(self, T, p):
+        """Return key (frozenset) of divariant field for given temperature and pressure.
+
+        Args:
+            T (float): Temperatures
+            p (float): pressurese
+        """
         for key in self:
             if Point(T, p).intersects(self.shapes[key]):
                 return key
 
     def gidentify(self, label=False):
+        """Visual version of `identify` method. PT point is provided by mouse click.
+
+        Args:
+            label (bool): Whether to label divariant fields. Default False.
+        """
         fig, ax = plt.subplots()
         ax.autoscale_view()
         self.add_overlay(ax, label=label)
@@ -667,6 +915,48 @@ class PTPS:
                     print(' '.join(sorted(list(key))))
 
     def isopleths(self, phase, expr=None, **kwargs):
+        """Method to draw compositional isopleths.
+
+        Isopleths are drawn as contours for values evaluated from provided
+        expression. Individual divariant fields are contoured separately, so
+        final plot allows sharp changes accross univariant lines. Within
+        divariant field the thin-plate radial basis function interpolation is
+        used. See scipy.interpolation.Rbf
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            N (int): Number of contours. Default 10.
+            step (int): Step between contour levels. If defined, N is ignored.
+                Default None.
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points
+
+            smooth (int): Values greater than zero increase the smoothness
+                of the approximation. 0 is for interpolation (default).
+            refine (int): Degree of grid refinement. Default 1
+            filled (bool): Whether to contours should be filled. Defaut True.
+            out (str or list): Highligt zero-mode lines for given phases.
+            high (frozenset or list): Highlight divariant fields identified
+                by key(s).
+            cmap (str): matplotlib colormap used to divariant fields coloring.
+                Colors are based on variance. Default 'viridis'.
+            bulk (bool): Whether to show bulk composition on top of diagram.
+                Default False.
+            labelkeys (frozenset or list): Keys of divariant fields where contours
+                should be labeled.
+            colors (seq): The colors of the levels, i.e. the lines for contour and
+                the areas for contourf. The sequence is cycled for the levels
+                in ascending order. By default (value None), the colormap
+                specified by cmap will be used.
+            gradient (bool): Whether the first derivate of values should be used.
+                Default False.
+            dt (bool): Whether the gradient should be calculated along
+                temperature or pressure. Default True.
+        """
         if expr is None:
             msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
@@ -686,7 +976,7 @@ class PTPS:
             refine = kwargs.get('refine', 1)
             colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
-            clabel = kwargs.get('clabel', [])
+            labelkeys = kwargs.get('labelkeys', {})
 
             if not self.gridded:
                 print('Collecting only from uni lines and inv points. Not yet gridded...')
@@ -741,7 +1031,7 @@ class PTPS:
                     for col in cont.collections:
                         col.set_clip_path(patch)
                     # label if needed
-                    if not filled and key == set(clabel):
+                    if not filled and key in labelkeys:
                         positions = []
                         for col in cont.collections:
                             for seg in col.get_segments():
@@ -772,6 +1062,13 @@ class PTPS:
                 fig.colorbar(cont)
             except:
                 print('There is trouble to draw colorbar. Sorry.')
+            # Show highlight. Change to list if only single key
+            if isinstance(high, frozenset):
+                high = [high]
+            if only is None:
+                for k in high:
+                    ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+            # bulk
             if bulk:
                 if only is None:
                     ax.set_xlim(self.ps.xrange)
@@ -797,6 +1094,11 @@ class PTPS:
             plt.show()
 
     def gendrawpd(self, export_areas=True):
+        """Method to write drawpd file
+
+        Args:
+            export_areas (bool): Whether to include constructed areas. Default True.
+        """
         #self.refresh_geometry()
         with self.tc.drawpdfile.open('w', encoding=self.tc.TCenc) as output:
             output.write('% Generated by PyPSbuilder (c) Ondrej Lexa 2019\n')
@@ -841,7 +1143,9 @@ class PTPS:
             if export_areas:
                 # phases in areas for TC-Investigator
                 with self.tc.workdir.joinpath('assemblages.txt').open('w') as tcinv:
-                    vertices, edges, phases, tedges, tphases = self.ps.construct_areas()
+                    vertices, edges, phases, tedges, tphases, log = self.ps.construct_areas()
+                    if log:
+                        print('\n'.join(log))
                     # write output
                     output.write('% Areas\n')
                     output.write('% ------------------------------\n')
@@ -934,7 +1238,116 @@ class PTPS:
                 gd[self.grid.masks[key]] = zg[self.grid.masks[key][slc]]
             return gd
 
+
+class GridData:
+    """ Class to store gridded calculations.
+
+    Attributes:
+        tspace (numpy.array): Array of temperatures used for gridding
+        pspace (numpy.array): Array of pressures used for gridding
+        gridcalcs (numpy.array): 2D array of THERMOCALC Results
+        status (numpy.array): 2D array indicating status of calculation. The
+            values are 1 - OK, 0 - Failed, NaN - not calculated (outside of any
+            divariant field)
+        delta (numpy.array): 2D array of time needed for THERMOCALC calculation
+        masks (dict): Dictionaty associating divariant field key (frozenset) and
+            binary mask for `gridcalcs`, `status` and `delta` arrays. Masks are
+            used to retrieve results for individual divariant fields.
+
+    """
+    def __init__(self, ps, nx, ny):
+        dx = (ps.xrange[1] - ps.xrange[0]) / nx
+        self.tspace = np.linspace(ps.xrange[0] + dx/2, ps.xrange[1] - dx/2, nx)
+        dy = (ps.yrange[1] - ps.yrange[0]) / ny
+        self.pspace = np.linspace(ps.yrange[0] + dy/2, ps.yrange[1] - dy/2, ny)
+        self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
+        self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
+        self.status = np.empty(self.tg.shape)
+        self.status[:] = np.nan
+        self.delta = np.empty(self.tg.shape)
+        self.delta[:] = np.nan
+        self.masks = OrderedDict()
+
+    def __repr__(self):
+        tmpl = 'Grid {}x{} with ok/failed/none solutions {}/{}/{}'
+        ok = len(np.flatnonzero(self.status == 1))
+        fail = len(np.flatnonzero(self.status == 0))
+        return tmpl.format(len(self.tspace), len(self.pspace),
+                           ok, fail, np.prod(self.tg.shape) - ok - fail)
+
+    def neighs(self, r, c):
+        """Returns list of row, column tuples of neighbouring points on grid.
+
+        Args:
+            r (int): Row index
+            c (int): Column index
+        """
+        m = np.array([[(r - 1, c - 1), (r - 1, c), (r - 1, c + 1)],
+                      [(r, c - 1), (None, None), (r, c + 1)],
+                      [(r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]])
+        if r < 1:
+            m = m[1:, :]
+        if r > len(self.pspace) - 2:
+            m = m[:-1, :]
+        if c < 1:
+            m = m[:, 1:]
+        if c > len(self.tspace) - 2:
+            m = m[:, :-1]
+        return zip([i for i in m[:, :, 0].flat if i is not None],
+                   [i for i in m[:, :, 1].flat if i is not None])
+
+    @property
+    def tstep(self):
+        """Returns spacing along temperature axis"""
+        return self.tspace[1] - self.tspace[0]
+
+    @property
+    def pstep(self):
+        """Returns spacing along pressure axis"""
+        return self.pspace[1] - self.pspace[0]
+
+    @property
+    def extent(self):
+        """Returns extend of grid (Note that grid is cell centered)"""
+        return (self.tspace[0] - self.tstep / 2, self.tspace[-1] + self.tstep / 2,
+                self.pspace[0] - self.pstep / 2, self.pspace[-1] + self.pstep / 2)
+
+
+class PTpath:
+    """Class to store THERMOCALC calculations along PT paths.
+
+    Attributes:
+        t (numpy.array): 1D array of temperatures.
+        p (numpy.array): 1D array of pressures.
+        results (list): List of THERMOCALC results dictionaries.
+    """
+    def __init__(self, points, results):
+        self.t, self.p = np.array(points).T
+        self.results = results
+
+    def get_path_data(self, phase, expr):
+        ex = np.array([eval_expr(expr, res['data'][phase]) if phase in res['data'] else np.nan for res in self.results])
+        return ex
+
+
 def eval_expr(expr, dt):
+    """Evaluate expression using THERMOCALC output variables.
+
+    Args:
+        expr (str): expression to be evaluated
+        dt (dict): dictionary of all available variables and their values
+
+    Returns:
+        float: value evaluated from epxression
+
+    Example:
+        >>> pt.ps.invpoints[5].data()['g'].keys()
+        dict_keys(['mode', 'x', 'z', 'm', 'f', 'xMgX', 'xFeX', 'xMnX', 'xCaX', 'xAlY', 'xFe3Y', 'H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'MnO', 'O', 'factor', 'G', 'H', 'S', 'V', 'rho'])
+        >>> eval_expr('mode', pt.ps.invpoints[5].data()['g'])
+        0.02496698
+        >>> eval_expr('xMgX/(xFeX+xMgX)', pt.ps.invpoints[5].data()['g'])
+        0.12584215591915301
+    """
     def eval_(node):
         if isinstance(node, ast.Num):  # number
             return node.n

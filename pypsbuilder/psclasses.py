@@ -41,41 +41,74 @@ class TCError(Exception):
 
 
 class TCAPI(object):
-    """
-    Class to access TC functionality in given working directory
-    """
+    """Class to access TC functionality in given working directory.
 
-    def __init__(self, workdir):
+    Retrieves rows pertaining to the given keys from the Table instance
+    represented by big_table.  Silly things may happen if
+    other_silly_variable is not None.
+
+    Args:
+        big_table: An open Bigtable Table instance.
+        keys: A sequence of strings representing the key of each table row
+            to fetch.
+        other_silly_variable: Another optional variable, that has a much
+            longer name than the other args, and which does nothing.
+
+    Returns:
+        A dict mapping keys to the corresponding table row data
+        fetched. Each row is represented as a tuple of strings. For
+        example:
+
+        {'Serak': ('Rigel VII', 'Preparer'),
+         'Zim': ('Irk', 'Invader'),
+         'Lrrr': ('Omicron Persei 8', 'Emperor')}
+
+        If a key from the keys argument is missing from the dictionary,
+        then that row was not found in the table.
+
+    Raises:
+        InitError: An error occurred accessing the bigtable.Table object.
+        ScriptfileError: sdsdsdsd.
+        TCError: wdwdwd.
+
+    """
+    def __init__(self, workdir, tcexe=None, drexe=None):
         self.workdir = Path(workdir).resolve()
         self.TCenc = 'mac-roman'
         try:
             errinfo = 'Initialize project error!'
-            # default exe
-            if sys.platform.startswith('win'):
-                tcpat = 'tc3*.exe'
-                drpat = 'dr1*.exe'
-            #elif sys.platform.startswith('linux'):
-            #    tcpat = 'tc3*L'
-            #    drpat = 'dr*L'
-            else:
-                tcpat = 'tc3*'
-                drpat = 'dr1*'
-            # THERMOCALC exe
             self.tcexe = None
-            for p in self.workdir.glob(tcpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.tcexe = p.resolve()
-                    break
+            self.drexe = None
+            if tcexe is not None:
+                self.tcexe = self.workdir / tcexe
+            if drexe is not None:
+                self.drexe = self.workdir / drexe
+            if self.tcexe is None:
+                # default exe
+                if sys.platform.startswith('win'):
+                    tcpat = 'tc3*.exe'
+                else:
+                    tcpat = 'tc3*'
+                # THERMOCALC exe
+                for p in self.workdir.glob(tcpat):
+                    if p.is_file() and os.access(str(p), os.X_OK):
+                        self.tcexe = p.resolve()
+                        break
+            if self.drexe is None:
+                # default exe
+                if sys.platform.startswith('win'):
+                    drpat = 'dr1*.exe'
+                else:
+                    drpat = 'dr1*'
+                # DRAWPD exe
+                for p in self.workdir.glob(drpat):
+                    if p.is_file() and os.access(str(p), os.X_OK):
+                        self.drexe = p.resolve()
+                        break
             if not self.tcexe:
                 raise InitError('No THERMOCALC executable in working directory.')
-            # DRAWPD exe
-            self.drexe = None
-            for p in self.workdir.glob(drpat):
-                if p.is_file() and os.access(str(p), os.X_OK):
-                    self.drexe = p.resolve()
-                    break
             #if not self.drexe:
-            #    InitError('No drawpd executable in working directory.')
+                #InitError('No drawpd executable in working directory.')
             # tc-prefs file
             if not self.workdir.joinpath('tc-prefs.txt').exists():
                 raise InitError('No tc-prefs.txt file in working directory.')
@@ -715,6 +748,7 @@ class TCAPI(object):
             sys.stdout.flush()
             return True
         else:
+            print('No drawpd executable identified in working directory.')
             return False
 
 
@@ -1028,6 +1062,7 @@ class SectionBase:
                     break
             return found_cycle[0], path
         # starts here
+        log = []
         vertices, edges, phases = [], [], []
         tedges, tphases = [], []
         uni_index = {}
@@ -1073,7 +1108,7 @@ class SectionBase:
                         phases.append(f)
                     else:
                         #raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
-                        print('Topology error in path {}. Edges {}'.format(path, edge))
+                        log.append('Topology error in path {}. Edges {}'.format(path, edge))
                 else:
                     # loop not found, search for range crossing chain
                     for ppath in itertools.permutations(path):
@@ -1091,7 +1126,7 @@ class SectionBase:
                                     tedges.append(edge)
                                     tphases.append(f)
                             break
-        return vertices, edges, phases, tedges, tphases
+        return vertices, edges, phases, tedges, tphases, log
 
     def create_shapes(self):
         if not isinstance(self, PTsection):
@@ -1102,9 +1137,8 @@ class SectionBase:
         shape_edges = OrderedDict()
         bad_shapes = OrderedDict()
         ignored_shapes = OrderedDict()
-        log = []
         # traverse pseudosection
-        vertices, edges, phases, tedges, tphases = self.construct_areas(shrink)
+        vertices, edges, phases, tedges, tphases, log = self.construct_areas(shrink)
         # default p-t range boundary
         bnd = [LineString([(self.xrange[0] + shrink, self.yrange[0] + shrink),
                           (self.xrange[1] - shrink, self.yrange[0] + shrink)]),
@@ -1134,6 +1168,11 @@ class SectionBase:
                         shapes[f] = ppok
             if invalid:
                 log.append('ERROR: Area defined by edges {} is not valid.'.format(e))
+                for e1, e2 in itertools.combinations(e, 2):
+                    l1 = LineString(np.c_[self.unilines[e1].x, self.unilines[e1].y])
+                    l2 = LineString(np.c_[self.unilines[e2].x, self.unilines[e2].y])
+                    if l1.crosses(l2):
+                        log.append('   - Uniline {} crosses uniline {}'.format(e1, e2))
                 bad_shapes[f] = e
         # Create all partial areas
         for ind in range(len(tedges)):

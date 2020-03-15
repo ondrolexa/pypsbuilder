@@ -12,5 +12,5 @@ psclasses
 ---------
 
 .. automodule:: pypsbuilder.psclasses
-  :members:
+  :members: TCAPI, InvPoint, UniLine
   :exclude-members:

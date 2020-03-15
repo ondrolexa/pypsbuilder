@@ -44,7 +44,7 @@ from .ui_txbuilder import Ui_TXBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
+from .psclasses import TCAPI, InvPoint, UniLine, PTsection, TXsection, polymorphs
 from . import __version__
 
 # Make sure that we are using QT5
@@ -891,6 +891,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
+                inv.id = id_inv
                 inv.x, inv.y = addinv.getValues()
                 if isnew:
                     self.invmodel.appendRow(id_inv, inv)
@@ -1082,7 +1083,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes()
                 if log:
-                    self.textOutput.setPlainText(' '.join(log))
+                    self.textOutput.setPlainText('\n'.join(log))
                 if shapes:
                     vari = [-len(key) for key in shapes]
                     poc = max(vari) - min(vari) + 1
