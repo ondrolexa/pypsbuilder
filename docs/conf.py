@@ -19,7 +19,10 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../pypsbuilder'))
+#sys.path.insert(0, os.path.abspath('../pypsbuilder'))
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- General configuration ------------------------------------------------
@@ -40,7 +43,8 @@ extensions = [
 napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
-autodoc_mock_imports = ['scipy', 'shapely', 'descartes', 'networkx', 'tqdm']
+autodoc_mock_imports = ['numpy', 'matplotlib', 'scipy', 'shapely',
+                        'descartes', 'networkx', 'tqdm', 'mpl_toolkits']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
