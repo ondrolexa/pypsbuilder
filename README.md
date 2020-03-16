@@ -1,9 +1,8 @@
-# PyPSbuilder
+# pypsbuilder
 
-[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=stable)](http://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=develop)](https://pypsbuilder.readthedocs.io/en/latest/?badge=develop)
 
 Not that simplistic THERMOCALC front-end for constructing pseudosections
-
 
 ## Install development version
 
@@ -11,19 +10,26 @@ Easiest way to install latest version of pypsbuilder is to use conda package man
 
     conda env create -f environment.yml
 
+or manually:
+
+    conda create -n pyps python=3.8 pyqt=5 numpy matplotlib scipy networkx notebook jupyterlab shapely descartes tqdm
+
 Then activate the new environment:
 
-    conda activate psbuilder
+    conda activate pyps
 
 and install pypsbuilder using pip:
 
+    pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
+
+or if you downloaded pypsbuilder repository, run in unzipped folder:
+
     pip install .
 
-## Documentation
+## Documentation an tutorials
 
-Documentation for stable version [http://pypsbuilder.readthedocs.io/en/latest](http://pypsbuilder.readthedocs.io/en/latest)
+Check documentation and tutorials for developement version [https://pypsbuilder.readthedocs.io/en/develop](https://pypsbuilder.readthedocs.io/en/develop)
 
 ## License
 
-PyPSbuilder is free software: you can redistribute it and/or modify it under the terms of the MIT License. A copy of this license is provided in ``LICENSE`` file.
-
+pypsbuilder is free software: you can redistribute it and/or modify it under the terms of the MIT License. A copy of this license is provided in ``LICENSE`` file.
