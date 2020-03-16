@@ -1,0 +1,2072 @@
+header
+=================================================================
+The 'metapelite set' of x-eos in MnNCKFMASHTO
+
+checked and uploaded 12-12-2019 by ecrg
+
+Use with:
+  - tc-ds62.txt
+  - tc350 and above
+
+File history:
+- First provided as tc-6axmn (Mainz website download, 2014).
+- delG(tran) for mat end-member in muscovite was routinely
+  changed to 5.0 kJ from 6.5 kJ from around 2015; this change
+  is formalised here. 
+- Re-formatted for tc350 by ecrg 10-12-19:
+  - renamed ilm (FMMnTO) as ilmm for consistency
+    with metabasite models 
+  - added ilm (FTO)
+  - hem and mt are now made by samecoding
+  - Cbar1 plag now called plc for consistency; rename via
+    samecoding for convenience
+
+
+Please read the README file in this distribution before using 
+these a-x relations.
+
+
+Solution phases: g liq plc ksp ep ma mu bi opx sa cd st 
+                 chl ctd sp ilmm ilm mt1  
+% =================================================================
+header
+
+g  5  1
+
+verbatim
+% =================================================================
+% Garnet: CFMMnASO 
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+% 
+% coded by axe attack on 24 March 2011
+% 
+% E-m    Formula                   Mixing sites
+%                       X                         Y             
+%                       Mg    Fe    Mn    Ca      Al    Fe3     
+% py     Mg3Al2Si3O12   3     0     0     0       2     0       
+% alm    Fe3Al2Si3O12   0     3     0     0       2     0       
+% spss   Mn3Al2Si3O12   0     0     3     0       2     0       
+% gr     Ca3Al2Si3O12   0     0     0     3       2     0       
+% kho    Mg3Fe2Si3O12   3     0     0     0       0     2       
+%
+% x -> xFeX/(xFeX + xMgX)
+% z -> xCaX
+% m -> xMnX
+% f -> xFe3Y
+% -------------------------------------------------
+verbatim
+ 
+  x(g)             0.9
+  z(g)             0.1
+  m(g)            0.06
+  f(g)            0.01
+% -------------------------------------------------
+ 
+p(py)      3 1    1  4  -1  f  -1  m  -1  x  -1  z
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  z
+ 
+p(alm)     3 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  z
+ 
+p(spss)    1 1    0  1  1  m
+ 
+p(gr)      1 1    0  1  1  z
+ 
+p(kho)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+W(py,alm)                2.5         0         0
+W(py,spss)                 2         0         0
+W(py,gr)                  31         0         0
+W(py,kho)                5.4         0         0
+W(alm,spss)                2         0         0
+W(alm,gr)                  5         0         0
+W(alm,kho)                22.6       0         0 
+W(spss,gr)                 0         0         0
+W(spss,kho)               29.4       0         0  
+W(gr,kho)                -15.3       0         0  
+ 
+a(py)                 1         0         0
+a(alm)                1         0         0
+a(spss)               1         0         0
+a(gr)               2.7         0         0
+a(kho)                1         0         0
+% -------------------------------------------------
+6
+ 
+xMgX       3 1    1  3  -1  m  -1  x  -1  z
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  z
+ 
+xFeX       3 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  z
+ 
+xMnX       1 1    0  1  1  m
+ 
+xCaX       1 1    0  1  1  z
+ 
+xAlY       1 1    1  1  -1  f
+ 
+xFe3Y      1 1    0  1  1  f
+% -------------------------------------------------
+ 
+py      1    2  xMgX 3  xAlY 2  
+  check 0  0  0  0  
+ 
+alm     1    2  xFeX 3  xAlY 2  
+  check 1  0  0  0  
+ 
+spss    1    2  xMnX 3  xAlY 2  
+  check 0  0  1  0  
+ 
+gr      1    2  xCaX 3  xAlY 2  
+  check 0  1  0  0  
+ 
+kho     1    2  xMgX 3  xFe3Y 2  
+  check 0  0  0  1  
+  make 3  py 1  gr -1  andr 1
+  delG(make)  27   0   0   
+  
+% ==================================================================================
+
+
+L 8  1
+
+verbatim
+% ====================================================================
+% Granitic 'metapelite' melt: NCKFMASH
+%
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+%  E-m    Formula                     Mixing sites			         
+%	               M*         V         molecular mixing
+%	               Mg4 Fe4    v2 H2   Si4O8 NaAlSi3O8 KAlSi3O8 CaAl2Si2O8 8/5*(Al2SiO5) Si2O8
+%  q4L	  Si4O8	                  1   0       1       0       0        0          0          0 
+%  abL    NaAlSi3O8               1   0       0       1       0        0          0          0 
+%  kspL   KAlSi3O8                1   0       0       0       1        0          0          0 
+%  anL    CaAl2Si2O8              1   0       0       0       0        1          0          0   
+%  slL    8/5*(Al2SiO5)           1   0       0       0       0        0          1          0 
+%  fo2L   Mg4Si2O8      1   0     1   0       0       0       0        0          0          1 
+%  fa2L   Fe4Si2O8      0   1     1   0       0       0       0        0          0          1 
+%  h2oL   H2O                     0   1       
+%              *use 5-fold entropy of mixing from M site
+%   
+%  q -> Si4O8 / denom
+%  fsp -> (NaAlSi3O8 + KAlSi3O8) / denom
+%  na -> NaAlSi3O8 / (NaAlSi3O8 + KAlSi3O8) 
+%  an -> CaSiO3 / denom
+%  ol -> Si2O8 / denom
+%  x -> Fe/(Fe + Mg)
+%  h2o -> H2O / denom            
+%
+%  where denom = Si4O8 + NaAlSi3O8 + KAlSi3O8 + CaAl2Si2O8 + 8/5*(Al2SiO5) + Si2O8 + H2O
+%
+% ====================================================================
+verbatim
+
+
+   q(L)          0.1814
+   fsp(L)        0.3490
+   na(L)         0.5840
+   an(L)        0.01104
+   ol(L)        0.01373
+   x(L)          0.7333
+   h2o(L)        0.4276
+
+% --------------------------------------------------
+  
+   
+   p(q4L)    1 1      0  1  1  q
+   
+   p(abL)   1 2      0  1  1  fsp    0  1  1  na
+   
+   p(kspL)  1 2      0  1  1  fsp    1  1 -1  na
+   
+   p(anL)   1 1      0  1  1  an
+   
+   p(slL)  1 1      1  5 -1 q -1 fsp -1 an -1 ol -1 h2o
+   
+   p(fo2L)   1 2      0  1  1  ol   1  1 -1  x
+   
+   p(fa2L)   1 2      0  1  1  ol   0  1  1  x
+      
+   p(h2oL)  1 1      0  1  1  h2o  
+
+% --------------------------------------------------
+   sf
+
+   W(q4L,abL)        12  0  -0.4   
+   W(q4L,kspL)       -2  0  -0.5
+   W(q4L,anL)         5  0     0    
+   W(q4L,slL)        12  0     0    
+   W(q4L,fo2L)       12  0  -0.4 
+   W(q4L,fa2L)       14  0     0 
+   W(q4L,h2oL)       17  0  -0.5 
+     
+   W(abL,kspL)       -6  0   3.0
+   W(abL,anL)         0  0     0      
+   W(abL,slL)        12  0     0      
+   W(abL,fo2L)       10  0     0      
+   W(abL,fa2L)        2  0     0
+   W(abL,h2oL)     -1.5  0  -0.3
+   
+   W(kspL,anL)        0  0  -1.0    
+   W(kspL,slL)       12  0     0    
+   W(kspL,fo2L)      12  0     0
+   W(kspL,fa2L)      12  0     0
+   W(kspL,h2oL)     9.5  0  -0.3
+     
+   W(anL,slL)         0  0     0       
+   W(anL,fo2L)        0  0     0 
+   W(anL,fa2L)        0  0     0 
+   W(anL,h2oL)      7.5  0   -0.5 
+
+   W(slL,fo2L)       12  0     0      
+   W(slL,fa2L)       12  0     0      
+   W(slL,h2oL)       11  0     0   
+    
+   W(fo2L,fa2L)      18  0     0
+   W(fo2L,h2oL)      11  0  -0.5
+
+   W(fa2L,h2oL)      12  0     0
+   
+% --------------------------------------------------
+   10 
+   
+   fac   1 1      1  1 -1  h2o
+   
+   pq    1 1      0  1  1  q
+   
+   xab   1 2      0  1  1  fsp    0  1  1  na
+   
+   xksp  1 2      0  1  1  fsp    1  1 -1  na
+   
+   pan   1 1      0  1  1  an
+   
+   psil   1 1     1  5 -1 q -1 fsp -1 an -1 ol -1 h2o
+   
+   pol    1 1      0  1  1  ol
+   
+   xFe    1 1      0  1  1  x
+   
+   xMg    1 1      1  1 -1  x
+
+   ph2o  1 1       0  1  1  h2o  
+
+% --------------------------------------------------
+% ideal mixing activities
+   
+ q4L     1  2      fac 1 pq 1    
+      make  1  qL 4
+      
+ abL    1  2      fac 1 xab 1
+ 
+ kspL   1  2      fac 1 xksp 1
+
+ anL    1  2      fac 1 pan 1
+ 
+ slL   1  2      fac 1  psil 1
+    make   1  silL  8/5 
+    delG(mod)  -23 0 0    
+
+ fo2L    1  3      fac 1  pol 1  xMg  5
+    make  1  foL 2
+    delG(mod)  -10 0 0    
+ 
+ fa2L    1  3      fac 1  pol 1  xFe  5
+    make  1  faL 2
+    delG(mod)  -9 0 -1.3   
+
+ h2oL   1  1      ph2o 2
+
+% ========================================================================================
+
+
+plc 3  1
+
+verbatim
+% =================================================================
+% ternary plagioclase (Cbar1 ASF): NCKAS
+%
+% Holland, TJB & Powell, R (2003) Activity-composition relations for phases in
+% petrological calculations: an asymmetric multicomponent formulation. Contributions
+% to Mineralogy and Petrology, 145, 492-501. 
+%
+%  E-m    Formula        Mixing site    
+%                       K     Na    Ca      
+%  san    KAlSi3O8      1     0     0       
+%  abh    NaAlSi3O8     0     1     0       
+%  anC    CaAl2Si2O8    0     0     1       
+%
+% ca -> xCa
+% k -> xK
+% --------------------------------------------------
+verbatim
+
+    ca(plc) 0.2
+    k(plc)  0.03
+    
+% --------------------------------------------------
+
+   p(abh)    1 1    1 2 -1 k -1 ca
+   p(anC)    1 1    0 1  1 ca
+   p(san)    1 1    0 1  1 k
+   
+% --------------------------------------------------
+
+   asf
+     W(abh,anC)   3.1   0     0    
+     W(abh,san)  25.1 -0.0108  0.338       
+     W(anC,san)   40   0     0      
+     
+    abh   0.643  0  0  	      
+    anC   1.0    0  0
+    san   1.0    0  0
+    
+% --------------------------------------------------
+
+   3
+   x(K)     1 1    0 1  1 k
+   x(Na)    1 1    1 2 -1 k -1 ca
+   x(Ca)    1 1    0 1  1 ca
+% --------------------------------------------------
+
+   abh      1 1     x(Na) 1
+ 		
+   anC      1 1     x(Ca) 1
+      make  1  equilibrium an  1
+      delG(tran)  7.03  -0.00466   0   
+
+   san      1 1     x(K) 1
+
+% ====================================================================
+
+
+ksp  3  1
+
+verbatim
+% =================================================================
+% ternary ksp (Cbar1 ASF): NCKAS
+% 
+% Holland, TJB & Powell, R (2003) Activity-composition relations for phases in
+% petrological calculations: an asymmetric multicomponent formulation. Contributions
+% to Mineralogy and Petrology, 145, 492-501. 
+%
+% coded by axe attack on 14 August 2013
+% 
+%  E-m    Formula        Mixing site    
+%                       K     Na    Ca      
+%  san    KAlSi3O8      1     0     0       
+%  abh    NaAlSi3O8     0     1     0       
+%  anC    CaAl2Si2O8    0     0     1       
+%
+% na -> xNa
+% ca -> xCa
+% --------------------------------------------------
+verbatim
+ 
+  na(ksp)          0.1
+  ca(ksp)          0.004
+% -------------------------------------------------
+ 
+p(san)     1 1    1  2  -1  ca  -1  na
+ 
+p(abh)     1 1    0  1  1  na
+ 
+p(anC)     1 1    0  1  1  ca
+% -------------------------------------------------
+asf
+W(san,abh)              25.1     -0.0108     0.338
+W(san,anC)               40           0         0
+W(abh,anC)              3.1           0         0
+ 
+a(san)                1         0         0
+a(abh)            0.643         0         0
+a(anC)                1         0         0
+% -------------------------------------------------
+3
+ 
+xK         1 1    1  2  -1  ca  -1  na
+ 
+xNa        1 1    0  1  1  na
+ 
+xCa        1 1    0  1  1  ca
+% -------------------------------------------------
+ 
+san     1    1  xK 1  
+  check 0  0  
+ 
+abh     1    1  xNa 1  
+  check 1  0  
+ 
+anC      1    1  xCa 1  
+  check 0  1  
+  make  1    equilibrium   an    1
+  delG(tran)   7.03       -0.00466           0
+      
+% ====================================================================
+
+
+ep 3  1
+
+verbatim
+% ===================================================================
+% epidote: CFASHO
+%
+% Holland, TJB & Powell, R (2011). An improved and
+% extended internally consistent thermodynamic dataset
+% for phases of petrological interest, involving a
+% new equation of state for solids. 
+% Journal of Metamorphic Geology, 29, 333-383.
+%
+% E-m   Formula                Mixing sites
+%                             M1       M3  
+%                             Al Fe3   Al Fe3 
+% cz    Ca2Al3Si3O12(OH)      1   0    1   0
+% ep    Ca2FeAl2Si3O12(OH)    1   0    0   1  - ordered end-member
+% fep   Ca2Fe2AlSi3O12(OH)    0   1    0   1
+%
+% f -> (xFe3M1+xFe3M3)/2
+% Q ->  f - xFe3M1   - order variable
+% --------------------------------------------------
+verbatim
+
+  f(ep)        0.1
+  Q(ep)        0.2   range 0 0.5
+
+% --------------------------------------------------
+p(cz)    1  1    1  2 -1  f  -1  Q
+p(ep)    1  1    0  1  2  Q
+p(fep)   1  1    0  2  1  f  -1  Q
+
+% --------------------------------------------------
+sf
+  W(cz,ep)         1  0  0
+  W(cz,fep)        3  0  0
+  W(ep,fep)        1  0  0
+
+% --------------------------------------------------
+  4  
+
+  xFeM1   1  1    0  2  1  f  -1  Q
+  xAlM1   1  1    1  2 -1  f   1  Q
+  xFeM3   1  1    0  2  1  f   1  Q
+  xAlM3   1  1    1  2 -1  f  -1  Q
+% --------------------------------------------------
+
+ cz      1  2      xAlM1  1  xAlM3   1
+ ep      1  2      xAlM1  1  xFeM3   1
+ fep     1  2      xFeM1  1  xFeM3   1
+
+% ====================================================================
+
+
+
+ma  6  1
+
+verbatim
+% =================================================================
+% margarite: CNKFMASHO
+% 
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+%  E-m    Formula                                    Mixing sites
+%                             A                   M2A                 M2B           T1            
+%                             K     Na    Ca      Mg    Fe    Al      Al    Fe3     Si    Al      
+%  mut   KAl3Si3O12(OH)2      1     0     0       0     0     1       1     0       1     1       
+%  celt  KMgAlSi4O10(OH)2     1     0     0       1     0     0       1     0       2     0       
+%  fcelt KFeAlSi4O10(OH)2     1     0     0       0     1     0       1     0       2     0       
+%  pat   NaAl3Si3O10(OH)2     0     1     0       0     0     1       1     0       1     1       
+%  ma    CaAl4Si2O10(OH)2     0     0     1       0     0     1       1     0       0     2       
+%  fmu   KAl2FeSi3O12(OH)2    1     0     0       0     0     1       0     1       1     1       
+%       
+% x -> xFeM2A/(xFeM2A + xMgM2A)
+% y -> xAlM2A
+% f -> xFe3M2B
+% n -> xNaA
+% c -> xCaA
+% --------------------------------------------------
+verbatim
+  
+  x(ma)   0.6  
+  y(ma)   0.96
+  f(ma)   0.001
+  n(ma)   0.05
+  c(ma)   0.94
+% -------------------------------------------------
+ 
+p(mut)      1 1    0  4  -1  c  -1  f  -1  n   1  y
+p(celt)     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+p(fcelt)    2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+p(pat)      1 1    0  1  1  n
+p(ma)      1 1    0  1  1  c
+p(fmu)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+	W(mut,celt)        0.00 0.0000  0.200
+	W(mut,fcelt)       0.00 0.0000  0.200
+	W(mut,pat)        10.12 0.0034  0.353
+	W(mut,ma)        34  0  0                 
+	W(mut,fmu)        0  0  0
+	W(celt,fcelt)      0  0  0
+	W(celt,pat)       45  0  0.25
+	W(celt,ma)       50  0  0    
+	W(celt,fmu)       0  0  0
+	W(fcelt,pat)      45  0  0.25
+	W(fcelt,ma)      50  0  0      
+	W(fcelt,fmu)      0  0  0
+	W(pat,ma)        18  0  0    
+	W(pat,fmu)       30  0  0 
+	W(ma,fmu)       35  0  0
+	
+	mut            0.63 0.0 0.0
+	celt           0.63 0.0 0.0
+	fcelt          0.63 0.0 0.0
+	pat            0.37 0.0 0.0
+	ma            0.63 0.0 0.0
+	fmu           0.63 0.0 0.0
+% -------------------------------------------------
+10
+xKA        1 1    1  2  -1  c  -1  n
+xNaA       1 1    0  1  1  n
+xCaA       1 1    0  1  1  c
+xMgM2A     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+xFeM2A     2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+xAlM2A     1 1    0  1  1  y
+xAlM2B     1 1    1  1  -1  f
+xFe3M2B    1 1    0  1  1  f
+xSiT1      1 1    1  2  -1/2  c  -1/2  y
+xAlT1      1 1    0  2  1/2  c  1/2  y
+% -------------------------------------------------
+ 
+mut      4    5  xKA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  0  0
+    make 1 mu 1
+  delG(tran)   1.0  0  0  
+  
+celt     1    4  xKA 1  xMgM2A 1  xAlM2B 1  xSiT1 2  
+  check 0  0  0  0  0 
+      make 1 cel 1
+  delG(tran)   5  0  0   
+  
+fcelt    1    4  xKA 1  xFeM2A 1  xAlM2B 1  xSiT1 2  
+  check 1  0  0  0  0 
+      make 1 fcel 1
+  delG(tran)   5  0  0  
+   
+pat      4    5  xNaA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  1  0 
+      make 1 pa 1
+  delG(tran)   4  0  0   
+  
+ma      1    4  xCaA 1  xAlM2A 1  xAlM2B 1  xAlT1 2  
+  check 0  1  0  0  1  
+  
+fmu     4    5  xKA 1  xAlM2A 1  xFe3M2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  1  0  0  
+  make  3   mu 1  gr -1/2  andr 1/2
+  delG(make)   25  0  0   
+
+% ====================================================================
+
+
+mu  6  1
+
+verbatim
+% =================================================================
+% muscovite: NCKFMASHO
+% 
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% !!!! delG(tran) for mat end-member changed from 6.5 to 5.0 since publication !!!!
+%
+%
+% coded by axe attack on 14 August 2013
+% 
+%  E-m    Formula                                    Mixing sites
+%                             A                   M2A                 M2B           T1            
+%                             K     Na    Ca      Mg    Fe    Al      Al    Fe3     Si    Al      
+%  mu    KAl3Si3O12(OH)2      1     0     0       0     0     1       1     0       1     1       
+%  cel   KMgAlSi4O10(OH)2     1     0     0       1     0     0       1     0       2     0       
+%  fcel  KFeAlSi4O10(OH)2     1     0     0       0     1     0       1     0       2     0       
+%  pa    NaAl3Si3O10(OH)2     0     1     0       0     0     1       1     0       1     1       
+%  mat   CaAl4Si2O10(OH)2     0     0     1       0     0     1       1     0       0     2       
+%  fmu   KAl2FeSi3O12(OH)2    1     0     0       0     0     1       0     1       1     1       
+%       
+% x -> xFeM2A/(xFeM2A + xMgM2A)
+% y -> xAlM2A
+% f -> xFe3M2B
+% n -> xNaA
+% c -> xCaA
+% --------------------------------------------------
+verbatim
+ 
+  x(mu)            0.25
+  y(mu)            0.6
+  f(mu)            0.17
+  n(mu)            0.06
+  c(mu)            0.004
+% -------------------------------------------------
+ 
+p(mu)      1 1    0  4  -1  c  -1  f  -1  n   1  y
+ 
+p(cel)     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+ 
+p(fcel)    2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(pa)      1 1    0  1  1  n
+ 
+p(mat)      1 1    0  1  1  c
+ 
+p(fmu)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+W(mu,cel)                  0           0       0.2
+W(mu,fcel)                 0           0       0.2
+W(mu,pa)               10.12      0.0034     0.353
+W(mu,mat)                 35           0         0
+W(mu,fmu)                  0           0         0
+W(cel,fcel)                0           0         0
+W(cel,pa)                 45           0      0.25
+W(cel,mat)                50           0         0
+W(cel,fmu)                 0           0         0
+W(fcel,pa)                45           0      0.25
+W(fcel,mat)               50           0         0
+W(fcel,fmu)                0           0         0
+W(pa,mat)                 15           0         0
+W(pa,fmu)                 30           0         0
+W(mat,fmu)                35           0         0
+ 
+a(mu)              0.63         0         0
+a(cel)             0.63         0         0
+a(fcel)            0.63         0         0
+a(pa)              0.37         0         0
+a(mat)             0.63         0         0
+a(fmu)             0.63         0         0
+% -------------------------------------------------
+10
+ 
+xKA        1 1    1  2  -1  c  -1  n
+ 
+xNaA       1 1    0  1  1  n
+ 
+xCaA       1 1    0  1  1  c
+ 
+xMgM2A     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM2A     2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xAlM2A     1 1    0  1  1  y
+ 
+xAlM2B     1 1    1  1  -1  f
+ 
+xFe3M2B    1 1    0  1  1  f
+ 
+xSiT1      1 1    1  2  -1/2  c  -1/2  y
+ 
+xAlT1      1 1    0  2  1/2  c  1/2  y
+% -------------------------------------------------
+ 
+mu      4    5  xKA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  0  0  
+ 
+cel     1    4  xKA 1  xMgM2A 1  xAlM2B 1  xSiT1 2  
+  check 0  0  0  0  0  
+ 
+fcel    1    4  xKA 1  xFeM2A 1  xAlM2B 1  xSiT1 2  
+  check 1  0  0  0  0  
+ 
+pa      4    5  xNaA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  1  0  
+ 
+mat      1    4  xCaA 1  xAlM2A 1  xAlM2B 1  xAlT1 2  
+  check 0  1  0  0  1  
+  make  1       ma    1
+  delG(tran)        5.0              0           0
+ 
+fmu     4    5  xKA 1  xAlM2A 1  xFe3M2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  1  0  0  
+  make  3     andr  1/2   gr -1/2    mu  1
+  delG(make)     25              0           0
+
+% ====================================================================
+
+
+
+bi  7  1
+
+verbatim
+% ====================================================================
+% biotite: KFMMnASHTO
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+% 
+% coded by axe attack on 05 March 2011
+% 
+% E-m    Formula                             Mixing sites
+%                            M3                        M12           T         V             
+%                            Mg  Mn  Fe  Fe3 Ti  Al    Mg  Mn  Fe    Si  Al    OH  O       
+% phl   KMg3AlSi3O10(OH)2    1   0   0   0   0   0     2   0   0     1   1     2   0       
+% annm  KFe3AlSi3O10(OH)2    0   0   1   0   0   0     0   0   2     1   1     2   0       
+% obi   KMg2Fe1AlSi3O10(OH)2 0   0   1   0   0   0     2   0   0     1   1     2   0  - ordered intermediate   
+% east  KMg2Al3Si2O10(OH)2   0   0   0   0   0   1     2   0   0     0   2     2   0       
+% tbi   KMg2AlSi3TiO12       0   0   0   0   1   0     2   0   0     1   1     0   2       
+% fbi   KMg2Al2FeSi2O10(OH)2 0   0   0   1   0   0     2   0   0     0   2     2   0  
+% mmbi  KMn3AlSi3O10(OH)2    0   1   0   0   0   0     0   2   0     1   1     2   0
+%      
+% x -> (2 xFeM12 + xFeM3)/(2 xFeM12 + xFeM3 + 2 xMgM12 + xMgM3)
+% m -> xMnM3 = xMnM12 (equidistribution)
+% y -> xAlM3
+% f -> xFe3M3
+% t -> xTiM3
+% Q -> 3 (x - xFeM12)  - order variable 
+% -------------------------------------------------
+verbatim
+ 
+  x(bi)            0.35 
+  m(bi)            0.03
+  y(bi)            0.25
+  f(bi)            0.04
+  t(bi)            0.17
+  Q(bi)            0.25
+% -------------------------------------------------
+ 
+p(phl)     5 1    1  6  -1  f  -1  m  -1  t  -1  x  -1  y  -2/3  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  3  m    0  1  1  x
+             2    0  1  1  t    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+p(annm)    1 1    0  2  -1/3  Q   1  x
+ 
+p(obi)     5 1    0  1   1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -3  m    0  1  1  x
+             2    0  1  -1  t    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(east)    1 1    0  1  1  y
+ 
+p(tbi)     1 1    0  1  1  t
+ 
+p(fbi)     1 1    0  1  1  f
+ 
+p(mmbi)    1 1    0  1  1  m
+
+% -------------------------------------------------
+
+sf
+W(phl,annm)               12         0         0
+W(phl,obi)                 4         0         0
+W(phl,east)               10         0         0
+W(phl,tbi)                30         0         0
+W(phl,fbi)                 8         0         0
+W(phl,mmbi)                9         0         0
+W(annm,obi)                8         0         0
+W(annm,east)              15         0         0
+W(annm,tbi)               32         0         0
+W(annm,fbi)             13.6         0         0
+W(annm,mmbi)             6.3         0         0
+W(obi,east)                7         0         0
+W(obi,tbi)                24         0         0
+W(obi,fbi)               5.6         0         0
+W(obi,mmbi)              8.1         0         0
+W(east,tbi)               40         0         0
+W(east,fbi)                1         0         0
+W(east,mmbi)              13         0         0
+W(tbi,fbi)                40         0         0
+W(tbi,mmbi)               30         0         0
+W(fbi,mmbi)             11.6         0         0
+ 
+% -------------------------------------------------
+13
+ 
+xMgM3      5 1    1  6  -1  f  -1  m  -1  t  -1  x  -1  y  -2/3  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  3  m    0  1  1  x
+             2    0  1  1  t    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+xMnM3      1 1    0  1  1  m
+ 
+xFeM3      5 1    0  2   1  x  2/3  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -3  m    0  1  1  x
+             2    0  1  -1  t    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xFe3M3     1 1    0  1  1  f
+ 
+xTiM3      1 1    0  1  1  t
+ 
+xAlM3      1 1    0  1  1  y
+ 
+xMgM12     1 1    1  3  1/3  Q  -1  m  -1  x
+ 
+xMnM12     1 1    0  1  1  m
+ 
+xFeM12     1 1    0  2  -1/3  Q   1  x
+ 
+xSiT       1 1    1/2  2  -1/2  f  -1/2  y
+ 
+xAlT       1 1    1/2  2  1/2  f  1/2  y
+ 
+xOHV       1 1    1  1  -1  t
+ 
+xOV        1 1    0  1  1  t
+% -------------------------------------------------
+ 
+phl     4    5  xMgM3 1  xMgM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 0  0  0  0  0  0  
+ 
+annm    4    5  xFeM3 1  xFeM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 1  0  0  0  0  0 
+  make 1 ann 1
+  delG(mod) -3  0  0   
+ 
+obi     4    5  xFeM3 1  xMgM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 1/3  0  0  0  0  1  
+  make  2      ann  1/3  phl  2/3
+  delG(od)  -3  0  0     
+ 
+east    1    4  xAlM3 1  xMgM12 2  xAlT 2  xOHV 2  
+  check 0  0  1  0  0  0  
+ 
+tbi     4    5  xTiM3 1  xMgM12 2  xSiT 1  xAlT 1  xOV 2  
+  check 0  0  0  0  1  0  
+  make 3 phl 1 br -1 ru 1
+  delG(make)   55  0  0     
+        
+fbi     1    4  xFe3M3 1  xMgM12 2  xAlT 2  xOHV 2  
+  check 0  0  0  1  0  0  
+  make 3 east 1  gr -1/2 andr 1/2         
+  delG(make)   -3  0  0    
+               
+mmbi      4    5  xMnM3 1  xMnM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 0  1  0  0  0  0  
+  make 1 mnbi 1
+  delG(rcal)   -7.89  0  0
+
+% ===========================================================================
+
+
+
+opx  7  1
+
+verbatim
+% =================================================================
+% orthopyroxene: CFMMnASO
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+% 
+% coded by axe attack on 07 March 2011 (W from 15-4-11)
+% 
+% E-m   Formula                             Mixing sites
+%                   M1                    M2                T*             
+%                   Mg  Fe  Mn  Fe3 Al    Mg  Fe  Mn  Ca    Si  Al      
+% en     Mg2Si2O6   1   0   0   0   0     1   0   0   0     2   0       
+% fs     Fe2Si2O6   0   1   0   0   0     0   1   0   0     2   0       
+% fm     MgFeSi2O6  1   0   0   0   0     0   1   0   0     2   0     - ordered intermediate       
+% mgts   MgAl2SiO6  0   0   0   0   1     1   0   0   0     1   1       
+% fopx   MgFe2SiO6  0   0   0   1   0     1   0   0   0     1   1       
+% mnopx  Mn2Si2O6   0   0   1   0   0     0   0   1   0     2   0       
+% odi    CaMgSi2O6  1   0   0   0   0     0   0   0   1     2   0  
+% *use 1/4 entropy of mixing from T-site         
+%
+% x -> (xFeM1 + xFeM2)/(xFeM1 + xFeM2 + xMgM1 + xMgM2)
+% m -> xMnM1
+% y -> xAlM1
+% f -> xFe3M1
+% c -> xCaM2
+% Q -> 2 xFeM2/(xFeM2 + xMgM2) - 2 x        - order variable
+% -------------------------------------------------
+verbatim
+ 
+  x(opx)           0.3
+  m(opx)           0.02
+  y(opx)           0.1
+  f(opx)           0.03
+  c(opx)           0.05
+  Q(opx)           0.4
+% -------------------------------------------------
+ 
+p(en)      5 1    1  6  -1/2  Q  -1  c  -1  f  -1  m  -1  x  -1  y
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  1  c    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fs)      6 1    0  2  -1/2  Q   1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(fm)      6 1    0  1   1  Q
+             2    0  1  -1  c    0  1  1  Q
+             2    0  1  -1  m    0  1  1  Q
+             2    0  1  -1  c    0  1  1  x
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+p(mgts)    1 1    0  1  1  y
+ 
+p(fopx)    1 1    0  1  1  f
+ 
+p(mnopx)   1 1    0  1  1  m
+ 
+p(odi)     1 1    0  1  1  c
+% -------------------------------------------------
+asf
+W(en,fs)                   7         0         0
+W(en,fm)                   4         0         0
+W(en,mgts)                13         0     -0.15
+W(en,fopx)                11         0     -0.15
+W(en,mnopx)                5         0         0
+W(en,odi)               32.2         0      0.12
+W(fs,fm)                   4         0         0
+W(fs,mgts)                13         0     -0.15   
+W(fs,fopx)              11.6         0     -0.15
+W(fs,mnopx)              4.2         0         0
+W(fs,odi)              25.54         0     0.084   
+W(fm,mgts)                17         0     -0.15   
+W(fm,fopx)                15         0     -0.15
+W(fm,mnopx)              5.1         0         0
+W(fm,odi)              22.54         0     0.084
+W(mgts,fopx)               1         0         0
+W(mgts,mnopx)             12         0     -0.15
+W(mgts,odi)             75.4         0     -0.94
+W(fopx,mnopx)           10.6         0     -0.15
+W(fopx,odi)             73.4         0     -0.94
+W(mnopx,odi)           24.54         0     0.084
+
+a(en)                 1         0         0
+a(fs)                 1         0         0
+a(fm)                 1         0         0
+a(mgts)               1         0         0
+a(fopx)               1         0         0
+a(mnopx)              1         0         0
+a(odi)              1.2         0         0
+
+% -------------------------------------------------
+11
+ 
+xMgM1      6 1    1  5  1/2  Q  -1  f  -1  m  -1  x  -1  y
+             2    0  1  -1/2  c    0  1  1  Q
+             2    0  1  -1/2  m    0  1  1  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM1      6 1    0  2  -1/2  Q   1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xMnM1      1 1    0  1  1  m
+ 
+xFe3M1     1 1    0  1  1  f
+ 
+xAlM1      1 1    0  1  1  y
+ 
+xMgM2      5 1    1  4  -1/2  Q  -1  c  -1  m  -1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  1  c    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xFeM2      5 1    0  2  1/2  Q   1  x
+             2    0  1  -1/2  c    0  1  1  Q
+             2    0  1  -1/2  m    0  1  1  Q
+             2    0  1  -1  c    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMnM2      1 1    0  1  1  m
+ 
+xCaM2      1 1    0  1  1  c
+ 
+xSiT       1 1    1  2  -1/2  f  -1/2  y
+ 
+xAlT       1 1    0  2  1/2  f  1/2  y
+% -------------------------------------------------
+ 
+en      1    3  xMgM1 1  xMgM2 1  xSiT 1/2  
+  check 0  0  0  0  0  0  
+ 
+fs      1    3  xFeM1 1  xFeM2 1  xSiT 1/2  
+  check 1  0  0  0  0  0  
+ 
+fm      1    3  xMgM1 1  xFeM2 1  xSiT 1/2  
+  check 1/2  0  0  0  0  1  
+  make  2       en  1/2   fs  1/2
+  delG(od)    -6.6  0  0     
+ 
+mgts    1.41421 4  xAlM1 1  xMgM2 1  xSiT 1/4  xAlT 1/4  
+  check 0  0  1  0  0  0  
+ 
+fopx    1.41421 4  xFe3M1 1  xMgM2 1  xSiT 1/4  xAlT 1/4  
+  check 0  0  0  1  0  0  
+  make 3  mgts 1   gr -1/2  andr 1/2 
+  delG(make)   2  0  0    
+ 
+mnopx   1    3  xMnM1 1  xMnM2 1  xSiT 1/2  
+  check 0  1  0  0  0  0  
+  make 1 pxmn 2
+  delG(rcal)  6.68  0  0                           
+ 
+odi     1    3  xMgM1 1  xCaM2 1  xSiT 1/2  % ortho-diopside
+  check 0  0  0  0  1  0  
+  make 1 di 1
+  delG(tran) -0.1  0.000211  0.005                
+% =================================================================
+
+
+sa  5  1
+
+verbatim
+% =================================================================
+% sapphirine: FMASO
+%
+% Wheller, CJ & Powell, R (2014). A new thermodynamic model for
+% sapphirine: calculated phase equilibria in K2O-FeO-MgO-Al2O3-
+% SiO2-H2O-TiO2-Fe2O3. Journal of Metamorphic Geology, 32, 287-299.
+%
+% coded by axe attack on 14 August 2013
+% 
+% E-m   Formula                         Mixing sites
+%                       M3                        M456          T             
+%                       Mg    Fe    Fe3   Al      Mg    Fe      Si    Al      
+% spr4  Mg4Al8Si2O20    1     0     0     0       3     0       1     0       
+% spr5  Mg3Al10SiO20    0     0     0     1       3     0       0     1       
+% fspm  Fe4Al8Si2O20    0     1     0     0       0     3       1     0       
+% spro  Fe3MgAl8Si2O20  1     0     0     0       0     3       1     0    - ordered intermediate   
+% ospr  Mg3FeAl9SiO20   0     0     1     0       3     0       0     1       
+%
+% x -> (xFeM3 + 3 xFeM456)/(xFeM3 + 3 xFeM456 + xMgM3 + 3 xMgM456)
+% y -> xAlM3
+% f -> xFe3M3
+% Q -> 4 (-x + xFeM456)      - order variable
+% -------------------------------------------------
+verbatim
+	
+  x(sa)            0.1
+  y(sa)            0.3
+  f(sa)            0.05
+  Q(sa)            0.05 range -1 1
+% -------------------------------------------------
+ 
+p(spr4)    1 1    1  4  -1/4  Q  -1  f  -1  x  -1  y
+ 
+p(spr5)    1 1    0  1  1  y
+ 
+p(fspm)    3 1    0  2   1  x  -3/4  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(spro)    3 1    0  1   1  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+p(ospr)    1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(spr4,spr5)              10           0     -0.02
+W(spr4,fspm)              16           0         0
+W(spr4,spro)              12           0         0
+W(spr4,ospr)               8           0     -0.02
+W(spr5,fspm)              19           0     -0.02
+W(spr5,spro)              22           0     -0.02
+W(spr5,ospr)               1           0         0
+W(fspm,spro)               4           0         0
+W(fspm,ospr)            17.6           0     -0.02
+W(spro,ospr)              20           0     -0.02
+ 
+% -------------------------------------------------
+8
+ 
+xMgM3      3 1    1  4  -1  f  -1  x  -1  y  3/4  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM3      3 1    0  2   1  x  -3/4  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xFe3M3     1 1    0  1  1  f
+ 
+xAlM3      1 1    0  1  1  y
+ 
+xMgM456    1 1    1  2  -1/4  Q  -1  x
+ 
+xFeM456    1 1    0  2  1/4  Q   1  x
+ 
+xSiT       1 1    1  2  -1  f  -1  y
+ 
+xAlT       1 1    0  2   1  f   1  y
+% -------------------------------------------------
+ 
+spr4    1    3  xMgM3 1  xMgM456 3  xSiT 1  
+  check 0  0  0  0  
+ 
+spr5    1    3  xAlM3 1  xMgM456 3  xAlT 1  
+  check 0  1  0  0  
+ 
+fspm    1    3  xFeM3 1  xFeM456 3  xSiT 1  
+  check 1  0  0  0  
+  make  1     fspr    1
+  delG(mod)       -2           0           0
+ 
+spro    1    3  xMgM3 1  xFeM456 3  xSiT 1  
+  check 3/4  0  0  1  
+  make  2     fspr  3/4 spr4  1/4
+  delG(od)       -3.5          0           0
+ 
+ospr    1    3  xFe3M3 1  xMgM456 3  xAlT 1  
+  check 0  0  1  0  
+  make  3     andr  1/2   gr -1/2  spr5  1
+  delG(make)      -16          0           0
+% =================================================================
+
+
+cd  4  1
+
+verbatim
+% =================================================================
+% Cordierite: MnFMASH
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+% 
+% coded by axe attack on 11 October 2011
+% 
+% E-m   Formula                      Mixing sites
+%                              X                   H             
+%                              Fe    Mg    Mn      H2O   v       
+% crd   Mg2Al4Si5O18           0     2     0       0     1       
+% fcrd  Fe2Al4Si5O18           2     0     0       0     1       
+% hcrd  Mg2Al4Si5O17(OH)2      0     2     0       1     0   
+% mncd Mg2Al4Si5O18            0     0     2       0     1
+%
+% x -> xFeX/(xFeX + xMgX) 
+% m -> xMnX
+% h -> xH2OH
+% -------------------------------------------------
+verbatim 
+ 
+  x(cd)            0.3
+  m(cd)            0.02
+  h(cd)            0.7
+% -------------------------------------------------
+ 
+p(crd)      2 1    1  3  -1  h  -1  m  -1  x
+              2    0  1  1  m    0  1  1  x
+ 
+p(fcrd)     2 1    0  1   1  x
+              2    0  1  -1  m    0  1  1  x
+ 
+p(hcrd)     1 1    0  1  1  h
+ 
+p(mncd)     1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(crd,fcrd)                 8         0         0
+W(crd,hcrd)                 0         0         0
+W(crd,mncd)                 6         0         0
+W(fcrd,hcrd)                9         0         0
+W(fcrd,mncd)                4         0         0
+W(hcrd,mncd)                6         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+ 
+xH2OH      1 1    0  1  1  h
+ 
+xvH        1 1    1  1  -1  h
+% -------------------------------------------------
+ 
+crd     1    2  xMgX 2  xvH 1  
+  check 0  0  0  
+ 
+fcrd    1    2  xFeX 2  xvH 1  
+  check 1  0  0  
+ 
+hcrd    1    2  xMgX 2  xH2OH 1  
+  check 0  0  1  
+ 
+mncd    1    2  xMnX 2  xvH 1  
+  check 0  1  0 
+  make 1 equilibrium  mncrd 1
+  delG(rcal)  -4.21  0  0
+   
+% =================================================
+
+
+st  5  1
+
+verbatim
+% =================================================================
+% staurolite: FMMnASHTO
+% 
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% coded by axe attack on 13 July 2011
+% 
+%
+%  E-m    Formula                                 Mixing sites
+%                                    X                   Y                         
+%                                    Mg    Fe    Mn      Al    Fe3   Ti    v       
+%  mstm   Mg4Al18Si7.5O44(OH)4       4     0     0       2     0     0     0       
+%  fst    Fe4Al18Si7.5O44(OH)4       0     4     0       2     0     0     0       
+%  mnstm  Mn4Al18Si7.5O44(OH)4       0     0     4       2     0     0     0       
+%  msto   Mg4Fe2Al16Si7.5O44(OH)4    4     0     0       0     2     0     0       
+%  mstt   Mg4Ti1.5Al16Si7.5O44(OH)4  4     0     0       0     0     3/2   1/2     
+%    
+% x -> xFeX/(xFeX + xMgX)
+% m -> xMnX
+% f -> xFe3Y
+% t -> xTiY
+% -------------------------------------------------
+verbatim
+
+  x(st)            0.88
+  m(st)            0.02
+  f(st)            0.05
+  t(st)            0.04
+% -------------------------------------------------
+ 
+p(mstm)    2 1    1  4  -1  f  -1  m  -1  x  -4/3  t
+             2    0  1  1  m    0  1  1  x
+ 
+p(fst)     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnstm)   1 1    0  1  1  m
+ 
+p(msto)    1 1    0  1  1  f
+ 
+p(mstt)    1 1    0  1  4/3  t
+% -------------------------------------------------
+sf
+W(mstm,fst)               16         0         0
+W(mstm,mnstm)             12         0         0
+W(mstm,msto)               2         0         0
+W(mstm,mstt)              20         0         0
+W(fst,mnstm)               8         0         0
+W(fst,msto)               18         0         0
+W(fst,mstt)               36         0         0
+W(mnstm,msto)             14         0         0
+W(mnstm,mstt)             32         0         0
+W(msto,mstt)              30         0         0
+ 
+% -------------------------------------------------
+7
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+ 
+xAlY       1 1    1  2  -1  f  -4/3  t
+ 
+xFe3Y      1 1    0  1  1  f
+ 
+xTiY       1 1    0  1  1  t
+ 
+xvY        1 1    0  1  1/3  t
+% -------------------------------------------------
+ 
+mstm    1    2  xMgX 4  xAlY 2  
+  check 0  0  0  0  
+  make  1  mst 1
+  delG(tran)  -8  0  0    
+ 
+fst     1    2  xFeX 4  xAlY 2  
+  check 1  0  0  0  
+ 
+mnstm   1    2  xMnX 4  xAlY 2  
+  check 0  1  0  0 
+  make 1 mnst 1
+  delG(rcal)  -0.19  0  0 
+ 
+msto    1    2  xMgX 4  xFe3Y 2  
+  check 0  0  1  0  
+  make 3  mst 1 gr -1 andr 1
+  delG(make)   9  0  0   
+ 
+mstt   3.0792  3  xMgX 4  xTiY 3/2  xvY 1/2  
+  check 0  0  0  3/4  
+  make 3  mst 1 cor -1 ru 3/2
+  delG(make)   13  0  0
+% ====================================================================
+
+chl  8  1
+
+verbatim
+% =================================================================
+% chlorite: FMMnASHO
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+%
+% 
+% coded by axe attack on 08 March 2011
+% 
+% E-m     Formula                                    Mixing sites
+%                             M1                M23           M4                  T2            
+%                             Mg  Mn  Fe  Al    Mg  Mn  Fe    Mg  Fe  Fe3 Al    Si  Al      
+% clin    Mg5Al2Si3O10(OH)8   1   0   0   0     4   0   0     0   0   0   1     1   1       
+% afchl   Mg6Si4O10(OH)8      1   0   0   0     4   0   0     1   0   0   0     2   0       
+% ames    Mg4Al4Si2O10(OH)8   0   0   0   1     4   0   0     0   0   0   1     0   2       
+% daph    Fe5Al2Si3O10(OH)8   0   0   1   0     0   0   4     0   0   0   1     1   1       
+% ochl1   Fe5MgSi4O10(OH)8    1   0   0   0     0   0   4     0   1   0   0     2   0    - ordered intermediate       
+% ochl4   FeMg5Si4O10(OH)8    0   0   1   0     4   0   0     1   0   0   0     2   0    - ordered intermediate       
+% f3clin  Mg5AlFeSi3O10(OH)8  1   0   0   0     4   0   0     0   0   1   0     1   1       
+% mmchl   Mn5Al2Si3O10(OH)8   0   1   0   0     0   4   0     0   0   0   1     1   1       
+%                 
+% x -> (xFeM1 + 4 xFeM23 + xFeM4)/(xFeM1 + 4 xFeM23 + xFeM4 + xMgM1 + 4 xMgM23 + xMgM4) 
+% y -> (xAlM1 + xAlM4)/2 
+% f -> xFe3M4
+% m -> xMnM23
+% QAl -> (xAlM4 - xAlM1)/2                 - order variable
+% Q1 -> x - xFeM1/(xFeM1 + xMgM1)          - order variable
+% Q4 -> x - xFeM4/(xFeM4 + xMgM4)          - order variable
+% -------------------------------------------------
+verbatim
+ 
+  x(chl)             0.3
+  y(chl)             0.55
+  f(chl)             0.05
+  m(chl)             0.03
+  QAl(chl)           0.42  range -1.000 1.000
+  Q1(chl)           -0.18  range -1.000 1.000
+  Q4(chl)           -0.26  range -1.000 1.000
+% -------------------------------------------------
+ 
+p(clin)    11 1    0  4  -1/4  Q1  -1  m  2  QAl  -5/4  Q4
+             2    0  1  1/4  m    0  1  1  Q1
+             2    0  1  5/4  f    0  1  1  Q4
+             2    0  1  -1/4  Q1    0  1  1  QAl
+             2    0  1  5/4  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1/4  Q1    0  1  1  y
+             2    0  1  5/4  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+p(afchl)   10 1    1  6  -1  f  -1  QAl  -1  y  -2  x  5/4  Q1  9/4  Q4
+             2    0  1  -5/4  m    0  1  1  Q1
+             2    0  1  -9/4  f    0  1  1  Q4
+             2    0  1  5/4  Q1    0  1  1  QAl
+             2    0  1  -9/4  Q4    0  1  1  QAl
+             2    0  1  2  f    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -5/4  Q1    0  1  1  y
+             2    0  1  -9/4  Q4    0  1  1  y
+             2    0  1  3  x    0  1  1  y
+ 
+p(ames)    1 1    0  2  -1  QAl   1  y
+ 
+p(daph)    11 1    0  2  1/4  Q1  5/4  Q4
+             2    0  1  -1/4  m    0  1  1  Q1
+             2    0  1  -5/4  f    0  1  1  Q4
+             2    0  1  1/4  Q1    0  1  1  QAl
+             2    0  1  -5/4  Q4    0  1  1  QAl
+             2    0  1  1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -1/4  Q1    0  1  1  y
+             2    0  1  -5/4  Q4    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+p(ochl1)   7 1    0  2  -1  Q4   1  x
+             2    0  1  1  f    0  1  1  Q4
+             2    0  1  1  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+p(ochl4)   9 1    0  3   1  x  -5/4  Q1  -5/4  Q4
+             2    0  1  5/4  m    0  1  1  Q1
+             2    0  1  5/4  f    0  1  1  Q4
+             2    0  1  -5/4  Q1    0  1  1  QAl
+             2    0  1  5/4  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  5/4  Q1    0  1  1  y
+             2    0  1  5/4  Q4    0  1  1  y
+             2    0  1  -2  x    0  1  1  y
+ 
+p(f3clin)   1 1    0  1  1  f
+ 
+p(mmchl)   1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(clin,afchl)             17         0         0
+W(clin,ames)              17         0         0
+W(clin,daph)              20         0         0
+W(clin,ochl1)             30         0         0
+W(clin,ochl4)             21         0         0
+W(clin,f3clin)             2         0         0
+W(clin,mmchl)              6         0         0
+W(afchl,ames)             16         0         0
+W(afchl,daph)             37         0         0
+W(afchl,ochl1)            20         0         0
+W(afchl,ochl4)             4         0         0
+W(afchl,f3clin)           15         0         0
+W(afchl,mmchl)            23         0         0
+W(ames,daph)              30         0         0
+W(ames,ochl1)             29         0         0
+W(ames,ochl4)             13         0         0
+W(ames,f3clin)            19         0         0
+W(ames,mmchl)             17         0         0
+W(daph,ochl1)             18         0         0
+W(daph,ochl4)             33         0         0
+W(daph,f3clin)            22         0         0
+W(daph,mmchl)              4         0         0
+W(ochl1,ochl4)            24         0         0
+W(ochl1,f3clin)         28.6         0         0
+W(ochl1,mmchl)            19         0         0
+W(ochl4,f3clin)           19         0         0
+W(ochl4,mmchl)            22         0         0
+W(f3clin,mmchl)            8         0         0 
+% -------------------------------------------------
+13
+ 
+xMgM1      7 1    1  5  -1  m   1  Q1   1  QAl  -1  x  -1  y
+             2    0  1  -1  m    0  1  1  Q1
+             2    0  1  1  Q1    0  1  1  QAl
+             2    0  1  1  m    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  -1  Q1    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+xMnM1      1 1    0  1  1  m
+ 
+xFeM1      7 1    0  2  -1  Q1   1  x
+             2    0  1  1  m    0  1  1  Q1
+             2    0  1  -1  Q1    0  1  1  QAl
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  1  Q1    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+xAlM1      1 1    0  2  -1  QAl   1  y
+ 
+xMgM23     8 1    1  4  -1/4  Q1  -1/4  Q4  -1  m  -1  x
+             2    0  1  1/4  m    0  1  1  Q1
+             2    0  1  1/4  f    0  1  1  Q4
+             2    0  1  -1/4  Q1    0  1  1  QAl
+             2    0  1  1/4  Q4    0  1  1  QAl
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1/4  Q1    0  1  1  y
+             2    0  1  1/4  Q4    0  1  1  y
+ 
+xMnM23     1 1    0  1  1  m
+ 
+xFeM23     8 1    0  3  1/4  Q1  1/4  Q4   1  x
+             2    0  1  -1/4  m    0  1  1  Q1
+             2    0  1  -1/4  f    0  1  1  Q4
+             2    0  1  1/4  Q1    0  1  1  QAl
+             2    0  1  -1/4  Q4    0  1  1  QAl
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1/4  Q1    0  1  1  y
+             2    0  1  -1/4  Q4    0  1  1  y
+ 
+xMgM4      7 1    1  5  -1  f   1  Q4  -1  QAl  -1  x  -1  y
+             2    0  1  -1  f    0  1  1  Q4
+             2    0  1  -1  Q4    0  1  1  QAl
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -1  Q4    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM4      7 1    0  2  -1  Q4   1  x
+             2    0  1  1  f    0  1  1  Q4
+             2    0  1  1  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+xFe3M4     1 1    0  1  1  f
+ 
+xAlM4      1 1    0  2   1  QAl   1  y
+ 
+xSiT2      1 1    1  2  -1/2  f  -1  y
+ 
+xAlT2      1 1    0  2  1/2  f   1  y
+% -------------------------------------------------
+ 
+clin    4    5  xMgM1 1  xMgM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 0  1/2  0  0  1/2  0  0  
+ 
+afchl   1    4  xMgM1 1  xMgM23 4  xMgM4 1  xSiT2 2  
+  check 0  0  0  0  0  0  0  
+ 
+ames    1    4  xAlM1 1  xMgM23 4  xAlM4 1  xAlT2 2  
+  check 0  1  0  0  0  0  0  
+ 
+daph    4    5  xFeM1 1  xFeM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 1  1/2  0  0  1/2  0  0  
+ 
+ochl1   1    4  xMgM1 1  xFeM23 4  xFeM4 1  xSiT2 2  
+  check 5/6  0  0  0  0  5/6  -1/6  
+  make  3    afchl    1 clin   -1 daph    1
+  delG(od)     3    0    0
+ 
+ochl4   1    4  xFeM1 1  xMgM23 4  xMgM4 1  xSiT2 2  
+  check 1/6  0  0  0  0  -5/6  1/6  
+  make  3    afchl    1 clin -1/5 daph  1/5
+  delG(od)     2.4    0    0
+ 
+f3clin  4    5  xMgM1 1  xMgM23 4  xFe3M4 1  xSiT2 1  xAlT2 1  
+  check 0  0  1  0  0  0  0  
+  make  3  clin  1  gr  -1/2  andr  1/2    
+  delG(make)   2  0  0      
+ 
+mmchl   4    5  xMnM1 1  xMnM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 0  1/2  0  1  1/2  0  0  
+  make 1 mnchl 1
+  delG(rcal)  -5.67  0  0     
+% =================================================================
+
+ 
+ctd  4  1
+
+verbatim
+% =================================================================
+% Chloritoid: FMMnASHO
+%
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+% 
+%
+% coded by axe attack on 09 July 2011 
+% 
+% E-m   Formula                         Mixing sites
+%                               M1A           M1B                 
+%                               Al    Fe3     Fe    Mg    Mn      
+% mctd  MgAl2SiO5(OH)2          1/2   0       0     1     0       
+% fctd  FeAl2SiO5(OH)2          1/2   0       1     0     0       
+% mnct  MnAl2SiO5(OH)2          1/2   0       0     0     1       
+% ctdo  MgFe0.5Al1.5SiO5(OH)2   0     1/2     0     1     0       
+%
+% x -> xFeM1B/(xFeM1B + xMgM1B)
+% m -> xMnM1B
+% f -> xFe3M1A
+% -------------------------------------------------
+verbatim
+ 
+  x(ctd)         0.88
+  m(ctd)         0.01
+  f(ctd)         0.02
+% -------------------------------------------------
+ 
+p(mctd)    2 1    1  3  -1  f  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fctd)    2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnct)    1 1    0  1  1  m
+ 
+p(ctdo)    1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(mctd,fctd)              4         0         0
+W(mctd,mnct)              3         0         0
+W(mctd,ctdo)              1         0         0
+W(fctd,mnct)              3         0         0
+W(fctd,ctdo)              5         0         0
+W(mnct,ctdo)              4         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xAlM1A     1 1    1  1  -1  f
+ 
+xFe3M1A    1 1    0  1  1  f
+ 
+xFeM1B     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgM1B     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnM1B     1 1    0  1  1  m
+% -------------------------------------------------
+ 
+mctd    1    2  xAlM1A 1/2  xMgM1B 1  
+  check 0  0  0  
+ 
+fctd    1    2  xAlM1A 1/2  xFeM1B 1  
+  check 1  0  0  
+ 
+mnct   1    2  xAlM1A 1/2  xMnM1B 1  
+  check 0  1  0 
+  make 1 mnctd 1
+  delG(rcal) 0.66  0  0
+ 
+ctdo    1    2  xFe3M1A 1/2  xMgM1B 1  
+  check 0  0  1  
+  make  3  mctd 1   andr  1/4   gr -1/4
+  delG(make) 13.5  0  0    
+% ================================================= 
+
+
+sp 4  1
+
+verbatim
+% ====================================================================
+% Spinel: FMATO
+%
+% White, RW, Powell, R & Clarke, GL (2002) The interpretation of reaction textures
+% in Fe-rich metapelitic granulites of the Musgrave Block, central Australia:
+% constraints from mineral equilibria calculations in the system K2O-FeO-MgO-Al2O3-
+% SiO2-H2O-TiO2-Fe2O3. Journal of Metamorphic Geology, 20, 41-55.
+%
+% E-m  Formula   "Mixing sites" (not true sites)
+%                M1             M2        
+%                Mg    Fe       Al    Fe3   Ti     
+% herc FeAl2O4   0     1        2     0     0 
+% sp   MgAl2O4   1     0        2     0     0
+% mt   Fe3O4     0     1        0     2     0
+% usp  Fe2TiO4   0     1        0     0     1
+%
+% x -> xFe2M/(xMgM + xFe2M)
+% y -> xAlM/(xAlM + xFe3M + 2 xTiM)
+% z -> 2 xTiM/(xAlM + xFe3M + 2 xTiM)
+% --------------------------------------------------
+verbatim
+
+ x(sp)    0.9    
+ y(sp)    0.95   
+ z(sp)    0.01   
+
+% --------------------------------------------------
+
+  p(herc)  2 1    0  1   1  y
+             2   -1  1   1  x    1  1   1  z
+
+  p(sp)    1 2    1  1  -1  x    1  1   1  z
+
+  p(mt)    1 1    1  2  -1  y -1  z
+
+  p(usp)   1 1    0  1   1  z
+
+% --------------------------------------------------
+
+  sf
+
+  W(herc,sp)       0  0  0
+  W(herc,mt)    18.5  0  0
+  W(herc,usp)     27  0  0
+  W(sp,mt)        40  0  0
+  W(sp,usp)       30  0  0   
+  W(mt,usp)        0  0  0
+
+% --------------------------------------------------
+
+  5     % site fractions
+
+  x(Al)       1 1    0  1  1  y
+
+  x(Fe3)      1 1    1  2 -1  y -1  z
+
+  x(Ti)       1 1    0  1  1  z
+
+  x(Mg)       1 1    1  1 -1  x
+
+  x(Fe2)      1 1    0  1  1  x
+
+
+% --------------------------------------------------
+
+   herc    1  2    x(Al)  1    x(Fe2)  1
+
+   sp      1  2    x(Al)  1    x(Mg)   1
+
+   mt      1  2    x(Fe3) 1    x(Fe2)  1
+
+   usp     1  2    x(Ti)  1    x(Fe2)  1
+
+% =================================================================
+
+
+     
+ilmm  5  1
+
+verbatim
+% =================================================================
+% Ilmenite: FMMnTO
+% 
+% Mn-free core model:
+% White, RW, Powell, R, Holland, TJB, Johnson, TE & 
+% Green, ECR (2014). New mineral activity-composition relations
+% for thermodynamic calculations in metapelitic systems.
+% Journal of Metamorphic Geology, 32, 261-286.
+%
+% Addition of Mn:
+% White, RW, Powell, R & Johnson, TE (2014). The effect of Mn
+% on mineral stability in metapelites revisited: new a-x
+% relations for manganese-bearing minerals. 
+% Journal of Metamorphic Geology, 32, 809-828.
+%
+%
+% This model may give implausibly high Mg contents, in which
+% case the older, Mg,Mn-free model ilm would be preferable.
+%
+% coded by axe attack on 08 March 2011
+% 
+% E-m   Formula                      Mixing sites
+%                  A                               B                   
+%                  Fe    Ti    Mg    Mn    Fe3     Fe    Ti    Fe3     
+% oilm  FeTiO3     1     0     0     0     0       0     1     0     - ordered ilm       
+% dilm  FeTiO3     1/2   1/2   0     0     0       1/2   1/2   0     - disordered ilm       
+% dhem  Fe2O3      0     0     0     0     1       0     0     1     - disordered hem       
+% geik  MgTiO3     0     0     1     0     0       0     1     0       
+% pnt   MnTiO3     0     0     0     1     0       0     1     0
+%
+% i -> 1 - xFe3A
+% g -> xMgA
+% m -> xMnA
+% Q -> xFeA - xFeB    - order variable
+% -------------------------------------------------
+verbatim
+
+  i(ilmm)           0.9
+  g(ilmm)           0.02
+  m(ilmm)           0.02
+  Q(ilmm)           0.85  range -1 1
+% -------------------------------------------------
+ 
+p(oilm)    1 1    0  1  1  Q
+ 
+p(dilm)    1 1    0  4  -1  g   1  i  -1  m  -1  Q
+ 
+p(dhem)    1 1    1  1  -1  i
+ 
+p(geik)    1 1    0  1  1  g
+ 
+p(pnt)     1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(oilm,dilm)            15.6         0         0
+W(oilm,dhem)            26.6         0         0
+W(oilm,geik)               4         0         0
+W(oilm,pnt)                2         0         0
+W(dilm,dhem)              11         0         0
+W(dilm,geik)               4         0         0
+W(dilm,pnt)                2         0         0
+W(dhem,geik)              36         0         0
+W(dhem,pnt)               25         0         0
+W(geik,pnt)                4         0         0
+ 
+% -------------------------------------------------
+8
+ 
+xFeA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  1/2  Q
+ 
+xTiA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xMgA       1 1    0  1  1  g
+ 
+xMnA       1 1    0  1  1  m
+ 
+xFe3A      1 1    1  1  -1  i
+ 
+xFeB       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xTiB       1 1    0  4  1/2  g  1/2  i  1/2  m  1/2  Q
+ 
+xFe3B      1 1    1  1  -1  i
+% -------------------------------------------------
+ 
+oilm    1    2  xFeA 1  xTiB 1  
+  check 1  0  0  1  
+  make  1  disordered    ilm    1
+  delG(od)      -13.6075   0.009426   0    % delG - dH + R Log[4]; dH = 15.6
+ 
+dilm    4    4  xFeA 1/2  xTiA 1/2  xFeB 1/2  xTiB 1/2  
+  check 1  0  0  0  
+  make  1   disordered   ilm    1
+  delG(od)     1.9928     -0.0021     0    % delG = G(equil,Landau) - G(equil,SF) 
+ 
+dhem     1    2  xFe3A 1  xFe3B 1  
+  check 0  0  0  0  
+  make  1  disordered    hem    1
+ 
+geik    1    2  xMgA 1  xTiB 1  
+  check 1  1  0  0  
+ 
+pnt     1    2  xMnA 1  xTiB 1  
+  check 1  0  1  0  
+% =================================================
+
+
+ilm 3   1
+
+verbatim
+% =================================================================
+% Ilmenite: FTO
+%
+% White, RW, Powell, R, Holland, TJB & Worley, BA (2000) The effect of TiO2 and
+% Fe2O3 on metapelitic assemblages at greenschist and amphibolite facies conditions:
+% mineral equilibria calculations in the system K2O-FeO-MgO-Al2O3-SiO2-H2O-TiO2-Fe2O3.
+% Journal of Metamorphic Geology, 18, 497-511.
+%
+% E-m   Formula    Mixing sites
+% 		   A            B
+                   Fe2 Ti Fe3   Fe2 Ti Fe3
+% oilm  FeTiO3      1   0   0    0   1   0     - ordered ilm
+% dilm  FeTiO3     1/2 1/2  0   1/2 1/2  0     - disordered ilm
+% dhem  Fe2O3       0   0   1    0   0   1     - disordered hem
+%
+% x(ilm) = 1 - xFe3A
+% Q(ilm) = x(Fe2,A) - x(Fe2,B)    - order variable
+% NOTE: Q(ilm) must have a range of -x to +x
+% --------------------------------------------------
+verbatim
+
+ x(ilm) 0.80           
+ Q(ilm) 0.55   range -0.99 0.99   
+
+% --------------------------------------------------
+ 
+
+% psub = {ph -> 1 - x, po -> Q, pd -> x - Q};
+
+  p(oilm)  1 1    0  1  1  Q
+  
+  p(dilm)  1 1    0  2  1  x -1  Q
+  
+  p(dhem)  1 1    1  1 -1  x 
+  
+% --------------------------------------------------
+
+ sf
+  
+  W(oilm,dilm)   15.6  0  0 
+  W(oilm,dhem)   26.6  0  0
+  W(dilm,dhem)     11  0  0    
+ 
+% --------------------------------------------------
+  6     % site fractions
+
+  xFe2A  1 1    0  2  1/2  x  1/2  Q
+  
+  xTiA   1 1    0  2  1/2  x -1/2  Q
+    
+  xFe3A  1 1    1  1 -1  x 
+    
+  xFe2B  1 1    0  2  1/2  x -1/2  Q
+    
+  xTiB   1 1    0  2  1/2  x  1/2  Q
+    
+  xFe3B  1 1    1  1 -1  x   
+  
+  
+% --------------------------------------------------
+
+   oilm      1  2    xFe2A  1  xTiB  1    
+         make  1 disordered ilm  1
+         delG(od)  -13.6075 0.009426 0  % delG - dH + R Log[4]; dH = 15.6
+         check 1 1
+               
+   dilm      4  4    xFe2A  1/2   xTiA  1/2   xFe2B  1/2   xTiB  1/2    
+         make  1 disordered ilm  1
+         delG(od)    1.9928 -0.0021 0    % delG = G(equil,Landau) - G(equil,SF) 
+         check 1 0
+                
+   dhem      1  2    xFe3A  1  xFe3B  1     
+         check 0 0
+         make 1 disordered  hem 1
+
+% ====================================================================  
+
+
+mt1 3 1
+
+verbatim
+% =============================================================
+% Magnetite: FTO
+%
+% Alternative magnetite: use for SUBSOLIDUS equilibria only! 
+% (greenschist->amphibolite grade) 
+%
+% White, RW, Powell, R, Holland, TJB & Worley, BA (2000) The effect of TiO2 and
+% Fe2O3 on metapelitic assemblages at greenschist and amphibolite facies conditions:
+% mineral equilibria calculations in the system K2O-FeO-MgO-Al2O3-SiO2-H2O-TiO2-Fe2O3.
+% Journal of Metamorphic Geology, 18, 497-511.
+%
+% E-m  Formula   "Mixing sites" (not true sites)
+%                T              M        
+%                Fe    Fe3      Fe    Fe3   Ti     
+% imt  Fe3O4     0     1        1     1     0
+% dmt  Fe3O4     1/3   2/3      2/3   4/3   0
+% usp  Fe2TiO4   1     0        1     0     1
+%
+% x -> 1/2 (1 - xTiM)
+% Q -> 1 - xFeT
+% =============================================================
+verbatim
+
+ x(mt1) 0.9704   % prop "mt"
+ Q(mt1) 0.7472   % x(Fe3,tet)
+
+% --------------------------------------------------
+% psub = {pi -> 3Q - 2x, pd -> 3x - 3Q, pu -> 1 - x};
+
+ p(imt)  1 1    0  2 -2  x  3  Q
+
+ p(dmt)  1 1    0  2  3  x -3  Q
+
+ p(usp)  1 1    1  1 -1  x
+
+% --------------------------------------------------
+
+sf
+
+ W(imt,dmt)    2.4  0  0
+ W(imt,usp)     1  0  0
+ W(dmt,usp)    -5  0  0
+% --------------------------------------------------
+ 5
+
+% sfsub = {xFe3oct -> x - Q/2, xFe2oct -> 1/2 + Q/2 - x/2,   xTioct -> 1/2 - 1/2 x,
+%          xFe3tet -> Q,       xFe2tet -> 1 - Q};
+
+ xTiM   1 1   1/2   1 -1/2  x
+ xFe3M  1 1    0    2   1   x -1/2 Q
+ xFeM   1 1   1/2   2 -1/2  x  1/2 Q
+ xFe3T  1 1    0    1   1   Q
+ xFeT   1 1    1    1  -1   Q
+% --------------------------------------------------
+
+% magnetic landau NOT included
+
+imt      4  3    xFe3M  1  xFeM  1  xFe3T  1
+    make  1  disordered mt  1
+    delG(od)     -1.8595  0.003166 0   % from dmt, - dHid - RT Log[16/27]
+    check 1 1                      %      dHid = 3.19
+
+dmt   27/4  4    xFe3M 4/3 xFeM 2/3 xFe3T  2/3 xFeT 1/3
+    make  1  disordered  mt  1
+    delG(od)  1.3305  -0.0011845  0    % taking off config dqf
+    check 1 2/3
+
+usp      4  3    xTiM  1  xFeM  1  xFeT  1
+    check 0 0
+
+% =====================================================================
+
+ksp0 1 san
+
+heme 1 hem
+
+mt0 1 mt
+ilm0 1 ilm
+
+ab     %0  1 ab
+
+Ni NiO 0.55 % to emulate QFM 700°C or so; 0.65 for 900°C
+
+ru sill and ky q H2O abh sph cz ta
+
+*

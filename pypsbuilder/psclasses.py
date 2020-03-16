@@ -1,5 +1,11 @@
-"""
-Base classes of pypsbuilder
+"""pypsbuilder classes used by builders.
+
+This module contains classes and tools providing API to THERMOCALC, parsing of
+outputs and storage of calculated invariant points and univariant lines.
+
+Todo:
+    * Implement own class for divariant fields
+
 """
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
@@ -26,7 +32,7 @@ popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
 
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
-
+"""list: List of two-element sets containing polymorphs."""
 
 class InitError(Exception):
     pass
@@ -43,28 +49,22 @@ class TCError(Exception):
 class TCAPI(object):
     """Class to access TC functionality in given working directory.
 
-    Retrieves rows pertaining to the given keys from the Table instance
-    represented by big_table.  Silly things may happen if
-    other_silly_variable is not None.
-
-    Args:
-        big_table: An open Bigtable Table instance.
-        keys: A sequence of strings representing the key of each table row
-            to fetch.
-        other_silly_variable: Another optional variable, that has a much
-            longer name than the other args, and which does nothing.
-
-    Returns:
-        A dict mapping keys to the corresponding table row data
-        fetched. Each row is represented as a tuple of strings. For
-        example:
-
-        {'Serak': ('Rigel VII', 'Preparer'),
-         'Zim': ('Irk', 'Invader'),
-         'Lrrr': ('Omicron Persei 8', 'Emperor')}
-
-        If a key from the keys argument is missing from the dictionary,
-        then that row was not found in the table.
+    Attributes:
+        workdir (pathlib.Path): Path instance pointing to working directory.
+        tcexe (pathlib.Path): Path instance pointing to *THERMOCALC* executable.
+        drexe (pathlib.Path): Path instance pointing to *dawpd* executable
+        name (str): Basename of the project.
+        axname (str): Name of a-x file in use.
+        OK (bool): Boolean value. True when all settings are correct and
+            THERMOCALC is ready to be used by builders.
+        excess (set): Set of excess phases from scriptfile.
+        trange (tuple): Tuple of temperature window from setdefTwindow
+        prange (tuple): Tuple of pressure window from setdefPwindow
+        bulk (list): List of bulk composition(s).
+        ptx_steps (int): Number of compositional steps for T-X and P-X sections.
+        phases (list): List of names of available phases.
+        TCenc (str): Encoding used for THERMOCALC output text files.
+            Default 'mac-roman'.
 
     Raises:
         InitError: An error occurred accessing the bigtable.Table object.
@@ -285,77 +285,105 @@ class TCAPI(object):
 
     @property
     def scriptfile(self):
+        """pathlib.Path: Path to scriptfile."""
         return self.workdir.joinpath('tc-' + self.name + '.txt')
 
     @property
     def drfile(self):
+        """pathlib.Path: Path to -dr output file."""
         return self.workdir.joinpath('tc-' + self.name + '-dr.txt')
 
     @property
     def logfile(self):
+        """pathlib.Path: Path to THERMOCALC log file."""
         return self.workdir.joinpath('tc-log.txt')
 
     @property
     def icfile(self):
+        """pathlib.Path: Path to ic file."""
         return self.workdir.joinpath('tc-' + self.name + '-ic.txt')
 
     @property
     def itfile(self):
+        """pathlib.Path: Path to it file."""
         return self.workdir.joinpath('tc-' + self.name + '-it.txt')
 
     @property
     def ofile(self):
+        """pathlib.Path: Path to project output file."""
         return self.workdir.joinpath('tc-' + self.name + '-o.txt')
 
     @property
     def csvfile(self):
+        """pathlib.Path: Path to csv file."""
         return self.workdir.joinpath('tc-' + self.name + '-csv.txt')
 
     @property
     def drawpdfile(self):
+        """pathlib.Path: Path to drawpd file."""
         return self.workdir.joinpath('dr-' + self.name + '.txt')
 
     @property
     def axfile(self):
+        """pathlib.Path: Path to used a-x file."""
         return self.workdir.joinpath('tc-' + self.axname + '.txt')
 
     @property
     def prefsfile(self):
+        """pathlib.Path: Path to THERMOCALC prefs file."""
         return self.workdir.joinpath('tc-prefs.txt')
 
     @property
     def tcversion(self):
+        """str: Version identification of THERMCALC executable."""
         return self.tcout.split('\n')[0]
 
     @property
     def tcnewversion(self):
+        """bool: False for THERMOCALC older than 3.5."""
         return not float(self.tcversion.split()[1]) < 3.5
 
     @property
     def datasetfile(self):
-        return self.workdir.joinpath(self.tcout.split('using ')[1].split(' produced')[0])
+        """pathlib.Path: Path to dataset file."""
+        return self.workdir.joinpath(self.dataset.split(' produced')[0])
 
     @property
     def dataset(self):
+        """str: Version identification of thermodynamic dataset in use."""
         return self.tcout.split('using ')[1].split('\n')[0]
 
     def parse_logfile(self, **kwargs):
-        # common api for logfile parsing
+        """Parser for THERMOCALC output.
+
+        It parses the outputs of THERMOCALC after calculation.
+
+        Args:
+            tx (bool): True for T-X and P-X calculations. Default False.
+
+        Returns:
+            status (str): Result of parsing. 'ok', 'nir' (nothing in range) or 'bombed'.
+            variance (int): parsed variance?
+            pts (numpy.array): 2D array of calculated coordinates (p, T), (C, T)
+            or (p, C) for P-T, T-X or P-X pseudosections).
+            ptcoords (numpy.array): Array of calculated p, T values. Returned
+            only when tx od px is True.
+            res (list): List of dicts with data and ptguess keys. One item for
+            invariant points, more items for univariant lines.
+            output (str): Full nonparsed THERMOCALC output.
+
+        Example:
+            Parse output after univariant line calculation in P-T pseudosection::
+
+                >>> tc = TCAPI('pat/to/dir')
+                >>> status, variance, pts, res, output = tc.parse_logfile()
+        """
         if self.tcnewversion:
             return self.parse_logfile_new(**kwargs)
         else:
             return self.parse_logfile_old(output=kwargs.get('output', None))
 
     def parse_logfile_new(self, **kwargs):
-        # res is list of dicts with data and ptguess keys
-        # data is dict with keys ['axvars', 'sitefractions', 'oxides', 'modes', 'factors', 'tdprops', 'mu', 'endmembers']
-        # axvar and sitefractions contains keys of compound phases
-        # oxides contains keys of all phases plus 'bulk'
-        # modes contains keys of all phases
-        # factors contains keys of all phases
-        # tdprops contains keys of all phases plus 'sys'
-        # mu contains keys of all phases compunds, e.g g(alm) for compund phase and q for simple phase
-        # endmembers contains keys of all non-simple phases compunds, e.g. g(py)
         tx = kwargs.get('tx', False)
         with self.logfile.open('r', encoding=self.TCenc) as f:
             output = f.read()
@@ -566,6 +594,7 @@ class TCAPI(object):
         return status, variance, np.array(pts).T, res, output
 
     def parse_dogmin(self):
+        """Dogmin parser."""
         try:
             with self.icfile.open('r', encoding=self.TCenc) as f:
                 resic = f.read()
@@ -578,7 +607,22 @@ class TCAPI(object):
         return res, resic
 
     def update_scriptfile(self, **kwargs):
-        # Store scriptfile content and initialize dicts
+        """Method to update scriptfile.
+
+        This methodcould be used to read or update ptguess or dogmin settings.
+
+        Args:
+            guesses (list): List of lines defining ptguesses. If None guesses
+                are not modified. Default None.
+            get_old_guesses (bool): When True method returns existing ptguess
+                before possible modification. Default False.
+            dogmin (str): Argument of dogmin script. Could be 'no' or 'yes' or
+                'yes X', where X is log level. When None no modification is
+                done. Default None.
+            which (set): Set of phases used for dogmin.
+            p (float): Pressure for dogmin calculation
+            T (float): Temperature for dogmin calculation
+        """
         guesses = kwargs.get('guesses', None)
         get_old_guesses = kwargs.get('get_old_guesses', False)
         dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
@@ -619,6 +663,7 @@ class TCAPI(object):
             return None
 
     def update_ptxsteps(self, steps=None):
+        """Modify number of compositional steps between two bulks."""
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             sc = f.readlines()
         bix = [ix for ix, ln in enumerate(sc) if ln.strip().startswith('setbulk')]
@@ -667,6 +712,19 @@ class TCAPI(object):
         return prange, trange, steps, prec
 
     def calc_t(self, phases, out, **kwargs):
+        """Method to run THERMOCALC to find univariant line using Calc T at P strategy.
+
+        Args:
+            phases (set): Set of present phases
+            out (set): Set of single zero mode phase
+            prange (tuple): Tempareture range for calculation
+            trange (tuple): Pressure range for calculation
+            steps (int): Number of steps
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (prange[1] - prange[0]) / steps
         tmpl = '{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
@@ -675,6 +733,19 @@ class TCAPI(object):
         return tcout, ans
 
     def calc_p(self, phases, out, **kwargs):
+        """Method to run THERMOCALC to find univariant line using Calc P at T strategy.
+
+        Args:
+            phases (set): Set of present phases
+            out (set): Set of single zero mode phase
+            prange (tuple): Tempareture range for calculation
+            trange (tuple): Pressure range for calculation
+            steps (int): Number of steps
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (trange[1] - trange[0]) / steps
         tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
@@ -683,6 +754,19 @@ class TCAPI(object):
         return tcout, ans
 
     def calc_pt(self, phases, out, **kwargs):
+        """Method to run THERMOCALC to find invariant point.
+
+        Args:
+            phases (set): Set of present phases
+            out (set): Set of two zero mode phases
+            prange (tuple): Tempareture range for calculation
+            trange (tuple): Pressure range for calculation
+            steps (int): Number of steps
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
         ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
@@ -690,6 +774,19 @@ class TCAPI(object):
         return tcout, ans
 
     def calc_tx(self, phases, out, **kwargs):
+        """Method to run THERMOCALC for T-X pseudosection calculations.
+
+        Args:
+            phases (set): Set of present phases
+            out (set): Set of zero mode phases
+            prange (tuple): Tempareture range for calculation
+            trange (tuple): Pressure range for calculation
+            steps (int): Number of steps
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         if len(out) > 1:
             tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
@@ -700,18 +797,45 @@ class TCAPI(object):
         return tcout, ans
 
     def calc_assemblage(self, phases, p, t):
+        """Method to run THERMOCALC to calculate compositions of stable assemblage.
+
+        Args:
+            phases (set): Set of present phases
+            p (float): Tempareture for calculation
+            t (float): Pressure for calculation
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
         tmpl = '{}\n\n\n{}\n{}\nkill\n\n'
         ans = tmpl.format(' '.join(phases), p, t)
         tcout = self.runtc(ans)
         return tcout, ans
 
     def dogmin(self, variance):
+        """Run THERMOCALC dogmin session.
+
+        Args:
+            variance (int): Maximum variance to be considered
+
+        Returns:
+            str: THERMOCALC standard output
+        """
         tmpl = '{}\nn\n\n'
         ans = tmpl.format(variance)
         tcout = self.runtc(ans)
         return tcout
 
     def calc_variance(self, phases):
+        """Get variance of assemblage.
+
+        Args:
+            phases (set): Set of present phases
+
+        Returns:
+            int: variance
+        """
         variance = None
         tcout = self.tc.runtc('{}\nkill\n\n'.format(' '.join(phases)))
         for ln in tcout.splitlines():
@@ -721,6 +845,14 @@ class TCAPI(object):
         return variance
 
     def runtc(self, instr):
+        """Low-level method to actually run THERMOCALC.
+
+        Args:
+            instr (str): String to be passed to standard input for session.
+
+        Returns:
+            str: THERMOCALC standard output
+        """
         if sys.platform.startswith('win'):
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags = 1
@@ -735,6 +867,7 @@ class TCAPI(object):
         return output.decode(self.TCenc)
 
     def rundr(self):
+        """Method to run drawpd."""
         if self.drexe:
             instr = self.name + '\n'
             if sys.platform.startswith('win'):
@@ -753,28 +886,61 @@ class TCAPI(object):
 
 
 class PseudoBase:
-    """Base class
+    """Base class with common methods for InvPoint and UniLine.
     """
     def label(self, excess={}):
+        """str: full label with space delimeted phases - zero mode phase."""
         return (' '.join(sorted(list(self.phases.difference(excess)))) +
                 ' - ' +
                 ' '.join(sorted(list(self.out))))
     def annotation(self, show_out=False):
+        """str: String representation of ID with possible zermo mode phase."""
         if show_out:
             return '{:d} {}'.format(self.id, ' '.join(self.out))
         else:
             return '{:d}'.format(self.id)
 
     def ptguess(self, **kwargs):
+        """list: Get stored ptguesses.
+
+        InvPoint has just single ptguess, but for UniLine idx need to be
+        specified. If omitted, the middle point from calculated ones is used.
+
+        Args:
+            idx (int): index which guesses to get.
+        """
         idx = kwargs.get('idx', self.midix)
         return self.results[idx]['ptguess']
 
     def data(self, **kwargs):
+        """dict: Get stored calculation data.
+
+        InvPoint has just single ptguess, but for UniLine idx need to be
+        specified. If omitted, the middle point from calculated ones is used.
+
+        Args:
+            idx (int): index which guesses to get.
+        """
         idx = kwargs.get('idx', self.midix)
         return self.results[idx]['data']
 
 class InvPoint(PseudoBase):
     """Class to store invariant point
+
+    Attributes:
+        id (int): Invariant point identification
+        phases (set): set of present phases
+        out (set): set of zero mode phases
+        cmd (str): THERMOCALC standard input to calculate this point
+        variance (int): variance
+        x (numpy.array): Array of x coordinates
+            (even if only one, it is stored as array)
+        y (numpy.array): Array of x coordinates
+            (even if only one, it is stored as array)
+        results (list): List of results dicts with data and ptgues keys.
+        output (str): Full THERMOCALC output
+        manual (bool): True when inavariant point is user-defined and not
+            calculated
     """
     def __init__(self, **kwargs):
         assert 'phases' in kwargs, 'Set of phases must be provided'
@@ -799,13 +965,17 @@ class InvPoint(PseudoBase):
 
     @property
     def _x(self):
+        """X coordinate as float"""
         return self.x[0]
 
     @property
     def _y(self):
+        """Y coordinate as float"""
         return self.y[0]
 
     def all_unilines(self):
+        """Return four tuples (phases, out) indicating possible four
+        univariant lines passing trough this invariant point"""
         a, b = self.out
         aset, bset = set([a]), set([b])
         aphases, bphases = self.phases.difference(aset), self.phases.difference(bset)
@@ -833,6 +1003,25 @@ class InvPoint(PseudoBase):
 
 class UniLine(PseudoBase):
     """Class to store univariant line
+
+    Attributes:
+        id (int): Invariant point identification
+        phases (set): set of present phases
+        out (set): set of zero mode phase
+        cmd (str): THERMOCALC standard input to calculate this point
+        variance (int): variance
+        _x (numpy.array): Array of x coordinates (all calculated)
+        _y (numpy.array): Array of x coordinates (all calculated)
+        results (list): List of results dicts with data and ptgues keys.
+        output (str): Full THERMOCALC output
+        manual (bool): True when inavariant point is user-defined and not
+            calculated
+        begin (int): id of invariant point defining begining of the line.
+            0 for no begin
+        end (int): id of invariant point defining end of the line.
+            0 for no end
+        used (slice): slice indicating which point on calculated line are
+            between begin and end
     """
     def __init__(self, **kwargs):
         assert 'phases' in kwargs, 'Set of phases must be provided'
@@ -861,6 +1050,14 @@ class UniLine(PseudoBase):
         return len(self.results) // 2
 
     def contains_inv(self, ip):
+        """Check whether invariant point theoretically belong to univariant line.
+
+        Args:
+            ip (InvPoint): Invariant point
+
+        Returns:
+            bool: True for yes, False for no. Note that metastability is not checked.
+        """
         def checkme(uphases, uout, iphases, iout):
             a, b = iout
             aset, bset = set([a]), set([b])
@@ -890,6 +1087,7 @@ class UniLine(PseudoBase):
         return candidate
 
     def get_label_point(self):
+        """Returns coordinate tuple of labeling point for univariant line."""
         if len(self.x) > 1:
             dx = np.diff(self.x)
             dy = np.diff(self.y)

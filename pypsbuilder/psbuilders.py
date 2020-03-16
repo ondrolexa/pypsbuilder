@@ -1221,8 +1221,8 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
-            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -1279,9 +1279,12 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             if reply == qb.Save:
                 self.do_save()
         if projfile is None:
+            if self.ready:
+                openin = str(self.tc.workdir)
+            else:
+                openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Open project',
-                                          os.path.expanduser('~'),
+            projfile = qd.getOpenFileName(self, 'Open project', openin,
                                           self.builder_file_selector)[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
@@ -1831,8 +1834,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
-            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -1890,9 +1893,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             if reply == qb.Save:
                 self.do_save()
         if projfile is None:
+            if self.ready:
+                openin = str(self.tc.workdir)
+            else:
+                openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Open project',
-                                          os.path.expanduser('~'),
+            projfile = qd.getOpenFileName(self, 'Open project', openin,
                                           self.builder_file_selector)[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:

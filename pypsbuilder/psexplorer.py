@@ -23,6 +23,7 @@ import time
 import re
 from pathlib import Path
 from collections import OrderedDict
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -94,7 +95,8 @@ class PTPS:
             if tc.OK:
                 self.tc = tc
                 self.shapes, self.edges, self.bad_shapes, self.ignored_shapes, log = self.ps.create_shapes()
-                print('\n'.join(log))
+                if log:
+                    print('\n'.join(log))
                 if 'variance' in data:
                     self.variance = data['variance']
                 else:
@@ -565,6 +567,8 @@ class PTPS:
             bulk (bool): Whether to show bulk composition on top of diagram.
                 Default False.
             alpha (float): alpha value for colors. Default 0.6
+            connect (bool): Whether mouse click echo stable assemblage to STDOUT.
+                Default False.
         """
         out = kwargs.get('out', None)
         cmap = kwargs.get('cmap', 'Purples')
@@ -572,13 +576,11 @@ class PTPS:
         label = kwargs.get('label', False)
         bulk = kwargs.get('bulk', False)
         high = kwargs.get('high', [])
+        connect = kwargs.get('connect', False)
 
-        if isinstance(out, str):
-            out = [out]
-        # check shapes created
-        #if not self.ready:
-        #    self.refresh_geometry()
         if self.shapes:
+            if isinstance(out, str):
+                out = [out]
             vari = [self.variance[k] for k in self]
             poc = max(vari) - min(vari) + 1
             # skip extreme values to visually differs from empty areas
@@ -642,7 +644,8 @@ class PTPS:
             # coords
             ax.format_coord = self.format_coord
             # connect button press
-            #cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+            if connect:
+                cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
             # return ax
         else:
@@ -948,6 +951,8 @@ class PTPS:
                 Default False.
             labelkeys (frozenset or list): Keys of divariant fields where contours
                 should be labeled.
+            nosplit (bool): Controls whether the contour underlying labels are
+                removed or not. Defaut True
             colors (seq): The colors of the levels, i.e. the lines for contour and
                 the areas for contourf. The sequence is cycled for the levels
                 in ascending order. By default (value None), the colormap
@@ -965,9 +970,10 @@ class PTPS:
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
             filled = kwargs.get('filled', True)
-            out = kwargs.get('out', True)
+            out = kwargs.get('out', None)
             bulk = kwargs.get('bulk', False)
-            nosplit = kwargs.get('nosplit', True)
+            high = kwargs.get('high', [])
+            nosplit = kwargs.get('nosplit', False)
             step = kwargs.get('step', None)
             N = kwargs.get('N', 10)
             gradient = kwargs.get('gradient', False)
@@ -976,10 +982,14 @@ class PTPS:
             refine = kwargs.get('refine', 1)
             colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
-            labelkeys = kwargs.get('labelkeys', {})
+            labelkeys = kwargs.get('labelkeys', [])
 
             if not self.gridded:
                 print('Collecting only from uni lines and inv points. Not yet gridded...')
+            if not isinstance(labelkeys, list):
+                labelkeys = [labelkeys]
+            if isinstance(out, str):
+                out = [out]
             if only is not None:
                 recs = OrderedDict()
                 d = self.collect_data(only, phase, expr, which=which)
@@ -1022,10 +1032,12 @@ class PTPS:
                         else:
                             cntv = 10
                     # ------------
-                    if filled:
-                        cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
-                    else:
-                        cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore",category=UserWarning)
+                        if filled:
+                            cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                        else:
+                            cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
                     patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
                     ax.add_patch(patch)
                     for col in cont.collections:
@@ -1044,26 +1056,27 @@ class PTPS:
                     print('{} for {}'.format(type(e).__name__, key))
             if only is None:
                 self.add_overlay(ax)
-                # zero mode line
+                # zero mode lines
                 if out:
-                    xy = []
-                    for uni in self.ps.unilines.values():
-                        if phase in uni.out:
-                            xy.append((uni.x, uni.y))
-                        for poly in polymorphs:
-                            if poly.issubset(uni.phases):
-                                if phase in poly:
-                                    if poly.difference({phase}).issubset(uni.out):
-                                        xy.append((uni.x, uni.y))
-                    if xy:
-                        ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
-                                np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
+                    for o in out:
+                        xy = []
+                        for uni in self.ps.unilines.values():
+                            if o in uni.out:
+                                xy.append((uni.x, uni.y))
+                            for poly in polymorphs:
+                                if poly.issubset(uni.phases):
+                                    if o in poly:
+                                        if poly.difference({o}).issubset(uni.out):
+                                            xy.append((uni.x, uni.y))
+                        if xy:
+                            ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
+                                    np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
             try:
                 fig.colorbar(cont)
             except:
                 print('There is trouble to draw colorbar. Sorry.')
             # Show highlight. Change to list if only single key
-            if isinstance(high, frozenset):
+            if not isinstance(high, list):
                 high = [high]
             if only is None:
                 for k in high:
@@ -1378,23 +1391,28 @@ def ps_show():
                         default='Purples', help='name of the colormap')
     parser.add_argument('--alpha', type=float,
                         default=0.6, help='alpha of colormap')
+    parser.add_argument('--connect', action='store_true',
+                        help='whether mouse click echo stable assemblage')
+    parser.add_argument('--high', nargs='+',
+                        default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
     ps = PTPS(args.project)
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
-                     cmap=args.cmap, alpha=args.alpha))
+                     high=frozenset(args.high), cmap=args.cmap,
+                     alpha=args.alpha, connect=args.connect))
 
 
 def ps_grid():
     parser = argparse.ArgumentParser(description='Calculate compositions in grid')
     parser.add_argument('project', type=str,
                         help='builder project file')
-    parser.add_argument('--numT', type=int, default=51,
+    parser.add_argument('--nx', type=int, default=50,
                         help='number of T steps')
-    parser.add_argument('--numP', type=int, default=51,
+    parser.add_argument('--ny', type=int, default=50,
                         help='number of P steps')
     args = parser.parse_args()
     ps = PTPS(args.project)
-    sys.exit(ps.calculate_composition(numT=args.numT, numP=args.numP))
+    sys.exit(ps.calculate_composition(nx=args.nx, ny=args.ny))
 
 
 def ps_iso():
@@ -1403,12 +1421,12 @@ def ps_iso():
                         help='builder project file')
     parser.add_argument('phase', type=str,
                         help='phase used for contouring')
-    parser.add_argument('expr', type=str,
+    parser.add_argument('-e', '--expr', type=str, default=None,
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
-                        help='filled contours')
-    parser.add_argument('-o', '--out', action='store_true',
-                        help='highlight out line for given phase')
+                        help='filled contours', default=False)
+    parser.add_argument('-o', '--out', nargs='+',
+                        help='highlight out lines for given phases')
     parser.add_argument('--nosplit', action='store_true',
                         help='controls whether the underlying contour is removed or not')
     parser.add_argument('-b', '--bulk', action='store_true',
@@ -1425,12 +1443,15 @@ def ps_iso():
                         default=0, help='smoothness of the approximation')
     parser.add_argument('--clabel', nargs='+',
                         default=[], help='label contours in field defined by set of phases')
+    parser.add_argument('--high', nargs='+',
+                        default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
     ps = PTPS(args.project)
-    sys.exit(ps.isopleths(args.phase, args.expr, filled=args.filled,
+    sys.exit(ps.isopleths(args.phase, expr=args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
-                          N=args.ncont, clabel=args.clabel, nosplit=args.nosplit,
-                          colors=args.colors, cmap=args.cmap, out=args.out))
+                          N=args.ncont, labelkeys=frozenset(args.clabel),
+                          nosplit=args.nosplit, colors=args.colors,
+                          cmap=args.cmap, out=args.out, high=frozenset(args.high)))
 
 
 def ps_drawpd():
