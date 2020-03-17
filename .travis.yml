@@ -16,10 +16,8 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Replace dep1 dep2 ... with your dependencies
-  - conda env create -f environment.yml
+  - conda create -n pyps python=3.8 pyqt=5 numpy matplotlib scipy networkx shapely descartes tqdm pytest
   - conda activate pyps
-  - conda install pytest
-  - pip install pytest-qt
   - pip install .
 
 script:
