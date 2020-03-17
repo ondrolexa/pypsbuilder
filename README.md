@@ -1,6 +1,9 @@
 # pypsbuilder
 
+[![Build Status](https://travis-ci.org/ondrolexa/pypsbuilder.svg?branch=develop)](https://travis-ci.org/github/ondrolexa/pypsbuilder)
 [![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=develop)](https://pypsbuilder.readthedocs.io/en/latest/?badge=develop)
+[![HitCount](http://hits.dwyl.com/ondrolexa/pypsbuilder.svg)](http://hits.dwyl.com/ondrolexa/pypsbuilder)
+[![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)
 
 Not that simplistic THERMOCALC front-end for constructing pseudosections
 
