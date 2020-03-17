@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Visual pseudosection builder for THERMOCALC
 """

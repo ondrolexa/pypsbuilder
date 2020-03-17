@@ -277,11 +277,15 @@ class TCAPI(object):
         return str(self.workdir)
 
     def __repr__(self):
-        return '\n'.join(['{}'.format(self.tcversion),
-                          'Working directory: {}'.format(self.workdir),
-                          'Scriptfile: {}'.format('tc-' + self.name + '.txt'),
-                          'AX file: {}'.format('tc-' + self.axname + '.txt'),
-                          'Status: {}'.format(self.status)])
+        if self.OK:
+            return '\n'.join(['{}'.format(self.tcversion),
+                              'Working directory: {}'.format(self.workdir),
+                              'Scriptfile: {}'.format('tc-' + self.name + '.txt'),
+                              'AX file: {}'.format('tc-' + self.axname + '.txt'),
+                              'Status: {}'.format(self.status)])
+        else:
+            return '\n'.join(['Uninitialized working directory {}'.format(self.workdir),
+                              'Status: {}'.format(self.status)])
 
     @property
     def scriptfile(self):
@@ -360,6 +364,8 @@ class TCAPI(object):
 
         Args:
             tx (bool): True for T-X and P-X calculations. Default False.
+            output (str): When not None, used as content of logfile. Default None.
+            resic (str): When not None, used as content of icfile. Default None.
 
         Returns:
             status (str): Result of parsing. 'ok', 'nir' (nothing in range) or 'bombed'.
@@ -385,23 +391,32 @@ class TCAPI(object):
 
     def parse_logfile_new(self, **kwargs):
         tx = kwargs.get('tx', False)
-        with self.logfile.open('r', encoding=self.TCenc) as f:
-            output = f.read()
+        output = kwargs.get('output', None)
+        resic = kwargs.get('resic', None)
+        if output is None:
+            with self.logfile.open('r', encoding=self.TCenc) as f:
+                output = f.read()
         lines = [ln for ln in output.splitlines() if ln != '']
         pts = []
         res = []
         headers = []
         variance = -1
-        # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
-        ptpat = re.compile('(?<=\{)(.*?)(?=\})')
-        #ovarpat = re.compile('(?<=ovar = )(.*?)(?=\;)')
-        varpat = re.compile('(?<=var = )(.*?)(?=\ )')
-        if not self.icfile.exists():
-            if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-                status = 'bombed'
+        do_parse = True
+        if resic is None:
+            if not self.icfile.exists():
+                if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+                    status = 'bombed'
+                else:
+                    status = 'nir'
+                do_parse = False
             else:
-                status = 'nir'
-        else:
+                with self.icfile.open('r', encoding=self.TCenc) as f:
+                    resic = f.read()
+        if do_parse:
+            # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
+            ptpat = re.compile(r'(?<=\{)(.*?)(?=\})')
+            #ovarpat = re.compile(r'(?<=ovar = )(.*?)(?=\;)')
+            varpat = re.compile(r'(?<=var = )(.*?)(?=\ )')
             # parse ptguesses
             bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
             bstarts.append(len(lines))
@@ -415,9 +430,7 @@ class TCAPI(object):
                 ptguesses.append(block[gixs:gixe])
             # parse icfile
             alldata = []
-            with self.icfile.open('r', encoding=self.TCenc) as f:
-                icfile = f.read()
-            for block in icfile.split('\n===========================================================\n\n')[1:]:
+            for block in resic.split('\n===========================================================\n\n')[1:]:
                 sections = block.split('\n\n')
                 data = {}
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
@@ -540,12 +553,13 @@ class TCAPI(object):
         else:
             return status, variance, np.array(pts).T, res, output
 
-    def parse_logfile_old(self, output=None):
+    def parse_logfile_old(self, **kwargs):
         # res is list of dicts with data and ptguess keys
         # data is dict with keys of phases and each contain dict of values
         # res[0]['data']['g']['mode']
         # res[0]['data']['g']['z']
         # res[0]['data']['g']['MnO']
+        output = kwargs.get('output', None)
         if output is None:
             with self.logfile.open('r', encoding=self.TCenc) as f:
                 output = f.read()
@@ -1438,15 +1452,17 @@ class PTsection(SectionBase):
         super(PTsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
+        bc = ([], [])
         for inv in self.invpoints.values():
             if not inv.manual:
+                if 'composition (from setbulk script)\n' in inv.output:
+                    cout = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
+                    bc = (cout[0].split(), cout[1].split())
+                if 'composition (from script)\n' in inv.output:
+                    cout = inv.output.split('composition (from script)\n')[1].split('\n')
+                    bc = (cout[0].split(), cout[1].split())
                 break
-        bc = ['', '']
-        if 'composition (from setbulk script)\n' in inv.output:
-            bc = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
-        if 'composition (from script)\n' in inv.output:
-            bc = inv.output.split('composition (from script)\n')[1].split('\n')
-        return bc[0].split(), bc[1].split()
+        return bc
 
 class TXsection(SectionBase):
     def __init__(self, **kwargs):
@@ -1461,14 +1477,14 @@ class TXsection(SectionBase):
         super(TXsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
+        bc = ([], [], [])
         for inv in self.invpoints.values():
             if not inv.manual:
+                if 'composition (from script)\n' in inv.output:
+                    tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
+                    nested = [r.split() for r in tb.split('\n')[2:-1]]
+                    bc = [[r[0] for r in nested],
+                          [r[1] for r in nested],
+                          [r[-1] for r in nested]]
                 break
-        bc = [[], []]
-        if 'composition (from script)\n' in inv.output:
-            tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
-            nested = [r.split() for r in tb.split('\n')[2:-1]]
-            bc = [[r[0] for r in nested],
-                  [r[1] for r in nested],
-                  [r[-1] for r in nested]]
         return bc
