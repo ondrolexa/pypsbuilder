@@ -141,7 +141,8 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.logText.setFont(f)
 
         self.initViewModels()
-        self.builder_ui_setting()
+        self.common_ui_settings()
+        self.builder_ui_settings()
 
         self.app_settings()
         self.populate_recent()
@@ -194,6 +195,49 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.unimodel.dataChanged.connect(self.uni_edited)
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.sel_changed)
+
+    def common_ui_settings(self):
+        # CONNECT SIGNALS
+        self.actionNew.triggered.connect(self.initProject)
+        self.actionOpen.triggered.connect(self.openProject)
+        self.actionSave.triggered.connect(self.saveProject)
+        self.actionSave_as.triggered.connect(self.saveProjectAs)
+        self.actionQuit.triggered.connect(self.close)
+        # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
+        self.actionAbout.triggered.connect(self.about_dialog.exec)
+        self.actionImport_project.triggered.connect(self.import_from_prj)
+        self.actionShow_areas.triggered.connect(self.check_prj_areas)
+        self.actionShow_topology.triggered.connect(self.show_topology)
+        self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
+        self.pushResetSettings.clicked.connect(self.reset_limits)
+        self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
+        self.tabMain.currentChanged.connect(lambda: self.apply_setting(4))
+        self.pushReadScript.clicked.connect(self.read_scriptfile)
+        self.pushSaveScript.clicked.connect(self.save_scriptfile)
+        self.actionReload.triggered.connect(self.reinitialize)
+        self.pushGuessUni.clicked.connect(self.unisel_guesses)
+        self.pushGuessInv.clicked.connect(self.invsel_guesses)
+        self.pushInvAuto.clicked.connect(self.auto_inv_calc)
+        self.pushUniSearch.clicked.connect(self.uni_explore)
+        self.pushManual.toggled.connect(self.add_userdefined)
+        self.pushManual.setCheckable(True)
+        self.pushInvRemove.clicked.connect(self.remove_inv)
+        self.pushUniRemove.clicked.connect(self.remove_uni)
+        self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
+        self.splitter_bottom.setSizes((400, 100))
+
+        self.phaseview.doubleClicked.connect(self.show_out)
+        self.uniview.doubleClicked.connect(self.show_uni)
+        self.uniview.clicked.connect(self.uni_activated)
+        self.uniview.customContextMenuRequested[QtCore.QPoint].connect(self.univiewRightClicked)
+        self.invview.doubleClicked.connect(self.show_inv)
+        self.invview.clicked.connect(self.inv_activated)
+        self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
+        # additional keyboard shortcuts
+        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
+        self.scHome.activated.connect(self.toolbar.home)
+        self.showAreas = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
+        self.showAreas.activated.connect(self.check_prj_areas)
 
     def reinitialize(self):
         if self.ready:
@@ -639,6 +683,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.unihigh = self.ax.plot(uni.x, uni.y, '-', **unihigh_kw)
         self.canvas.draw()
 
+    def uni_activated(self, index):
+        self.invsel.clearSelection()
+
     def uni_edited(self, index):
         self.ps.trim_uni(self.unimodel.getRowID(index))
         self.changed = True
@@ -651,6 +698,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.set_phaselist(inv, show_output=True)
         self.invhigh = self.ax.plot(inv.x, inv.y, 'o', **invhigh_kw)
         self.canvas.draw()
+
+    def inv_activated(self, index):
+        self.unisel.clearSelection()
 
     def show_out(self, index):
         out = self.phasemodel.itemFromIndex(index).text()
@@ -1125,63 +1175,25 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
         self.ps = PTsection()
         super(PSBuilder, self).__init__(parent)
 
-    def builder_ui_setting(self):
+    def builder_ui_settings(self):
         # Dogmin tab settings
         f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
         self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.logDogmin.setReadOnly(True)
         self.logDogmin.setFont(f)
         # CONNECT SIGNALS
-        self.actionNew.triggered.connect(self.initProject)
-        self.actionOpen.triggered.connect(self.openProject)
-        self.actionSave.triggered.connect(self.saveProject)
-        self.actionSave_as.triggered.connect(self.saveProjectAs)
-        self.actionQuit.triggered.connect(self.close)
-        # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
-        self.actionAbout.triggered.connect(self.about_dialog.exec)
-        self.actionImport_project.triggered.connect(self.import_from_prj)
-        self.actionShow_areas.triggered.connect(self.check_prj_areas)
-        self.actionShow_topology.triggered.connect(self.show_topology)
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
-        self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
-        self.pushResetSettings.clicked.connect(self.reset_limits)
-        self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
-        self.tabMain.currentChanged.connect(lambda: self.apply_setting(4))
-        self.pushReadScript.clicked.connect(self.read_scriptfile)
-        self.pushSaveScript.clicked.connect(self.save_scriptfile)
-        self.actionReload.triggered.connect(self.reinitialize)
         self.actionImport_drfile.triggered.connect(self.import_drfile)
-        self.pushGuessUni.clicked.connect(self.unisel_guesses)
-        self.pushGuessInv.clicked.connect(self.invsel_guesses)
-        self.pushInvAuto.clicked.connect(self.auto_inv_calc)
-        self.pushUniSearch.clicked.connect(self.uni_explore)
-        self.pushManual.toggled.connect(self.add_userdefined)
-        self.pushManual.setCheckable(True)
         self.pushDogmin.toggled.connect(self.do_dogmin)
         self.pushDogmin.setCheckable(True)
         self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
         self.pushDogmin_guesses.clicked.connect(self.dogmin_set_guesses)
-        self.pushInvRemove.clicked.connect(self.remove_inv)
-        self.pushUniRemove.clicked.connect(self.remove_uni)
-        self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
-        self.splitter_bottom.setSizes((400, 100))
-
-        self.phaseview.doubleClicked.connect(self.show_out)
-        self.uniview.doubleClicked.connect(self.show_uni)
-        self.uniview.customContextMenuRequested[QtCore.QPoint].connect(self.univiewRightClicked)
-        self.invview.doubleClicked.connect(self.show_inv)
-        self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
         # additional keyboard shortcuts
         self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
         self.scCalcPatT = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+P"), self)
         self.scCalcPatT.activated.connect(lambda: self.do_calc(False))
-        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
-        self.scHome.activated.connect(self.toolbar.home)
-        self.showAreas = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
-        self.showAreas.activated.connect(self.check_prj_areas)
-
 
     def app_settings(self, write=False):
         # Applicatiom settings
@@ -1200,8 +1212,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
             builder_settings.setValue("autoconnectinv", self.checkAutoconnectInv.checkState())
-            # builder_settings.setValue("export_areas", self.checkAreas.checkState())
-            # builder_settings.setValue("export_partial", self.checkPartial.checkState())
+            builder_settings.setValue("use_inv_guess", self.checkUseInvGuess.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -1222,8 +1233,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkUseInvGuess.setCheckState(builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -1344,6 +1354,9 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     self.statusBar().showMessage('Project loaded.')
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
             ##### VERY OLD FORMAT ####
             elif data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
@@ -1476,9 +1489,10 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            # set guesses temporarily
-            #midix = len(r['results']) // 2
-            #old_guesses = self.tc.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
+            # set guesses temporarily when asked
+            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+                inv_id = sorted([uni.begin, uni.end])[1]
+                old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -1517,7 +1531,9 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         exists, inv_id = '*', str(id)
                     cand.append((inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
 
-            #self.tc.update_scriptfile(guesses=old_guesses)
+            # set original ptguesses when asked
+            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+                self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
                 txt = '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
@@ -1570,17 +1586,22 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
     def do_dogmin(self, checked=True):
         if self.ready:
             if checked:
-                # cancle zoom and pan action on toolbar
-                if self.toolbar._active == "PAN":
-                    self.toolbar.pan()
-                elif self.toolbar._active == "ZOOM":
-                    self.toolbar.zoom()
-                self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
-                self.cid.connect_event('button_press_event', self.dogminer)
-                self.tabMain.setCurrentIndex(0)
-                self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
-                self.pushManual.toggled.disconnect()
-                self.pushManual.setCheckable(False)
+                phases, out = self.get_phases_out()
+                which = phases.difference(self.ps.excess)
+                if which:
+                    # cancle zoom and pan action on toolbar
+                    if self.toolbar._active == "PAN":
+                        self.toolbar.pan()
+                    elif self.toolbar._active == "ZOOM":
+                        self.toolbar.zoom()
+                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
+                    self.cid.connect_event('button_press_event', self.dogminer)
+                    self.tabMain.setCurrentIndex(0)
+                    self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
+                    self.pushManual.toggled.disconnect()
+                    self.pushManual.setCheckable(False)
+                else:
+                    self.statusBar().showMessage('You need to select phases to consider for dogmin.')
             else:
                 self.tc.update_scriptfile(dogmin='no')
                 self.read_scriptfile()
@@ -1677,12 +1698,13 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
+                            uni.begin = self.ps.unilines[id_uni].begin
+                            uni.end = self.ps.unilines[id_uni].end
                             self.ps.unilines[id_uni] = uni
+                            self.ps.trim_uni(id_uni)
                             if self.checkAutoconnectUni.isChecked():
                                 if len(candidates) == 2:
                                     self.uni_connect(id_uni, candidates)
-                            else:
-                                self.ps.trim_uni(id_uni)
                             self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())
@@ -1756,49 +1778,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
         self.ps = TXsection()
         super(TXBuilder, self).__init__(parent)
 
-    def builder_ui_setting(self):
+    def builder_ui_settings(self):
         # CONNECT SIGNALS
-        self.actionNew.triggered.connect(self.initProject)
-        self.actionOpen.triggered.connect(self.openProject)
-        self.actionSave.triggered.connect(self.saveProject)
-        self.actionSave_as.triggered.connect(self.saveProjectAs)
-        self.actionQuit.triggered.connect(self.close)
-        # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
-        self.actionAbout.triggered.connect(self.about_dialog.exec)
-        self.actionImport_project.triggered.connect(self.import_from_prj)
-        self.actionShow_areas.triggered.connect(self.check_prj_areas)
-        self.actionShow_topology.triggered.connect(self.show_topology)
         self.pushCalc.clicked.connect(self.do_calc)
-        self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
-        self.pushResetSettings.clicked.connect(self.reset_limits)
-        self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
-        self.tabMain.currentChanged.connect(lambda: self.apply_setting(4))
-        self.pushReadScript.clicked.connect(self.read_scriptfile)
-        self.pushSaveScript.clicked.connect(self.save_scriptfile)
-        self.actionReload.triggered.connect(self.reinitialize)
-        self.pushGuessUni.clicked.connect(self.unisel_guesses)
-        self.pushGuessInv.clicked.connect(self.invsel_guesses)
-        self.pushInvAuto.clicked.connect(self.auto_inv_calc)
-        self.pushUniSearch.clicked.connect(self.uni_explore)
-        self.pushManual.toggled.connect(self.add_userdefined)
-        self.pushManual.setCheckable(True)
-        self.pushInvRemove.clicked.connect(self.remove_inv)
-        self.pushUniRemove.clicked.connect(self.remove_uni)
-        self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
-        self.splitter_bottom.setSizes((400, 100))
-
-        self.phaseview.doubleClicked.connect(self.show_out)
-        self.uniview.doubleClicked.connect(self.show_uni)
-        self.uniview.customContextMenuRequested[QtCore.QPoint].connect(self.univiewRightClicked)
-        self.invview.doubleClicked.connect(self.show_inv)
-        self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
         # additional keyboard shortcuts
         self.scCalc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalc.activated.connect(self.do_calc)
-        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
-        self.scHome.activated.connect(self.toolbar.home)
-        self.showAreas = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
-        self.showAreas.activated.connect(self.check_prj_areas)
 
     def app_settings(self, write=False):
         # Applicatiom settings
@@ -1815,8 +1800,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
             builder_settings.setValue("autoconnectinv", self.checkAutoconnectInv.checkState())
-            # builder_settings.setValue("export_areas", self.checkAreas.checkState())
-            # builder_settings.setValue("export_partial", self.checkPartial.checkState())
+            builder_settings.setValue("use_inv_guess", self.checkUseInvGuess.checkState())
             builder_settings.setValue("overwrite", self.checkOverwrite.checkState())
             builder_settings.beginWriteArray("recent")
             for ix, f in enumerate(self.recent):
@@ -1835,8 +1819,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            # self.checkAreas.setCheckState(builder_settings.value("export_areas", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            # self.checkPartial.setCheckState(builder_settings.value("export_partial", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkUseInvGuess.setCheckState(builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -1957,6 +1940,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     self.statusBar().showMessage('Project loaded.')
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
             ##### VERY OLD FORMAT ####
             elif data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
@@ -2064,9 +2050,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            # set guesses temporarily
-            #midix = len(r['results']) // 2
-            #old_guesses = self.tc.update_scriptfile(guesses=r['results'][midix]['ptguess'], get_old_guesses=True)
+            # set guesses temporarily when asked
+            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+                inv_id = sorted([uni.begin, uni.end])[1]
+                old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -2128,7 +2115,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
                     else:
                         out_section.append((ptcoords[1][0], ptcoords[0][0], exists, ' '.join(inv.out), inv_id))
-            #self.tc.update_scriptfile(guesses=old_guesses)
+
+            # set original ptguesses when asked
+            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+                self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -2200,12 +2190,13 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
+                            uni.begin = self.ps.unilines[id_uni].begin
+                            uni.end = self.ps.unilines[id_uni].end
                             self.ps.unilines[id_uni] = uni
+                            self.ps.trim_uni(id_uni)
                             if self.checkAutoconnectUni.isChecked():
                                 if len(candidates) == 2:
                                     self.uni_connect(id_uni, candidates)
-                            else:
-                                self.ps.trim_uni(id_uni)
                             self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())

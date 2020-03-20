@@ -987,6 +987,10 @@ class InvPoint(PseudoBase):
         """Y coordinate as float"""
         return self.y[0]
 
+    def shape(self):
+        """Return shapely Point representing invariant point."""
+        return Point(self._x, self._y)
+
     def all_unilines(self):
         """Return four tuples (phases, out) indicating possible four
         univariant lines passing trough this invariant point"""
@@ -1063,6 +1067,50 @@ class UniLine(PseudoBase):
     def midix(self):
         return len(self.results) // 2
 
+    @property
+    def connected(self):
+        return 2 - [self.begin, self.end].count(0)
+
+    def _shape(self, ratio=None, tolerance=None):
+        """Return shapely LineString representing univariant line.
+
+        This method is using all calculated points.
+
+        Args:
+            ratio: y-coordinate multiplier to scale coordinates. Default None
+            tolerance: tolerance x coordinates. Simplified object will be within
+            the tolerance distance of the original geometry. Default None
+        """
+        if ratio is None:
+            return LineString(np.array([self._x, self._y]).T)
+        else:
+            if tolerance is None:
+                return LineString(np.array([self._x, self._y]).T)
+            else:
+                ln = LineString(np.array([self._x, ratio * self._y]).T).simplify(tolerance)
+                x, y = np.array(ln.coords).T
+                return LineString(np.array([x, y / ratio]).T)
+
+    def shape(self, ratio=None, tolerance=None):
+        """Return shapely LineString representing univariant line.
+
+        This method is using trimmed points.
+
+        Args:
+            ratio: y-coordinate multiplier to scale coordinates. Default None
+            tolerance: tolerance x coordinates. Simplified object will be within
+            the tolerance distance of the original geometry. Default None
+        """
+        if ratio is None:
+            return LineString(np.array([self.x, self.y]).T)
+        else:
+            if tolerance is None:
+                return LineString(np.array([self.x, self.y]).T)
+            else:
+                ln = LineString(np.array([self.x, ratio * self.y]).T).simplify(tolerance)
+                x, y = np.array(ln.coords).T
+                return LineString(np.array([x, y / ratio]).T)
+
     def contains_inv(self, ip):
         """Check whether invariant point theoretically belong to univariant line.
 
@@ -1133,6 +1181,19 @@ class SectionBase:
     @property
     def ratio(self):
         return (self.xrange[1] - self.xrange[0]) / (self.yrange[1] - self.yrange[0])
+
+    @property
+    def range_shapes(self):
+        # default p-t range boundary
+        bnd = [LineString([(self.xrange[0] + self.shrink, self.yrange[0] + self.shrink),
+                          (self.xrange[1] - self.shrink, self.yrange[0] + self.shrink)]),
+               LineString([(self.xrange[1] - self.shrink, self.yrange[0] + self.shrink),
+                          (self.xrange[1] - self.shrink, self.yrange[1] - self.shrink)]),
+               LineString([(self.xrange[1] - self.shrink, self.yrange[1] - self.shrink),
+                          (self.xrange[0] + self.shrink, self.yrange[1] - self.shrink)]),
+               LineString([(self.xrange[0] + self.shrink, self.yrange[1] - self.shrink),
+                          (self.xrange[0] + self.shrink, self.yrange[0] + self.shrink)])]
+        return bnd, next(polygonize(bnd))
 
     def add_inv(self, id, inv):
         self.invpoints[id] = inv
@@ -1228,7 +1289,7 @@ class SectionBase:
         uni.x = np.hstack((x1, xx, x2))
         uni.y = np.hstack((y1, yy, y2))
 
-    def construct_areas(self, shrink=0):
+    def construct_areas(self):
         def area_exists(indexes):
             def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
                 if found_cycle[0]:
@@ -1323,6 +1384,7 @@ class SectionBase:
                         log.append('Topology error in path {}. Edges {}'.format(path, edge))
                 else:
                     # loop not found, search for range crossing chain
+                    _, section_area = self.range_shapes
                     for ppath in itertools.permutations(path):
                         edge = []
                         vert = []
@@ -1330,76 +1392,65 @@ class SectionBase:
                             edge.append(uni_index.get((b, e), None))
                             vert.append(inv_coords[b])
                         vert.append(inv_coords[e])
-                        if None not in edge:
-                            x, y = vert[0]
-                            if x < self.xrange[0] + shrink or x > self.xrange[1] - shrink or y < self.yrange[0] + shrink or y > self.yrange[1] - shrink:
-                                x, y = vert[-1]
-                                if x < self.xrange[0] + shrink or x > self.xrange[1] - shrink or y < self.yrange[0] + shrink or y > self.yrange[1] - shrink:
-                                    tedges.append(edge)
-                                    tphases.append(f)
+                        if None not in edge: # FIXME: do it better
+                            if not Point(*vert[0]).within(section_area) and not Point(*vert[-1]).within(section_area):
+                                tedges.append(edge)
+                                tphases.append(f)
                             break
         return vertices, edges, phases, tedges, tphases, log
 
-    def create_shapes(self):
-        if not isinstance(self, PTsection):
-            shrink = 0.0001
-        else:
-            shrink = 0
+    def create_shapes(self, tolerance=None): # TODO: use simplified geometries...
         shapes = OrderedDict()
         shape_edges = OrderedDict()
         bad_shapes = OrderedDict()
         ignored_shapes = OrderedDict()
         # traverse pseudosection
-        vertices, edges, phases, tedges, tphases, log = self.construct_areas(shrink)
-        # default p-t range boundary
-        bnd = [LineString([(self.xrange[0] + shrink, self.yrange[0] + shrink),
-                          (self.xrange[1] - shrink, self.yrange[0] + shrink)]),
-               LineString([(self.xrange[1] - shrink, self.yrange[0] + shrink),
-                          (self.xrange[1] - shrink, self.yrange[1] - shrink)]),
-               LineString([(self.xrange[1] - shrink, self.yrange[1] - shrink),
-                          (self.xrange[0] + shrink, self.yrange[1] - shrink)]),
-               LineString([(self.xrange[0] + shrink, self.yrange[1] - shrink),
-                          (self.xrange[0] + shrink, self.yrange[0] + shrink)])]
-        bnda = list(polygonize(bnd))[0]
+        vertices, edges, phases, tedges, tphases, log = self.construct_areas()
+        # get range shapes
+        section_boundaries, section_area = self.range_shapes
         # Create all full areas
         for ind in range(len(edges)):
             e, f = edges[ind], phases[ind]
-            lns = [LineString(np.c_[self.unilines[fid].x, self.unilines[fid].y]) for fid in e]
+            lns = [self.unilines[fid].shape(ratio=self.ratio, tolerance=tolerance) for fid in e]
             pp = polygonize(lns)
             invalid = True
             for ppp in pp:
                 if not ppp.is_valid:
+                    # fix topologically correct but self-intersecting shapes
+                    # You need to be a little careful with the buffer(0) technique. We've had bowtie cases where it destroyed the big part of the polygon and left just a small bowtied corner.
                     log.append('WARNING: Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
-                ppok = bnda.intersection(ppp.buffer(0))  # fix topologically correct but self-intersecting shapes
+                    ppp = ppp.buffer(0)
+                ppok = section_area.intersection(ppp)
                 if not ppok.is_empty and ppok.geom_type == 'Polygon':
                     invalid = False
                     shape_edges[f] = e
                     if f in shapes:
+                        # is it always self-crossing case?
                         shapes[f] = shapes[f].union(ppok)
                     else:
                         shapes[f] = ppok
             if invalid:
                 log.append('ERROR: Area defined by edges {} is not valid.'.format(e))
                 for e1, e2 in itertools.combinations(e, 2):
-                    l1 = LineString(np.c_[self.unilines[e1].x, self.unilines[e1].y])
-                    l2 = LineString(np.c_[self.unilines[e2].x, self.unilines[e2].y])
+                    l1 = self.unilines[e1].shape(ratio=self.ratio, tolerance=tolerance)
+                    l2 = self.unilines[e2].shape(ratio=self.ratio, tolerance=tolerance)
                     if l1.crosses(l2):
                         log.append('   - Uniline {} crosses uniline {}'.format(e1, e2))
                 bad_shapes[f] = e
         # Create all partial areas
         for ind in range(len(tedges)):
             e, f = tedges[ind], tphases[ind]
-            lns = [LineString(np.c_[self.unilines[fid].x, self.unilines[fid].y]) for fid in e]
+            lns = [self.unilines[fid].shape(ratio=self.ratio, tolerance=tolerance) for fid in e]
             pp = linemerge(lns)
             invalid = True
             if pp.geom_type == 'LineString':
-                bndu = unary_union([s for s in bnd if pp.crosses(s)])
+                bndu = unary_union([s for s in section_boundaries if pp.crosses(s)])
                 if not bndu.is_empty:
                     pps = pp.difference(bndu)
                     bnds = bndu.difference(pp)
                     pp = polygonize(pps.union(bnds))
                     for ppp in pp:
-                        ppok = bnda.intersection(ppp)
+                        ppok = section_area.intersection(ppp)
                         if ppok.geom_type == 'Polygon':
                             invalid = False
                             shape_edges[f] = e
@@ -1451,6 +1502,10 @@ class PTsection(SectionBase):
         self.y_var_res = 0.001
         super(PTsection, self).__init__(**kwargs)
 
+    @property
+    def shrink(self):
+        return 0
+
     def get_bulk_composition(self):
         bc = ([], [])
         for inv in self.invpoints.values():
@@ -1475,6 +1530,10 @@ class TXsection(SectionBase):
         self.y_var_label = 'Composition'
         self.y_var_res = 0.001
         super(TXsection, self).__init__(**kwargs)
+
+    @property
+    def shrink(self):
+        return 0.0001
 
     def get_bulk_composition(self):
         bc = ([], [], [])

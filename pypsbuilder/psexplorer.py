@@ -77,11 +77,12 @@ class PTPS:
             univariant lines IDs which are either out of range or incomplete.
 
     """
-    def __init__(self, projfile):
+    def __init__(self, projfile, tolerance=None):
         """Create PTPS class instance from builder project file.
 
         Args:
             projfile (str, Path): psbuilder project file
+            tolerance (float): if not None, simplification tolerance. Default None
         """
         self.projfile = Path(projfile).resolve()
         if self.projfile.exists():
@@ -94,7 +95,8 @@ class PTPS:
             tc = TCAPI(data['workdir'])
             if tc.OK:
                 self.tc = tc
-                self.shapes, self.edges, self.bad_shapes, self.ignored_shapes, log = self.ps.create_shapes()
+                self.tolerance = tolerance
+                self.shapes, self.edges, self.bad_shapes, self.ignored_shapes, log = self.ps.create_shapes(tolerance=self.tolerance)
                 if log:
                     print('\n'.join(log))
                 if 'variance' in data:
@@ -569,6 +571,8 @@ class PTPS:
             alpha (float): alpha value for colors. Default 0.6
             connect (bool): Whether mouse click echo stable assemblage to STDOUT.
                 Default False.
+            show_vertices (bool): Whether to show vertices of drawn areas.
+                Default False.
         """
         out = kwargs.get('out', None)
         cmap = kwargs.get('cmap', 'Purples')
@@ -577,6 +581,7 @@ class PTPS:
         bulk = kwargs.get('bulk', False)
         high = kwargs.get('high', [])
         connect = kwargs.get('connect', False)
+        show_vertices = kwargs.get('show_vertices', False)
 
         if self.shapes:
             if isinstance(out, str):
@@ -591,7 +596,12 @@ class PTPS:
             norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
             fig, ax = plt.subplots()
             for k in self:
-                ax.add_patch(PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none'))
+                patch = PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none')
+                ax.add_patch(patch)
+                if show_vertices:
+                    #x, y = np.array(self.shapes[k].exterior.coords).T
+                    x, y = zip(*patch.get_path().vertices)
+                    ax.plot(x, y, 'k.', ms=3)
             ax.autoscale_view()
             self.add_overlay(ax, label=label)
             if out:
@@ -599,12 +609,14 @@ class PTPS:
                     xy = []
                     for uni in self.ps.unilines.values():
                         if o in uni.out:
-                            xy.append((uni.x, uni.y))
+                            #xy.append((uni.x, uni.y))
+                            xy.append(np.array(uni.shape().coords).T)
                         for poly in polymorphs:
                             if poly.issubset(uni.phases):
                                 if o in poly:
                                     if poly.difference({o}).issubset(uni.out):
-                                        xy.append((uni.x, uni.y))
+                                        #xy.append((uni.x, uni.y))
+                                        xy.append(np.array(uni.shape().coords).T)
                     if xy:
                         ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
                                 np.hstack([(*seg[1], np.nan) for seg in xy]),

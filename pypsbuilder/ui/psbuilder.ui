@@ -553,17 +553,24 @@
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
+              <item row="11" column="0">
                <widget class="QCheckBox" name="checkAutoconnectUni">
                 <property name="text">
                  <string>Automatically connect new univariant lines if possible</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
+              <item row="12" column="0">
                <widget class="QCheckBox" name="checkAutoconnectInv">
                 <property name="text">
                  <string>Automatically connect new invariant points if possible</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
+               <widget class="QCheckBox" name="checkUseInvGuess">
+                <property name="text">
+                 <string>Use ptguess from connected invariant point for Search</string>
                 </property>
                </widget>
               </item>
