@@ -447,7 +447,7 @@ class PTPS:
         """
         dt = dict(pts=[], data=[])
         # check if phase or end-member is in assemblage
-        if re.sub('[\(].*?[\)]', '', phase) in key:
+        if re.sub(r'[\(].*?[\)]', '', phase) in key:
             if which & (1 << 0):
                 d = self.collect_inv_data(key, phase, expr)
                 dt['pts'].extend(d['pts'])

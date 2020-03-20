@@ -647,24 +647,27 @@ class BuildersBase(QtWidgets.QMainWindow):
                 n_format = '{:10.4f}{:10.4f}' + '{:8.5f}' * len(mlabels)
                 txt += h_format.format(self.ps.x_var, self.ps.y_var, *mlabels)
                 txt += '\n'
+                nln = 0
                 if isinstance(r, UniLine):
-                    if r.begin > 0:
+                    if r.begin > 0 and not self.ps.invpoints[r.begin].manual:
                         x, y = self.ps.invpoints[r.begin]._x, self.ps.invpoints[r.begin]._y
                         res = self.ps.invpoints[r.begin].results[0]
                         row = [x, y] + [res['data'][lbl]['mode'] for lbl in mlabels]
                         txt += n_format.format(*row)
                         txt += '\n'
+                        nln += 1
                     for x, y, res in zip(r._x[r.used], r._y[r.used], r.results[r.used]):
                         row = [x, y] + [res['data'][lbl]['mode'] for lbl in mlabels]
                         txt += n_format.format(*row)
                         txt += '\n'
-                    if r.end > 0:
+                    if r.end > 0 and not self.ps.invpoints[r.end].manual:
                         x, y = self.ps.invpoints[r.end]._x, self.ps.invpoints[r.end]._y
                         res = self.ps.invpoints[r.end].results[0]
                         row = [x, y] + [res['data'][lbl]['mode'] for lbl in mlabels]
                         txt += n_format.format(*row)
                         txt += '\n'
-                    if len(r.results[r.used]) > 3:
+                        nln += 1
+                    if len(r.results[r.used]) > (5 - nln):
                         txt += h_format.format(self.ps.x_var, self.ps.y_var, *mlabels)
                 else:
                     for x, y, res in zip(r.x, r.y, r.results):
