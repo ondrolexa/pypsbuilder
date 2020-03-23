@@ -13,6 +13,7 @@ except ImportError:
 import gzip
 from pathlib import Path
 from datetime import datetime
+import itertools
 
 from pkg_resources import resource_filename
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -853,8 +854,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                     for uni in self.ps.unilines.values():
                         if uni.begin == inv_id:
                             uni.begin = 0
+                            self.ps.trim_uni(uni.id)
                         if uni.end == inv_id:
                             uni.end = 0
+                            self.ps.trim_uni(uni.id)
                     self.invmodel.removeRow(idx[0])
                     self.changed = True
                     self.plot()
@@ -910,20 +913,72 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.pushManual.setChecked(False)
             elif len(out) == 2:
                 if checked:
-                    # cancle zoom and pan action on toolbar
-                    if self.toolbar._active == "PAN":
-                        self.toolbar.pan()
-                    elif self.toolbar._active == "ZOOM":
-                        self.toolbar.zoom()
-                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
-                    self.cid.connect_event('button_press_event', self.clicker)
-                    self.tabMain.setCurrentIndex(0)
-                    self.statusBar().showMessage('Click on canvas to add invariant point.')
+                    phases, out = self.get_phases_out()
+                    inv = InvPoint(phases=phases, out=out, manual=True,
+                                   output='User-defined invariant point.')
+                    unis = [uni for uni in self.ps.unilines.values() if uni.contains_inv(inv)]
+                    done = False
+                    if len(unis) > 1:
+                        xx, yy = [], []
+                        for uni1, uni2 in itertools.combinations(unis, 2):
+                            x, y = intersection(uni1, uni2, ratio=self.ps.ratio, extra=0.2, N=100)
+                            xx.append(x[0])
+                            yy.append(y[0])
+                        x = np.mean(xx)
+                        y = np.mean(yy)
+                        msg = 'Found intersection of {} unilines.\n Do you want to use it?'.format(len(unis))
+                        qb = QtWidgets.QMessageBox
+                        reply = qb.question(self, 'Add manual invariant point',
+                                            msg, qb.Yes, qb.No)
+                        if reply == qb.Yes:
+                            isnew, id_inv = self.ps.getidinv(inv)
+                            inv.id = id_inv
+                            inv.x, inv.y = x, y
+                            if isnew:
+                                self.invmodel.appendRow(id_inv, inv)
+                                idx = self.invmodel.getIndexID(id_inv)
+                                self.invview.selectRow(idx.row())
+                                self.invview.scrollToBottom()
+                                if self.checkAutoconnectInv.isChecked():
+                                    for uni in self.ps.unilines.values():
+                                        if uni.contains_inv(inv):
+                                            candidates = [inv]
+                                            for other_inv in self.ps.invpoints.values():
+                                                if other_inv.id != id_inv:
+                                                    if uni.contains_inv(other_inv):
+                                                        candidates.append(other_inv)
+                                            if len(candidates) == 2:
+                                                self.uni_connect(uni.id, candidates)
+                                                self.uniview.resizeColumnsToContents()
+                            else:
+                                self.ps.invpoints[id_inv] = inv
+                                for uni in self.ps.unilines.values():
+                                    if uni.begin == id_inv or uni.end == id_inv:
+                                        self.ps.trim_uni(uni.id)
+                            self.invview.resizeColumnsToContents()
+                            self.changed = True
+                            self.plot()
+                            idx = self.invmodel.getIndexID(id_inv)
+                            self.show_inv(idx)
+                            self.statusBar().showMessage('User-defined invariant point added.')
+                            self.pushManual.setChecked(False)
+                            done = True
+                    if not done:
+                        # cancle zoom and pan action on toolbar
+                        if self.toolbar._active == "PAN":
+                            self.toolbar.pan()
+                        elif self.toolbar._active == "ZOOM":
+                            self.toolbar.zoom()
+                        self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
+                        self.cid.connect_event('button_press_event', self.clicker)
+                        self.tabMain.setCurrentIndex(0)
+                        self.statusBar().showMessage('Click on canvas to add invariant point.')
                 else:
-                    self.canvas.mpl_disconnect(self.cid)
-                    self.statusBar().showMessage('')
-                    self.cid.disconnect_events()
-                    self.cid = None
+                    if self.cid is not None:
+                        self.canvas.mpl_disconnect(self.cid)
+                        self.statusBar().showMessage('')
+                        self.cid.disconnect_events()
+                        self.cid = None
             else:
                 self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
                 self.pushManual.setChecked(False)
@@ -2675,6 +2730,81 @@ class TopologyGraph(QtWidgets.QDialog):
         # refresh canvas
         self.canvas.draw()
 
+def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
+    """
+    INTERSECTIONS Intersections of two unilines.
+       Computes the (x,y) locations where two unilines intersect.
+
+    Based on: Sukhbinder
+    https://github.com/sukhbinder/intersection
+    """
+    def _rect_inter_inner(x1, x2):
+        n1 = x1.shape[0] - 1
+        n2 = x2.shape[0] - 1
+        X1 = np.c_[x1[:-1], x1[1:]]
+        X2 = np.c_[x2[:-1], x2[1:]]
+        S1 = np.tile(X1.min(axis=1), (n2, 1)).T
+        S2 = np.tile(X2.max(axis=1), (n1, 1))
+        S3 = np.tile(X1.max(axis=1), (n2, 1)).T
+        S4 = np.tile(X2.min(axis=1), (n1, 1))
+        return S1, S2, S3, S4
+
+    def _rectangle_intersection_(x1, y1 ,x2, y2):
+        S1, S2, S3, S4 = _rect_inter_inner(x1, x2)
+        S5, S6, S7, S8 = _rect_inter_inner(y1, y2)
+
+        C1 = np.less_equal(S1, S2)
+        C2 = np.greater_equal(S3, S4)
+        C3 = np.less_equal(S5, S6)
+        C4 = np.greater_equal(S7, S8)
+
+        ii, jj = np.nonzero(C1 & C2 & C3 & C4)
+        return ii, jj
+
+    # Linear length along the line:
+    d1 = np.cumsum(np.sqrt(np.diff(uni1._x)**2 + np.diff(ratio*uni1._y)**2))
+    d1 = np.insert(d1, 0, 0)/d1[-1]
+    d2 = np.cumsum(np.sqrt(np.diff(uni2._x)**2 + np.diff(ratio*uni2._y)**2))
+    d2 = np.insert(d2, 0, 0)/d2[-1]
+    s1x = interp1d(d1, uni1._x, kind='quadratic', fill_value='extrapolate')
+    s1y = interp1d(d1, ratio*uni1._y, kind='quadratic', fill_value='extrapolate')
+    s2x = interp1d(d2, uni2._x, kind='quadratic', fill_value='extrapolate')
+    s2y = interp1d(d2, ratio*uni2._y, kind='quadratic', fill_value='extrapolate')
+    p = np.linspace(-extra, 1 + extra, N)
+    x1, y1 = s1x(p), s1y(p)
+    x2, y2 = s2x(p), s2y(p)
+
+    ii,jj=_rectangle_intersection_(x1, y1, x2, y2)
+    n=len(ii)
+
+    dxy1 = np.diff(np.c_[x1, y1], axis=0)
+    dxy2 = np.diff(np.c_[x2, y2], axis=0)
+
+    T = np.zeros((4, n))
+    AA = np.zeros((4, 4, n))
+    AA[0:2, 2, :] = -1
+    AA[2:4, 3, :] = -1
+    AA[0::2, 0, :] = dxy1[ii, :].T
+    AA[1::2, 1, :] = dxy2[jj, :].T
+
+    BB = np.zeros((4, n))
+    BB[0, :] = -x1[ii].ravel()
+    BB[1, :] = -x2[jj].ravel()
+    BB[2, :] = -y1[ii].ravel()
+    BB[3, :] = -y2[jj].ravel()
+
+    for i in range(n):
+        try:
+            T[:, i] = np.linalg.solve(AA[:, :, i], BB[:, i])
+        except:
+            T[:, i] = np.NaN
+
+
+    in_range= (T[0, :] >= 0) & (T[1, :] >= 0) & (T[0, :] <= 1) & (T[1, :] <= 1)
+
+    xy0 = T[2:, in_range]
+    xy0 = xy0.T
+    return xy0[:, 0], xy0[:, 1] / ratio
 
 def psbuilder():
     application = QtWidgets.QApplication(sys.argv)
