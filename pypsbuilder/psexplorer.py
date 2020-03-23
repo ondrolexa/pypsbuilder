@@ -77,12 +77,14 @@ class PTPS:
             univariant lines IDs which are either out of range or incomplete.
 
     """
-    def __init__(self, projfile, tolerance=None):
+    def __init__(self, projfile, tolerance=None, origwd=False):
         """Create PTPS class instance from builder project file.
 
         Args:
             projfile (str, Path): psbuilder project file
             tolerance (float): if not None, simplification tolerance. Default None
+            origwd (bool): If True TCAPI uses original stored working directory
+                Default False.
         """
         self.projfile = Path(projfile).resolve()
         if self.projfile.exists():
@@ -92,7 +94,10 @@ class PTPS:
             if not 'workdir' in data:
                 data['workdir'] = self.projfile.parent
             self.ps = data['section']
-            tc = TCAPI(data['workdir'])
+            if origwd:
+                tc = TCAPI(data['workdir'])
+            else:
+                tc = TCAPI(self.projfile.parent)
             if tc.OK:
                 self.tc = tc
                 self.tolerance = tolerance
@@ -634,7 +639,7 @@ class PTPS:
             ax.set_xlim(self.ps.xrange)
             ax.set_ylim(self.ps.yrange)
             # Show highlight. Change to list if only single key
-            if isinstance(high, frozenset):
+            if not isinstance(high, list):
                 high = [high]
             for k in high:
                 ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
@@ -1397,6 +1402,8 @@ def ps_show():
                         help='highlight out lines for given phases')
     parser.add_argument('-l', '--label', action='store_true',
                         help='show area labels')
+    parser.add_argument('--origwd', action='store_true',
+                        help='use stored original working directory')
     parser.add_argument('-b', '--bulk', action='store_true',
                         help='show bulk composition on figure')
     parser.add_argument('--cmap', type=str,
@@ -1408,9 +1415,9 @@ def ps_show():
     parser.add_argument('--high', nargs='+',
                         default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS(args.project, origwd=args.origwd)
     sys.exit(ps.show(out=args.out, label=args.label, bulk=args.bulk,
-                     high=frozenset(args.high), cmap=args.cmap,
+                     high=args.high, cmap=args.cmap,
                      alpha=args.alpha, connect=args.connect))
 
 
@@ -1422,8 +1429,10 @@ def ps_grid():
                         help='number of T steps')
     parser.add_argument('--ny', type=int, default=50,
                         help='number of P steps')
+    parser.add_argument('--origwd', action='store_true',
+                        help='use stored original working directory')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS(args.project, origwd=args.origwd)
     sys.exit(ps.calculate_composition(nx=args.nx, ny=args.ny))
 
 
@@ -1437,6 +1446,8 @@ def ps_iso():
                         help='expression evaluated to calculate values')
     parser.add_argument('-f', '--filled', action='store_true',
                         help='filled contours', default=False)
+    parser.add_argument('--origwd', action='store_true',
+                        help='use stored original working directory')
     parser.add_argument('-o', '--out', nargs='+',
                         help='highlight out lines for given phases')
     parser.add_argument('--nosplit', action='store_true',
@@ -1453,17 +1464,17 @@ def ps_iso():
                         default=None, help='name of the colormap')
     parser.add_argument('--smooth', type=float,
                         default=0, help='smoothness of the approximation')
-    parser.add_argument('--clabel', nargs='+',
+    parser.add_argument('--labelkey', nargs='+',
                         default=[], help='label contours in field defined by set of phases')
     parser.add_argument('--high', nargs='+',
                         default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS(args.project, origwd=args.origwd)
     sys.exit(ps.isopleths(args.phase, expr=args.expr, filled=args.filled,
                           smooth=args.smooth, step=args.step, bulk=args.bulk,
-                          N=args.ncont, labelkeys=frozenset(args.clabel),
+                          N=args.ncont, labelkeys=args.labelkey,
                           nosplit=args.nosplit, colors=args.colors,
-                          cmap=args.cmap, out=args.out, high=frozenset(args.high)))
+                          cmap=args.cmap, out=args.out, high=args.high))
 
 
 def ps_drawpd():
@@ -1472,6 +1483,8 @@ def ps_drawpd():
                         help='psbuilder project file')
     parser.add_argument('-a', '--areas', action='store_true',
                         help='export also areas', default=True)
+    parser.add_argument('--origwd', action='store_true',
+                        help='use stored original working directory')
     args = parser.parse_args()
-    ps = PTPS(args.project)
+    ps = PTPS(args.project, origwd=args.origwd)
     sys.exit(ps.gendrawpd(export_areas=args.areas))
