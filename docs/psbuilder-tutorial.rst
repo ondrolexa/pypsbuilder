@@ -110,6 +110,16 @@ lines.
 
 .. image:: images/psbuilder_highlight.png
 
+Manual invariant points or univariant lines
+-------------------------------------------
+
+``Manual`` button allows to add user-defined point or line. You need to select
+stable phases and zero mode phases accordingly. For manual univariant line
+begin and end invariant point must be specified. For manual invariant point, you
+can either specify position of point by clicking on diagram by mouse or when
+more than two univariant lines passing trough that point already exists,
+calculated intersection could be used.
+
 Dogmin
 ------
 
