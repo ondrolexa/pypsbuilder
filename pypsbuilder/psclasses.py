@@ -436,8 +436,14 @@ class TCAPI(object):
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
                 variance = int(varpat.search(sections[0]).group().replace(';', ''))
                 #seenvariance = int(varpat.search(sections[0]).group())
+                if variance < 3:
+                    offset = 0
+                else:
+                    offset = 1
                 # parse mode
-                l1, l2 = sections[5].split('\n')
+                if not sections[4 + offset].startswith('mode'): # For some reasons there is no mode in output
+                    break
+                l1, l2 = sections[4 + offset].split('\n')
                 if tx:
                     for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
                         dt = data.get(phase, {})
@@ -469,23 +475,40 @@ class TCAPI(object):
                     dt.update(sfp)
                     data[phase] = dt
                 # parse oxides
-                l1, l2 = sections[3].split('\n')[1:]
-                ccs = l1.split()
-                nccs = len(ccs)
-                bulk = {}
-                for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
-                    bulk[cc] = float(vv)
-                data['bulk'] = bulk
-                for ln in sections[4].split('\n'):
-                    oxp = {}
-                    phase, lnr = ln.split(maxsplit=1)
-                    for cc, vv in zip(ccs, lnr.split()):
-                        oxp[cc] = float(vv)
-                    dt = data.get(phase, {})
-                    dt.update(oxp)
-                    data[phase] = dt
+                if variance < 3:
+                    l1, l2 = sections[3].split('\n')[1:3]
+                    ccs = l1.split()
+                    nccs = len(ccs)
+                    bulk = {}
+                    for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
+                        bulk[cc] = float(vv)
+                    data['bulk'] = bulk
+                    for ln in sections[3].split('\n')[3:]:
+                        oxp = {}
+                        phase, lnr = ln.split(maxsplit=1)
+                        for cc, vv in zip(ccs, lnr.split()):
+                            oxp[cc] = float(vv)
+                        dt = data.get(phase, {})
+                        dt.update(oxp)
+                        data[phase] = dt
+                else:
+                    l1, l2 = sections[3].split('\n')[1:]
+                    ccs = l1.split()
+                    nccs = len(ccs)
+                    bulk = {}
+                    for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
+                        bulk[cc] = float(vv)
+                    data['bulk'] = bulk
+                    for ln in sections[4].split('\n'):
+                        oxp = {}
+                        phase, lnr = ln.split(maxsplit=1)
+                        for cc, vv in zip(ccs, lnr.split()):
+                            oxp[cc] = float(vv)
+                        dt = data.get(phase, {})
+                        dt.update(oxp)
+                        data[phase] = dt
                 # parse factor
-                l1, l2 = sections[6].split('\n')
+                l1, l2 = sections[5 + offset].split('\n')
                 if tx:
                     for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
                         dt = data.get(phase, {})
@@ -497,7 +520,7 @@ class TCAPI(object):
                         dt.update(dict(factor=float(vv)))
                         data[phase] = dt
                 # parse thermodynamic properties
-                props, lr = sections[7].split('\n', maxsplit=1)
+                props, lr = sections[6 + offset].split('\n', maxsplit=1)
                 for ln in lr.split('\n'):
                     tdpp = {}
                     phase, lnr = ln.split(maxsplit=1)
@@ -508,7 +531,7 @@ class TCAPI(object):
                     data[phase] = dt
                 # sys
                 tdps = {}
-                header, lnr = sections[8].split(maxsplit=1)
+                header, lnr = sections[7 + offset].split(maxsplit=1)
                 for cc, vv in zip(props.split(), lnr.split()):
                     tdps[cc] = float(vv)
                 dt = data.get('sys', {})
@@ -518,7 +541,7 @@ class TCAPI(object):
                     headers.append(float(header))
                 # parse endmembers and chemical potential
                 props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
-                for section in sections[9:-1]:
+                for section in sections[8 + offset:-1]:
                     lns = [ln for ln in section.split('\n') if ln != '                    ideal       gamma    activity        prop          µ0     RT ln a']
                     phase, lnr = lns[0].split(maxsplit=1)
                     lns[0] = lnr
@@ -537,7 +560,8 @@ class TCAPI(object):
                     dt.update(dict(mu=float(vv)))
                     data[phase] = dt
                 alldata.append(data)
-            res = [dict(data=data, ptguess=ptguess) for data, ptguess in zip(alldata, ptguesses)]
+            if alldata:
+                res = [dict(data=data, ptguess=ptguess) for data, ptguess in zip(alldata, ptguesses)]
             if res:
                 status = 'ok'
             else:

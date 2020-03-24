@@ -642,7 +642,13 @@ class PTPS:
             if not isinstance(high, list):
                 high = [high]
             for k in high:
-                ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+                if isinstance(k, str):
+                    k = frozenset(k.split())
+                k = k.union(self.ps.excess)
+                if k in self.shapes:
+                    ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+                else:
+                    print('Field {} not found.'.format(' '.join(k)))
             # Show bulk
             if bulk:
                 if label:
@@ -1003,8 +1009,14 @@ class PTPS:
 
             if not self.gridded:
                 print('Collecting only from uni lines and inv points. Not yet gridded...')
+            # fix labelkeys
             if not isinstance(labelkeys, list):
                 labelkeys = [labelkeys]
+            labelkyes_ok = []
+            for lbl in labelkeys:
+                if isinstance(lbl, str):
+                    lbl = frozenset(lbl.split())
+                labelkyes_ok.append(lbl.union(self.ps.excess))
             if isinstance(out, str):
                 out = [out]
             if only is not None:
@@ -1060,7 +1072,7 @@ class PTPS:
                     for col in cont.collections:
                         col.set_clip_path(patch)
                     # label if needed
-                    if not filled and key in labelkeys:
+                    if not filled and key in labelkyes_ok:
                         positions = []
                         for col in cont.collections:
                             for seg in col.get_segments():
@@ -1097,7 +1109,13 @@ class PTPS:
                 high = [high]
             if only is None:
                 for k in high:
-                    ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+                    if isinstance(k, str):
+                        k = frozenset(k.split())
+                    k = k.union(self.ps.excess)
+                    if k in self.shapes:
+                        ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+                    else:
+                        print('Field {} not found.'.format(' '.join(k)))
             # bulk
             if bulk:
                 if only is None:
@@ -1412,7 +1430,7 @@ def ps_show():
                         default=0.6, help='alpha of colormap')
     parser.add_argument('--connect', action='store_true',
                         help='whether mouse click echo stable assemblage')
-    parser.add_argument('--high', nargs='+',
+    parser.add_argument('--high', action='append',
                         default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
     ps = PTPS(args.project, origwd=args.origwd)
@@ -1464,9 +1482,9 @@ def ps_iso():
                         default=None, help='name of the colormap')
     parser.add_argument('--smooth', type=float,
                         default=0, help='smoothness of the approximation')
-    parser.add_argument('--labelkey', nargs='+',
+    parser.add_argument('--labelkey', action='append',
                         default=[], help='label contours in field defined by set of phases')
-    parser.add_argument('--high', nargs='+',
+    parser.add_argument('--high', action='append',
                         default=[], help='highlight field defined by set of phases')
     args = parser.parse_args()
     ps = PTPS(args.project, origwd=args.origwd)
