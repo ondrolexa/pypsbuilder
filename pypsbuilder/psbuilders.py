@@ -922,47 +922,49 @@ class BuildersBase(QtWidgets.QMainWindow):
                         xx, yy = [], []
                         for uni1, uni2 in itertools.combinations(unis, 2):
                             x, y = intersection(uni1, uni2, ratio=self.ps.ratio, extra=0.2, N=100)
-                            xx.append(x[0])
-                            yy.append(y[0])
-                        x = np.mean(xx)
-                        y = np.mean(yy)
-                        msg = 'Found intersection of {} unilines.\n Do you want to use it?'.format(len(unis))
-                        qb = QtWidgets.QMessageBox
-                        reply = qb.question(self, 'Add manual invariant point',
-                                            msg, qb.Yes, qb.No)
-                        if reply == qb.Yes:
-                            isnew, id_inv = self.ps.getidinv(inv)
-                            inv.id = id_inv
-                            inv.x, inv.y = x, y
-                            if isnew:
-                                self.invmodel.appendRow(id_inv, inv)
-                                idx = self.invmodel.getIndexID(id_inv)
-                                self.invview.selectRow(idx.row())
-                                self.invview.scrollToBottom()
-                                if self.checkAutoconnectInv.isChecked():
+                            if len(x) > 0:
+                                xx.append(x[0])
+                                yy.append(y[0])
+                        if len(xx) > 0:
+                            x = np.mean(xx)
+                            y = np.mean(yy)
+                            msg = 'Found intersection of {} unilines.\n Do you want to use it?'.format(len(unis))
+                            qb = QtWidgets.QMessageBox
+                            reply = qb.question(self, 'Add manual invariant point',
+                                                msg, qb.Yes, qb.No)
+                            if reply == qb.Yes:
+                                isnew, id_inv = self.ps.getidinv(inv)
+                                inv.id = id_inv
+                                inv.x, inv.y = x, y
+                                if isnew:
+                                    self.invmodel.appendRow(id_inv, inv)
+                                    idx = self.invmodel.getIndexID(id_inv)
+                                    self.invview.selectRow(idx.row())
+                                    self.invview.scrollToBottom()
+                                    if self.checkAutoconnectInv.isChecked():
+                                        for uni in self.ps.unilines.values():
+                                            if uni.contains_inv(inv):
+                                                candidates = [inv]
+                                                for other_inv in self.ps.invpoints.values():
+                                                    if other_inv.id != id_inv:
+                                                        if uni.contains_inv(other_inv):
+                                                            candidates.append(other_inv)
+                                                if len(candidates) == 2:
+                                                    self.uni_connect(uni.id, candidates)
+                                                    self.uniview.resizeColumnsToContents()
+                                else:
+                                    self.ps.invpoints[id_inv] = inv
                                     for uni in self.ps.unilines.values():
-                                        if uni.contains_inv(inv):
-                                            candidates = [inv]
-                                            for other_inv in self.ps.invpoints.values():
-                                                if other_inv.id != id_inv:
-                                                    if uni.contains_inv(other_inv):
-                                                        candidates.append(other_inv)
-                                            if len(candidates) == 2:
-                                                self.uni_connect(uni.id, candidates)
-                                                self.uniview.resizeColumnsToContents()
-                            else:
-                                self.ps.invpoints[id_inv] = inv
-                                for uni in self.ps.unilines.values():
-                                    if uni.begin == id_inv or uni.end == id_inv:
-                                        self.ps.trim_uni(uni.id)
-                            self.invview.resizeColumnsToContents()
-                            self.changed = True
-                            self.plot()
-                            idx = self.invmodel.getIndexID(id_inv)
-                            self.show_inv(idx)
-                            self.statusBar().showMessage('User-defined invariant point added.')
-                            self.pushManual.setChecked(False)
-                            done = True
+                                        if uni.begin == id_inv or uni.end == id_inv:
+                                            self.ps.trim_uni(uni.id)
+                                self.invview.resizeColumnsToContents()
+                                self.changed = True
+                                self.plot()
+                                idx = self.invmodel.getIndexID(id_inv)
+                                self.show_inv(idx)
+                                self.statusBar().showMessage('User-defined invariant point added.')
+                                self.pushManual.setChecked(False)
+                                done = True
                     if not done:
                         # cancle zoom and pan action on toolbar
                         if self.toolbar._active == "PAN":
