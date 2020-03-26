@@ -140,6 +140,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.logText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         self.logText.setReadOnly(True)
         self.logText.setFont(f)
+        self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.logDogmin.setReadOnly(True)
+        self.logDogmin.setFont(f)
 
         self.initViewModels()
         self.common_ui_settings()
@@ -226,7 +229,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.pushUniRemove.clicked.connect(self.remove_uni)
         self.tabOutput.tabBarDoubleClicked.connect(self.show_output)
         self.splitter_bottom.setSizes((400, 100))
-
+        self.pushDogmin.toggled.connect(self.do_dogmin)
+        self.pushDogmin.setCheckable(True)
+        self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
+        self.pushDogmin_guesses.clicked.connect(self.dogmin_set_guesses)
         self.phaseview.doubleClicked.connect(self.show_out)
         self.uniview.doubleClicked.connect(self.show_uni)
         self.uniview.clicked.connect(self.uni_activated)
@@ -1133,6 +1139,67 @@ class BuildersBase(QtWidgets.QMainWindow):
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
 
+    def do_dogmin(self, checked=True):
+        if self.ready:
+            if checked:
+                phases, out = self.get_phases_out()
+                which = phases.difference(self.ps.excess)
+                if which:
+                    # cancle zoom and pan action on toolbar
+                    if self.toolbar._active == "PAN":
+                        self.toolbar.pan()
+                    elif self.toolbar._active == "ZOOM":
+                        self.toolbar.zoom()
+                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
+                    self.cid.connect_event('button_press_event', self.dogminer)
+                    self.tabMain.setCurrentIndex(0)
+                    self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
+                    self.pushManual.toggled.disconnect()
+                    self.pushManual.setCheckable(False)
+                else:
+                    self.statusBar().showMessage('You need to select phases to consider for dogmin.')
+            else:
+                self.tc.update_scriptfile(dogmin='no')
+                self.read_scriptfile()
+                QtWidgets.QApplication.restoreOverrideCursor()
+                self.statusBar().showMessage('')
+                self.pushManual.toggled.connect(self.add_userdefined)
+                self.pushManual.setCheckable(True)
+                self.cid.disconnect_events()
+                self.cid = None
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+            self.pushDogmin.setChecked(False)
+
+    def dogmin_select_phases(self):
+        if self.ready:
+            dgtxt = self.logDogmin.toPlainText()
+            try:
+                phases = set(dgtxt.split('phases: ')[1].split(' (')[0].split())
+                tmp = InvPoint(phases=phases, out=set(), output='User-defined')
+                self.set_phaselist(tmp, show_output=False)
+            except:
+                self.statusBar().showMessage('You need to run dogmin first.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+
+    def dogmin_set_guesses(self):
+        if self.ready:
+            dgtxt = self.logDogmin.toPlainText()
+            try:
+                block = [ln for ln in dgtxt.splitlines() if ln != '']
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+                gixe = xyz[-1] + 2
+                ptguess = block[gixs:gixe]
+                self.tc.update_scriptfile(guesses=ptguess)
+                self.read_scriptfile()
+                self.statusBar().showMessage('Dogmin ptuess set.')
+            except:
+                self.statusBar().showMessage('You need to run dogmin first.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+
     def plot(self):
         if self.ready:
             lalfa = self.spinAlpha.value() / 100
@@ -1236,19 +1303,10 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
         super(PSBuilder, self).__init__(parent)
 
     def builder_ui_settings(self):
-        # Dogmin tab settings
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
-        self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
-        self.logDogmin.setReadOnly(True)
-        self.logDogmin.setFont(f)
         # CONNECT SIGNALS
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.actionImport_drfile.triggered.connect(self.import_drfile)
-        self.pushDogmin.toggled.connect(self.do_dogmin)
-        self.pushDogmin.setCheckable(True)
-        self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
-        self.pushDogmin_guesses.clicked.connect(self.dogmin_set_guesses)
         # additional keyboard shortcuts
         self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
@@ -1643,68 +1701,6 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                 self.statusBar().showMessage('Dogmin failed.')
             self.pushDogmin.setChecked(False)
 
-    def do_dogmin(self, checked=True):
-        if self.ready:
-            if checked:
-                phases, out = self.get_phases_out()
-                which = phases.difference(self.ps.excess)
-                if which:
-                    # cancle zoom and pan action on toolbar
-                    if self.toolbar._active == "PAN":
-                        self.toolbar.pan()
-                    elif self.toolbar._active == "ZOOM":
-                        self.toolbar.zoom()
-                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
-                    self.cid.connect_event('button_press_event', self.dogminer)
-                    self.tabMain.setCurrentIndex(0)
-                    self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
-                    self.pushManual.toggled.disconnect()
-                    self.pushManual.setCheckable(False)
-                else:
-                    self.statusBar().showMessage('You need to select phases to consider for dogmin.')
-            else:
-                self.tc.update_scriptfile(dogmin='no')
-                self.read_scriptfile()
-                QtWidgets.QApplication.restoreOverrideCursor()
-                self.statusBar().showMessage('')
-                self.pushManual.toggled.connect(self.add_userdefined)
-                self.pushManual.setCheckable(True)
-                self.cid.disconnect_events()
-                self.cid = None
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
-            self.pushDogmin.setChecked(False)
-
-    def dogmin_select_phases(self):
-        if self.ready:
-            dgtxt = self.logDogmin.toPlainText()
-            try:
-                phases = set(dgtxt.split('phases: ')[1].split(' (')[0].split())
-                tmp = InvPoint(phases=phases, out=set(), output='User-defined')
-                self.set_phaselist(tmp, show_output=False)
-            except:
-                self.statusBar().showMessage('You need to run dogmin first.')
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
-
-    def dogmin_set_guesses(self):
-        if self.ready:
-            dgtxt = self.logDogmin.toPlainText()
-            try:
-                block = [ln for ln in dgtxt.splitlines() if ln != '']
-                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
-                gixe = xyz[-1] + 2
-                ptguess = block[gixs:gixe]
-                self.tc.update_scriptfile(guesses=ptguess)
-                self.read_scriptfile()
-                self.statusBar().showMessage('Dogmin ptuess set.')
-            except:
-                self.statusBar().showMessage('You need to run dogmin first.')
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
-
-
     def do_calc(self, calcT, phases={}, out={}):
         if self.ready:
             if phases == {} and out == {}:
@@ -1765,6 +1761,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                             if self.checkAutoconnectUni.isChecked():
                                 if len(candidates) == 2:
                                     self.uni_connect(id_uni, candidates)
+                            self.changed = True
                             self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())
@@ -1852,6 +1849,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("extend_range", self.spinOver.value())
             builder_settings.setValue("label_uni", self.checkLabelUni.checkState())
+            builder_settings.setValue("dogmin_level", self.spinDoglevel.value())
             builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
@@ -1871,6 +1869,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
             self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
@@ -2120,9 +2119,14 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             ts = extend * (trange[1] - trange[0]) / 100
             trange = (max(trange[0] - ts, 11), trange[1] + ts)
             prange = (max(self.tc.prange[0] - 1, 0.01), self.tc.prange[1] + 1)
-            _, changed = self.tc.update_ptxsteps(steps=self.spinSteps.value())
-            if changed:
-                self.read_scriptfile()
+            crange = self.ax.get_ylim()
+            cs = extend * (crange[1] - crange[0]) / 100
+            crange = (crange[0] - cs, crange[1] + cs)
+            # change bulk
+            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
+                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            self.tc.update_scriptfile(bulk=bulk, steps=self.spinSteps.value(), xvals=crange)
+
             out_section = []
             cand = []
             for ophase in phases.difference(out).difference(self.ps.excess):
@@ -2137,6 +2141,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     else:
                         exists, inv_id = '*', str(id)
                     if len(res) > 1:
+                        # rescale pts from zoomed composition
+                        pts[0] = crange[0] + pts[0] * (crange[1] - crange[0])
                         pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                         splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
                         splx = interp1d(ptcoords[0], pts[0], bounds_error=False, fill_value=np.nan)
@@ -2163,6 +2169,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     else:
                         exists, inv_id = '*', str(id)
                     if len(res) > 1:
+                        # rescale pts from zoomed composition
+                        pts[0] = crange[0] + pts[0] * (crange[1] - crange[0])
                         pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                         splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
                         splx = interp1d(ptcoords[0], pts[0], bounds_error=False, fill_value=np.nan)
@@ -2179,6 +2187,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             # set original ptguesses when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 self.tc.update_scriptfile(guesses=old_guesses)
+            # restore bulk
+            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
+                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
+            self.tc.update_scriptfile(bulk=bulk, steps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -2200,6 +2212,48 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             else:
                 self.statusBar().showMessage('No invariant points found.')
 
+    def dogminer(self, event):
+        self.cid.onmove(event)
+        if event.inaxes is not None:
+            self.cid.clear(event)
+            phases, out = self.get_phases_out()
+            which = phases.difference(self.ps.excess)
+            extend = self.spinOver.value()
+            trange = self.ax.get_xlim()
+            ts = extend * (trange[1] - trange[0]) / 100
+            trange = (trange[0] - ts, trange[1] + ts)
+            prange = (max(self.tc.prange[0] - 1, 0.01), self.tc.prange[1] + 1)
+            steps = self.spinSteps.value()
+            variance = self.spinVariance.value()
+            doglevel = self.spinDoglevel.value()
+            #prec = max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0)
+            prec = self.spinPrec.value()
+            # change bulk
+            bulk = [self.tc.interpolate_bulk(event.ydata, prec=self.spinPrec.value())]
+            self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
+            self.tc.update_scriptfile(bulk=bulk,
+                                      dogmin='yes {}'.format(doglevel), which=which,
+                                      T='{:.{prec}f}'.format(event.xdata, prec=prec),
+                                      p='{:.{prec}f}'.format(event.ydata, prec=prec))
+            #self.read_scriptfile()
+            QtWidgets.QApplication.processEvents()
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            tcout = self.tc.dogmin(variance)
+            res, resic = self.tc.parse_dogmin()
+            if res is not None:
+                self.textOutput.setPlainText(res)
+                self.textFullOutput.setPlainText(resic)
+                self.logDogmin.setPlainText(res + resic)
+                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                self.statusBar().showMessage('Dogmin finished.')
+            else:
+                self.statusBar().showMessage('Dogmin failed.')
+            # restore bulk
+            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
+                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
+            self.tc.update_scriptfile(bulk=bulk, steps=self.spinSteps.value())
+            self.pushDogmin.setChecked(False)
+
     def do_calc(self, calcT, phases={}, out={}):
         if self.ready:
             if phases == {} and out == {}:
@@ -2213,9 +2267,13 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             ts = extend * (trange[1] - trange[0]) / 100
             trange = (max(trange[0] - ts, 11), trange[1] + ts)
             prange = (max(self.tc.prange[0] - 1, 0.01), self.tc.prange[1] + 1)
-            _, changed = self.tc.update_ptxsteps(steps=self.spinSteps.value())
-            if changed:
-                self.read_scriptfile()
+            crange = self.ax.get_ylim()
+            cs = extend * (crange[1] - crange[0]) / 100
+            crange = (crange[0] - cs, crange[1] + cs)
+            # change bulk
+            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
+                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            self.tc.update_scriptfile(bulk=bulk, steps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
                 uni_tmp = UniLine(phases=phases, out=out)
@@ -2230,6 +2288,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 elif len(res) < 2:
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
+                    # rescale pts from zoomed composition
+                    pts[0] = crange[0] + pts[0] * (crange[1] - crange[0])
                     uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
                                   variance=variance, y=pts[0], x=pts[1], output=output, results=res)
                     if self.checkAutoconnectUni.isChecked():
@@ -2257,6 +2317,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             if self.checkAutoconnectUni.isChecked():
                                 if len(candidates) == 2:
                                     self.uni_connect(id_uni, candidates)
+                            self.changed = True
                             self.uniview.resizeColumnsToContents()
                             idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())
@@ -2278,6 +2339,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 elif len(res) < 2:
                     self.statusBar().showMessage('Only one point calculated. Change steps.')
                 else:
+                    # rescale pts from zoomed composition
+                    pts[0] = crange[0] + pts[0] * (crange[1] - crange[0])
                     pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                     splt = interp1d(ptcoords[0], ptcoords[1], bounds_error=False, fill_value=np.nan)
                     splx = interp1d(ptcoords[0], pts[0], bounds_error=False, fill_value=np.nan)
@@ -2328,6 +2391,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
+            # restore bulk
+            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
+                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
+            self.tc.update_scriptfile(bulk=bulk, steps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')

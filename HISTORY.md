@@ -2,7 +2,8 @@
 
 ## 2.2 (XX YY 2019)
 
-* psbuilder major update and refactoring
+* pseudosection builders major update and refactoring
+  - currently psbuilder and txbuilder implemented
   - compatible with TC 3.50
   - topology graph window added
   - dogmin implemented
@@ -21,7 +22,7 @@
 ```
   % =================================================
   liq 8  1
-  
+
      q(liq)          0.1814
      fsp(liq)        0.3490
      na(liq)         0.5840
@@ -29,7 +30,7 @@
      ol(liq)        0.01373
      x(liq)          0.7333
      h2o(liq)        0.4276
-  
+
   % --------------------------------------------------
 ```
 

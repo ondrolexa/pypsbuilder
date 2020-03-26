@@ -165,14 +165,18 @@ class TCAPI(object):
                     elif kw[0] == 'setbulk':
                         errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
                         bulk = kw[1:]
+                        if 'ask' in bulk:
+                            raise ScriptfileError('Setbulk must not be set to ask.')
                         if 'yes' in bulk:
                             bulk.remove('yes')
-                        if len(self.bulk) == 1:
-                            if len(self.bulk[0]) < len(bulk):
-                                self.ptx_steps = int(bulk[-1]) - 1
-                                bulk = bulk[:-1]
-                        self.bulk.append(bulk)
-                        check['setbulk'] = True
+                        if not 'no' in bulk:
+                            if len(self.bulk) == 1:
+                                if len(self.bulk[0]) < len(bulk):
+                                    self.ptx_steps = int(bulk[-1])
+                                    bulk = bulk[:-1]
+                            self.bulk.append(bulk)
+                            check['setbulk'] = True
+
                     elif kw[0] == 'setexcess':
                         errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
                         self.excess = set(kw[1:])
@@ -658,6 +662,10 @@ class TCAPI(object):
                 'yes X', where X is log level. When None no modification is
                 done. Default None.
             which (set): Set of phases used for dogmin.
+            bulk (list): Bulk composition. Default None.
+            xvals (tuple): x values for compositions. Default (0, 1)
+            xsteps (int): Number of compositional steps between two bulks.
+                Default 20.
             p (float): Pressure for dogmin calculation
             T (float): Temperature for dogmin calculation
         """
@@ -665,6 +673,9 @@ class TCAPI(object):
         get_old_guesses = kwargs.get('get_old_guesses', False)
         dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
         which = kwargs.get('which', None)
+        bulk = kwargs.get('bulk', None)
+        xvals = kwargs.get('xvals', (0, 1))
+        xsteps = kwargs.get('xsteps', 20)
         p = kwargs.get('p', None)
         T = kwargs.get('T', None)
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
@@ -691,6 +702,20 @@ class TCAPI(object):
             if dgb and dge:
                 sc = sc[:dgb[0] + 1] + dglines + sc[dge[0]:]
                 changed = True
+        if bulk is not None:
+            bub = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBBULK-BEGIN}')]
+            bue = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBBULK-END}')]
+            bulines = []
+            if len(bulk) == 2:
+                bulk[1].append(str(xsteps))
+                for bul, xvl in zip(bulk, xvals):
+                    bulines.append('setbulk yes {} % x={:g}\n'.format(' '.join(bul), xvl))
+            else:
+                for bul in bulk:
+                    bulines.append('setbulk yes {}\n'.format(' '.join(bul)))
+            if bub and bue:
+                sc = sc[:bub[0] + 1] + bulines + sc[bue[0]:]
+                changed = True
         if changed:
             with self.scriptfile.open('w', encoding=self.TCenc) as f:
                 for ln in sc:
@@ -700,7 +725,7 @@ class TCAPI(object):
         else:
             return None
 
-    def update_ptxsteps(self, steps=None):
+    def update_ptxsteps(self, steps=None, bulk=None):
         """Modify number of compositional steps between two bulks."""
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             sc = f.readlines()
@@ -736,6 +761,16 @@ class TCAPI(object):
             return old_steps, changed
         else:
             return None, changed
+
+    def interpolate_bulk(self, x, prec=3):
+        if len(self.bulk) == 2:
+            b1 = np.array([float(v) for v in self.bulk[0]])
+            b2 = np.array([float(v) for v in self.bulk[1]])
+            db = b2 - b1
+            bi = b1 + x * db
+        else:
+            bi = np.array([float(v) for v in self.bulk[0]])
+        return ['{:.{prec}f}'.format(v, prec=prec) for v in bi]
 
     def parse_kwargs(self, **kwargs):
         prange = kwargs.get('prange', self.prange)
