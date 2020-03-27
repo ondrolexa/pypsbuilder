@@ -932,8 +932,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                                 xx.append(x[0])
                                 yy.append(y[0])
                         if len(xx) > 0:
-                            x = np.mean(xx)
-                            y = np.mean(yy)
+                            x = np.atleast_1d(np.mean(xx))
+                            y = np.atleast_1d(np.mean(yy))
                             msg = 'Found intersection of {} unilines.\n Do you want to use it?'.format(len(unis))
                             qb = QtWidgets.QMessageBox
                             reply = qb.question(self, 'Add manual invariant point',
@@ -2231,10 +2231,11 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             # change bulk
             bulk = [self.tc.interpolate_bulk(event.ydata, prec=self.spinPrec.value())]
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
+            pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
             self.tc.update_scriptfile(bulk=bulk,
                                       dogmin='yes {}'.format(doglevel), which=which,
                                       T='{:.{prec}f}'.format(event.xdata, prec=prec),
-                                      p='{:.{prec}f}'.format(event.ydata, prec=prec))
+                                      p='{:.{prec}f}'.format(pm, prec=prec))
             #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)

@@ -137,6 +137,7 @@ class TCAPI(object):
                 lines = f.readlines()
             gsb, gse = False, False
             dgb, dge = False, False
+            bub, bue = False, False
             for line in lines:
                 kw = line.split('%')[0].split()
                 if '{PSBGUESS-BEGIN}' in line:
@@ -147,6 +148,10 @@ class TCAPI(object):
                     dgb = True
                 if '{PSBDOGMIN-END}' in line:
                     dge = True
+                if '{PSBBULK-BEGIN}' in line:
+                    bub = True
+                if '{PSBBULK-END}' in line:
+                    bue = True
                 if kw == ['*']:
                     break
                 if kw:
@@ -259,6 +264,8 @@ class TCAPI(object):
                 raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
             if not (dgb and dge):
                 raise ScriptfileError('There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile.')
+            if not (bub and bue):
+                raise ScriptfileError('There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile.')
 
             # TC
             self.tcout = self.runtc('\nkill\n\n')
@@ -1237,6 +1244,7 @@ class SectionBase:
                           'Invariant points: {}'.format(len(self.invpoints)),
                           '{} range: {} {}'.format(self.x_var, *self.xrange),
                           '{} range: {} {}'.format(self.y_var, *self.yrange)])
+
     @property
     def ratio(self):
         return (self.xrange[1] - self.xrange[0]) / (self.yrange[1] - self.yrange[0])
@@ -1547,6 +1555,12 @@ class SectionBase:
         plt.xlabel(self.x_var_label)
         plt.xlabel(self.y_var_label)
         plt.show()
+
+    @classmethod
+    def from_file(cls, projfile):
+        with gzip.open(str(projfile), 'rb') as stream:
+            data = pickle.load(stream)
+        return data['section']
 
 
 class PTsection(SectionBase):
