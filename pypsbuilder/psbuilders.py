@@ -44,7 +44,8 @@ from .ui_txbuilder import Ui_TXBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-from .psclasses import TCAPI, InvPoint, UniLine, PTsection, TXsection, polymorphs
+from .psclasses import (TCAPI, InvPoint, UniLine, Dogmin,
+                        PTsection, TXsection, polymorphs)
 from . import __version__
 
 # Make sure that we are using QT5
@@ -200,6 +201,21 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.unisel = self.uniview.selectionModel()
         self.unisel.selectionChanged.connect(self.sel_changed)
 
+        # DOGVIEW
+        self.dogmodel = DogminModel(self.ps, self.dogview)
+        self.dogview.setModel(self.dogmodel)
+        # enable sorting
+        self.dogview.setSortingEnabled(False)
+        # select rows
+        self.dogview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.dogview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.dogview.horizontalHeader().setMinimumSectionSize(40)
+        self.dogview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.dogview.horizontalHeader().hide()
+        # signals
+        self.dogsel = self.dogview.selectionModel()
+        self.dogsel.selectionChanged.connect(self.dogmin_changed)
+
     def common_ui_settings(self):
         # CONNECT SIGNALS
         self.actionNew.triggered.connect(self.initProject)
@@ -231,8 +247,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.splitter_bottom.setSizes((400, 100))
         self.pushDogmin.toggled.connect(self.do_dogmin)
         self.pushDogmin.setCheckable(True)
-        self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
-        self.pushDogmin_guesses.clicked.connect(self.dogmin_set_guesses)
+        #self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
+        self.pushGuessDogmin.clicked.connect(self.dogmin_set_guesses)
+        self.pushDogminRemove.clicked.connect(self.remove_dogmin)
         self.phaseview.doubleClicked.connect(self.show_out)
         self.uniview.doubleClicked.connect(self.show_uni)
         self.uniview.clicked.connect(self.uni_activated)
@@ -240,6 +257,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.invview.doubleClicked.connect(self.show_inv)
         self.invview.clicked.connect(self.inv_activated)
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
+        self.dogview.doubleClicked.connect(self.set_dogmin_phases)
         # additional keyboard shortcuts
         self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
         self.scHome.activated.connect(self.toolbar.home)
@@ -592,6 +610,14 @@ class BuildersBase(QtWidgets.QMainWindow):
     def sel_changed(self):
         self.clean_high()
 
+    def dogmin_changed(self):
+        if self.dogsel.hasSelection():
+            idx = self.dogsel.selectedIndexes()
+            dgm = self.ps.dogmins[self.dogmodel.data(idx[0])]
+            self.textOutput.setPlainText(dgm.output)
+            self.textFullOutput.setPlainText(dgm.resic)
+            self.logDogmin.setPlainText(dgm.output + dgm.resic)
+
     def invsel_guesses(self):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
@@ -618,6 +644,14 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.statusBar().showMessage('Univariant line ptguess set for {}'.format(self.format_coord(uni._x[ix], uni._y[ix])))
             else:
                 self.statusBar().showMessage('Guesses cannot be set from user-defined univariant line.')
+
+    def dogmin_set_guesses(self):
+        if self.dogsel.hasSelection():
+            idx = self.dogsel.selectedIndexes()
+            dgm = self.ps.dogmins[self.dogmodel.data(idx[0])]
+            self.tc.update_scriptfile(guesses=dgm.ptguess())
+            self.read_scriptfile()
+            self.statusBar().showMessage('Dogmin ptuess set.')
 
     def get_phases_out(self):
         phases = []
@@ -692,6 +726,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.set_phaselist(uni, show_output=True)
         self.unihigh = self.ax.plot(uni.x, uni.y, '-', **unihigh_kw)
         self.canvas.draw()
+
+    def set_dogmin_phases(self, index):
+        dgm = self.ps.dogmins[self.dogmodel.getRowID(index)]
+        self.set_phaselist(dgm, show_output=False)
 
     def uni_activated(self, index):
         self.invsel.clearSelection()
@@ -883,6 +921,19 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.changed = True
                 self.plot()
                 self.statusBar().showMessage('Univariant line removed')
+
+    def remove_dogmin(self):
+        if self.dogsel.hasSelection():
+            idx = self.dogsel.selectedIndexes()
+            msg = '{}\nAre you sure?'.format(self.dogmodel.data(idx[1]))
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Remove dogmin result',
+                                msg, qb.Yes, qb.No)
+            if reply == qb.Yes:
+                self.dogmodel.removeRow(idx[0])
+                self.changed = True
+                self.plot()
+                self.statusBar().showMessage('Dogmin result removed')
 
     def add_userdefined(self, checked=True):
         if self.ready:
@@ -1208,6 +1259,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                                bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
+            doglabel_kw = dict(ha='center', va='center', size=fsize,
+                               bbox=dict(boxstyle="round,pad=0.2", fc='sandybrown', alpha=lalfa, pad=2))
             axs = self.figure.get_axes()
             if axs:
                 self.ax = axs[0]
@@ -1228,6 +1281,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                 else:
                     if self.checkDotInv.isChecked():
                         self.ax.plot(inv.x, inv.y, 'k.')
+            if self.checkLabelDog.isChecked():
+                for dgm in self.ps.dogmins.values():
+                    self.ax.annotate(s=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
             self.ax.set_xlabel(self.ps.x_var_label)
             self.ax.set_ylabel(self.ps.y_var_label)
             ex = list(self.ps.excess)
@@ -1325,6 +1381,8 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
+            builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
+            builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
             builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
@@ -1346,6 +1404,8 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
@@ -1456,10 +1516,10 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                     for id, uni in data['section'].unilines.items():
                         self.unimodel.appendRow(id, uni)
                     self.uniview.resizeColumnsToContents()
-                    # cutting
-                    #for row in self.unimodel.unilist:
-                    #    self.trimuni(row)
-                    # all done
+                    if hasattr(data['section'], 'dogmins'):
+                        for id, dgm in data['section'].dogmins.items():
+                            self.dogmodel.appendRow(id, dgm)
+                        self.dogview.resizeColumnsToContents()
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -1690,11 +1750,20 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
-            res, resic = self.tc.parse_dogmin()
-            if res is not None:
-                self.textOutput.setPlainText(res)
-                self.textFullOutput.setPlainText(resic)
-                self.logDogmin.setPlainText(res + resic)
+            output, resic = self.tc.parse_dogmin()
+            if output is not None:
+                dgm = Dogmin(output=output, resic=resic, x=event.xdata, y=event.ydata)
+                id_dog = 0
+                for key in self.ps.dogmins:
+                    id_dog = max(id_dog, key)
+                id_dog += 1
+                self.dogmodel.appendRow(id_dog, dgm)
+                self.dogview.resizeColumnsToContents()
+                self.changed = True
+                idx = self.dogmodel.getIndexID(id_dog)
+                self.dogview.selectRow(idx.row())
+                self.dogview.scrollToBottom()
+                self.plot()
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 self.statusBar().showMessage('Dogmin finished.')
             else:
@@ -1853,6 +1922,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.setValue("label_uni_text", self.checkLabelUniText.checkState())
             builder_settings.setValue("label_inv", self.checkLabelInv.checkState())
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
+            builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
+            builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
             builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
@@ -1873,6 +1944,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
@@ -1983,10 +2056,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     for id, uni in data['section'].unilines.items():
                         self.unimodel.appendRow(id, uni)
                     self.uniview.resizeColumnsToContents()
-                    # cutting
-                    #for row in self.unimodel.unilist:
-                    #    self.trimuni(row)
-                    # all done
+                    if hasattr(data['section'], 'dogmins'):
+                        for id, dgm in data['section'].dogmins.items():
+                            self.dogmodel.appendRow(id, dgm)
+                        self.dogview.resizeColumnsToContents()
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2240,11 +2313,20 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
-            res, resic = self.tc.parse_dogmin()
-            if res is not None:
-                self.textOutput.setPlainText(res)
-                self.textFullOutput.setPlainText(resic)
-                self.logDogmin.setPlainText(res + resic)
+            output, resic = self.tc.parse_dogmin()
+            if output is not None:
+                dgm = Dogmin(output=output, resic=resic, x=event.xdata, y=event.ydata)
+                id_dog = 0
+                for key in self.ps.dogmins:
+                    id_dog = max(id_dog, key)
+                id_dog += 1
+                self.dogmodel.appendRow(id_dog, dgm)
+                self.dogview.resizeColumnsToContents()
+                self.changed = True
+                idx = self.dogmodel.getIndexID(id_dog)
+                self.dogview.selectRow(idx.row())
+                self.dogview.scrollToBottom()
+                self.plot()
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 self.statusBar().showMessage('Dogmin finished.')
             else:
@@ -2592,6 +2674,69 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     def setModelData(self, editor, model, index):
         new = editor.currentData(1)
         model.setData(index, int(new))
+
+
+class DogminModel(QtCore.QAbstractTableModel):
+    def __init__(self, ps, parent, *args):
+        super(DogminModel, self).__init__(parent, *args)
+        self.ps = ps
+        self.doglist = []
+        self.header = ['ID', 'Label']
+
+    def rowCount(self, parent=None):
+        return len(self.doglist)
+
+    def columnCount(self, parent=None):
+        return len(self.header)
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        dgm = self.ps.dogmins[self.doglist[index.row()]]
+        # elif role == QtCore.Qt.ForegroundRole:
+        #     if self.invlist[index.row()][self.header.index('Data')]['manual']:
+        #         brush = QtGui.QBrush()
+        #         brush.setColor(QtGui.QColor('red'))
+        #         return brush
+        #if role == QtCore.Qt.FontRole:
+        #    if inv.manual:
+        #        font = QtGui.QFont()
+        #        font.setItalic(True)
+        #        return font
+        if role != QtCore.Qt.DisplayRole:
+            return None
+        else:
+            if index.column() == 0:
+                return self.doglist[index.row()]
+            else:
+                return dgm.label(excess=self.ps.excess)
+
+    def appendRow(self, id, dgm):
+        """ Append model row. """
+        self.beginInsertRows(QtCore.QModelIndex(),
+                             len(self.doglist), len(self.doglist))
+        self.doglist.append(id)
+        self.ps.add_dogmin(id, dgm)
+        self.endInsertRows()
+
+    def removeRow(self, index):
+        """ Remove model row. """
+        self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
+        id = self.doglist[index.row()]
+        del self.doglist[index.row()]
+        del self.ps.dogmins[id]
+        self.endRemoveRows()
+
+    def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
+        if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
+            return self.header[col]
+        return None
+
+    def getRowID(self, index):
+        return self.doglist[index.row()]
+
+    def getIndexID(self, id):
+        return self.index(self.doglist.index(id), 0, QtCore.QModelIndex())
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):

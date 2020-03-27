@@ -642,7 +642,7 @@ class TCAPI(object):
                 status = 'nir'
         return status, variance, np.array(pts).T, res, output
 
-    def parse_dogmin(self):
+    def parse_dogmin_old(self):
         """Dogmin parser."""
         try:
             with self.icfile.open('r', encoding=self.TCenc) as f:
@@ -654,6 +654,18 @@ class TCAPI(object):
             res = None
             resic = None
         return res, resic
+
+    def parse_dogmin(self):
+        """Dogmin parser."""
+        try:
+            with self.icfile.open('r', encoding=self.TCenc) as f:
+                resic = f.read()
+            with self.logfile.open('r', encoding=self.TCenc) as f:
+                output = f.read()
+        except:
+            output = None
+            resic = None
+        return output, resic
 
     def update_scriptfile(self, **kwargs):
         """Method to update scriptfile.
@@ -964,6 +976,46 @@ class TCAPI(object):
             print('No drawpd executable identified in working directory.')
             return False
 
+class Dogmin:
+    def __init__(self, **kwargs):
+        assert 'output' in kwargs, 'Dogmin output must be provided'
+        assert 'resic' in kwargs, 'ic file content must be provided'
+        self.id = kwargs.get('id', 0)
+        self._output = kwargs.get('output')
+        self.resic = kwargs.get('resic')
+        self.x = kwargs.get('x', None)
+        self.y = kwargs.get('y', None)
+
+    @property
+    def output(self):
+        return self._output.split('##########################################################\n')[-1]
+
+    @property
+    def phases(self):
+        return set(self.output.split('phases: ')[1].split(' (')[0].split())
+
+    @property
+    def out(self):
+        return set()
+
+    def label(self, excess={}):
+        """str: full label with space delimeted phases."""
+        return ' '.join(sorted(list(self.phases.difference(excess))))
+
+    def annotation(self, show_out=False, excess={}):
+        """str: String representation of ID with possible zermo mode phase."""
+        if show_out:
+            return ' '.join(self.phases.difference(excess))
+        else:
+            return '{:d}'.format(self.id)
+
+    def ptguess(self):
+        block = [ln for ln in self.output.splitlines() if ln != '']
+        xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+        gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+        gixe = xyz[-1] + 2
+        return  block[gixs:gixe]
+
 
 class PseudoBase:
     """Base class with common methods for InvPoint and UniLine.
@@ -1237,6 +1289,7 @@ class SectionBase:
         self.excess = kwargs.get('excess', set())
         self.invpoints = {}
         self.unilines = {}
+        self.dogmins = {}
 
     def __repr__(self):
         return '\n'.join(['{}'.format(type(self).__name__),
@@ -1269,6 +1322,10 @@ class SectionBase:
     def add_uni(self, id, uni):
         self.unilines[id] = uni
         self.unilines[id].id = id
+
+    def add_dogmin(self, id, dgm):
+        self.dogmins[id] = dgm
+        self.dogmins[id].id = id
 
     def getidinv(self, inv=None):
         '''Return id of either new or existing invariant point'''
