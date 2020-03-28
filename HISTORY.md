@@ -3,10 +3,10 @@
 ## 2.2 (XX YY 2019)
 
 * pseudosection builders major update and refactoring
-  - currently psbuilder and txbuilder implemented
+  - psbuilder, txbuilder and pxbuilder implemented
   - compatible with TC 3.50
   - topology graph window added
-  - dogmin implemented
+  - dogmin implemented (results stored in projects)
   - autoconnect implemented
   - invariant point search implemented
   - zoom to uni added to context menu

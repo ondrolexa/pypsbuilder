@@ -38,6 +38,7 @@ setup(
     [console_scripts]
     psbuilder=pypsbuilder.psbuilders:psbuilder
     txbuilder=pypsbuilder.psbuilders:txbuilder
+    pxbuilder=pypsbuilder.psbuilders:pxbuilder
     psshow=pypsbuilder.psexplorer:ps_show
     psiso=pypsbuilder.psexplorer:ps_iso
     psgrid=pypsbuilder.psexplorer:ps_grid

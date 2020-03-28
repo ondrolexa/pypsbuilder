@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PSBuilder</class>
- <widget class="QMainWindow" name="PSBuilder">
+ <class>PXBuilder</class>
+ <widget class="QMainWindow" name="PXBuilder">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>PS Builder</string>
+   <string>PX Builder</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
@@ -81,7 +81,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushCalcPatT">
+           <widget class="QPushButton" name="pushCalc">
             <property name="maximumSize">
              <size>
               <width>16777215</width>
@@ -89,20 +89,20 @@
              </size>
             </property>
             <property name="text">
-             <string>Calc P</string>
+             <string>Calc</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushCalcTatP">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>16777215</height>
-             </size>
+           <widget class="QSpinBox" name="spinSteps">
+            <property name="minimum">
+             <number>2</number>
             </property>
-            <property name="text">
-             <string>Calc T</string>
+            <property name="maximum">
+             <number>200</number>
+            </property>
+            <property name="value">
+             <number>20</number>
             </property>
            </widget>
           </item>
@@ -163,7 +163,7 @@
          </property>
          <widget class="QWidget" name="tabPlot">
           <attribute name="title">
-           <string>P-T Pseudosection</string>
+           <string>P-X Pseudosection</string>
           </attribute>
           <layout class="QHBoxLayout" name="horizontalLayout_6">
            <property name="spacing">
@@ -190,7 +190,7 @@
           <attribute name="title">
            <string>Settings</string>
           </attribute>
-          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,1,0">
+          <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,0">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -218,7 +218,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>T max:</string>
+                 <string>X max:</string>
                 </property>
                </widget>
               </item>
@@ -297,7 +297,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>T min:</string>
+                 <string>X min:</string>
                 </property>
                </widget>
               </item>
@@ -340,6 +340,26 @@
                 </property>
                </widget>
               </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>T range</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QSpinBox" name="rangeSpin">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>200</number>
+                </property>
+                <property name="value">
+                 <number>50</number>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
@@ -356,39 +376,13 @@
              </property>
              <layout class="QFormLayout" name="formLayout">
               <item row="0" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Number of calculation steps:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QSpinBox" name="spinSteps">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimum">
-                 <number>5</number>
-                </property>
-                <property name="maximum">
-                 <number>200</number>
-                </property>
-                <property name="value">
-                 <number>50</number>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
                <widget class="QLabel" name="label">
                 <property name="text">
                  <string>Coordinates precision (scale)</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
+              <item row="0" column="1">
                <widget class="QSpinBox" name="spinPrec">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -404,14 +398,14 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="1" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
                  <string>Extend view range to calculation range [%]</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="1" column="1">
                <widget class="QSpinBox" name="spinOver">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -427,14 +421,14 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="2" column="0">
                <widget class="QLabel" name="label_10">
                 <property name="text">
                  <string>Dogmin doglevel</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="2" column="1">
                <widget class="QSpinBox" name="spinDoglevel">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -450,7 +444,7 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
+              <item row="3" column="0">
                <widget class="QCheckBox" name="checkLabelInv">
                 <property name="text">
                  <string>Label invariant points</string>
@@ -460,14 +454,14 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="3" column="1">
                <widget class="QCheckBox" name="checkLabelInvText">
                 <property name="text">
                  <string>Use zero phases instead numbers</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
+              <item row="4" column="0">
                <widget class="QCheckBox" name="checkLabelUni">
                 <property name="text">
                  <string>Label univariant lines</string>
@@ -477,21 +471,21 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="4" column="1">
                <widget class="QCheckBox" name="checkLabelUniText">
                 <property name="text">
                  <string>Use zero phase instead numbers</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
+              <item row="6" column="0">
                <widget class="QLabel" name="label_2">
                 <property name="text">
                  <string>Labels alpha</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
+              <item row="6" column="1">
                <widget class="QSpinBox" name="spinAlpha">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -510,14 +504,14 @@
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
+              <item row="7" column="0">
                <widget class="QLabel" name="label_3">
                 <property name="text">
                  <string>Label fontsize</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
+              <item row="7" column="1">
                <widget class="QSpinBox" name="spinFontsize">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -539,49 +533,49 @@
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
+              <item row="8" column="0">
                <widget class="QCheckBox" name="checkDotInv">
                 <property name="text">
                  <string>Show dot at invariant point when not labelled</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
+              <item row="9" column="0">
                <widget class="QCheckBox" name="checkOverwrite">
                 <property name="text">
                  <string>Do not overwrite already calculated lines and points</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
-               <widget class="QCheckBox" name="checkAutoconnectUni">
-                <property name="text">
-                 <string>Automatically connect new univariant lines if possible</string>
-                </property>
-               </widget>
-              </item>
-              <item row="13" column="0">
-               <widget class="QCheckBox" name="checkAutoconnectInv">
-                <property name="text">
-                 <string>Automatically connect new invariant points if possible</string>
-                </property>
-               </widget>
-              </item>
-              <item row="11" column="0">
+              <item row="10" column="0">
                <widget class="QCheckBox" name="checkUseInvGuess">
                 <property name="text">
                  <string>Use ptguess from connected invariant point for Search</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="11" column="0">
+               <widget class="QCheckBox" name="checkAutoconnectUni">
+                <property name="text">
+                 <string>Automatically connect new univariant lines if possible</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0">
+               <widget class="QCheckBox" name="checkAutoconnectInv">
+                <property name="text">
+                 <string>Automatically connect new invariant points if possible</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
                <widget class="QCheckBox" name="checkLabelDog">
                 <property name="text">
                  <string>Label dogmins</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="5" column="1">
                <widget class="QCheckBox" name="checkLabelDogText">
                 <property name="text">
                  <string>Use phases instead numbers</string>
@@ -742,7 +736,7 @@
             </widget>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="0,0,0">
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
              <item>
               <spacer name="horizontalSpacer_5">
                <property name="orientation">
@@ -771,6 +765,12 @@
              </item>
              <item>
               <widget class="QPushButton" name="pushDogminRemove">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="text">
                 <string>Remove</string>
                </property>
@@ -1026,7 +1026,6 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionReload"/>
-    <addaction name="actionImport_drfile"/>
     <addaction name="actionImport_project"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
@@ -1133,8 +1132,7 @@
  <tabstops>
   <tabstop>phaseview</tabstop>
   <tabstop>outview</tabstop>
-  <tabstop>pushCalcTatP</tabstop>
-  <tabstop>pushCalcPatT</tabstop>
+  <tabstop>pushCalc</tabstop>
   <tabstop>tabMain</tabstop>
   <tabstop>tabOutput</tabstop>
   <tabstop>textOutput</tabstop>
@@ -1145,7 +1143,6 @@
   <tabstop>pmaxEdit</tabstop>
   <tabstop>pushFromAxes</tabstop>
   <tabstop>pushResetSettings</tabstop>
-  <tabstop>spinSteps</tabstop>
   <tabstop>spinPrec</tabstop>
   <tabstop>checkLabelInv</tabstop>
   <tabstop>checkLabelUni</tabstop>

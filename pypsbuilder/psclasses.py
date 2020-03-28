@@ -402,6 +402,7 @@ class TCAPI(object):
 
     def parse_logfile_new(self, **kwargs):
         tx = kwargs.get('tx', False)
+        px = kwargs.get('px', False)
         output = kwargs.get('output', None)
         resic = kwargs.get('resic', None)
         if output is None:
@@ -455,7 +456,7 @@ class TCAPI(object):
                 if not sections[4 + offset].startswith('mode'): # For some reasons there is no mode in output
                     break
                 l1, l2 = sections[4 + offset].split('\n')
-                if tx:
+                if tx or px:
                     for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
                         dt = data.get(phase, {})
                         dt['mode'] = float(vv)
@@ -548,7 +549,7 @@ class TCAPI(object):
                 dt = data.get('sys', {})
                 dt.update(tdps)
                 data['sys'] = dt
-                if tx:
+                if tx or px:
                     headers.append(float(header))
                 # parse endmembers and chemical potential
                 props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
@@ -585,6 +586,14 @@ class TCAPI(object):
             else:
                 txcoords = None
             return status, variance, txcoords, np.array(pts).T, res, output
+        elif px:
+            if status == 'ok':
+                comps = [ix for ix, ln in enumerate(lines) if ln.startswith('composition (from script)')][0]
+                steps = int(lines[comps + 1].split()[-1]) - 1
+                pxcoords = np.array((np.array(pts).T[0], (np.array(headers) - 1) / steps))
+            else:
+                pxcoords = None
+            return status, variance, pxcoords, np.array(pts).T, res, output
         else:
             return status, variance, np.array(pts).T, res, output
 
@@ -809,7 +818,7 @@ class TCAPI(object):
         Args:
             phases (set): Set of present phases
             out (set): Set of single zero mode phase
-            prange (tuple): Tempareture range for calculation
+            prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
             steps (int): Number of steps
 
@@ -830,7 +839,7 @@ class TCAPI(object):
         Args:
             phases (set): Set of present phases
             out (set): Set of single zero mode phase
-            prange (tuple): Tempareture range for calculation
+            prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
             steps (int): Number of steps
 
@@ -851,7 +860,7 @@ class TCAPI(object):
         Args:
             phases (set): Set of present phases
             out (set): Set of two zero mode phases
-            prange (tuple): Tempareture range for calculation
+            prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
             steps (int): Number of steps
 
@@ -871,7 +880,7 @@ class TCAPI(object):
         Args:
             phases (set): Set of present phases
             out (set): Set of zero mode phases
-            prange (tuple): Tempareture range for calculation
+            prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
             steps (int): Number of steps
 
@@ -882,9 +891,34 @@ class TCAPI(object):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         if len(out) > 1:
             tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
+            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
         else:
             tmpl = '{}\n\n{}\ny\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n'
-        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, prec=prec)
+        tcout = self.runtc(ans)
+        return tcout, ans
+
+    def calc_px(self, phases, out, **kwargs):
+        """Method to run THERMOCALC for P-X pseudosection calculations.
+
+        Args:
+            phases (set): Set of present phases
+            out (set): Set of zero mode phases
+            prange (tuple): Temperature range for calculation
+            trange (tuple): Pressure range for calculation
+            steps (int): Number of steps
+
+        Returns:
+            tuple: (tcout, ans) standard output and input for THERMOCALC run.
+            Input ans could be used to reproduce calculation.
+        """
+        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        if len(out) > 1:
+            tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
+            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+        else:
+            tmpl = '{}\n\n{}\nn\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n'
+            ans = tmpl.format(' '.join(phases), ' '.join(out), *prange, prec=prec)
         tcout = self.runtc(ans)
         return tcout, ans
 
@@ -893,7 +927,7 @@ class TCAPI(object):
 
         Args:
             phases (set): Set of present phases
-            p (float): Tempareture for calculation
+            p (float): Temperature for calculation
             t (float): Pressure for calculation
 
         Returns:
@@ -1005,7 +1039,7 @@ class Dogmin:
     def annotation(self, show_out=False, excess={}):
         """str: String representation of ID with possible zermo mode phase."""
         if show_out:
-            return ' '.join(self.phases.difference(excess))
+            return self.label(excess=excess)
         else:
             return '{:d}'.format(self.id)
 
@@ -1305,14 +1339,14 @@ class SectionBase:
     @property
     def range_shapes(self):
         # default p-t range boundary
-        bnd = [LineString([(self.xrange[0] + self.shrink, self.yrange[0] + self.shrink),
-                          (self.xrange[1] - self.shrink, self.yrange[0] + self.shrink)]),
-               LineString([(self.xrange[1] - self.shrink, self.yrange[0] + self.shrink),
-                          (self.xrange[1] - self.shrink, self.yrange[1] - self.shrink)]),
-               LineString([(self.xrange[1] - self.shrink, self.yrange[1] - self.shrink),
-                          (self.xrange[0] + self.shrink, self.yrange[1] - self.shrink)]),
-               LineString([(self.xrange[0] + self.shrink, self.yrange[1] - self.shrink),
-                          (self.xrange[0] + self.shrink, self.yrange[0] + self.shrink)])]
+        bnd = [LineString([(self.xrange[0], self.yrange[0]),
+                          (self.xrange[1], self.yrange[0])]),
+               LineString([(self.xrange[1], self.yrange[0]),
+                          (self.xrange[1], self.yrange[1])]),
+               LineString([(self.xrange[1], self.yrange[1]),
+                          (self.xrange[0], self.yrange[1])]),
+               LineString([(self.xrange[0], self.yrange[1]),
+                          (self.xrange[0], self.yrange[0])])]
         return bnd, next(polygonize(bnd))
 
     def add_inv(self, id, inv):
@@ -1632,10 +1666,6 @@ class PTsection(SectionBase):
         self.y_var_res = 0.001
         super(PTsection, self).__init__(**kwargs)
 
-    @property
-    def shrink(self):
-        return 0
-
     def get_bulk_composition(self):
         bc = ([], [])
         for inv in self.invpoints.values():
@@ -1661,9 +1691,30 @@ class TXsection(SectionBase):
         self.y_var_res = 0.001
         super(TXsection, self).__init__(**kwargs)
 
-    @property
-    def shrink(self):
-        return 0.0001
+    def get_bulk_composition(self):
+        bc = ([], [], [])
+        for inv in self.invpoints.values():
+            if not inv.manual:
+                if 'composition (from script)\n' in inv.output:
+                    tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
+                    nested = [r.split() for r in tb.split('\n')[2:-1]]
+                    bc = [[r[0] for r in nested],
+                          [r[1] for r in nested],
+                          [r[-1] for r in nested]]
+                break
+        return bc
+
+class PXsection(SectionBase):
+    def __init__(self, **kwargs):
+        self.xrange = (0., 1.)
+        self.yrange = kwargs.get('prange', (0.1, 20.))
+        self.x_var = 'C'
+        self.x_var_label = 'Composition'
+        self.x_var_res = 0.001
+        self.y_var = 'p'
+        self.y_var_label = 'Pressure [kbar]'
+        self.y_var_res = 0.001
+        super(PXsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
         bc = ([], [], [])
