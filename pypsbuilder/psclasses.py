@@ -67,9 +67,9 @@ class TCAPI(object):
             Default 'mac-roman'.
 
     Raises:
-        InitError: An error occurred accessing the bigtable.Table object.
-        ScriptfileError: sdsdsdsd.
-        TCError: wdwdwd.
+        InitError: An error occurred during initialization of working dir.
+        ScriptfileError: Error or problem in scriptfile.
+        TCError: THERMOCALC bombed.
 
     """
     def __init__(self, workdir, tcexe=None, drexe=None):
@@ -790,7 +790,7 @@ class TCAPI(object):
         else:
             return None, changed
 
-    def interpolate_bulk(self, x, prec=3):
+    def interpolate_bulk(self, x):
         if len(self.bulk) == 2:
             b1 = np.array([float(v) for v in self.bulk[0]])
             b2 = np.array([float(v) for v in self.bulk[1]])
@@ -798,7 +798,7 @@ class TCAPI(object):
             bi = b1 + x * db
         else:
             bi = np.array([float(v) for v in self.bulk[0]])
-        return ['{:.{prec}f}'.format(v, prec=prec) for v in bi]
+        return ['{:g}'.format(v) for v in bi]
 
     def parse_kwargs(self, **kwargs):
         prange = kwargs.get('prange', self.prange)

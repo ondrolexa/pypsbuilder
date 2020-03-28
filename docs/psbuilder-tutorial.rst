@@ -11,18 +11,26 @@ Psbuilder checks for valid  settings and gives warning if some action is needed.
 scriptfile, to allow ``psbuilder`` manage starting guesses and dogmin runs**.
 
 Just insert following comment lines to your script file to line where normally
-starting guesses should be placed (definitely before last `*`).::
+starting guesses should be placed (definitely before last `*` and before
+standard or samecoding guesses).::
 
 		%{PSBGUESS-BEGIN}
 		%{PSBGUESS-END}
 
-and for dogmin replace existing ``dogmin`` script with::
+for dogmin replace existing ``dogmin`` script with::
 
 		%{PSBDOGMIN-BEGIN}
 		dogmin no
 		%{PSBDOGMIN-END}
 
-If you are nor sure, what scripts should be set on and off, you can check
+and for bulk composition place before and after existing ``setbulk`` script(s)
+these tags::
+
+%{PSBBULK-BEGIN}
+setbulk ....
+%{PSBBULK-END}
+
+If you are not sure, which scripts should be set on and off, you can check
 example scriptfile in ``examples/avgpelite`` directory.
 
 New P-T pseudosection project

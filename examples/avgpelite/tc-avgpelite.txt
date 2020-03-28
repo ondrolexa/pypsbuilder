@@ -2,14 +2,14 @@
 % axfile to use
 % =======================
 
-axfile mp50MnNCKFMASHTO   
+axfile mp50MnNCKFMASHTO
 
 % =======================
 % which phases
 % =======================
 
-setexcess q H2O
-tozero H2O
+setexcess q
+%tozero H2O
 
 omit  sp0 sp1 Ni NiO opx sp ta plc abh ilm ilm0 ksp0 mt0 mt1 heme
 
@@ -37,7 +37,7 @@ dogmin no
 calctatp ask
 
 project no
-%pseudo no 
+%pseudo no
 
 calcah2o no
 calcsdnle no
@@ -46,10 +46,12 @@ printbulkinfo yes
 
 pseudosection yes
 % ---------------------------------
-% 
+%
 % ---------------------------------
 %            H2O SiO2   Al2O3   CaO   MgO   FeO   K2O Na2O TiO2 MnO   O
+%{PSBBULK-BEGIN}
 setbulk yes  100 71.13  11.61   1.39  4.65  5.78 2.68 1.99 0.67 0.10 0.01
+%{PSBBULK-END}
 % ---------------------------------
 
 project no
@@ -115,8 +117,8 @@ xyzguess Q4(chl)      0.0564528  range -1.000 1.000
 % sundry starting guesses for samecoding phases
 % (over-ridden by any above)
 % ----------------------
-xyzguess  x(mu)   0.25 
-xyzguess  y(mu)   0.60 
+xyzguess  x(mu)   0.25
+xyzguess  y(mu)   0.60
 xyzguess  f(mu)   0.17
 xyzguess  n(mu)   0.06
 xyzguess  c(mu)   0.01
@@ -170,6 +172,3 @@ xyzguess   x(L)          0.7333
 xyzguess   h2o(L)        0.4276
 
 *
-
-
-

@@ -530,6 +530,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 'section': self.ps,
                 'tcversion': self.tc.tcversion,
                 'workdir': self.tc.workdir,
+                'bulk': self.bulk,
                 'datetime': datetime.now(),
                 'version': __version__}
         return data
@@ -1152,16 +1153,19 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             fmt = lambda x: '{:.{prec}f}'.format(x, prec=self.spinPrec.value())
             if (1 << 0) & bitopt:
-                self.ps.xrange = (float(self.tminEdit.text()),
-                                   float(self.tmaxEdit.text()))
-                self.ps.yrange = (float(self.pminEdit.text()),
-                                   float(self.pmaxEdit.text()))
+                if (float(self.tminEdit.text()), float(self.tmaxEdit.text())) != self.ps.xrange:
+                    self.ps.xrange = (float(self.tminEdit.text()),
+                                       float(self.tmaxEdit.text()))
+                    self.changed = True
+                if (float(self.pminEdit.text()), float(self.pmaxEdit.text())) != self.ps.yrange:
+                    self.ps.yrange = (float(self.pminEdit.text()),
+                                       float(self.pmaxEdit.text()))
+                    self.changed = True
                 self.ax.set_xlim(self.ps.xrange)
                 self.ax.set_ylim(self.ps.yrange)
                 # clear navigation toolbar history
                 self.toolbar.update()
                 self.statusBar().showMessage('Settings applied.')
-                self.changed = True
                 self.figure.clear()
                 self.plot()
             if (1 << 1) & bitopt:
@@ -1440,6 +1444,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                 self.ps = PTsection(trange=self.tc.trange,
                                     prange=self.tc.prange,
                                     excess=self.tc.excess)
+                self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
                 self.project = None
@@ -1515,6 +1520,11 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'])
+                    else:
+                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -1979,6 +1989,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.tc = tc
                 self.ps = TXsection(trange=self.tc.trange,
                                     excess=self.tc.excess)
+                self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
                 self.project = None
@@ -2052,6 +2063,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'],
+                                                  xsteps=self.spinSteps.value())
+                    else:
+                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2115,8 +2132,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(crange[0]),
+                    self.tc.interpolate_bulk(crange[1])]
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             out_section = []
@@ -2180,9 +2197,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -2214,7 +2229,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             doglevel = self.spinDoglevel.value()
             prec = self.spinPrec.value()
             # change bulk
-            bulk = [self.tc.interpolate_bulk(event.ydata, prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(event.ydata)]
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
             pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
             self.tc.update_scriptfile(bulk=bulk,
@@ -2244,9 +2259,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             else:
                 self.statusBar().showMessage('Dogmin failed.')
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
     def do_calc(self, calcT, phases={}, out={}):
@@ -2267,8 +2280,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(crange[0]),
+                    self.tc.interpolate_bulk(crange[1])]
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
@@ -2388,9 +2401,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -2489,6 +2500,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.tc = tc
                 self.ps = PXsection(prange=self.tc.prange,
                                     excess=self.tc.excess)
+                self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
                 self.project = None
@@ -2562,6 +2574,12 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'],
+                                                  xsteps=self.spinSteps.value())
+                    else:
+                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2625,8 +2643,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(crange[0]),
+                    self.tc.interpolate_bulk(crange[1])]
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             out_section = []
@@ -2690,9 +2708,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -2724,7 +2740,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             doglevel = self.spinDoglevel.value()
             prec = self.spinPrec.value()
             # change bulk
-            bulk = [self.tc.interpolate_bulk(event.xdata, prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(event.xdata)]
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
             tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
             self.tc.update_scriptfile(bulk=bulk,
@@ -2754,9 +2770,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             else:
                 self.statusBar().showMessage('Dogmin failed.')
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
     def do_calc(self, calcT, phases={}, out={}):
@@ -2777,8 +2791,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0], prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(crange[1], prec=self.spinPrec.value())]
+            bulk = [self.tc.interpolate_bulk(crange[0]),
+                    self.tc.interpolate_bulk(crange[1])]
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
@@ -2898,9 +2912,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             # restore bulk
-            bulk = [self.tc.interpolate_bulk(0, prec=self.spinPrec.value()),
-                    self.tc.interpolate_bulk(1, prec=self.spinPrec.value())]
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value())
+            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
