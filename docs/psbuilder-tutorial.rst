@@ -8,7 +8,7 @@ setting, like ``calcmode`` must be 1, ``calctatp`` have to be ask etc.
 Psbuilder checks for valid  settings and gives warning if some action is needed.
 
 **The only special need is to place ptguess tags and dogmin tags in your
-scriptfile, to allow ``psbuilder`` manage starting guesses and dogmin runs**.
+scriptfile, to allow** ``psbuilder`` **manage starting guesses and dogmin runs**.
 
 Just insert following comment lines to your script file to line where normally
 starting guesses should be placed (definitely before last `*` and before
@@ -26,9 +26,9 @@ for dogmin replace existing ``dogmin`` script with::
 and for bulk composition place before and after existing ``setbulk`` script(s)
 these tags::
 
-%{PSBBULK-BEGIN}
-setbulk ....
-%{PSBBULK-END}
+		%{PSBBULK-BEGIN}
+		setbulk ....
+		%{PSBBULK-END}
 
 If you are not sure, which scripts should be set on and off, you can check
 example scriptfile in ``examples/avgpelite`` directory.

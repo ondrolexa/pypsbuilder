@@ -735,12 +735,10 @@ class TCAPI(object):
             bue = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBBULK-END}')]
             bulines = []
             if len(bulk) == 2:
-                bulk[1].append(str(xsteps))
-                for bul, xvl in zip(bulk, xvals):
-                    bulines.append('setbulk yes {} % x={:g}\n'.format(' '.join(bul), xvl))
+                bulines.append('setbulk yes {} % x={:g}\n'.format(' '.join(bulk[0]), xvals[0]))
+                bulines.append('setbulk yes {} {:d} % x={:g}\n'.format(' '.join(bulk[1]), xsteps, xvals[1]))
             else:
-                for bul in bulk:
-                    bulines.append('setbulk yes {}\n'.format(' '.join(bul)))
+                bulines.append('setbulk yes {}\n'.format(' '.join(bulk[0])))
             if bub and bue:
                 sc = sc[:bub[0] + 1] + bulines + sc[bue[0]:]
                 changed = True
@@ -753,52 +751,27 @@ class TCAPI(object):
         else:
             return None
 
-    def update_ptxsteps(self, steps=None, bulk=None):
-        """Modify number of compositional steps between two bulks."""
-        with self.scriptfile.open('r', encoding=self.TCenc) as f:
-            sc = f.readlines()
-        bix = [ix for ix, ln in enumerate(sc) if ln.strip().startswith('setbulk')]
-        changed = False
-        if len(bix) == 2:
-            bulk1 = sc[bix[0]].split('%')[0].split()[1:]
-            nox1 = len(bulk1)
-            if 'yes' in bulk1:
-                nox1 -= 1
-            oparts = sc[bix[1]].split('%')
-            bulk2 = oparts[0].split()[1:]
-            nox2 = len(bulk2)
-            if 'yes' in bulk2:
-                nox2 -= 1
-            if nox2 > nox1:
-                old_steps = int(bulk2[-1])
-                if steps is not None:
-                    oparts[0] = oparts[0][::-1].split(maxsplit=1)[1][::-1] + ' ' + str(steps) + ' '
-                else:
-                    oparts[0] = oparts[0][::-1].split(maxsplit=1)[1][::-1] + ' '
-            else:
-                old_steps = 20
-                if steps is not None:
-                    oparts[0] = oparts[0] + str(steps) + ' '
-            sc[bix[1]] = '%'.join(oparts)
-            if steps is not None:
-                if steps != old_steps:
-                    with self.scriptfile.open('w', encoding=self.TCenc) as f:
-                        for ln in sc:
-                            f.write(ln)
-                    changed = True
-            return old_steps, changed
-        else:
-            return None, changed
-
     def interpolate_bulk(self, x):
         if len(self.bulk) == 2:
-            b1 = np.array([float(v) for v in self.bulk[0]])
-            b2 = np.array([float(v) for v in self.bulk[1]])
-            db = b2 - b1
-            bi = b1 + x * db
+            new_bulk = []
+            try:
+               _ = (e for e in x)
+            except TypeError:
+                b1 = np.array([float(v) for v in self.bulk[0]])
+                b2 = np.array([float(v) for v in self.bulk[1]])
+                db = b2 - b1
+                bi = b1 + x * db
+                new_bulk.append(['{:g}'.format(v) for v in bi])
+            else:
+                for x_val in x:
+                    b1 = np.array([float(v) for v in self.bulk[0]])
+                    b2 = np.array([float(v) for v in self.bulk[1]])
+                    db = b2 - b1
+                    bi = b1 + x_val * db
+                    new_bulk.append(['{:g}'.format(v) for v in bi])
         else:
-            bi = np.array([float(v) for v in self.bulk[0]])
-        return ['{:g}'.format(v) for v in bi]
+            new_bulk = self.bulk[0]
+        return new_bulk
 
     def parse_kwargs(self, **kwargs):
         prange = kwargs.get('prange', self.prange)
@@ -1026,7 +999,7 @@ class Dogmin:
 
     @property
     def phases(self):
-        return set(self.output.split('phases: ')[1].split(' (')[0].split())
+        return set(self.output.split('phases: ')[1].split('(gmin')[0].split())
 
     @property
     def out(self):
@@ -1647,8 +1620,14 @@ class SectionBase:
         plt.xlabel(self.y_var_label)
         plt.show()
 
-    @classmethod
-    def from_file(cls, projfile):
+    @staticmethod
+    def read_file(projfile):
+        with gzip.open(str(projfile), 'rb') as stream:
+            data = pickle.load(stream)
+        return data
+
+    @staticmethod
+    def from_file(projfile):
         with gzip.open(str(projfile), 'rb') as stream:
             data = pickle.load(stream)
         return data['section']

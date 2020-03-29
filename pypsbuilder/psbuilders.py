@@ -1520,11 +1520,6 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
-                    if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'])
-                    else:
-                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -1536,6 +1531,11 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                     self.populate_recent()
                     self.app_settings(write=True)
                     self.refresh_gui()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'])
+                    else:
+                        self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
                 else:
                     qb = QtWidgets.QMessageBox
@@ -1751,22 +1751,25 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
                 dgm = Dogmin(output=output, resic=resic, x=event.xdata, y=event.ydata)
-                id_dog = 0
-                for key in self.ps.dogmins:
-                    id_dog = max(id_dog, key)
-                id_dog += 1
-                self.dogmodel.appendRow(id_dog, dgm)
-                self.dogview.resizeColumnsToContents()
-                self.changed = True
-                idx = self.dogmodel.getIndexID(id_dog)
-                self.dogview.selectRow(idx.row())
-                self.dogview.scrollToBottom()
-                self.plot()
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                self.statusBar().showMessage('Dogmin finished.')
+                if dgm.phases:
+                    id_dog = 0
+                    for key in self.ps.dogmins:
+                        id_dog = max(id_dog, key)
+                    id_dog += 1
+                    self.dogmodel.appendRow(id_dog, dgm)
+                    self.dogview.resizeColumnsToContents()
+                    self.changed = True
+                    idx = self.dogmodel.getIndexID(id_dog)
+                    self.dogview.selectRow(idx.row())
+                    self.dogview.scrollToBottom()
+                    self.plot()
+                    self.statusBar().showMessage('Dogmin finished.')
+                else:
+                    self.statusBar().showMessage('Dogmin failed.')
             else:
                 self.statusBar().showMessage('Dogmin failed.')
             self.pushDogmin.setChecked(False)
@@ -1964,8 +1967,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.endArray()
 
     def builder_refresh_gui(self):
-        steps, changed = self.tc.update_ptxsteps()
-        self.spinSteps.setValue(steps)
+        self.spinSteps.setValue(self.tc.ptx_steps)
 
     def initProject(self, workdir=False):
         """Open working directory and initialize project
@@ -2063,12 +2065,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
-                    if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'],
-                                                  xsteps=self.spinSteps.value())
-                    else:
-                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2080,6 +2076,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     self.populate_recent()
                     self.app_settings(write=True)
                     self.refresh_gui()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'],
+                                                  xsteps=self.spinSteps.value())
+                    else:
+                        self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
                 else:
                     qb = QtWidgets.QMessageBox
@@ -2132,8 +2134,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0]),
-                    self.tc.interpolate_bulk(crange[1])]
+            bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             out_section = []
@@ -2229,7 +2230,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             doglevel = self.spinDoglevel.value()
             prec = self.spinPrec.value()
             # change bulk
-            bulk = [self.tc.interpolate_bulk(event.ydata)]
+            bulk = self.tc.interpolate_bulk(event.ydata)
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
             pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
             self.tc.update_scriptfile(bulk=bulk,
@@ -2240,22 +2241,25 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
                 dgm = Dogmin(output=output, resic=resic, x=event.xdata, y=event.ydata)
-                id_dog = 0
-                for key in self.ps.dogmins:
-                    id_dog = max(id_dog, key)
-                id_dog += 1
-                self.dogmodel.appendRow(id_dog, dgm)
-                self.dogview.resizeColumnsToContents()
-                self.changed = True
-                idx = self.dogmodel.getIndexID(id_dog)
-                self.dogview.selectRow(idx.row())
-                self.dogview.scrollToBottom()
-                self.plot()
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                self.statusBar().showMessage('Dogmin finished.')
+                if dgm.phases:
+                    id_dog = 0
+                    for key in self.ps.dogmins:
+                        id_dog = max(id_dog, key)
+                    id_dog += 1
+                    self.dogmodel.appendRow(id_dog, dgm)
+                    self.dogview.resizeColumnsToContents()
+                    self.changed = True
+                    idx = self.dogmodel.getIndexID(id_dog)
+                    self.dogview.selectRow(idx.row())
+                    self.dogview.scrollToBottom()
+                    self.plot()
+                    self.statusBar().showMessage('Dogmin finished.')
+                else:
+                    self.statusBar().showMessage('Dogmin failed.')
             else:
                 self.statusBar().showMessage('Dogmin failed.')
             # restore bulk
@@ -2280,8 +2284,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0]),
-                    self.tc.interpolate_bulk(crange[1])]
+            bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
@@ -2475,8 +2478,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             builder_settings.endArray()
 
     def builder_refresh_gui(self):
-        steps, changed = self.tc.update_ptxsteps()
-        self.spinSteps.setValue(steps)
+        self.spinSteps.setValue(self.tc.ptx_steps)
 
     def initProject(self, workdir=False):
         """Open working directory and initialize project
@@ -2574,12 +2576,6 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
-                    if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'],
-                                                  xsteps=self.spinSteps.value())
-                    else:
-                        self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2591,6 +2587,12 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     self.populate_recent()
                     self.app_settings(write=True)
                     self.refresh_gui()
+                    if 'bulk' in data:
+                        self.bulk = data['bulk']
+                        self.tc.update_scriptfile(bulk=data['bulk'],
+                                                  xsteps=self.spinSteps.value())
+                    else:
+                        self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
                 else:
                     qb = QtWidgets.QMessageBox
@@ -2643,8 +2645,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0]),
-                    self.tc.interpolate_bulk(crange[1])]
+            bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             out_section = []
@@ -2740,7 +2741,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             doglevel = self.spinDoglevel.value()
             prec = self.spinPrec.value()
             # change bulk
-            bulk = [self.tc.interpolate_bulk(event.xdata)]
+            bulk = self.tc.interpolate_bulk(event.xdata)
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
             tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
             self.tc.update_scriptfile(bulk=bulk,
@@ -2751,22 +2752,25 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
                 dgm = Dogmin(output=output, resic=resic, x=event.xdata, y=event.ydata)
-                id_dog = 0
-                for key in self.ps.dogmins:
-                    id_dog = max(id_dog, key)
-                id_dog += 1
-                self.dogmodel.appendRow(id_dog, dgm)
-                self.dogview.resizeColumnsToContents()
-                self.changed = True
-                idx = self.dogmodel.getIndexID(id_dog)
-                self.dogview.selectRow(idx.row())
-                self.dogview.scrollToBottom()
-                self.plot()
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                self.statusBar().showMessage('Dogmin finished.')
+                if dgm.phases:
+                    id_dog = 0
+                    for key in self.ps.dogmins:
+                        id_dog = max(id_dog, key)
+                    id_dog += 1
+                    self.dogmodel.appendRow(id_dog, dgm)
+                    self.dogview.resizeColumnsToContents()
+                    self.changed = True
+                    idx = self.dogmodel.getIndexID(id_dog)
+                    self.dogview.selectRow(idx.row())
+                    self.dogview.scrollToBottom()
+                    self.plot()
+                    self.statusBar().showMessage('Dogmin finished.')
+                else:
+                    self.statusBar().showMessage('Dogmin failed.')
             else:
                 self.statusBar().showMessage('Dogmin failed.')
             # restore bulk
@@ -2791,8 +2795,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (crange[0] - cs, crange[1] + cs)
             # change bulk
-            bulk = [self.tc.interpolate_bulk(crange[0]),
-                    self.tc.interpolate_bulk(crange[1])]
+            bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
