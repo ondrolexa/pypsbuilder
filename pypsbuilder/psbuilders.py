@@ -1579,25 +1579,43 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                             item.setCheckState(QtCore.Qt.Checked)
                     # views
                     for row in data['invlist']:
-                        inv = InvPoint(id=row[0],
-                                       phases=row[2]['phases'],
-                                       out=row[2]['out'],
-                                       x=row[2]['T'],
-                                       y=row[2]['p'],
-                                       results=row[2]['results'],
-                                       output=row[2]['output'])
+                        if row[2]['manual']:
+                            inv = InvPoint(id=row[0],
+                                           phases=row[2]['phases'],
+                                           out=row[2]['out'],
+                                           x=row[2]['T'],
+                                           y=row[2]['p'],
+                                           manual=True)
+                        else:
+                            inv = InvPoint(id=row[0],
+                                           phases=row[2]['phases'],
+                                           out=row[2]['out'],
+                                           x=row[2]['T'],
+                                           y=row[2]['p'],
+                                           results=row[2]['results'],
+                                           output=row[2]['output'])
                         self.invmodel.appendRow(row[0], inv)
                     self.invview.resizeColumnsToContents()
                     for row in data['unilist']:
-                        uni = UniLine(id=row[0],
-                                      phases=row[4]['phases'],
-                                      out=row[4]['out'],
-                                      x=row[4]['T'],
-                                      y=row[4]['p'],
-                                      results=row[4]['results'],
-                                      output=row[4]['output'],
-                                      begin=row[2],
-                                      end=row[3])
+                        if row[4]['manual']:
+                            uni = UniLine(id=row[0],
+                                          phases=row[4]['phases'],
+                                          out=row[4]['out'],
+                                          x=row[4]['T'],
+                                          y=row[4]['p'],
+                                          manual=True,
+                                          begin=row[2],
+                                          end=row[3])
+                        else:
+                            uni = UniLine(id=row[0],
+                                          phases=row[4]['phases'],
+                                          out=row[4]['out'],
+                                          x=row[4]['T'],
+                                          y=row[4]['p'],
+                                          results=row[4]['results'],
+                                          output=row[4]['output'],
+                                          begin=row[2],
+                                          end=row[3])
                         self.unimodel.appendRow(row[0], uni)
                         self.ps.trim_uni(row[0])
                     self.uniview.resizeColumnsToContents()
@@ -3419,10 +3437,16 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     d1 = np.insert(d1, 0, 0)/d1[-1]
     d2 = np.cumsum(np.sqrt(np.diff(uni2._x)**2 + np.diff(ratio*uni2._y)**2))
     d2 = np.insert(d2, 0, 0)/d2[-1]
-    s1x = interp1d(d1, uni1._x, kind='quadratic', fill_value='extrapolate')
-    s1y = interp1d(d1, ratio*uni1._y, kind='quadratic', fill_value='extrapolate')
-    s2x = interp1d(d2, uni2._x, kind='quadratic', fill_value='extrapolate')
-    s2y = interp1d(d2, ratio*uni2._y, kind='quadratic', fill_value='extrapolate')
+    try:
+        s1x = interp1d(d1, uni1._x, kind='quadratic', fill_value='extrapolate')
+        s1y = interp1d(d1, ratio*uni1._y, kind='quadratic', fill_value='extrapolate')
+        s2x = interp1d(d2, uni2._x, kind='quadratic', fill_value='extrapolate')
+        s2y = interp1d(d2, ratio*uni2._y, kind='quadratic', fill_value='extrapolate')
+    except ValueError:
+        s1x = interp1d(d1, uni1._x, fill_value='extrapolate')
+        s1y = interp1d(d1, ratio*uni1._y, fill_value='extrapolate')
+        s2x = interp1d(d2, uni2._x, fill_value='extrapolate')
+        s2y = interp1d(d2, ratio*uni2._y, fill_value='extrapolate')
     p = np.linspace(-extra, 1 + extra, N)
     x1, y1 = s1x(p), s1y(p)
     x2, y2 = s2x(p), s2y(p)
