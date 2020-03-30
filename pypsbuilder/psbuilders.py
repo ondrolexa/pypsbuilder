@@ -298,6 +298,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.uniview.resizeColumnsToContents()
                 # settings
                 self.refresh_gui()
+                self.bulk = self.tc.bulk
                 self.statusBar().showMessage('Project re-initialized from scriptfile.')
                 self.changed = True
             else:
@@ -1534,6 +1535,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                     if 'bulk' in data:
                         self.bulk = data['bulk']
                         self.tc.update_scriptfile(bulk=data['bulk'])
+                        self.read_scriptfile()
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
@@ -2098,6 +2100,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self.bulk = data['bulk']
                         self.tc.update_scriptfile(bulk=data['bulk'],
                                                   xsteps=self.spinSteps.value())
+                        self.read_scriptfile()
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
@@ -2609,6 +2612,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self.bulk = data['bulk']
                         self.tc.update_scriptfile(bulk=data['bulk'],
                                                   xsteps=self.spinSteps.value())
+                        self.read_scriptfile()
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
