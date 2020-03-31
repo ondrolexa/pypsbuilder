@@ -107,11 +107,31 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushManual">
-            <property name="text">
-             <string>Manual</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <item>
+             <widget class="QPushButton" name="pushMerge">
+              <property name="maximumSize">
+               <size>
+                <width>24</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>+</string>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushManual">
+              <property name="text">
+               <string>Manual</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_5">

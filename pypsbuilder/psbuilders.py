@@ -248,6 +248,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.splitter_bottom.setSizes((400, 100))
         self.pushDogmin.toggled.connect(self.do_dogmin)
         self.pushDogmin.setCheckable(True)
+        self.pushMerge.setCheckable(True)
         #self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
         self.pushGuessDogmin.clicked.connect(self.dogmin_set_guesses)
         self.pushDogminRemove.clicked.connect(self.remove_dogmin)
@@ -1847,20 +1848,60 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
-                            uni.begin = self.ps.unilines[id_uni].begin
-                            uni.end = self.ps.unilines[id_uni].end
-                            self.ps.unilines[id_uni] = uni
-                            self.ps.trim_uni(id_uni)
-                            if self.checkAutoconnectUni.isChecked():
-                                if len(candidates) == 2:
-                                    self.uni_connect(id_uni, candidates)
-                            self.changed = True
-                            self.uniview.resizeColumnsToContents()
-                            idx = self.unimodel.getIndexID(id_uni)
-                            self.uniview.selectRow(idx.row())
-                            self.plot()
-                            self.show_uni(idx)
-                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
+                            if self.pushMerge.isChecked():
+                                uni_old = self.ps.unilines[id_uni]
+                                dt = {}
+                                for p in uni_old.phases.difference(uni_old.out):
+                                    dt[p] = []
+                                for res in uni_old.results:
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].append(res['data'][p]['mode'])
+                                N = len(uni_old.results)
+                                for res, x, y in zip(uni.results, uni._x, uni._y):
+                                    idx = []
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+
+                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                    values, counts = np.unique(idx_clip, return_counts=True)
+                                    nix = values[np.argmax(counts)]
+                                    # insert data to temporary dict
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].insert(nix, res['data'][p]['mode'])
+                                    # insert real data
+                                    uni_old.results.insert(nix, res)
+                                    uni_old._x = np.insert(uni_old._x, nix, x)
+                                    uni_old._y = np.insert(uni_old._y, nix, y)
+                                    N += 1
+                                uni_old.output += uni.output
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
+                                self.pushMerge.setChecked(False)
+                            else:
+                                uni.begin = self.ps.unilines[id_uni].begin
+                                uni.end = self.ps.unilines[id_uni].end
+                                self.ps.unilines[id_uni] = uni
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
@@ -2343,20 +2384,60 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
-                            uni.begin = self.ps.unilines[id_uni].begin
-                            uni.end = self.ps.unilines[id_uni].end
-                            self.ps.unilines[id_uni] = uni
-                            self.ps.trim_uni(id_uni)
-                            if self.checkAutoconnectUni.isChecked():
-                                if len(candidates) == 2:
-                                    self.uni_connect(id_uni, candidates)
-                            self.changed = True
-                            self.uniview.resizeColumnsToContents()
-                            idx = self.unimodel.getIndexID(id_uni)
-                            self.uniview.selectRow(idx.row())
-                            self.plot()
-                            self.show_uni(idx)
-                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
+                            if self.pushMerge.isChecked():
+                                uni_old = self.ps.unilines[id_uni]
+                                dt = {}
+                                for p in uni_old.phases.difference(uni_old.out):
+                                    dt[p] = []
+                                for res in uni_old.results:
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].append(res['data'][p]['mode'])
+                                N = len(uni_old.results)
+                                for res, x, y in zip(uni.results, uni._x, uni._y):
+                                    idx = []
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+
+                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                    values, counts = np.unique(idx_clip, return_counts=True)
+                                    nix = values[np.argmax(counts)]
+                                    # insert data to temporary dict
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].insert(nix, res['data'][p]['mode'])
+                                    # insert real data
+                                    uni_old.results.insert(nix, res)
+                                    uni_old._x = np.insert(uni_old._x, nix, x)
+                                    uni_old._y = np.insert(uni_old._y, nix, y)
+                                    N += 1
+                                uni_old.output += uni.output
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
+                                self.pushMerge.setChecked(False)
+                            else:
+                                uni.begin = self.ps.unilines[id_uni].begin
+                                uni.end = self.ps.unilines[id_uni].end
+                                self.ps.unilines[id_uni] = uni
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
@@ -2855,20 +2936,60 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self.statusBar().showMessage('New univariant line calculated.')
                     else:
                         if not self.checkOverwrite.isChecked():
-                            uni.begin = self.ps.unilines[id_uni].begin
-                            uni.end = self.ps.unilines[id_uni].end
-                            self.ps.unilines[id_uni] = uni
-                            self.ps.trim_uni(id_uni)
-                            if self.checkAutoconnectUni.isChecked():
-                                if len(candidates) == 2:
-                                    self.uni_connect(id_uni, candidates)
-                            self.changed = True
-                            self.uniview.resizeColumnsToContents()
-                            idx = self.unimodel.getIndexID(id_uni)
-                            self.uniview.selectRow(idx.row())
-                            self.plot()
-                            self.show_uni(idx)
-                            self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
+                            if self.pushMerge.isChecked():
+                                uni_old = self.ps.unilines[id_uni]
+                                dt = {}
+                                for p in uni_old.phases.difference(uni_old.out):
+                                    dt[p] = []
+                                for res in uni_old.results:
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].append(res['data'][p]['mode'])
+                                N = len(uni_old.results)
+                                for res, x, y in zip(uni.results, uni._x, uni._y):
+                                    idx = []
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+
+                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                    values, counts = np.unique(idx_clip, return_counts=True)
+                                    nix = values[np.argmax(counts)]
+                                    # insert data to temporary dict
+                                    for p in uni_old.phases.difference(uni_old.out):
+                                        dt[p].insert(nix, res['data'][p]['mode'])
+                                    # insert real data
+                                    uni_old.results.insert(nix, res)
+                                    uni_old._x = np.insert(uni_old._x, nix, x)
+                                    uni_old._y = np.insert(uni_old._y, nix, y)
+                                    N += 1
+                                uni_old.output += uni.output
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
+                                self.pushMerge.setChecked(False)
+                            else:
+                                uni.begin = self.ps.unilines[id_uni].begin
+                                uni.end = self.ps.unilines[id_uni].end
+                                self.ps.unilines[id_uni] = uni
+                                self.ps.trim_uni(id_uni)
+                                if self.checkAutoconnectUni.isChecked():
+                                    if len(candidates) == 2:
+                                        self.uni_connect(id_uni, candidates)
+                                self.changed = True
+                                self.uniview.resizeColumnsToContents()
+                                idx = self.unimodel.getIndexID(id_uni)
+                                self.uniview.selectRow(idx.row())
+                                self.plot()
+                                self.show_uni(idx)
+                                self.statusBar().showMessage('Univariant line {} re-calculated.'.format(id_uni))
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:

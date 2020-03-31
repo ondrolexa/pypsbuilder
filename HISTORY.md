@@ -9,6 +9,7 @@
   - dogmin implemented (results stored in projects)
   - autoconnect implemented
   - invariant point search implemented
+  - merge of partially calculated univariant lines implemented
   - zoom to uni added to context menu
   - option to extend calculation range to extend univariant lines gently out of defined region
 * psexplorer updated
