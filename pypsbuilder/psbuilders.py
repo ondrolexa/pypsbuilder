@@ -1886,7 +1886,6 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                                 self.plot()
                                 self.show_uni(idx)
                                 self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
-                                self.pushMerge.setChecked(False)
                             else:
                                 uni.begin = self.ps.unilines[id_uni].begin
                                 uni.end = self.ps.unilines[id_uni].end
@@ -1958,6 +1957,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+        self.pushMerge.setChecked(False)
 
 
 class TXBuilder(BuildersBase, Ui_TXBuilder):
@@ -2422,7 +2422,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                 self.plot()
                                 self.show_uni(idx)
                                 self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
-                                self.pushMerge.setChecked(False)
                             else:
                                 uni.begin = self.ps.unilines[id_uni].begin
                                 uni.end = self.ps.unilines[id_uni].end
@@ -2510,6 +2509,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+        self.pushMerge.setChecked(False)
 
 
 class PXBuilder(BuildersBase, Ui_PXBuilder):
@@ -2974,7 +2974,6 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                 self.plot()
                                 self.show_uni(idx)
                                 self.statusBar().showMessage('Univariant line {} merged.'.format(id_uni))
-                                self.pushMerge.setChecked(False)
                             else:
                                 uni.begin = self.ps.unilines[id_uni].begin
                                 uni.end = self.ps.unilines[id_uni].end
@@ -3062,6 +3061,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+        self.pushMerge.setChecked(False)
 
 
 class InvModel(QtCore.QAbstractTableModel):
