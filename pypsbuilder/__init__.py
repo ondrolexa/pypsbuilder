@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pypsbuilder.psexplorer import PTPS
+from pypsbuilder.psexplorer import PTPS, TXPS, PXPS
 from pypsbuilder.psclasses import (
     TCAPI,
     InvPoint,

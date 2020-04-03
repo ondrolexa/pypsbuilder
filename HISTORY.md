@@ -12,8 +12,9 @@
   - merge of partially calculated univariant lines implemented
   - zoom to uni added to context menu
   - option to extend calculation range to extend univariant lines gently out of defined region
-* psexplorer updated
-  - calc along PT path implemented
+* psexplorers updated
+  - PTPS, TXPS and PXPS implemented
+  - calc along PT path implemented (now only for PT sections)
 
 ### 2.1.5 (25 Mar 2019)
 

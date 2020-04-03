@@ -263,9 +263,7 @@ def test_trim_uni():
     assert uni.used == slice(3, 28), 'Wrong used slice after trimming uni 3'
 
 def test_create_shapes():
-    shapes, shape_edges, bad_shapes, ignored_shapes, log = pytest.ps.create_shapes()
+    shapes, shape_edges, log = pytest.ps.create_shapes()
     akey = frozenset({'pa', 'ep', 'g', 'q', 'bi', 'mu', 'H2O', 'sph'})
     assert len(shapes) == 1, 'Wrong number of areas created'
     assert akey in shapes, 'Wrong key for constructed area'
-    
-

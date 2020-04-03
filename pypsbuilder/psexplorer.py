@@ -3,6 +3,35 @@
 This module contains tools to postprocess and explore pseudosections
 calculated by available builders.
 
+It provides a tools to visualize pseudosections constructed with
+builders, calculate compositional variations within multivariant fields, and
+plot compositional isopleths.
+
+It provides four command line scipts `psgrid`, `psdrawpd`, `psshow` and `psiso`,
+or could be used interactively, e.g. within jupyter notebooks.
+
+Example:
+    Use of command line scripts::
+
+        $ psshow myproject.psb
+
+    Interctive use::
+
+        >>> from pypsbuilder import PTPS
+        >>> pt = PTPS('/path/to/myproject.psb')
+
+Attributes:
+    tc (TCAPI): THERMOCALC API to working directory
+    ps (SectionBase): Pseudosection storage class
+    grid (GridData): Store for THERMOCALC calculations on grid
+    all_data_keys (dict): Dictionary of phases, end-members and variables
+    shapes (dict): Divariant field key based dictionary of shapely.Polygon
+        representation of areas
+    variance (dict): Divariant field key based dictionary of variances
+    unilists (dict): Divariant field key based dictionary of lists of
+        univariant lines IDs surrounding each field.
+
+
 Todo:
     * TXPS and PXPS needs to be implemented as soon as TXsection and PXsection
       will be ready.
@@ -41,41 +70,8 @@ from tqdm import tqdm, trange
 from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
 
 
-class PTPS:
-    """PTPS - class to postprocess psbuilder project file
-
-    The PTPS provides a tools to visualize pseudosections constructed with
-    psbuilder, calculate compositional variations with divariant fields, and
-    plot compositional isopleths.
-
-    It provides four command line scipts `psgrid`, `psdrawpd`, `psshow` and `psiso`,
-    or could be used interactively, e.g. within jupyter notebooks.
-
-    Example:
-        Use of command line scripts::
-
-            $ psshow myproject.psb
-
-        Interctive use::
-
-            >>> from pypsbuilder import PTPS
-            >>> pt = PTPS('/path/to/myproject.psb')
-
-    Attributes:
-        tc (TCAPI): THERMOCALC API to working directory
-        ps (PTsection): Pseudosection storage class
-        grid (GridData): Store for THERMOCALC calculations on grid
-        all_data_keys (dict): Dictionary of phases, end-members and variables
-        shapes (dict): Divariant field key based dictionary of shapely.Polygon
-            representation of areas
-        variance (dict): Divariant field key based dictionary of variances
-        edges (dict): Divariant field key based dictionary of lists of
-            univariant lines IDs surrounding each field.
-        bad_shapes (dict): Divariant field key based dictionary of lists of
-            univariant lines IDs which do not form valid area
-        ignored_shapes (dict): Divariant field key based dictionary of lists of
-            univariant lines IDs which are either out of range or incomplete.
-
+class ExplorerBase:
+    """Main class for pseudosection ExplorerBase
     """
     def __init__(self, projfile, tolerance=None, origwd=False):
         """Create PTPS class instance from builder project file.
@@ -101,7 +97,7 @@ class PTPS:
             if tc.OK:
                 self.tc = tc
                 self.tolerance = tolerance
-                self.shapes, self.edges, self.bad_shapes, self.ignored_shapes, log = self.ps.create_shapes(tolerance=self.tolerance)
+                self.shapes, self.unilists, log = self.ps.create_shapes(tolerance=self.tolerance)
                 if log:
                     print('\n'.join(log))
                 if 'variance' in data:
@@ -116,6 +112,11 @@ class PTPS:
                             if 'variance of required equilibrium' in ln:
                                 break
                         self.variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                # bulk
+                if 'bulk' in data:
+                    self.bulk = data['bulk']
+                else:
+                    self.bulk = self.tc.bulk
                 # already gridded?
                 if 'grid' in data:
                     self.grid = data['grid']
@@ -128,13 +129,6 @@ class PTPS:
 
     def __iter__(self):
         return iter(self.shapes)
-
-    def __repr__(self):
-        reprs = [repr(self.tc), repr(self.ps)]
-        reprs.append('Areas: {}'.format(len(self.shapes)))
-        if self.gridded:
-            reprs.append(repr(self.grid))
-        return '\n'.join(reprs)
 
     @property
     def name(self):
@@ -157,17 +151,17 @@ class PTPS:
         by frozenset of present phases called key."""
         return list(self.shapes.keys())
 
-    def invs_from_edges(self, edges):
+    def invs_from_unilist(self, unilist):
         """Return set of IDs of invariant points associated with univariant
         lines.
 
         Args:
-            edges (iterable): IDs of univariant lines
+            unilist (iterable): IDs of univariant lines
 
         Returns:
             set: IDs of associated invariant lines
         """
-        return {self.ps.unilines[ed].begin for ed in edges}.union({self.ps.unilines[ed].end for ed in edges}).difference({0})
+        return {self.ps.unilines[ed].begin for ed in unilist}.union({self.ps.unilines[ed].end for ed in unilist}).difference({0})
 
     def save(self):
         """Save gridded copositions and constructed divariant fields into
@@ -179,13 +173,10 @@ class PTPS:
         """
         if self.gridded:
             # put to dict
-            # put to dict
             with gzip.open(str(self.projfile), 'rb') as stream:
                 data = pickle.load(stream)
             data['shapes'] = self.shapes
-            data['edges'] = self.edges
-            data['bad_shapes'] = self.bad_shapes
-            data['ignored_shapes'] = self.ignored_shapes
+            data['unilists'] = self.unilists
             data['variance'] = self.variance
             data['grid'] = self.grid
             # do save
@@ -194,129 +185,13 @@ class PTPS:
         else:
             print('Not yet gridded...')
 
-    def calculate_composition(self, nx=50, ny=50):
-        """Method to calculate compositional variations on grid.
-
-        A compositions are calculated for stable assemblages in regular grid
-        covering pT range of pseudosection. A stable assemblage is identified
-        from constructed divariant fields. Results are stored in `grid` property
-        as `GridData` instance. A property `all_data_keys` is updated.
-
-        Before any grid point calculation, ptguesses are updated from nearest
-        invariant point. If calculation fails, nearest solution from univariant
-        line is used to update ptguesses. Finally, if solution is still not found,
-        the method `fix_solutions` is called and neigbouring grid calculations are
-        used to provide ptguess.
-
-        Args:
-            nx (int): Number of grid points along x direction (T)
-            ny (int): Number of grid points along y direction (p)
-        """
-        grid = GridData(self.ps, nx=nx, ny=ny)
-        last_inv = 0
-        for (r, c) in tqdm(np.ndindex(grid.tg.shape), desc='Gridding', total=np.prod(grid.tg.shape)):
-            x, y = grid.tg[r, c], grid.pg[r, c]
-            k = self.identify(x, y)
-            if k is not None:
-                # update guesses from closest inv point
-                dst = sys.float_info.max
-                for id_inv, inv in self.ps.invpoints.items():
-                    d2 = (inv._x - x)**2 + (inv._y - y)**2
-                    if d2 < dst:
-                        dst = d2
-                        id_close = id_inv
-                if id_close != last_inv:
-                    self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
-                    last_inv = id_close
-                grid.status[r, c] = 0
-                start_time = time.time()
-                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                delta = time.time() - start_time
-                status, variance, pts, res, output = self.tc.parse_logfile()
-                if len(res) == 1:
-                    grid.gridcalcs[r, c] = res[0]
-                    grid.status[r, c] = 1
-                    grid.delta[r, c] = delta
-                else:
-                    # update guesses from closest uni line point
-                    dst = sys.float_info.max
-                    for id_uni in self.edges[k]:
-                        uni = self.ps.unilines[id_uni]
-                        for ix in list(range(len(uni._x))[uni.used]):
-                            d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
-                            if d2 < dst:
-                                dst = d2
-                                id_close = id_uni
-                                idix = ix
-                    self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
-                    start_time = time.time()
-                    tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                    delta = time.time() - start_time
-                    status, variance, pts, res, output = self.tc.parse_logfile()
-                    if len(res) == 1:
-                        grid.gridcalcs[r, c] = res[0]
-                        grid.status[r, c] = 1
-                        grid.delta[r, c] = delta
-                    else:
-                        grid.gridcalcs[r, c] = None
-                        grid.status[r, c] = 0
-            else:
-                grid.gridcalcs[r, c] = None
-        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
-        self.grid = grid
-        if len(np.flatnonzero(self.grid.status == 0)) > 0:
-            self.fix_solutions()
-        self.create_masks()
-        # update variable lookup table
-        self.collect_all_data_keys()
-        # save
-        self.save()
-
-    def fix_solutions(self):
-        """Method try to find solution for grid points with failed status.
-
-        Ptguesses are used from successfully calculated neighboring points until
-        solution is find. Otherwise ststus remains failed.
-        """
-        if self.gridded:
-            log = []
-            ri, ci = np.nonzero(self.grid.status == 0)
-            fixed, ftot = 0, len(ri)
-            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
-            for ind in tq:
-                r, c = ri[ind], ci[ind]
-                x, y = self.grid.tg[r, c], self.grid.pg[r, c]
-                k = self.identify(x, y)
-                if k is not None:
-                    # search already done grid neighs
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            self.tc.update_scriptfile(guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
-                                self.grid.gridcalcs[r, c] = res[0]
-                                self.grid.status[r, c] = 1
-                                self.grid.delta[r, c] = delta
-                                fixed += 1
-                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                                break
-                if self.grid.status[r, c] == 0:
-                    log.append('No solution find for {}, {}'.format(x, y))
-            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
-            print('\n'.join(log))
-        else:
-            print('Not yet gridded...')
-
     def create_masks(self):
         """Update grid masks from existing divariant fields"""
         if self.gridded:
             # Create data masks
-            points = MultiPoint(list(zip(self.grid.tg.flatten(), self.grid.pg.flatten())))
+            points = MultiPoint(list(zip(self.grid.xg.flatten(), self.grid.yg.flatten())))
             for key in self:
-                self.grid.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.grid.tg.shape)
+                self.grid.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.grid.xg.shape)
         else:
             print('Not yet gridded...')
 
@@ -362,7 +237,7 @@ class PTPS:
             'data' key  storing list of thermocalc results.
         """
         dt = dict(pts=[], data=[])
-        for id_inv in self.invs_from_edges(self.edges[key]):
+        for id_inv in self.invs_from_unilist(self.unilists[key]):
             inv = self.ps.invpoints[id_inv]
             if not inv.manual:
                 if phase in inv.results[0]['data']:
@@ -370,7 +245,7 @@ class PTPS:
                     dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
         return dt
 
-    def collect_edges_data(self, key, phase, expr):
+    def collect_uni_data(self, key, phase, expr):
         """Retrieve values of expression for given phase for
         all univariant lines surrounding divariant field identified by key.
 
@@ -386,7 +261,7 @@ class PTPS:
             'data' key  storing list of thermocalc results.
         """
         dt = dict(pts=[], data=[])
-        for id_uni in self.edges[key]:
+        for id_uni in self.unilists[key]:
             uni = self.ps.unilines[id_uni]
             if not uni.manual:
                 if phase in uni.results[uni.midix]['data']:
@@ -418,8 +293,8 @@ class PTPS:
             results = self.grid.gridcalcs[self.grid.masks[key]]
             if len(results) > 0:
                 if phase in results[0]['data']:
-                    gdt = zip(self.grid.tg[self.grid.masks[key]],
-                              self.grid.pg[self.grid.masks[key]],
+                    gdt = zip(self.grid.xg[self.grid.masks[key]],
+                              self.grid.yg[self.grid.masks[key]],
                               results,
                               self.grid.status[self.grid.masks[key]])
                     for x, y, res, ok in gdt:
@@ -458,7 +333,7 @@ class PTPS:
                 dt['pts'].extend(d['pts'])
                 dt['data'].extend(d['data'])
             if which & (1 << 1):
-                d = self.collect_edges_data(key, phase, expr)
+                d = self.collect_uni_data(key, phase, expr)
                 dt['pts'].extend(d['pts'])
                 dt['data'].extend(d['data'])
             if which & (1 << 2):
@@ -503,63 +378,6 @@ class PTPS:
             #             mn = min(mn, min(z))
             #             mx = max(mx, max(z))
         return recs, mn, mx
-
-    def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
-        """Method to collect THERMOCALC calculations along defined PT path.
-
-        PT path is interpolated from provided points using defined method. For
-        each point THERMOCALC seek for solution using ptguess from nearest
-        `GridData` point.
-
-        Args:
-            tpath (numpy.array): 1D array of temperatures for given PT path
-            ppath (numpy.array): 1D array of pressures for given PT path
-            N (int): Number of calculation steps. Default 100.
-            kind (str): Kind of interpolation. See scipy.interpolate.interp1d
-
-        Returns:
-            PTpath: returns instance of PTpath class storing all calculations
-                along PT path.
-        """
-        if self.gridded:
-            tpath, ppath = np.asarray(tpath), np.asarray(ppath)
-            assert tpath.shape == ppath.shape, 'Shape of temperatures and pressures should be same.'
-            assert tpath.ndim == 1, 'Temperatures and pressures should be 1D array like data.'
-            gpath = np.arange(tpath.shape[0], dtype=float)
-            gpath /= gpath[-1]
-            splt = interp1d(gpath, tpath, kind=kind)
-            splp = interp1d(gpath, ppath, kind=kind)
-            err = 0
-            points, results = [], []
-            for step in tqdm(np.linspace(0, 1, N), desc='Calculating'):
-                t, p = splt(step), splp(step)
-                key = self.identify(t, p)
-                mask = self.grid.masks[key]
-                dst = (t - self.grid.tg)**2 + (self.ps.ratio * (p - self.grid.pg))**2
-                dst[~mask] = np.nan
-                r, c = np.unravel_index(np.nanargmin(dst), self.grid.tg.shape)
-                calc = None
-                if self.grid.status[r, c] == 1:
-                    calc = self.grid.gridcalcs[r, c]
-                else:
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            calc = self.grid.gridcalcs[rn, cn]
-                            break
-                if calc is not None:
-                    self.tc.update_scriptfile(guesses=calc['ptguess'])
-                    tcout, ans = self.tc.calc_assemblage(key.difference(self.ps.excess), p, t)
-                    status, variance, pts, res, output = self.tc.parse_logfile()
-                    if len(res) == 1:
-                        points.append((t, p))
-                        results.append(res[0])
-                else:
-                    err += 1
-            if err > 0:
-                print('Solution not found on {} points'.format(err))
-            return PTpath(points, results)
-        else:
-            print('Not yet gridded...')
 
     def show(self, **kwargs):
         """Method to draw PT pseudosection.
@@ -744,7 +562,7 @@ class PTPS:
                 msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
                 print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
             else:
-                gd = np.empty(self.grid.tg.shape)
+                gd = np.empty(self.grid.xg.shape)
                 gd[:] = np.nan
                 for key in self:
                     res = self.grid.gridcalcs[self.grid.masks[key]]
@@ -816,96 +634,6 @@ class PTPS:
         else:
             print('Not yet gridded...')
 
-    def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
-        """Show values of expression for given phase calculated along PTpath.
-
-        It plots colored strip on PT space. Strips arenot drawn accross fields,
-        where 'phase' is not present.
-
-        Args:
-            ptpath (PTpath): Results obtained by `collect_ptpath` method.
-            phase (str): Phase or end-member named
-            expr (str): Expression to evaluate. It could use any variable
-                existing for given phase. Check `all_data_keys` property for
-                possible variables.
-            label (bool): Whether to label divariant fields. Default False.
-            pathwidth (int): Width of colored strip. Default 4.
-            allpath (bool): Whether to plot full PT path (dashed line).
-        """
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-        else:
-            ex = ptpath.get_path_data(phase, expr)
-            fig, ax = plt.subplots()
-            if allpath:
-                ax.plot(ptpath.t, ptpath.p, '--', color='grey', lw=1)
-            # Create a continuous norm to map from data points to colors
-            norm = plt.Normalize(np.nanmin(ex), np.nanmax(ex))
-
-            for s in np.ma.clump_unmasked(np.ma.masked_invalid(ex)):
-                ts, ps, exs = ptpath.t[s], ptpath.p[s], ex[s]
-                points = np.array([ts, ps]).T.reshape(-1, 1, 2)
-                segments = np.concatenate([points[:-1], points[1:]], axis=1)
-                lc = LineCollection(segments, cmap='viridis', norm=norm)
-                # Set the values used for colormapping
-                lc.set_array(exs)
-                lc.set_linewidth(pathwidth)
-                line = ax.add_collection(lc)
-                self.add_overlay(ax, label=label)
-            cbar = fig.colorbar(line, ax=ax)
-            cbar.set_label('{}[{}]'.format(phase, expr))
-            ax.set_xlim(self.ps.xrange)
-            ax.set_ylim(self.ps.yrange)
-            ax.set_title('PT path - {}'.format(self.name))
-            plt.show()
-
-    def show_path_modes(self, ptpath, exclude=[], cmap='tab20'):
-        """Show stacked area diagram of phase modes along PT path
-
-        Args:
-            ptpath (PTpath): Results obtained by `collect_ptpath` method.
-            exclude (list): List of phases to exclude. Included phases area
-                normalized to 100%.
-            cmap (str): matplotlib colormap. Default 'tab20'
-        """
-        if not isinstance(exclude, list):
-            exclude = [exclude]
-        steps = len(ptpath.t)
-        nd = np.linspace(0, 1, steps)
-        splt = interp1d(nd, ptpath.t, kind='quadratic')
-        splp = interp1d(nd, ptpath.p, kind='quadratic')
-        pset = set()
-        for res in ptpath.results:
-            pset.update(res['data'].keys())
-
-        pset = set()
-        for res in ptpath.results:
-            for key in res['data']:
-                if 'mode' in res['data'][key] and key not in exclude:
-                    pset.add(key)
-        phases = sorted(list(pset))
-        modes = np.array([[res['data'][phase]['mode'] if phase in res['data'] else 0 for res in ptpath.results] for phase in phases])
-        modes = 100 * modes / modes.sum(axis=0)
-        cm = plt.get_cmap(cmap)
-        fig, ax = plt.subplots(figsize=(12, 5))
-        ax.set_prop_cycle(color=[cm(i/len(phases)) for i in range(len(phases))])
-        bottom = np.zeros_like(modes[0])
-        bars = []
-        for n, mode in enumerate(modes):
-            h = ax.bar(nd, mode, bottom=bottom, width=nd[1]-nd[0])
-            bars.append(h[0])
-            bottom += mode
-
-        ax.format_coord = lambda x, y: 'T={:.2f} p={:.2f}'.format(splt(x), splp(x))
-        ax.set_xlim(0, 1)
-        ax.set_xlabel('Normalized distance along path')
-        ax.set_ylabel('Mode [%]')
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
-        # Put a legend to the right of the current axis
-        ax.legend(bars, phases, fancybox=True, loc='center left', bbox_to_anchor=(1.05,0.5))
-        plt.show()
 
     def identify(self, T, p):
         """Return key (frozenset) of divariant field for given temperature and pressure.
@@ -1040,10 +768,10 @@ class PTPS:
             fig, ax = plt.subplots()
             for key in recs:
                 tmin, pmin, tmax, pmax = self.shapes[key].bounds
-                # ttspace = self.tspace[np.logical_and(self.tspace >= tmin - self.tstep, self.tspace <= tmax + self.tstep)]
-                # ppspace = self.pspace[np.logical_and(self.pspace >= pmin - self.pstep, self.pspace <= pmax + self.pstep)]
-                ttspace = np.arange(tmin - self.grid.tstep, tmax + self.grid.tstep, self.grid.tstep / refine)
-                ppspace = np.arange(pmin - self.grid.pstep, pmax + self.grid.pstep, self.grid.pstep / refine)
+                # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
+                # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
+                ttspace = np.arange(tmin - self.grid.xstep, tmax + self.grid.xstep, self.grid.xstep / refine)
+                ppspace = np.arange(pmin - self.grid.ystep, pmax + self.grid.ystep, self.grid.ystep / refine)
                 tg, pg = np.meshgrid(ttspace, ppspace)
                 x, y = np.array(recs[key]['pts']).T
                 try:
@@ -1053,9 +781,9 @@ class PTPS:
                     # experimental
                     if gradient:
                         if dt:
-                            zg = np.gradient(zg, self.grid.tstep, self.grid.pstep)[0]
+                            zg = np.gradient(zg, self.grid.xstep, self.grid.ystep)[0]
                         else:
-                            zg = -np.gradient(zg, self.grid.tstep, self.grid.pstep)[1]
+                            zg = -np.gradient(zg, self.grid.xstep, self.grid.ystep)[1]
                         if N:
                             cntv = N
                         else:
@@ -1256,9 +984,9 @@ class PTPS:
         with Path(tabfile).open('wb') as f:
             head = ['psbuilder', self.name + '.tab', '{:12d}'.format(2),
                     'T(°C)', '   {:16.16f}'.format(self.ps.trange[0])[:19],
-                    '   {:16.16f}'.format(self.tstep)[:19], '{:12d}'.format(len(self.tspace)),
+                    '   {:16.16f}'.format(self.xstep)[:19], '{:12d}'.format(len(self.xspace)),
                     'p(kbar)', '   {:16.16f}'.format(self.ps.prange[0])[:19],
-                    '   {:16.16f}'.format(self.pstep)[:19], '{:12d}'.format(len(self.pspace)),
+                    '   {:16.16f}'.format(self.ystep)[:19], '{:12d}'.format(len(self.yspace)),
                     '{:12d}'.format(len(data)), (len(data) * '{:15s}').format(*comps)]
             for ln in head:
                 f.write(bytes(ln + '\n', 'utf-8'))
@@ -1271,14 +999,14 @@ class PTPS:
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
         else:
             recs, mn, mx = self.merge_data(phase, expr, which=which)
-            gd = np.empty(self.grid.tg.shape)
+            gd = np.empty(self.grid.xg.shape)
             gd[:] = np.nan
             for key in recs:
                 tmin, pmin, tmax, pmax = self.shapes[key].bounds
-                ttind = np.logical_and(self.grid.tspace >= tmin - self.grid.tstep, self.grid.tspace <= tmax + self.grid.tstep)
-                ppind = np.logical_and(self.grid.pspace >= pmin - self.grid.pstep, self.grid.pspace <= pmax + self.grid.pstep)
+                ttind = np.logical_and(self.grid.xspace >= tmin - self.grid.xstep, self.grid.xspace <= tmax + self.grid.xstep)
+                ppind = np.logical_and(self.grid.yspace >= pmin - self.grid.ystep, self.grid.yspace <= pmax + self.grid.ystep)
                 slc = np.ix_(ppind, ttind)
-                tg, pg = self.grid.tg[slc], self.grid.pg[slc]
+                tg, pg = self.grid.xg[slc], self.grid.yg[slc]
                 x, y = np.array(recs[key]['pts']).T
                 # Use scaling
                 rbf = Rbf(x, self.ps.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
@@ -1287,12 +1015,575 @@ class PTPS:
             return gd
 
 
+class PTPS(ExplorerBase):
+    """PTPS - class to postprocess psbuilder project
+    """
+    def __repr__(self):
+        reprs = ['PT pseudosection explorer']
+        reprs.append(repr(self.tc))
+        reprs.append(repr(self.ps))
+        reprs.append('Areas: {}'.format(len(self.shapes)))
+        if self.gridded:
+            reprs.append(repr(self.grid))
+        return '\n'.join(reprs)
+
+    def calculate_composition(self, nx=50, ny=50):
+        """Method to calculate compositional variations on grid.
+
+        A compositions are calculated for stable assemblages in regular grid
+        covering pT range of pseudosection. A stable assemblage is identified
+        from constructed divariant fields. Results are stored in `grid` property
+        as `GridData` instance. A property `all_data_keys` is updated.
+
+        Before any grid point calculation, ptguesses are updated from nearest
+        invariant point. If calculation fails, nearest solution from univariant
+        line is used to update ptguesses. Finally, if solution is still not found,
+        the method `fix_solutions` is called and neigbouring grid calculations are
+        used to provide ptguess.
+
+        Args:
+            nx (int): Number of grid points along x direction (T)
+            ny (int): Number of grid points along y direction (p)
+        """
+        grid = GridData(self.ps, nx=nx, ny=ny)
+        last_inv = 0
+        for (r, c) in tqdm(np.ndindex(grid.xg.shape), desc='Gridding', total=np.prod(grid.xg.shape)):
+            x, y = grid.xg[r, c], grid.yg[r, c]
+            k = self.identify(x, y)
+            if k is not None:
+                # update guesses from closest inv point
+                dst = sys.float_info.max
+                for id_inv, inv in self.ps.invpoints.items():
+                    d2 = (inv._x - x)**2 + (inv._y - y)**2
+                    if d2 < dst:
+                        dst = d2
+                        id_close = id_inv
+                if id_close != last_inv:
+                    self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
+                    last_inv = id_close
+                grid.status[r, c] = 0
+                start_time = time.time()
+                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                delta = time.time() - start_time
+                status, variance, pts, res, output = self.tc.parse_logfile()
+                if len(res) == 1:
+                    grid.gridcalcs[r, c] = res[0]
+                    grid.status[r, c] = 1
+                    grid.delta[r, c] = delta
+                else:
+                    # update guesses from closest uni line point
+                    dst = sys.float_info.max
+                    for id_uni in self.unilists[k]:
+                        uni = self.ps.unilines[id_uni]
+                        for ix in list(range(len(uni._x))[uni.used]):
+                            d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
+                            if d2 < dst:
+                                dst = d2
+                                id_close = id_uni
+                                idix = ix
+                    self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                    start_time = time.time()
+                    tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                    delta = time.time() - start_time
+                    status, variance, pts, res, output = self.tc.parse_logfile()
+                    if len(res) == 1:
+                        grid.gridcalcs[r, c] = res[0]
+                        grid.status[r, c] = 1
+                        grid.delta[r, c] = delta
+                    else:
+                        grid.gridcalcs[r, c] = None
+                        grid.status[r, c] = 0
+            else:
+                grid.gridcalcs[r, c] = None
+        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+        self.grid = grid
+        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+            self.fix_solutions()
+        self.create_masks()
+        # update variable lookup table
+        self.collect_all_data_keys()
+        # save
+        self.save()
+
+    def fix_solutions(self):
+        """Method try to find solution for grid points with failed status.
+
+        Ptguesses are used from successfully calculated neighboring points until
+        solution is find. Otherwise ststus remains failed.
+        """
+        if self.gridded:
+            log = []
+            ri, ci = np.nonzero(self.grid.status == 0)
+            fixed, ftot = 0, len(ri)
+            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+            for ind in tq:
+                r, c = ri[ind], ci[ind]
+                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
+                k = self.identify(x, y)
+                if k is not None:
+                    # search already done grid neighs
+                    for rn, cn in self.grid.neighs(r, c):
+                        if self.grid.status[rn, cn] == 1:
+                            self.tc.update_scriptfile(guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = self.tc.parse_logfile()
+                            if len(res) == 1:
+                                self.grid.gridcalcs[r, c] = res[0]
+                                self.grid.status[r, c] = 1
+                                self.grid.delta[r, c] = delta
+                                fixed += 1
+                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                break
+                if self.grid.status[r, c] == 0:
+                    log.append('No solution find for {}, {}'.format(x, y))
+            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
+            print('\n'.join(log))
+        else:
+            print('Not yet gridded...')
+
+    def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
+        """Method to collect THERMOCALC calculations along defined PT path.
+
+        PT path is interpolated from provided points using defined method. For
+        each point THERMOCALC seek for solution using ptguess from nearest
+        `GridData` point.
+
+        Args:
+            tpath (numpy.array): 1D array of temperatures for given PT path
+            ppath (numpy.array): 1D array of pressures for given PT path
+            N (int): Number of calculation steps. Default 100.
+            kind (str): Kind of interpolation. See scipy.interpolate.interp1d
+
+        Returns:
+            PTpath: returns instance of PTpath class storing all calculations
+                along PT path.
+        """
+        if self.gridded:
+            tpath, ppath = np.asarray(tpath), np.asarray(ppath)
+            assert tpath.shape == ppath.shape, 'Shape of temperatures and pressures should be same.'
+            assert tpath.ndim == 1, 'Temperatures and pressures should be 1D array like data.'
+            gpath = np.arange(tpath.shape[0], dtype=float)
+            gpath /= gpath[-1]
+            splt = interp1d(gpath, tpath, kind=kind)
+            splp = interp1d(gpath, ppath, kind=kind)
+            err = 0
+            points, results = [], []
+            for step in tqdm(np.linspace(0, 1, N), desc='Calculating'):
+                t, p = splt(step), splp(step)
+                key = self.identify(t, p)
+                mask = self.grid.masks[key]
+                dst = (t - self.grid.xg)**2 + (self.ps.ratio * (p - self.grid.yg))**2
+                dst[~mask] = np.nan
+                r, c = np.unravel_index(np.nanargmin(dst), self.grid.xg.shape)
+                calc = None
+                if self.grid.status[r, c] == 1:
+                    calc = self.grid.gridcalcs[r, c]
+                else:
+                    for rn, cn in self.grid.neighs(r, c):
+                        if self.grid.status[rn, cn] == 1:
+                            calc = self.grid.gridcalcs[rn, cn]
+                            break
+                if calc is not None:
+                    self.tc.update_scriptfile(guesses=calc['ptguess'])
+                    tcout, ans = self.tc.calc_assemblage(key.difference(self.ps.excess), p, t)
+                    status, variance, pts, res, output = self.tc.parse_logfile()
+                    if len(res) == 1:
+                        points.append((t, p))
+                        results.append(res[0])
+                else:
+                    err += 1
+            if err > 0:
+                print('Solution not found on {} points'.format(err))
+            return PTpath(points, results)
+        else:
+            print('Not yet gridded...')
+
+    def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
+        """Show values of expression for given phase calculated along PTpath.
+
+        It plots colored strip on PT space. Strips arenot drawn accross fields,
+        where 'phase' is not present.
+
+        Args:
+            ptpath (PTpath): Results obtained by `collect_ptpath` method.
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            label (bool): Whether to label divariant fields. Default False.
+            pathwidth (int): Width of colored strip. Default 4.
+            allpath (bool): Whether to plot full PT path (dashed line).
+        """
+        if expr is None:
+            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
+            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+        else:
+            ex = ptpath.get_path_data(phase, expr)
+            fig, ax = plt.subplots()
+            if allpath:
+                ax.plot(ptpath.t, ptpath.p, '--', color='grey', lw=1)
+            # Create a continuous norm to map from data points to colors
+            norm = plt.Normalize(np.nanmin(ex), np.nanmax(ex))
+
+            for s in np.ma.clump_unmasked(np.ma.masked_invalid(ex)):
+                ts, ps, exs = ptpath.t[s], ptpath.p[s], ex[s]
+                points = np.array([ts, ps]).T.reshape(-1, 1, 2)
+                segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                lc = LineCollection(segments, cmap='viridis', norm=norm)
+                # Set the values used for colormapping
+                lc.set_array(exs)
+                lc.set_linewidth(pathwidth)
+                line = ax.add_collection(lc)
+                self.add_overlay(ax, label=label)
+            cbar = fig.colorbar(line, ax=ax)
+            cbar.set_label('{}[{}]'.format(phase, expr))
+            ax.set_xlim(self.ps.xrange)
+            ax.set_ylim(self.ps.yrange)
+            ax.set_title('PT path - {}'.format(self.name))
+            plt.show()
+
+    def show_path_modes(self, ptpath, exclude=[], cmap='tab20'):
+        """Show stacked area diagram of phase modes along PT path
+
+        Args:
+            ptpath (PTpath): Results obtained by `collect_ptpath` method.
+            exclude (list): List of phases to exclude. Included phases area
+                normalized to 100%.
+            cmap (str): matplotlib colormap. Default 'tab20'
+        """
+        if not isinstance(exclude, list):
+            exclude = [exclude]
+        steps = len(ptpath.t)
+        nd = np.linspace(0, 1, steps)
+        splt = interp1d(nd, ptpath.t, kind='quadratic')
+        splp = interp1d(nd, ptpath.p, kind='quadratic')
+        pset = set()
+        for res in ptpath.results:
+            pset.update(res['data'].keys())
+
+        pset = set()
+        for res in ptpath.results:
+            for key in res['data']:
+                if 'mode' in res['data'][key] and key not in exclude:
+                    pset.add(key)
+        phases = sorted(list(pset))
+        modes = np.array([[res['data'][phase]['mode'] if phase in res['data'] else 0 for res in ptpath.results] for phase in phases])
+        modes = 100 * modes / modes.sum(axis=0)
+        cm = plt.get_cmap(cmap)
+        fig, ax = plt.subplots(figsize=(12, 5))
+        ax.set_prop_cycle(color=[cm(i/len(phases)) for i in range(len(phases))])
+        bottom = np.zeros_like(modes[0])
+        bars = []
+        for n, mode in enumerate(modes):
+            h = ax.bar(nd, mode, bottom=bottom, width=nd[1]-nd[0])
+            bars.append(h[0])
+            bottom += mode
+
+        ax.format_coord = lambda x, y: 'T={:.2f} p={:.2f}'.format(splt(x), splp(x))
+        ax.set_xlim(0, 1)
+        ax.set_xlabel('Normalized distance along path')
+        ax.set_ylabel('Mode [%]')
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax.legend(bars, phases, fancybox=True, loc='center left', bbox_to_anchor=(1.05,0.5))
+        plt.show()
+
+
+class TXPS(ExplorerBase):
+    """TXPS - class to postprocess txbuilder project
+    """
+    def __repr__(self):
+        reprs = ['TX pseudosection explorer']
+        reprs.append(repr(self.tc))
+        reprs.append(repr(self.ps))
+        reprs.append('Areas: {}'.format(len(self.shapes)))
+        if self.gridded:
+            reprs.append(repr(self.grid))
+        return '\n'.join(reprs)
+
+    def calculate_composition(self, nx=50, ny=50):
+        """Method to calculate compositional variations on grid.
+
+        A compositions are calculated for stable assemblages in regular grid
+        covering pT range of pseudosection. A stable assemblage is identified
+        from constructed divariant fields. Results are stored in `grid` property
+        as `GridData` instance. A property `all_data_keys` is updated.
+
+        Before any grid point calculation, ptguesses are updated from nearest
+        invariant point. If calculation fails, nearest solution from univariant
+        line is used to update ptguesses. Finally, if solution is still not found,
+        the method `fix_solutions` is called and neigbouring grid calculations are
+        used to provide ptguess.
+
+        Args:
+            nx (int): Number of grid points along x direction (T)
+            ny (int): Number of grid points along y direction (p)
+        """
+        grid = GridData(self.ps, nx=nx, ny=ny)
+        last_inv = 0
+        with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
+            pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
+            for r in range(len(grid.yspace)):
+                # change bulk
+                bulk = self.tc.interpolate_bulk(grid.yspace[r])
+                self.tc.update_scriptfile(bulk=bulk)
+                for c in range(len(grid.xspace)):
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # update guesses from closest inv point
+                        dst = sys.float_info.max
+                        for id_inv, inv in self.ps.invpoints.items():
+                            d2 = (inv._x - x)**2 + (inv._y - y)**2
+                            if d2 < dst:
+                                dst = d2
+                                id_close = id_inv
+                        if id_close != last_inv:
+                            self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
+                            last_inv = id_close
+                        grid.status[r, c] = 0
+                        start_time = time.time()
+                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                        delta = time.time() - start_time
+                        status, variance, pts, res, output = self.tc.parse_logfile()
+                        if len(res) == 1:
+                            grid.gridcalcs[r, c] = res[0]
+                            grid.status[r, c] = 1
+                            grid.delta[r, c] = delta
+                        else:
+                            # update guesses from closest uni line point
+                            dst = sys.float_info.max
+                            for id_uni in self.unilists[k]:
+                                uni = self.ps.unilines[id_uni]
+                                for ix in list(range(len(uni._x))[uni.used]):
+                                    d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
+                                    if d2 < dst:
+                                        dst = d2
+                                        id_close = id_uni
+                                        idix = ix
+                            self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = self.tc.parse_logfile()
+                            if len(res) == 1:
+                                grid.gridcalcs[r, c] = res[0]
+                                grid.status[r, c] = 1
+                                grid.delta[r, c] = delta
+                            else:
+                                grid.gridcalcs[r, c] = None
+                                grid.status[r, c] = 0
+                    else:
+                        grid.gridcalcs[r, c] = None
+                    pbar.update(1)
+        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+        # restore bulk
+        self.tc.update_scriptfile(bulk=self.bulk)
+        self.grid = grid
+        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+            self.fix_solutions()
+        self.create_masks()
+        # update variable lookup table
+        self.collect_all_data_keys()
+        # save
+        #self.save()
+
+    def fix_solutions(self):
+        """Method try to find solution for grid points with failed status.
+
+        Ptguesses are used from successfully calculated neighboring points until
+        solution is find. Otherwise ststus remains failed.
+        """
+        if self.gridded:
+            log = []
+            ri, ci = np.nonzero(self.grid.status == 0)
+            fixed, ftot = 0, len(ri)
+            pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
+            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+            for ind in tq:
+                r, c = ri[ind], ci[ind]
+                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
+                k = self.identify(x, y)
+                if k is not None:
+                    # search already done grid neighs
+                    for rn, cn in self.grid.neighs(r, c):
+                        if self.grid.status[rn, cn] == 1:
+                            # change bulk
+                            bulk = self.tc.interpolate_bulk(self.grid.yspace[rn])
+                            self.tc.update_scriptfile(bulk=bulk, guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = self.tc.parse_logfile()
+                            if len(res) == 1:
+                                self.grid.gridcalcs[r, c] = res[0]
+                                self.grid.status[r, c] = 1
+                                self.grid.delta[r, c] = delta
+                                fixed += 1
+                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                break
+                if self.grid.status[r, c] == 0:
+                    log.append('No solution find for {}, {}'.format(x, y))
+            # restore bulk
+            self.tc.update_scriptfile(bulk=self.bulk)
+            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
+            print('\n'.join(log))
+        else:
+            print('Not yet gridded...')
+
+
+class PXPS(ExplorerBase):
+    """PXPS - class to postprocess pxbuilder project
+    """
+    def __repr__(self):
+        reprs = ['PX pseudosection explorer']
+        reprs.append(repr(self.tc))
+        reprs.append(repr(self.ps))
+        reprs.append('Areas: {}'.format(len(self.shapes)))
+        if self.gridded:
+            reprs.append(repr(self.grid))
+        return '\n'.join(reprs)
+
+    def calculate_composition(self, nx=50, ny=50):
+        """Method to calculate compositional variations on grid.
+
+        A compositions are calculated for stable assemblages in regular grid
+        covering pT range of pseudosection. A stable assemblage is identified
+        from constructed divariant fields. Results are stored in `grid` property
+        as `GridData` instance. A property `all_data_keys` is updated.
+
+        Before any grid point calculation, ptguesses are updated from nearest
+        invariant point. If calculation fails, nearest solution from univariant
+        line is used to update ptguesses. Finally, if solution is still not found,
+        the method `fix_solutions` is called and neigbouring grid calculations are
+        used to provide ptguess.
+
+        Args:
+            nx (int): Number of grid points along x direction (T)
+            ny (int): Number of grid points along y direction (p)
+        """
+        grid = GridData(self.ps, nx=nx, ny=ny)
+        last_inv = 0
+        with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
+            tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+            for c in range(len(grid.xspace)):
+                # change bulk
+                bulk = self.tc.interpolate_bulk(grid.xspace[c])
+                self.tc.update_scriptfile(bulk=bulk)
+                for r in range(len(grid.yspace)):
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # update guesses from closest inv point
+                        dst = sys.float_info.max
+                        for id_inv, inv in self.ps.invpoints.items():
+                            d2 = (inv._x - x)**2 + (inv._y - y)**2
+                            if d2 < dst:
+                                dst = d2
+                                id_close = id_inv
+                        if id_close != last_inv:
+                            self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
+                            last_inv = id_close
+                        grid.status[r, c] = 0
+                        start_time = time.time()
+                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                        delta = time.time() - start_time
+                        status, variance, pts, res, output = self.tc.parse_logfile()
+                        if len(res) == 1:
+                            grid.gridcalcs[r, c] = res[0]
+                            grid.status[r, c] = 1
+                            grid.delta[r, c] = delta
+                        else:
+                            # update guesses from closest uni line point
+                            dst = sys.float_info.max
+                            for id_uni in self.unilists[k]:
+                                uni = self.ps.unilines[id_uni]
+                                for ix in list(range(len(uni._x))[uni.used]):
+                                    d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
+                                    if d2 < dst:
+                                        dst = d2
+                                        id_close = id_uni
+                                        idix = ix
+                            self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = self.tc.parse_logfile()
+                            if len(res) == 1:
+                                grid.gridcalcs[r, c] = res[0]
+                                grid.status[r, c] = 1
+                                grid.delta[r, c] = delta
+                            else:
+                                grid.gridcalcs[r, c] = None
+                                grid.status[r, c] = 0
+                    else:
+                        grid.gridcalcs[r, c] = None
+                    pbar.update(1)
+        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+        # restore bulk
+        self.tc.update_scriptfile(bulk=self.bulk)
+        self.grid = grid
+        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+            self.fix_solutions()
+        self.create_masks()
+        # update variable lookup table
+        self.collect_all_data_keys()
+        # save
+        #self.save()
+
+    def fix_solutions(self):
+        """Method try to find solution for grid points with failed status.
+
+        Ptguesses are used from successfully calculated neighboring points until
+        solution is find. Otherwise ststus remains failed.
+        """
+        if self.gridded:
+            log = []
+            ri, ci = np.nonzero(self.grid.status == 0)
+            fixed, ftot = 0, len(ri)
+            tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+            for ind in tq:
+                r, c = ri[ind], ci[ind]
+                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
+                k = self.identify(x, y)
+                if k is not None:
+                    # search already done grid neighs
+                    for rn, cn in self.grid.neighs(r, c):
+                        if self.grid.status[rn, cn] == 1:
+                            # change bulk
+                            bulk = self.tc.interpolate_bulk(self.grid.xspace[cn])
+                            self.tc.update_scriptfile(bulk=bulk, guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                            delta = time.time() - start_time
+                            status, variance, pts, res, output = self.tc.parse_logfile()
+                            if len(res) == 1:
+                                self.grid.gridcalcs[r, c] = res[0]
+                                self.grid.status[r, c] = 1
+                                self.grid.delta[r, c] = delta
+                                fixed += 1
+                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                break
+                if self.grid.status[r, c] == 0:
+                    log.append('No solution find for {}, {}'.format(x, y))
+            # restore bulk
+            self.tc.update_scriptfile(bulk=self.bulk)
+            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
+            print('\n'.join(log))
+        else:
+            print('Not yet gridded...')
+
+
 class GridData:
     """ Class to store gridded calculations.
 
     Attributes:
-        tspace (numpy.array): Array of temperatures used for gridding
-        pspace (numpy.array): Array of pressures used for gridding
+        xspace (numpy.array): Array of x coordinates used for gridding
+        yspace (numpy.array): Array of y coordinates used for gridding
         gridcalcs (numpy.array): 2D array of THERMOCALC Results
         status (numpy.array): 2D array indicating status of calculation. The
             values are 1 - OK, 0 - Failed, NaN - not calculated (outside of any
@@ -1305,14 +1596,14 @@ class GridData:
     """
     def __init__(self, ps, nx, ny):
         dx = (ps.xrange[1] - ps.xrange[0]) / nx
-        self.tspace = np.linspace(ps.xrange[0] + dx/2, ps.xrange[1] - dx/2, nx)
+        self.xspace = np.linspace(ps.xrange[0] + dx/2, ps.xrange[1] - dx/2, nx)
         dy = (ps.yrange[1] - ps.yrange[0]) / ny
-        self.pspace = np.linspace(ps.yrange[0] + dy/2, ps.yrange[1] - dy/2, ny)
-        self.tg, self.pg = np.meshgrid(self.tspace, self.pspace)
-        self.gridcalcs = np.empty(self.tg.shape, np.dtype(object))
-        self.status = np.empty(self.tg.shape)
+        self.yspace = np.linspace(ps.yrange[0] + dy/2, ps.yrange[1] - dy/2, ny)
+        self.xg, self.yg = np.meshgrid(self.xspace, self.yspace)
+        self.gridcalcs = np.empty(self.xg.shape, np.dtype(object))
+        self.status = np.empty(self.xg.shape)
         self.status[:] = np.nan
-        self.delta = np.empty(self.tg.shape)
+        self.delta = np.empty(self.xg.shape)
         self.delta[:] = np.nan
         self.masks = OrderedDict()
 
@@ -1320,8 +1611,8 @@ class GridData:
         tmpl = 'Grid {}x{} with ok/failed/none solutions {}/{}/{}'
         ok = len(np.flatnonzero(self.status == 1))
         fail = len(np.flatnonzero(self.status == 0))
-        return tmpl.format(len(self.tspace), len(self.pspace),
-                           ok, fail, np.prod(self.tg.shape) - ok - fail)
+        return tmpl.format(len(self.xspace), len(self.yspace),
+                           ok, fail, np.prod(self.xg.shape) - ok - fail)
 
     def neighs(self, r, c):
         """Returns list of row, column tuples of neighbouring points on grid.
@@ -1335,30 +1626,30 @@ class GridData:
                       [(r + 1, c - 1), (r + 1, c), (r + 1, c + 1)]])
         if r < 1:
             m = m[1:, :]
-        if r > len(self.pspace) - 2:
+        if r > len(self.yspace) - 2:
             m = m[:-1, :]
         if c < 1:
             m = m[:, 1:]
-        if c > len(self.tspace) - 2:
+        if c > len(self.xspace) - 2:
             m = m[:, :-1]
         return zip([i for i in m[:, :, 0].flat if i is not None],
                    [i for i in m[:, :, 1].flat if i is not None])
 
     @property
-    def tstep(self):
+    def xstep(self):
         """Returns spacing along temperature axis"""
-        return self.tspace[1] - self.tspace[0]
+        return self.xspace[1] - self.xspace[0]
 
     @property
-    def pstep(self):
+    def ystep(self):
         """Returns spacing along pressure axis"""
-        return self.pspace[1] - self.pspace[0]
+        return self.yspace[1] - self.yspace[0]
 
     @property
     def extent(self):
         """Returns extend of grid (Note that grid is cell centered)"""
-        return (self.tspace[0] - self.tstep / 2, self.tspace[-1] + self.tstep / 2,
-                self.pspace[0] - self.pstep / 2, self.pspace[-1] + self.pstep / 2)
+        return (self.xspace[0] - self.xstep / 2, self.xspace[-1] + self.xstep / 2,
+                self.yspace[0] - self.ystep / 2, self.yspace[-1] + self.ystep / 2)
 
 
 class PTpath:

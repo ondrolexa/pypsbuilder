@@ -1314,7 +1314,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 #shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes_old()
-                shapes, log = self.ps.create_shapes()
+                shapes, _, log = self.ps.create_shapes()
                 if log:
                     self.textOutput.setPlainText('\n'.join(log))
                 if shapes:

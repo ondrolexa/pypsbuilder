@@ -1653,25 +1653,25 @@ class SectionBase:
         polys = list(polygonize(edges + list(lns.values())))
         # create shapes
         shapes = {}
-        unisets = {}
+        unilists = {}
         for ix, poly in enumerate(polys):
-            uniset = []
+            unilist = []
             for uni_id, ln in lns.items():
                 if ln.relate_pattern(poly, '*1*F*****'):
-                    uniset.append(uni_id)
-            phases = set.intersection(*(self.unilines[id].phases for id in uniset))
-            vd = [phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out or not phases.symmetric_difference(self.unilines[id].phases) or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs for id in uniset]
+                    unilist.append(uni_id)
+            phases = set.intersection(*(self.unilines[id].phases for id in unilist))
+            vd = [phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out or not phases.symmetric_difference(self.unilines[id].phases) or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs for id in unilist]
             if all(vd):
                 if frozenset(phases) in shapes:
                     shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
-                    unisets[frozenset(phases)] = list(set(unisets[frozenset(phases)] + uniset))
-                    log.append('Area defined by unilines {} is self-intersecting.'.format(' '.join([str(id) for id in unisets[frozenset(phases)]])))
+                    unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
+                    log.append('Area defined by unilines {} is self-intersecting.'.format(' '.join([str(id) for id in unilists[frozenset(phases)]])))
                 else:
                     shapes[frozenset(phases)] = poly
-                    unisets[frozenset(phases)] = uniset
+                    unilists[frozenset(phases)] = unilist
             else:
-                log.append('Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in uniset])))
-        return shapes, log
+                log.append('Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in unilist])))
+        return shapes, unilists, log
 
     def show(self):
         for ln in self.unilines.values():
