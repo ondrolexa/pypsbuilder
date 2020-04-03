@@ -26,7 +26,7 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point
-from shapely.ops import polygonize, linemerge, unary_union
+from shapely.ops import polygonize, linemerge, unary_union, split
 
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
@@ -1420,6 +1420,9 @@ class SectionBase:
         uni.x = np.hstack((x1, xx, x2))
         uni.y = np.hstack((y1, yy, y2))
 
+############# OLD ################
+#
+#
     def construct_areas(self):
         def area_exists(indexes):
             def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
@@ -1530,7 +1533,7 @@ class SectionBase:
                             break
         return vertices, edges, phases, tedges, tphases, log
 
-    def create_shapes(self, tolerance=None): # TODO: use simplified geometries...
+    def create_shapes_old(self, tolerance=None): # TODO: use simplified geometries...
         shapes = OrderedDict()
         shape_edges = OrderedDict()
         bad_shapes = OrderedDict()
@@ -1606,6 +1609,69 @@ class SectionBase:
         for k in todel:
             shapes.pop(k)
         return shapes, shape_edges, bad_shapes, ignored_shapes, log
+#
+#
+############# OLD ################
+
+    def create_shapes(self, tolerance=None):
+        def splitme(seg):
+            '''Recursive boundary splitter'''
+            splitted = False
+            for l in lns.values():
+                if seg.intersects(l):
+                    m = linemerge([seg, l])
+                    if m.type == 'MultiLineString':
+                        p = seg.intersection(l)
+                        p_ok = seg.interpolate(seg.project(p))
+                        s_seg = split(seg, p_ok)
+                        splitted = True
+                        break
+            if splitted:
+                if len(s_seg) == 2:
+                    return splitme(s_seg[0]) + splitme(s_seg[1])
+                else:
+                    return [seg]
+            else:
+                return [seg]
+        # define bounds and area
+        bnd, area = self.range_shapes
+        lns = {}
+        log = []
+        # trim univariant lines
+        skipped = []
+        for uni in self.unilines.values():
+            l = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
+            if l.type == 'LineString' and not l.is_empty:
+                lns[uni.id] = l
+            else:
+                skipped.append(str(uni.id))
+        if skipped:
+            log.append('Unilines skipped: {}'.format(' '.join(skipped)))
+        # split boundaries
+        edges = splitme(bnd[0]) + splitme(bnd[1]) + splitme(bnd[2]) + splitme(bnd[3])
+        # polygonize
+        polys = list(polygonize(edges + list(lns.values())))
+        # create shapes
+        shapes = {}
+        unisets = {}
+        for ix, poly in enumerate(polys):
+            uniset = []
+            for uni_id, ln in lns.items():
+                if ln.relate_pattern(poly, '*1*F*****'):
+                    uniset.append(uni_id)
+            phases = set.intersection(*(self.unilines[id].phases for id in uniset))
+            vd = [phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out or not phases.symmetric_difference(self.unilines[id].phases) or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs for id in uniset]
+            if all(vd):
+                if frozenset(phases) in shapes:
+                    shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
+                    unisets[frozenset(phases)] = list(set(unisets[frozenset(phases)] + uniset))
+                    log.append('Area defined by unilines {} is self-intersecting.'.format(' '.join([str(id) for id in unisets[frozenset(phases)]])))
+                else:
+                    shapes[frozenset(phases)] = poly
+                    unisets[frozenset(phases)] = uniset
+            else:
+                log.append('Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in uniset])))
+        return shapes, log
 
     def show(self):
         for ln in self.unilines.values():

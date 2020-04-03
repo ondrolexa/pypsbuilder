@@ -1313,7 +1313,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             if not hasattr(self.ax, 'areas_shown'):
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes()
+                #shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes_old()
+                shapes, log = self.ps.create_shapes()
                 if log:
                     self.textOutput.setPlainText('\n'.join(log))
                 if shapes:
