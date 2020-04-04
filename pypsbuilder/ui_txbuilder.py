@@ -662,7 +662,7 @@ class Ui_TXBuilder(object):
         self.label_3.setText(_translate("TXBuilder", "Label fontsize"))
         self.checkDotInv.setText(_translate("TXBuilder", "Show dot at invariant point when not labelled"))
         self.checkOverwrite.setText(_translate("TXBuilder", "Do not overwrite already calculated lines and points"))
-        self.checkUseInvGuess.setText(_translate("TXBuilder", "Use ptguess from connected invariant point for Search"))
+        self.checkUseInvGuess.setText(_translate("TXBuilder", "Use ptguess from connected invariant point"))
         self.checkAutoconnectUni.setText(_translate("TXBuilder", "Automatically connect new univariant lines if possible"))
         self.checkAutoconnectInv.setText(_translate("TXBuilder", "Automatically connect new invariant points if possible"))
         self.checkLabelDog.setText(_translate("TXBuilder", "Label dogmins"))

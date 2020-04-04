@@ -668,7 +668,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 out.append(item.text())
         return set(phases).union(self.ps.excess), set(out)
 
-    def set_phaselist(self, r, show_output=True):
+    def set_phaselist(self, r, show_output=True, useguess=False):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
             if item.text() in r.phases:   # or item.text() in r.out:
@@ -721,6 +721,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             else:
                 self.textOutput.setPlainText(r.output)
             self.textFullOutput.setPlainText(r.output)
+        if useguess:
+            self.invsel_guesses()
 
     def show_uni(self, index):
         uni = self.ps.unilines[self.unimodel.getRowID(index)]
@@ -790,7 +792,8 @@ class BuildersBase(QtWidgets.QMainWindow):
     def invviewRightClicked(self, QPos):
         if self.invsel.hasSelection():
             idx = self.invsel.selectedIndexes()
-            inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
+            inv_id = self.invmodel.getRowID(idx[0])
+            inv = self.ps.invpoints[inv_id]
             all_uni = inv.all_unilines()
             show_menu = False
             menu = QtWidgets.QMenu(self.uniview)
@@ -798,25 +801,25 @@ class BuildersBase(QtWidgets.QMainWindow):
             isnew, id = self.ps.getiduni(u1)
             if isnew:
                 menu_item1 = menu.addAction(u1.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u1, show_output=False))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u1, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
                 show_menu = True
             u2 = UniLine(phases=all_uni[1][0], out=all_uni[1][1])
             isnew, id = self.ps.getiduni(u2)
             if isnew:
                 menu_item2 = menu.addAction(u2.label(excess=self.ps.excess))
-                menu_item2.triggered.connect(lambda: self.set_phaselist(u2, show_output=False))
+                menu_item2.triggered.connect(lambda: self.set_phaselist(u2, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
                 show_menu = True
             u3 = UniLine(phases=all_uni[2][0], out=all_uni[2][1])
             isnew, id = self.ps.getiduni(u3)
             if isnew:
                 menu_item1 = menu.addAction(u3.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u3, show_output=False))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u3, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
                 show_menu = True
             u4 = UniLine(phases=all_uni[3][0], out=all_uni[3][1])
             isnew, id = self.ps.getiduni(u4)
             if isnew:
                 menu_item1 = menu.addAction(u4.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u4, show_output=False))
+                menu_item1.triggered.connect(lambda: self.set_phaselist(u4, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
                 show_menu = True
             if show_menu:
                 menu.exec(self.invview.mapToGlobal(QPos))

@@ -576,7 +576,7 @@
               <item row="10" column="0">
                <widget class="QCheckBox" name="checkUseInvGuess">
                 <property name="text">
-                 <string>Use ptguess from connected invariant point for Search</string>
+                 <string>Use ptguess from connected invariant point</string>
                 </property>
                </widget>
               </item>

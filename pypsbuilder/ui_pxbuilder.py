@@ -660,7 +660,7 @@ class Ui_PXBuilder(object):
         self.label_3.setText(_translate("PXBuilder", "Label fontsize"))
         self.checkDotInv.setText(_translate("PXBuilder", "Show dot at invariant point when not labelled"))
         self.checkOverwrite.setText(_translate("PXBuilder", "Do not overwrite already calculated lines and points"))
-        self.checkUseInvGuess.setText(_translate("PXBuilder", "Use ptguess from connected invariant point for Search"))
+        self.checkUseInvGuess.setText(_translate("PXBuilder", "Use ptguess from connected invariant point"))
         self.checkAutoconnectUni.setText(_translate("PXBuilder", "Automatically connect new univariant lines if possible"))
         self.checkAutoconnectInv.setText(_translate("PXBuilder", "Automatically connect new invariant points if possible"))
         self.checkLabelDog.setText(_translate("PXBuilder", "Label dogmins"))

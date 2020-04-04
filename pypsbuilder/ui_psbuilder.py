@@ -670,7 +670,7 @@ class Ui_PSBuilder(object):
         self.checkOverwrite.setText(_translate("PSBuilder", "Do not overwrite already calculated lines and points"))
         self.checkAutoconnectUni.setText(_translate("PSBuilder", "Automatically connect new univariant lines if possible"))
         self.checkAutoconnectInv.setText(_translate("PSBuilder", "Automatically connect new invariant points if possible"))
-        self.checkUseInvGuess.setText(_translate("PSBuilder", "Use ptguess from connected invariant point for Search"))
+        self.checkUseInvGuess.setText(_translate("PSBuilder", "Use ptguess from connected invariant point"))
         self.checkLabelDog.setText(_translate("PSBuilder", "Label dogmins"))
         self.checkLabelDogText.setText(_translate("PSBuilder", "Use phases instead numbers"))
         self.pushApplySettings.setText(_translate("PSBuilder", "Apply"))
