@@ -1273,6 +1273,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             axs = self.figure.get_axes()
             if axs:
                 self.ax = axs[0]
+                if hasattr(self.ax, 'areas_shown'):
+                    del self.ax.areas_shown
                 cur = (self.ax.get_xlim(), self.ax.get_ylim())
             else:
                 cur = None
