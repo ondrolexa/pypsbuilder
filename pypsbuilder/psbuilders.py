@@ -978,7 +978,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     phases, out = self.get_phases_out()
                     inv = InvPoint(phases=phases, out=out, manual=True,
                                    output='User-defined invariant point.')
-                    unis = [uni for uni in self.ps.unilines.values() if uni.contains_inv(inv)]
+                    unis = [uni for uni in self.ps.unilines.values() if uni.contains_inv(inv) and not uni.manual]
                     done = False
                     if len(unis) > 1:
                         xx, yy = [], []

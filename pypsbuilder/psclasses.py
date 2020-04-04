@@ -1663,9 +1663,25 @@ class SectionBase:
             vd = [phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out or not phases.symmetric_difference(self.unilines[id].phases) or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs for id in unilist]
             if all(vd):
                 if frozenset(phases) in shapes:
-                    shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
-                    unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
-                    log.append('Area defined by unilines {} is self-intersecting.'.format(' '.join([str(id) for id in unilists[frozenset(phases)]])))
+                    # multivariant field crossed just by single univariant line
+                    if len(unilist) == 1:
+                        if self.unilines[unilist[0]].out in phases:
+                            phases = phases.difference(self.unilines[unilist[0]].out)
+                            shapes[frozenset(phases)] = poly
+                            unilists[frozenset(phases)] = unilist
+                    elif len(unilists[frozenset(phases)]) == 1:
+                        if self.unilines[unilists[frozenset(phases)][0]].out in phases:
+                            orig_poly = shapes[frozenset(phases)]
+                            orig_unilist = unilists[frozenset(phases)]
+                            shapes[frozenset(phases)] = poly
+                            unilists[frozenset(phases)] = unilist
+                            phases = phases.difference(self.unilines[orig_unilist[0]].out)
+                            shapes[frozenset(phases)] = poly
+                            unilists[frozenset(phases)] = orig_unilist
+                    else:
+                        shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
+                        log.append('Area defined by unilines {} is self-intersecting with {}.'.format(' '.join([str(id) for id in unilist]), ' '.join([str(id) for id in unilists[frozenset(phases)]])))
+                        unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
                 else:
                     shapes[frozenset(phases)] = poly
                     unilists[frozenset(phases)] = unilist
