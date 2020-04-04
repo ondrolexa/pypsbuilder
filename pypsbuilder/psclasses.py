@@ -1638,15 +1638,10 @@ class SectionBase:
         lns = {}
         log = []
         # trim univariant lines
-        skipped = []
         for uni in self.unilines.values():
             l = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
             if l.type == 'LineString' and not l.is_empty:
                 lns[uni.id] = l
-            else:
-                skipped.append(str(uni.id))
-        if skipped:
-            log.append('Unilines skipped: {}'.format(' '.join(skipped)))
         # split boundaries
         edges = splitme(bnd[0]) + splitme(bnd[1]) + splitme(bnd[2]) + splitme(bnd[3])
         # polygonize

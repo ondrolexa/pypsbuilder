@@ -636,7 +636,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             idx = self.unisel.selectedIndexes()
             uni = self.ps.unilines[self.unimodel.data(idx[0])]
             if not uni.manual:
-                lbl = [self.format_coord(x, y) for x, y in zip(uni._x, uni._y)]
+                prec = self.spinPrec.value()
+                lbl = ['{}={:.{prec}f} {}={:.{prec}f}'.format(self.ps.x_var, x, self.ps.y_var, y, prec=prec) for x, y in zip(uni._x, uni._y)]
                 uniguess = UniGuess(lbl, self)
                 respond = uniguess.exec()
                 if respond == QtWidgets.QDialog.Accepted:
