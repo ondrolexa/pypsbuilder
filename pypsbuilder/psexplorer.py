@@ -64,7 +64,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from shapely.geometry import MultiPoint, Point
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf
-from scipy.interpolate import interp1d
+from scipy.linalg import LinAlgWarning
+from scipy.interpolate import griddata
 from tqdm import tqdm, trange
 
 from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorphs
@@ -73,95 +74,180 @@ from .psclasses import TCAPI, InvPoint, UniLine, PTsection, PTsection, polymorph
 class ExplorerBase:
     """Main class for pseudosection ExplorerBase
     """
-    def __init__(self, projfile, tolerance=None, origwd=False):
+    def __init__(self, *args, tolerance=None, origwd=False):
         """Create PTPS class instance from builder project file.
 
         Args:
-            projfile (str, Path): psbuilder project file
+            projfile (str, Path): psbuilder project file or files
             tolerance (float): if not None, simplification tolerance. Default None
             origwd (bool): If True TCAPI uses original stored working directory
                 Default False.
         """
-        self.projfile = Path(projfile).resolve()
-        if self.projfile.exists():
-            with gzip.open(str(self.projfile), 'rb') as stream:
+        projfiles = [Path(projfile).resolve() for projfile in args if Path(projfile).exists()]
+        assert len(projfiles) > 0, 'You have to provide existing filename.'
+        # individual based (keys are 0, 1...)
+        self.projfiles = {}
+        self.sections = {}
+        self.grids = {}
+        self._shapes = {}
+        self.unilists = {}
+        self._variance = {}
+        # common
+        self.tolerance = tolerance
+        self.tc = None
+        self.bulk = None
+        # read
+        for ix, projfile in enumerate(projfiles):
+            self.projfiles[ix] = projfile
+            with gzip.open(str(projfile), 'rb') as stream:
                 data = pickle.load(stream)
-            # check
+            # check if workdir exists
             if not 'workdir' in data:
-                data['workdir'] = self.projfile.parent
-            self.ps = data['section']
-            if origwd:
-                tc = TCAPI(data['workdir'])
-            else:
-                tc = TCAPI(self.projfile.parent)
-            if tc.OK:
-                self.tc = tc
-                self.tolerance = tolerance
-                self.shapes, self.unilists, log = self.ps.create_shapes(tolerance=self.tolerance)
-                if log:
-                    print('\n'.join(log))
-                if 'variance' in data:
-                    self.variance = data['variance']
+                data['workdir'] = projfile.parent
+            # check workdit compatibility
+            if self.tc is None:
+                if origwd:
+                    tc = TCAPI(data['workdir'])
+                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc.status)
                 else:
-                    # calculate variance
-                    self.variance = {}
-                    for key in self.shapes:
-                        ans = '{}\nkill\n\n'.format(' '.join(key))
-                        tcout = self.tc.runtc(ans)
-                        for ln in tcout.splitlines():
-                            if 'variance of required equilibrium' in ln:
-                                break
-                        self.variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
-                # bulk
+                    tc = TCAPI(projfile.parent)
+                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(projfile.parent, tc.status)
+                self.tc = tc
+            else:
+                if origwd:
+                    assert data['workdir'] == tc.workdir, 'Workdirs of merged profiles must be same.'
+                else:
+                    assert projfile.parent == tc.workdir, 'Workdirs of merged profiles must be same.'
+            for ps in self.sections.values():
+                assert type(data['section']) == type(ps), 'You cannot merge different types of pseudosection'
+            self.sections[ix] = data['section']
+            self._shapes[ix], self.unilists[ix], log = self.sections[ix].create_shapes(tolerance=self.tolerance)
+            if log:
+                print('\n'.join(log))
+            # process variances
+            if 'variance' in data:
+                self._variance[ix] = data['variance']
+            else:
+                # calculate variance
+                variance = {}
+                for key in self._shapes[ix]:
+                    ans = '{}\nkill\n\n'.format(' '.join(key))
+                    tcout = self.tc.runtc(ans)
+                    for ln in tcout.splitlines():
+                        if 'variance of required equilibrium' in ln:
+                            break
+                    variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                self._variance[ix] = variance
+            # bulk
+            if self.bulk is None:
                 if 'bulk' in data:
                     self.bulk = data['bulk']
                 else:
                     self.bulk = self.tc.bulk
-                # already gridded?
-                if 'grid' in data:
-                    self.grid = data['grid']
-                # update variable lookup table
-                self.collect_all_data_keys()
             else:
-                raise Exception('Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc.status))
-        else:
-            raise Exception('File {} does not exists.'.format(self.projfile))
+                if 'bulk' in data:
+                    assert self.bulk == data['bulk'], 'Bulks in merged projects must be same'
+            # already gridded?
+            if 'grid' in data:
+                self.grids[ix] = data['grid']
+        # union _shapes
+        self.shapes = {}
+        for shapes in self._shapes.values():
+            for key, shape in shapes.items():
+                if key in self.shapes:
+                    self.shapes[key] = self.shapes[key].union(shape)
+                else:
+                    self.shapes[key] = shape
+        # update variable lookup table
+        self.collect_all_data_keys()
+
+    def __repr__(self):
+        reprs = ['{} explorer'.format(type(self).__name__)]
+        reprs.append(repr(self.tc))
+        for ps in self.sections.values():
+            reprs.append(repr(ps))
+        reprs.append('Areas: {}'.format(len(self.shapes)))
+        if self.gridded:
+            for grid in self.grids.values():
+                reprs.append(repr(grid))
+        return '\n'.join(reprs)
 
     def __iter__(self):
         return iter(self.shapes)
 
     @property
+    def xrange(self):
+        return min(ps.xrange[0] for ps in self.sections.values()), max(ps.xrange[1] for ps in self.sections.values())
+
+    @property
+    def yrange(self):
+        return min(ps.yrange[0] for ps in self.sections.values()), max(ps.yrange[1] for ps in self.sections.values())
+
+    @property
+    def x_var(self):
+        return self.sections[0].x_var
+
+    @property
+    def y_var(self):
+        return self.sections[0].y_var
+
+    @property
+    def gridxstep(self):
+        v = [grid.xstep for grid in self.grids.values()]
+        return sum(v) / len(v)
+
+    @property
+    def gridystep(self):
+        v = [grid.ystep for grid in self.grids.values()]
+        return sum(v) / len(v)
+
+    @property
+    def ratio(self):
+        return (self.xrange[1] - self.xrange[0]) / (self.yrange[1] - self.yrange[0])
+
+    @property
     def name(self):
-        """Get project filename without extension."""
-        return self.projfile.stem
+        """Get project directory name."""
+        return self.projfiles[0].parent.stem
 
     @property
     def gridded(self):
-        """True when compositional grid is calculated, otherwise False"""
-        return hasattr(self, 'grid')
+        """True when compositional grid(s) is calculated, otherwise False"""
+        return all([i in self.grids for i in range(len(self.sections))])
 
     @property
     def phases(self):
-        """Return set of all phases present in pseudosection"""
-        return {phase for key in self for phase in key}
+        """Returns set of all phases present in pseudosection"""
+        return {phase for key in self.keys for phase in key}
+
+    @property
+    def variance(self):
+        """Returns dictionary of variances"""
+        v = self._variance[0].copy()
+        for ix in range(1, len(self._variance)):
+            v.update(self._variance[ix])
+        return v
 
     @property
     def keys(self):
-        """Returns list of all existing divariant fields. Fields are identified
-        by frozenset of present phases called key."""
-        return list(self.shapes.keys())
+        """Returns set of all existing multivariant fields. Fields are
+        identified by frozenset of present phases called key."""
+        keylist = []
+        for shapes in self._shapes.values():
+            keylist.extend(list(shapes.keys()))
+        return set(keylist)
 
-    def invs_from_unilist(self, unilist):
-        """Return set of IDs of invariant points associated with univariant
+    def invs_from_unilist(self, ix, unilist):
+        """Return set of IDs of invariant points associated with unilines.
         lines.
 
         Args:
-            unilist (iterable): IDs of univariant lines
+            unilist (iterable): list of (section_id, uni_id) pairs
 
         Returns:
-            set: IDs of associated invariant lines
+            set: set of associated invariant points
         """
-        return {self.ps.unilines[ed].begin for ed in unilist}.union({self.ps.unilines[ed].end for ed in unilist}).difference({0})
+        return {self.sections[ix].unilines[ed].begin for ed in unilist}.union({self.sections[ix].unilines[ed].end for ed in unilist}).difference({0})
 
     def save(self):
         """Save gridded copositions and constructed divariant fields into
@@ -172,26 +258,27 @@ class ExplorerBase:
         method.
         """
         if self.gridded:
-            # put to dict
-            with gzip.open(str(self.projfile), 'rb') as stream:
-                data = pickle.load(stream)
-            data['shapes'] = self.shapes
-            data['unilists'] = self.unilists
-            data['variance'] = self.variance
-            data['grid'] = self.grid
-            # do save
-            with gzip.open(str(self.projfile), 'wb') as stream:
-                pickle.dump(data, stream)
+            for ix, projfile in self.projfiles.items():
+                # put to dict
+                with gzip.open(str(projfile), 'rb') as stream:
+                    data = pickle.load(stream)
+                data['variance'] = self._variance[ix]
+                data['grid'] = self.grids[ix]
+                # do save
+                with gzip.open(str(projfile), 'wb') as stream:
+                    pickle.dump(data, stream)
         else:
             print('Not yet gridded...')
 
     def create_masks(self):
         """Update grid masks from existing divariant fields"""
         if self.gridded:
-            # Create data masks
-            points = MultiPoint(list(zip(self.grid.xg.flatten(), self.grid.yg.flatten())))
-            for key in self:
-                self.grid.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.grid.xg.shape)
+            for ix, grid in self.grids.items():
+                # Create data masks
+                points = MultiPoint(list(zip(grid.xg.flatten(), grid.yg.flatten())))
+                shapes = self._shapes[ix]
+                for key in shapes:
+                    grid.masks[key] = np.array(list(map(shapes[key].contains, points))).reshape(grid.xg.shape)
         else:
             print('Not yet gridded...')
 
@@ -214,11 +301,13 @@ class ExplorerBase:
         """
         data = dict()
         if self.gridded:
-            for key in self:
-                res = self.grid.gridcalcs[self.grid.masks[key]]
-                if len(res) > 0:
-                    for k in res[0]['data'].keys():
-                        data[k] = list(res[0]['data'][k].keys())
+            for ix, grid in self.grids.items():
+                shapes = self._shapes[ix]
+                for key in shapes:
+                    res = grid.gridcalcs[grid.masks[key]]
+                    if len(res) > 0:
+                        for k in res[0]['data'].keys():
+                            data[k] = list(res[0]['data'][k].keys())
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
@@ -237,12 +326,15 @@ class ExplorerBase:
             'data' key  storing list of thermocalc results.
         """
         dt = dict(pts=[], data=[])
-        for id_inv in self.invs_from_unilist(self.unilists[key]):
-            inv = self.ps.invpoints[id_inv]
-            if not inv.manual:
-                if phase in inv.results[0]['data']:
-                    dt['pts'].append((inv._x, inv._y))
-                    dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
+        for ix, ps in self.sections.items():
+            if key in self.unilists[ix]:
+                for id_inv in self.invs_from_unilist(ix, self.unilists[ix][key]):
+                    inv = ps.invpoints[id_inv]
+                    if not inv.manual:
+                        if phase in inv.results[0]['data']:
+                            if self.shapes[key].intersects(Point(inv._x, inv._y)):
+                                dt['pts'].append((inv._x, inv._y))
+                                dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
         return dt
 
     def collect_uni_data(self, key, phase, expr):
@@ -261,16 +353,19 @@ class ExplorerBase:
             'data' key  storing list of thermocalc results.
         """
         dt = dict(pts=[], data=[])
-        for id_uni in self.unilists[key]:
-            uni = self.ps.unilines[id_uni]
-            if not uni.manual:
-                if phase in uni.results[uni.midix]['data']:
-                    edt = zip(uni._x[uni.used],
-                              uni._y[uni.used],
-                              uni.results[uni.used],)
-                    for x, y, res in edt:
-                        dt['pts'].append((x, y))
-                        dt['data'].append(eval_expr(expr, res['data'][phase]))
+        for ix, ps in self.sections.items():
+            if key in self.unilists[ix]:
+                for id_uni in self.unilists[ix][key]:
+                    uni = ps.unilines[id_uni]
+                    if not uni.manual:
+                        if phase in uni.results[uni.midix]['data']:
+                            edt = zip(uni._x[uni.used],
+                                      uni._y[uni.used],
+                                      uni.results[uni.used],)
+                            for x, y, res in edt:
+                                if self.shapes[key].intersects(Point(x, y)):
+                                    dt['pts'].append((x, y))
+                                    dt['data'].append(eval_expr(expr, res['data'][phase]))
         return dt
 
     def collect_grid_data(self, key, phase, expr):
@@ -290,17 +385,19 @@ class ExplorerBase:
         """
         dt = dict(pts=[], data=[])
         if self.gridded:
-            results = self.grid.gridcalcs[self.grid.masks[key]]
-            if len(results) > 0:
-                if phase in results[0]['data']:
-                    gdt = zip(self.grid.xg[self.grid.masks[key]],
-                              self.grid.yg[self.grid.masks[key]],
-                              results,
-                              self.grid.status[self.grid.masks[key]])
-                    for x, y, res, ok in gdt:
-                        if ok == 1:
-                            dt['pts'].append((x, y))
-                            dt['data'].append(eval_expr(expr, res['data'][phase]))
+            for ix, grid in self.grids.items():
+                if key in grid.masks:
+                    results = grid.gridcalcs[grid.masks[key]]
+                    if len(results) > 0:
+                        if phase in results[0]['data']:
+                            gdt = zip(grid.xg[grid.masks[key]],
+                                      grid.yg[grid.masks[key]],
+                                      results,
+                                      grid.status[grid.masks[key]])
+                            for x, y, res, ok in gdt:
+                                if ok == 1:
+                                    dt['pts'].append((x, y))
+                                    dt['data'].append(eval_expr(expr, res['data'][phase]))
         else:
             print('Not yet gridded...')
         return dt
@@ -418,8 +515,8 @@ class ExplorerBase:
             pscmap = ListedColormap(pscolors)
             norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
             fig, ax = plt.subplots()
-            for k in self:
-                patch = PolygonPatch(self.shapes[k], fc=pscmap(norm(self.variance[k])), ec='none')
+            for k, shape in self.shapes.items():
+                patch = PolygonPatch(shape, fc=pscmap(norm(self.variance[k])), ec='none')
                 ax.add_patch(patch)
                 if show_vertices:
                     #x, y = np.array(self.shapes[k].exterior.coords).T
@@ -430,16 +527,17 @@ class ExplorerBase:
             if out:
                 for o in out:
                     xy = []
-                    for uni in self.ps.unilines.values():
-                        if o in uni.out:
-                            #xy.append((uni.x, uni.y))
-                            xy.append(np.array(uni.shape().coords).T)
-                        for poly in polymorphs:
-                            if poly.issubset(uni.phases):
-                                if o in poly:
-                                    if poly.difference({o}).issubset(uni.out):
-                                        #xy.append((uni.x, uni.y))
-                                        xy.append(np.array(uni.shape().coords).T)
+                    for ix, ps in self.sections.items():
+                        for uni in ps.unilines.values():
+                            if o in uni.out:
+                                #xy.append((uni.x, uni.y))
+                                xy.append(np.array(uni.shape().coords).T)
+                            for poly in polymorphs:
+                                if poly.issubset(uni.phases):
+                                    if o in poly:
+                                        if poly.difference({o}).issubset(uni.out):
+                                            #xy.append((uni.x, uni.y))
+                                            xy.append(np.array(uni.shape().coords).T)
                     if xy:
                         ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
                                 np.hstack([(*seg[1], np.nan) for seg in xy]),
@@ -454,32 +552,34 @@ class ExplorerBase:
             #cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar.set_label('Variance')
-            ax.set_xlim(self.ps.xrange)
-            ax.set_ylim(self.ps.yrange)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
+            ax.set_xlabel(self.x_var)
+            ax.set_ylabel(self.y_var)
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
                 high = [high]
             for k in high:
                 if isinstance(k, str):
                     k = frozenset(k.split())
-                k = k.union(self.ps.excess)
-                if k in self.shapes:
+                k = k.union(self.tc.excess)
+                if k in self.keys:
                     ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
                 else:
                     print('Field {} not found.'.format(' '.join(k)))
             # Show bulk
             if bulk:
                 if label:
-                    ax.set_xlabel(self.name + (len(self.ps.excess) * ' +{}').format(*self.ps.excess))
+                    ax.set_xlabel(self.name + (len(self.tc.excess) * ' +{}').format(*self.tc.excess))
                 else:
                     ax.set_xlabel(self.name)
                 # bulk composition
-                ox, vals = self.ps.get_bulk_composition() # FIXME: TX has another bulk format
+                ox, vals = self.sections[0].get_bulk_composition() # FIXME: TX has another bulk format
                 table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
                 plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
             else:
                 if label:
-                    ax.set_title(self.name + (len(self.ps.excess) * ' +{}').format(*self.ps.excess))
+                    ax.set_title(self.name + (len(self.tc.excess) * ' +{}').format(*self.tc.excess))
                 else:
                     ax.set_title(self.name)
             # coords
@@ -496,22 +596,27 @@ class ExplorerBase:
         prec = 2
         point = Point(x, y)
         phases = ''
-        for key in self.shapes:
-            if self.shapes[key].contains(point):
-                phases = ' '.join(sorted(list(key.difference(self.ps.excess))))
+        for key, shape in self.shapes.items():
+            if shape.contains(point):
+                phases = ' '.join(sorted(list(key.difference(self.tc.excess))))
                 break
-        return '{}={:.{prec}f} {}={:.{prec}f} {}'.format(self.ps.x_var, x, self.ps.y_var, y, phases, prec=prec)
+        return '{}={:.{prec}f} {}={:.{prec}f} {}'.format(self.x_var, x, self.y_var, y, phases, prec=prec)
 
     def add_overlay(self, ax, fc='none', ec='k', label=False):
-        for k in self:
-            ax.add_patch(PolygonPatch(self.shapes[k], ec=ec, fc=fc, lw=0.5))
+        for k, shape in self.shapes.items():
+            ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=0.5))
             if label:
                 # multiline for long labels
-                tl = sorted(list(k.difference(self.ps.excess)))
+                tl = sorted(list(k.difference(self.tc.excess)))
                 wp = len(tl) // 4 + int(len(tl) % 4 > 1)
                 txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
-                xy = self.shapes[k].representative_point().coords[0]
-                ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                if shape.type == 'MultiPolygon':
+                    for part in shape:
+                        xy = part.representative_point().coords[0]
+                        ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                else:
+                    xy = shape.representative_point().coords[0]
+                    ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
 
     def show_data(self, key, phase, expr=None, which=7):
         """Convinient function to show values of expression
@@ -562,26 +667,34 @@ class ExplorerBase:
                 msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
                 print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
             else:
-                gd = np.empty(self.grid.xg.shape)
-                gd[:] = np.nan
-                for key in self:
-                    res = self.grid.gridcalcs[self.grid.masks[key]]
-                    if len(res) > 0:
-                        if phase in res[0]['data']:
-                            rows, cols = np.nonzero(self.grid.masks[key])
-                            for r, c in zip(rows, cols):
-                                if self.grid.status[r, c] == 1:
-                                    gd[r, c] = eval_expr(expr, self.grid.gridcalcs[r, c]['data'][phase])
                 fig, ax = plt.subplots()
-                im = ax.imshow(gd, extent=self.grid.extent, interpolation=interpolation,
-                               aspect='auto', origin='lower')
+                cgd = {}
+                mn, mx = sys.float_info.max, -sys.float_info.max
+                for ix, grid in self.grids.items():
+                    gd = np.empty(grid.xg.shape)
+                    gd[:] = np.nan
+                    for key in grid.masks:
+                        res = grid.gridcalcs[grid.masks[key]]
+                        if len(res) > 0:
+                            if phase in res[0]['data']:
+                                rows, cols = np.nonzero(grid.masks[key])
+                                for r, c in zip(rows, cols):
+                                    if grid.status[r, c] == 1:
+                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c]['data'][phase])
+                    cgd[ix] = gd
+                    mn = min(np.nanmin(gd), mn)
+                    mx = max(np.nanmax(gd), mx)
+                for ix, grid in self.grids.items():
+                    im = ax.imshow(cgd[ix], extent=grid.extent, interpolation=interpolation,
+                                   aspect='auto', origin='lower', vmin=mn, vmax=mx)
                 self.add_overlay(ax, label=label)
-                ax.set_xlim(self.ps.xrange)
-                ax.set_ylim(self.ps.yrange)
+                ax.set_xlim(self.xrange)
+                ax.set_ylim(self.yrange)
                 cbar = fig.colorbar(im)
                 ax.set_title('{}({})'.format(phase, expr))
                 fig.tight_layout()
                 plt.show()
+                return im
         else:
             print('Not yet gridded...')
 
@@ -589,16 +702,18 @@ class ExplorerBase:
         """Shows status of grid calculations"""
         if self.gridded:
             fig, ax = plt.subplots()
+            im = {}
             cmap = ListedColormap(['orangered', 'limegreen'])
             bounds = [-0.5, 0.5, 1.5]
             norm = BoundaryNorm(bounds, cmap.N)
-            im = ax.imshow(self.grid.status, extent=self.grid.extent,
-                           aspect='auto', origin='lower', cmap=cmap, norm=norm)
+            for ix, grid in self.grids.items():
+                im[ix] = ax.imshow(grid.status, extent=grid.extent,
+                                   aspect='auto', origin='lower', cmap=cmap, norm=norm)
             self.add_overlay(ax, label=label)
-            ax.set_xlim(self.ps.xrange)
-            ax.set_ylim(self.ps.yrange)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
             ax.set_title('Gridding status - {}'.format(self.name))
-            cbar = fig.colorbar(im, cmap=cmap, norm=norm, boundaries=bounds, ticks=[0, 1])
+            cbar = fig.colorbar(im[0], cmap=cmap, norm=norm, boundaries=bounds, ticks=[0, 1])
             cbar.ax.set_yticklabels(['Failed', 'OK'])
             fig.tight_layout()
             plt.show()
@@ -613,19 +728,27 @@ class ExplorerBase:
             label (bool): Whether to label divariant fields. Default False.
         """
         if self.gridded:
-            if pointsec:
-                val = 1 / self.grid.delta
-                lbl = 'points/sec'
-                tit = 'THERMOCALC calculation rate - {}'
-            else:
-                val = self.grid.delta
-                lbl = 'secs/point'
-                tit = 'THERMOCALC execution time - {}'
             fig, ax = plt.subplots()
-            im = ax.imshow(val, extent=self.grid.extent, aspect='auto', origin='lower')
+            cval = {}
+            mn, mx = sys.float_info.max, -sys.float_info.max
+            for ix, grid in self.grids.items():
+                if pointsec:
+                    val = 1 / grid.delta
+                    lbl = 'points/sec'
+                    tit = 'THERMOCALC calculation rate - {}'
+                else:
+                    val = grid.delta
+                    lbl = 'secs/point'
+                    tit = 'THERMOCALC execution time - {}'
+                cval[ix] = val
+                mn = min(np.nanmin(val), mn)
+                mx = max(np.nanmax(val), mx)
+            for ix, grid in self.grids.items():
+                im = ax.imshow(cval[ix], extent=grid.extent, aspect='auto',
+                               origin='lower', vmin=mn, vmax=mx)
             self.add_overlay(ax, label=label)
-            ax.set_xlim(self.ps.xrange)
-            ax.set_ylim(self.ps.yrange)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
             cbar = fig.colorbar(im)
             cbar.set_label(lbl)
             ax.set_title(tit.format(self.name))
@@ -634,17 +757,17 @@ class ExplorerBase:
         else:
             print('Not yet gridded...')
 
-
-    def identify(self, T, p):
+    def identify(self, x, y):
         """Return key (frozenset) of divariant field for given temperature and pressure.
 
         Args:
-            T (float): Temperatures
-            p (float): pressurese
+            x (float): x coord
+            y (float): y coord
         """
-        for key in self:
-            if Point(T, p).intersects(self.shapes[key]):
-                return key
+        for key, shape in self.shapes.items():
+            if shape.contains(Point(x, y)):
+                break
+        return key
 
     def gidentify(self, label=False):
         """Visual version of `identify` method. PT point is provided by mouse click.
@@ -655,11 +778,11 @@ class ExplorerBase:
         fig, ax = plt.subplots()
         ax.autoscale_view()
         self.add_overlay(ax, label=label)
-        ax.set_xlim(self.ps.xrange)
-        ax.set_ylim(self.ps.yrange)
+        ax.set_xlim(self.xrange)
+        ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
-        T, p = plt.ginput(1)[0]
-        return self.identify(T, p)
+        x, y = plt.ginput(1)[0]
+        return self.identify(x, y)
 
     def onclick(self, event):
         if event.button == 1:
@@ -728,7 +851,7 @@ class ExplorerBase:
             step = kwargs.get('step', None)
             N = kwargs.get('N', 10)
             gradient = kwargs.get('gradient', False)
-            dt = kwargs.get('dt', True)
+            dx = kwargs.get('dx', True)
             only = kwargs.get('only', None)
             refine = kwargs.get('refine', 1)
             colors = kwargs.get('colors', None)
@@ -744,7 +867,7 @@ class ExplorerBase:
             for lbl in labelkeys:
                 if isinstance(lbl, str):
                     lbl = frozenset(lbl.split())
-                labelkyes_ok.append(lbl.union(self.ps.excess))
+                labelkyes_ok.append(lbl.union(self.tc.excess))
             if isinstance(out, str):
                 out = [out]
             if only is not None:
@@ -770,61 +893,65 @@ class ExplorerBase:
                 tmin, pmin, tmax, pmax = self.shapes[key].bounds
                 # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
                 # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
-                ttspace = np.arange(tmin - self.grid.xstep, tmax + self.grid.xstep, self.grid.xstep / refine)
-                ppspace = np.arange(pmin - self.grid.ystep, pmax + self.grid.ystep, self.grid.ystep / refine)
+                ttspace = np.arange(tmin - self.gridxstep, tmax + self.gridxstep, self.gridxstep / refine)
+                ppspace = np.arange(pmin - self.gridystep, pmax + self.gridystep, self.gridystep / refine)
                 tg, pg = np.meshgrid(ttspace, ppspace)
                 x, y = np.array(recs[key]['pts']).T
                 try:
                     # Use scaling
-                    rbf = Rbf(x, self.ps.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
-                    zg = rbf(tg, self.ps.ratio * pg)
-                    # experimental
-                    if gradient:
-                        if dt:
-                            zg = np.gradient(zg, self.grid.xstep, self.grid.ystep)[0]
-                        else:
-                            zg = -np.gradient(zg, self.grid.xstep, self.grid.ystep)[1]
-                        if N:
-                            cntv = N
-                        else:
-                            cntv = 10
-                    # ------------
                     with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore",category=UserWarning)
-                        if filled:
-                            cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
-                        else:
-                            cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
-                    patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
-                    ax.add_patch(patch)
-                    for col in cont.collections:
-                        col.set_clip_path(patch)
-                    # label if needed
-                    if not filled and key in labelkyes_ok:
-                        positions = []
-                        for col in cont.collections:
-                            for seg in col.get_segments():
-                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
-                                if np.any(inside):
-                                    positions.append(seg[inside].mean(axis=0))
-                        ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
-
+                        warnings.filterwarnings("ignore", category=LinAlgWarning)
+                        rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
+                        zg = rbf(tg, self.ratio * pg)
                 except Exception as e:
-                    print('{} for {}'.format(type(e).__name__, key))
+                    print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
+                    zg = griddata(np.array(recs[key]['pts']), recs[key]['data'], (tg,pg), method='nearest', rescale=True)
+                # experimental
+                if gradient:
+                    grd = np.gradient(zg, self.gridxstep, self.gridystep)
+                    if dx:
+                        zg = grd[0]
+                    else:
+                        zg = -grd[1]
+                    if N:
+                        cntv = N
+                    else:
+                        cntv = 10
+                # ------------
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning)
+                    if filled:
+                        cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                    else:
+                        cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
+                ax.add_patch(patch)
+                for col in cont.collections:
+                    col.set_clip_path(patch)
+                # label if needed
+                if not filled and key in labelkyes_ok:
+                    positions = []
+                    for col in cont.collections:
+                        for seg in col.get_segments():
+                            inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
+                            if np.any(inside):
+                                positions.append(seg[inside].mean(axis=0))
+                    ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
             if only is None:
                 self.add_overlay(ax)
                 # zero mode lines
                 if out:
                     for o in out:
                         xy = []
-                        for uni in self.ps.unilines.values():
-                            if o in uni.out:
-                                xy.append((uni.x, uni.y))
-                            for poly in polymorphs:
-                                if poly.issubset(uni.phases):
-                                    if o in poly:
-                                        if poly.difference({o}).issubset(uni.out):
-                                            xy.append((uni.x, uni.y))
+                        for ps in self.sections.values():
+                            for uni in ps.unilines.values():
+                                if o in uni.out:
+                                    xy.append((uni.x, uni.y))
+                                for poly in polymorphs:
+                                    if poly.issubset(uni.phases):
+                                        if o in poly:
+                                            if poly.difference({o}).issubset(uni.out):
+                                                xy.append((uni.x, uni.y))
                         if xy:
                             ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
                                     np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
@@ -839,7 +966,7 @@ class ExplorerBase:
                 for k in high:
                     if isinstance(k, str):
                         k = frozenset(k.split())
-                    k = k.union(self.ps.excess)
+                    k = k.union(self.tc.excess)
                     if k in self.shapes:
                         ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
                     else:
@@ -847,19 +974,19 @@ class ExplorerBase:
             # bulk
             if bulk:
                 if only is None:
-                    ax.set_xlim(self.ps.xrange)
-                    ax.set_ylim(self.ps.yrange)
+                    ax.set_xlim(self.xrange)
+                    ax.set_ylim(self.yrange)
                     ax.set_xlabel('{}({})'.format(phase, expr))
                 else:
                     ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
                 # bulk composition
-                ox, vals = self.ps.get_bulk_composition()
+                ox, vals = self.sections[0].get_bulk_composition()
                 table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
                 plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
             else:
                 if only is None:
-                    ax.set_xlim(self.ps.xrange)
-                    ax.set_ylim(self.ps.yrange)
+                    ax.set_xlim(self.xrange)
+                    ax.set_ylim(self.yrange)
                     ax.set_title('{}({})'.format(phase, expr))
                 else:
                     ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
@@ -868,7 +995,7 @@ class ExplorerBase:
             # connect button press
             #cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
-
+# # TODO:
     def gendrawpd(self, export_areas=True):
         """Method to write drawpd file
 
@@ -972,7 +1099,7 @@ class ExplorerBase:
             print('Drawpd sucessfully executed.')
         else:
             print('Drawpd error!', str(err))
-
+## TODO:
     def save_tab(self, tabfile=None, comps=None): # FIXME:
         if not tabfile:
             tabfile = self.name + '.tab'
@@ -1018,15 +1145,6 @@ class ExplorerBase:
 class PTPS(ExplorerBase):
     """PTPS - class to postprocess psbuilder project
     """
-    def __repr__(self):
-        reprs = ['PT pseudosection explorer']
-        reprs.append(repr(self.tc))
-        reprs.append(repr(self.ps))
-        reprs.append('Areas: {}'.format(len(self.shapes)))
-        if self.gridded:
-            reprs.append(repr(self.grid))
-        return '\n'.join(reprs)
-
     def calculate_composition(self, nx=50, ny=50):
         """Method to calculate compositional variations on grid.
 
@@ -1045,43 +1163,31 @@ class PTPS(ExplorerBase):
             nx (int): Number of grid points along x direction (T)
             ny (int): Number of grid points along y direction (p)
         """
-        grid = GridData(self.ps, nx=nx, ny=ny)
-        last_inv = 0
-        for (r, c) in tqdm(np.ndindex(grid.xg.shape), desc='Gridding', total=np.prod(grid.xg.shape)):
-            x, y = grid.xg[r, c], grid.yg[r, c]
-            k = self.identify(x, y)
-            if k is not None:
-                # update guesses from closest inv point
-                dst = sys.float_info.max
-                for id_inv, inv in self.ps.invpoints.items():
-                    d2 = (inv._x - x)**2 + (inv._y - y)**2
-                    if d2 < dst:
-                        dst = d2
-                        id_close = id_inv
-                if id_close != last_inv:
-                    self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
-                    last_inv = id_close
-                grid.status[r, c] = 0
-                start_time = time.time()
-                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                delta = time.time() - start_time
-                status, variance, pts, res, output = self.tc.parse_logfile()
-                if len(res) == 1:
-                    grid.gridcalcs[r, c] = res[0]
-                    grid.status[r, c] = 1
-                    grid.delta[r, c] = delta
-                else:
-                    # update guesses from closest uni line point
+        axr = self.xrange
+        ayr = self.yrange
+        gpleft = 0
+        for ix, ps in self.sections.items():
+            paxr = ps.xrange
+            payr = ps.yrange
+            grid = GridData(ps,
+                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
+                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+            last_inv = 0
+            for (r, c) in tqdm(np.ndindex(grid.xg.shape), desc='Gridding {}/{}'.format(ix + 1, len(self.sections)), total=np.prod(grid.xg.shape)):
+                x, y = grid.xg[r, c], grid.yg[r, c]
+                k = self.identify(x, y)
+                if k is not None:
+                    # update guesses from closest inv point
                     dst = sys.float_info.max
-                    for id_uni in self.unilists[k]:
-                        uni = self.ps.unilines[id_uni]
-                        for ix in list(range(len(uni._x))[uni.used]):
-                            d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
-                            if d2 < dst:
-                                dst = d2
-                                id_close = id_uni
-                                idix = ix
-                    self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                    for id_inv, inv in ps.invpoints.items():
+                        d2 = (inv._x - x)**2 + (inv._y - y)**2
+                        if d2 < dst:
+                            dst = d2
+                            id_close = id_inv
+                    if id_close != last_inv:
+                        self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
+                        last_inv = id_close
+                    grid.status[r, c] = 0
                     start_time = time.time()
                     tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                     delta = time.time() - start_time
@@ -1091,13 +1197,34 @@ class PTPS(ExplorerBase):
                         grid.status[r, c] = 1
                         grid.delta[r, c] = delta
                     else:
-                        grid.gridcalcs[r, c] = None
-                        grid.status[r, c] = 0
-            else:
-                grid.gridcalcs[r, c] = None
-        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
-        self.grid = grid
-        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+                        # update guesses from closest uni line point
+                        dst = sys.float_info.max
+                        for id_uni in self.unilists[ix][k]:
+                            uni = ps.unilines[id_uni]
+                            for vix in list(range(len(uni._x))[uni.used]):
+                                d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                if d2 < dst:
+                                    dst = d2
+                                    id_close = id_uni
+                                    vix_close = vix
+                        self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
+                        start_time = time.time()
+                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                        delta = time.time() - start_time
+                        status, variance, pts, res, output = self.tc.parse_logfile()
+                        if len(res) == 1:
+                            grid.gridcalcs[r, c] = res[0]
+                            grid.status[r, c] = 1
+                            grid.delta[r, c] = delta
+                        else:
+                            grid.gridcalcs[r, c] = None
+                            grid.status[r, c] = 0
+                else:
+                    grid.gridcalcs[r, c] = None
+            print('Grid search done. {} empty points left.'.format(len(np.flatnonzero(grid.status == 0))))
+            gpleft += len(np.flatnonzero(grid.status == 0))
+            self.grids[ix] = grid
+        if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
         # update variable lookup table
@@ -1112,37 +1239,38 @@ class PTPS(ExplorerBase):
         solution is find. Otherwise ststus remains failed.
         """
         if self.gridded:
-            log = []
-            ri, ci = np.nonzero(self.grid.status == 0)
-            fixed, ftot = 0, len(ri)
-            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
-            for ind in tq:
-                r, c = ri[ind], ci[ind]
-                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
-                k = self.identify(x, y)
-                if k is not None:
-                    # search already done grid neighs
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            self.tc.update_scriptfile(guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
-                                self.grid.gridcalcs[r, c] = res[0]
-                                self.grid.status[r, c] = 1
-                                self.grid.delta[r, c] = delta
-                                fixed += 1
-                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                                break
-                if self.grid.status[r, c] == 0:
-                    log.append('No solution find for {}, {}'.format(x, y))
-            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
-            print('\n'.join(log))
+            for ix, grid in self.grids.items():
+                log = []
+                ri, ci = np.nonzero(grid.status == 0)
+                fixed, ftot = 0, len(ri)
+                tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+                for ind in tq:
+                    r, c = ri[ind], ci[ind]
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # search already done grid neighs
+                        for rn, cn in grid.neighs(r, c):
+                            if grid.status[rn, cn] == 1:
+                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn]['ptguess'])
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                                delta = time.time() - start_time
+                                status, variance, pts, res, output = self.tc.parse_logfile()
+                                if len(res) == 1:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                    fixed += 1
+                                    tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                    break
+                    if grid.status[r, c] == 0:
+                        log.append('No solution find for {}, {}'.format(x, y))
+                log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+                print('\n'.join(log))
         else:
             print('Not yet gridded...')
-
+# # TODO:
     def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
         """Method to collect THERMOCALC calculations along defined PT path.
 
@@ -1199,7 +1327,7 @@ class PTPS(ExplorerBase):
             return PTpath(points, results)
         else:
             print('Not yet gridded...')
-
+## TODO: \
     def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
         """Show values of expression for given phase calculated along PTpath.
 
@@ -1243,7 +1371,7 @@ class PTPS(ExplorerBase):
             ax.set_ylim(self.ps.yrange)
             ax.set_title('PT path - {}'.format(self.name))
             plt.show()
-
+## TODO: 
     def show_path_modes(self, ptpath, exclude=[], cmap='tab20'):
         """Show stacked area diagram of phase modes along PT path
 
@@ -1295,15 +1423,6 @@ class PTPS(ExplorerBase):
 class TXPS(ExplorerBase):
     """TXPS - class to postprocess txbuilder project
     """
-    def __repr__(self):
-        reprs = ['TX pseudosection explorer']
-        reprs.append(repr(self.tc))
-        reprs.append(repr(self.ps))
-        reprs.append('Areas: {}'.format(len(self.shapes)))
-        if self.gridded:
-            reprs.append(repr(self.grid))
-        return '\n'.join(reprs)
-
     def calculate_composition(self, nx=50, ny=50):
         """Method to calculate compositional variations on grid.
 
@@ -1322,49 +1441,37 @@ class TXPS(ExplorerBase):
             nx (int): Number of grid points along x direction (T)
             ny (int): Number of grid points along y direction (p)
         """
-        grid = GridData(self.ps, nx=nx, ny=ny)
-        last_inv = 0
-        with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
-            pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
-            for r in range(len(grid.yspace)):
-                # change bulk
-                bulk = self.tc.interpolate_bulk(grid.yspace[r])
-                self.tc.update_scriptfile(bulk=bulk)
-                for c in range(len(grid.xspace)):
-                    x, y = grid.xg[r, c], grid.yg[r, c]
-                    k = self.identify(x, y)
-                    if k is not None:
-                        # update guesses from closest inv point
-                        dst = sys.float_info.max
-                        for id_inv, inv in self.ps.invpoints.items():
-                            d2 = (inv._x - x)**2 + (inv._y - y)**2
-                            if d2 < dst:
-                                dst = d2
-                                id_close = id_inv
-                        if id_close != last_inv:
-                            self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
-                            last_inv = id_close
-                        grid.status[r, c] = 0
-                        start_time = time.time()
-                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
-                        delta = time.time() - start_time
-                        status, variance, pts, res, output = self.tc.parse_logfile()
-                        if len(res) == 1:
-                            grid.gridcalcs[r, c] = res[0]
-                            grid.status[r, c] = 1
-                            grid.delta[r, c] = delta
-                        else:
-                            # update guesses from closest uni line point
+        axr = self.xrange
+        ayr = self.yrange
+        gpleft = 0
+        for ix, ps in self.sections.items():
+            paxr = ps.xrange
+            payr = ps.yrange
+            grid = GridData(ps,
+                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
+                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+            last_inv = 0
+            with tqdm(desc='Gridding {}/{}'.format(ix + 1, len(self.sections)), total=np.prod(grid.xg.shape)) as pbar:
+                pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
+                for r in range(len(grid.yspace)):
+                    # change bulk
+                    bulk = self.tc.interpolate_bulk(grid.yspace[r])
+                    self.tc.update_scriptfile(bulk=bulk)
+                    for c in range(len(grid.xspace)):
+                        x, y = grid.xg[r, c], grid.yg[r, c]
+                        k = self.identify(x, y)
+                        if k is not None:
+                            # update guesses from closest inv point
                             dst = sys.float_info.max
-                            for id_uni in self.unilists[k]:
-                                uni = self.ps.unilines[id_uni]
-                                for ix in list(range(len(uni._x))[uni.used]):
-                                    d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
-                                    if d2 < dst:
-                                        dst = d2
-                                        id_close = id_uni
-                                        idix = ix
-                            self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                            for id_inv, inv in ps.invpoints.items():
+                                d2 = (inv._x - x)**2 + (inv._y - y)**2
+                                if d2 < dst:
+                                    dst = d2
+                                    id_close = id_inv
+                            if id_close != last_inv:
+                                self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
+                                last_inv = id_close
+                            grid.status[r, c] = 0
                             start_time = time.time()
                             tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
                             delta = time.time() - start_time
@@ -1374,22 +1481,43 @@ class TXPS(ExplorerBase):
                                 grid.status[r, c] = 1
                                 grid.delta[r, c] = delta
                             else:
-                                grid.gridcalcs[r, c] = None
-                                grid.status[r, c] = 0
-                    else:
-                        grid.gridcalcs[r, c] = None
-                    pbar.update(1)
-        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+                                # update guesses from closest uni line point
+                                dst = sys.float_info.max
+                                for id_uni in self.unilists[ix][k]:
+                                    uni = ps.unilines[id_uni]
+                                    for vix in list(range(len(uni._x))[uni.used]):
+                                        d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                        if d2 < dst:
+                                            dst = d2
+                                            id_close = id_uni
+                                            vix_close = vix
+                                self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=vix_close))
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                                delta = time.time() - start_time
+                                status, variance, pts, res, output = self.tc.parse_logfile()
+                                if len(res) == 1:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                else:
+                                    grid.gridcalcs[r, c] = None
+                                    grid.status[r, c] = 0
+                        else:
+                            grid.gridcalcs[r, c] = None
+                        pbar.update(1)
+            print('Grid search done. {} empty points left.'.format(len(np.flatnonzero(grid.status == 0))))
+            gpleft += len(np.flatnonzero(grid.status == 0))
+            self.grids[ix] = grid
         # restore bulk
         self.tc.update_scriptfile(bulk=self.bulk)
-        self.grid = grid
-        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+        if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
         # update variable lookup table
         self.collect_all_data_keys()
         # save
-        #self.save()
+        self.save()
 
     def fix_solutions(self):
         """Method try to find solution for grid points with failed status.
@@ -1398,39 +1526,40 @@ class TXPS(ExplorerBase):
         solution is find. Otherwise ststus remains failed.
         """
         if self.gridded:
-            log = []
-            ri, ci = np.nonzero(self.grid.status == 0)
-            fixed, ftot = 0, len(ri)
-            pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
-            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
-            for ind in tq:
-                r, c = ri[ind], ci[ind]
-                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
-                k = self.identify(x, y)
-                if k is not None:
-                    # search already done grid neighs
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            # change bulk
-                            bulk = self.tc.interpolate_bulk(self.grid.yspace[rn])
-                            self.tc.update_scriptfile(bulk=bulk, guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
-                                self.grid.gridcalcs[r, c] = res[0]
-                                self.grid.status[r, c] = 1
-                                self.grid.delta[r, c] = delta
-                                fixed += 1
-                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                                break
-                if self.grid.status[r, c] == 0:
-                    log.append('No solution find for {}, {}'.format(x, y))
+            for ix, grid in self.grids.items():
+                log = []
+                ri, ci = np.nonzero(grid.status == 0)
+                fixed, ftot = 0, len(ri)
+                pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
+                tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+                for ind in tq:
+                    r, c = ri[ind], ci[ind]
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # search already done grid neighs
+                        for rn, cn in grid.neighs(r, c):
+                            if grid.status[rn, cn] == 1:
+                                # change bulk
+                                bulk = self.tc.interpolate_bulk(grid.yspace[rn])
+                                self.tc.update_scriptfile(bulk=bulk, guesses=grid.gridcalcs[rn, cn]['ptguess'])
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                                delta = time.time() - start_time
+                                status, variance, pts, res, output = self.tc.parse_logfile()
+                                if len(res) == 1:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                    fixed += 1
+                                    tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                    break
+                    if grid.status[r, c] == 0:
+                        log.append('No solution find for {}, {}'.format(x, y))
+                log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+                print('\n'.join(log))
             # restore bulk
             self.tc.update_scriptfile(bulk=self.bulk)
-            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
-            print('\n'.join(log))
         else:
             print('Not yet gridded...')
 
@@ -1438,15 +1567,6 @@ class TXPS(ExplorerBase):
 class PXPS(ExplorerBase):
     """PXPS - class to postprocess pxbuilder project
     """
-    def __repr__(self):
-        reprs = ['PX pseudosection explorer']
-        reprs.append(repr(self.tc))
-        reprs.append(repr(self.ps))
-        reprs.append('Areas: {}'.format(len(self.shapes)))
-        if self.gridded:
-            reprs.append(repr(self.grid))
-        return '\n'.join(reprs)
-
     def calculate_composition(self, nx=50, ny=50):
         """Method to calculate compositional variations on grid.
 
@@ -1465,49 +1585,37 @@ class PXPS(ExplorerBase):
             nx (int): Number of grid points along x direction (T)
             ny (int): Number of grid points along y direction (p)
         """
-        grid = GridData(self.ps, nx=nx, ny=ny)
-        last_inv = 0
-        with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
-            tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
-            for c in range(len(grid.xspace)):
-                # change bulk
-                bulk = self.tc.interpolate_bulk(grid.xspace[c])
-                self.tc.update_scriptfile(bulk=bulk)
-                for r in range(len(grid.yspace)):
-                    x, y = grid.xg[r, c], grid.yg[r, c]
-                    k = self.identify(x, y)
-                    if k is not None:
-                        # update guesses from closest inv point
-                        dst = sys.float_info.max
-                        for id_inv, inv in self.ps.invpoints.items():
-                            d2 = (inv._x - x)**2 + (inv._y - y)**2
-                            if d2 < dst:
-                                dst = d2
-                                id_close = id_inv
-                        if id_close != last_inv:
-                            self.tc.update_scriptfile(guesses=self.ps.invpoints[id_close].ptguess())
-                            last_inv = id_close
-                        grid.status[r, c] = 0
-                        start_time = time.time()
-                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
-                        delta = time.time() - start_time
-                        status, variance, pts, res, output = self.tc.parse_logfile()
-                        if len(res) == 1:
-                            grid.gridcalcs[r, c] = res[0]
-                            grid.status[r, c] = 1
-                            grid.delta[r, c] = delta
-                        else:
-                            # update guesses from closest uni line point
+        axr = self.xrange
+        ayr = self.yrange
+        gpleft = 0
+        for ix, ps in self.sections.items():
+            paxr = ps.xrange
+            payr = ps.yrange
+            grid = GridData(ps,
+                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
+                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+            last_inv = 0
+            with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
+                tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+                for c in range(len(grid.xspace)):
+                    # change bulk
+                    bulk = self.tc.interpolate_bulk(grid.xspace[c])
+                    self.tc.update_scriptfile(bulk=bulk)
+                    for r in range(len(grid.yspace)):
+                        x, y = grid.xg[r, c], grid.yg[r, c]
+                        k = self.identify(x, y)
+                        if k is not None:
+                            # update guesses from closest inv point
                             dst = sys.float_info.max
-                            for id_uni in self.unilists[k]:
-                                uni = self.ps.unilines[id_uni]
-                                for ix in list(range(len(uni._x))[uni.used]):
-                                    d2 = (uni._x[ix] - x)**2 + (uni._y[ix] - y)**2
-                                    if d2 < dst:
-                                        dst = d2
-                                        id_close = id_uni
-                                        idix = ix
-                            self.tc.update_scriptfile(guesses=self.ps.unilines[id_close].ptguess(idx=idix))
+                            for id_inv, inv in ps.invpoints.items():
+                                d2 = (inv._x - x)**2 + (inv._y - y)**2
+                                if d2 < dst:
+                                    dst = d2
+                                    id_close = id_inv
+                            if id_close != last_inv:
+                                self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
+                                last_inv = id_close
+                            grid.status[r, c] = 0
                             start_time = time.time()
                             tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
                             delta = time.time() - start_time
@@ -1517,22 +1625,43 @@ class PXPS(ExplorerBase):
                                 grid.status[r, c] = 1
                                 grid.delta[r, c] = delta
                             else:
-                                grid.gridcalcs[r, c] = None
-                                grid.status[r, c] = 0
-                    else:
-                        grid.gridcalcs[r, c] = None
-                    pbar.update(1)
-        print('Grid search done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+                                # update guesses from closest uni line point
+                                dst = sys.float_info.max
+                                for id_uni in self.unilists[ix][k]:
+                                    uni = ps.unilines[id_uni]
+                                    for vix in list(range(len(uni._x))[uni.used]):
+                                        d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                        if d2 < dst:
+                                            dst = d2
+                                            id_close = id_uni
+                                            vix_close = vix
+                                self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                                delta = time.time() - start_time
+                                status, variance, pts, res, output = self.tc.parse_logfile()
+                                if len(res) == 1:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                else:
+                                    grid.gridcalcs[r, c] = None
+                                    grid.status[r, c] = 0
+                        else:
+                            grid.gridcalcs[r, c] = None
+                        pbar.update(1)
+            print('Grid search done. {} empty points left.'.format(len(np.flatnonzero(grid.status == 0))))
+            gpleft += len(np.flatnonzero(grid.status == 0))
+            self.grids[ix] = grid
         # restore bulk
         self.tc.update_scriptfile(bulk=self.bulk)
-        self.grid = grid
-        if len(np.flatnonzero(self.grid.status == 0)) > 0:
+        if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
         # update variable lookup table
         self.collect_all_data_keys()
         # save
-        #self.save()
+        self.save()
 
     def fix_solutions(self):
         """Method try to find solution for grid points with failed status.
@@ -1541,39 +1670,40 @@ class PXPS(ExplorerBase):
         solution is find. Otherwise ststus remains failed.
         """
         if self.gridded:
-            log = []
-            ri, ci = np.nonzero(self.grid.status == 0)
-            fixed, ftot = 0, len(ri)
-            tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
-            tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
-            for ind in tq:
-                r, c = ri[ind], ci[ind]
-                x, y = self.grid.xg[r, c], self.grid.yg[r, c]
-                k = self.identify(x, y)
-                if k is not None:
-                    # search already done grid neighs
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            # change bulk
-                            bulk = self.tc.interpolate_bulk(self.grid.xspace[cn])
-                            self.tc.update_scriptfile(bulk=bulk, guesses=self.grid.gridcalcs[rn, cn]['ptguess'])
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
-                            delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
-                                self.grid.gridcalcs[r, c] = res[0]
-                                self.grid.status[r, c] = 1
-                                self.grid.delta[r, c] = delta
-                                fixed += 1
-                                tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
-                                break
-                if self.grid.status[r, c] == 0:
-                    log.append('No solution find for {}, {}'.format(x, y))
+            for ix, grid in self.grids.items():
+                log = []
+                ri, ci = np.nonzero(grid.status == 0)
+                fixed, ftot = 0, len(ri)
+                tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+                tq = trange(ftot, desc='Fix ({}/{})'.format(fixed, ftot))
+                for ind in tq:
+                    r, c = ri[ind], ci[ind]
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # search already done grid neighs
+                        for rn, cn in grid.neighs(r, c):
+                            if grid.status[rn, cn] == 1:
+                                # change bulk
+                                bulk = self.tc.interpolate_bulk(grid.xspace[cn])
+                                self.tc.update_scriptfile(bulk=bulk, guesses=grid.gridcalcs[rn, cn]['ptguess'])
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                                delta = time.time() - start_time
+                                status, variance, pts, res, output = self.tc.parse_logfile()
+                                if len(res) == 1:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                    fixed += 1
+                                    tq.set_description(desc='Fix ({}/{})'.format(fixed, ftot))
+                                    break
+                    if grid.status[r, c] == 0:
+                        log.append('No solution find for {}, {}'.format(x, y))
+                log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
+                print('\n'.join(log))
             # restore bulk
             self.tc.update_scriptfile(bulk=self.bulk)
-            log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(self.grid.status == 0))))
-            print('\n'.join(log))
         else:
             print('Not yet gridded...')
 

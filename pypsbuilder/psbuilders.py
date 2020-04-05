@@ -329,6 +329,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + self.tc.tcout)
         self.phasemodel.clear()
         self.outmodel.clear()
+        self.logDogmin.clear()
         for p in self.tc.phases:
             if p not in self.ps.excess:
                 item = QtGui.QStandardItem(p)
@@ -936,6 +937,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             reply = qb.question(self, 'Remove dogmin result',
                                 msg, qb.Yes, qb.No)
             if reply == qb.Yes:
+                self.logDogmin.clear()
                 self.dogmodel.removeRow(idx[0])
                 self.changed = True
                 self.plot()

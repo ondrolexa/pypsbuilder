@@ -26,7 +26,7 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point
-from shapely.ops import polygonize, linemerge, unary_union, split
+from shapely.ops import polygonize, linemerge, unary_union
 
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
@@ -1612,25 +1612,25 @@ class SectionBase:
 #
 #
 ############# OLD ################
-
     def create_shapes(self, tolerance=None):
         def splitme(seg):
             '''Recursive boundary splitter'''
-            splitted = False
+            s_seg = []
             for l in lns.values():
                 if seg.intersects(l):
                     m = linemerge([seg, l])
                     if m.type == 'MultiLineString':
                         p = seg.intersection(l)
-                        p_ok = seg.interpolate(seg.project(p))
-                        s_seg = split(seg, p_ok)
-                        splitted = True
+                        p_ok = l.interpolate(l.project(p)) # fit intersection to line
+                        t_seg = LineString([Point(seg.coords[0]), p_ok])
+                        if t_seg.is_valid:
+                            s_seg.append(t_seg)
+                        t_seg = LineString([p_ok, Point(seg.coords[-1])])
+                        if t_seg.is_valid:
+                            s_seg.append(t_seg)
                         break
-            if splitted:
-                if len(s_seg) == 2:
-                    return splitme(s_seg[0]) + splitme(s_seg[1])
-                else:
-                    return [seg]
+            if len(s_seg) == 2:
+                return splitme(s_seg[0]) + splitme(s_seg[1])
             else:
                 return [seg]
         # define bounds and area
@@ -1660,12 +1660,12 @@ class SectionBase:
                 if frozenset(phases) in shapes:
                     # multivariant field crossed just by single univariant line
                     if len(unilist) == 1:
-                        if self.unilines[unilist[0]].out in phases:
+                        if self.unilines[unilist[0]].out.issubset(phases):
                             phases = phases.difference(self.unilines[unilist[0]].out)
                             shapes[frozenset(phases)] = poly
                             unilists[frozenset(phases)] = unilist
                     elif len(unilists[frozenset(phases)]) == 1:
-                        if self.unilines[unilists[frozenset(phases)][0]].out in phases:
+                        if self.unilines[unilists[frozenset(phases)][0]].out.issubset(phases):
                             orig_poly = shapes[frozenset(phases)]
                             orig_unilist = unilists[frozenset(phases)]
                             shapes[frozenset(phases)] = poly
