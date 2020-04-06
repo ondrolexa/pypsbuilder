@@ -769,8 +769,10 @@ class PS:
             x (float): x coord
             y (float): y coord
         """
-        for key, shape in self.shapes.items():
+        key = None
+        for k, shape in self.shapes.items():
             if shape.contains(Point(x, y)):
+                key = k
                 break
         return key
 
