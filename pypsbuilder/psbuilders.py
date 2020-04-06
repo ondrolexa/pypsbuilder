@@ -886,9 +886,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                     menu_item2 = menu.addAction('Autoconnect')
                     menu_item2.triggered.connect(lambda: self.uni_connect(id, candidates, plot=True))
             if self.unihigh is not None:
-                menu = QtWidgets.QMenu(self)
-                menu_item1 = menu.addAction('Remove nodes')
-                menu_item1.triggered.connect(lambda: self.remove_from_uni(uni))
+                menu_item3 = menu.addAction('Remove nodes')
+                menu_item3.triggered.connect(lambda: self.remove_from_uni(uni))
             menu.exec(self.uniview.mapToGlobal(QPos))
 
     def uni_connect(self, id, candidates, plot=False):
