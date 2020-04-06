@@ -1039,11 +1039,20 @@
       <string>Open &amp;recent</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menuImport">
+     <property name="title">
+      <string>Import</string>
+     </property>
+     <addaction name="actionImport_project"/>
+     <addaction name="actionImport_from_PT"/>
+    </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="menuOpen_recent"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_as"/>
+    <addaction name="separator"/>
+    <addaction name="menuImport"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -1052,7 +1061,6 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionReload"/>
-    <addaction name="actionImport_project"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
    </widget>
@@ -1100,17 +1108,6 @@
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionExport_Drawpd">
-   <property name="text">
-    <string>&amp;Export Drawpd file</string>
-   </property>
-   <property name="toolTip">
-    <string>Export Drawpd file</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
-   </property>
-  </action>
   <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
@@ -1129,19 +1126,9 @@
     <string>&amp;About</string>
    </property>
   </action>
-  <action name="actionImport_drfile">
-   <property name="text">
-    <string>Import from drfile</string>
-   </property>
-  </action>
   <action name="actionSave_as">
    <property name="text">
     <string>Save project as</string>
-   </property>
-  </action>
-  <action name="actionImport_project">
-   <property name="text">
-    <string>&amp;Import from project</string>
    </property>
   </action>
   <action name="actionShow_areas">
@@ -1152,6 +1139,16 @@
   <action name="actionShow_topology">
    <property name="text">
     <string>Show &amp;topology</string>
+   </property>
+  </action>
+  <action name="actionImport_project">
+   <property name="text">
+    <string>&amp;Import into range...</string>
+   </property>
+  </action>
+  <action name="actionImport_from_PT">
+   <property name="text">
+    <string>Import from PT section</string>
    </property>
   </action>
  </widget>

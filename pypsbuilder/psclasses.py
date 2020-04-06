@@ -1616,7 +1616,7 @@ class SectionBase:
         def splitme(seg):
             '''Recursive boundary splitter'''
             s_seg = []
-            for l in lns.values():
+            for _, l in lns:
                 if seg.intersects(l):
                     m = linemerge([seg, l])
                     if m.type == 'MultiLineString':
@@ -1635,23 +1635,27 @@ class SectionBase:
                 return [seg]
         # define bounds and area
         bnd, area = self.range_shapes
-        lns = {}
+        lns = []
         log = []
         # trim univariant lines
         for uni in self.unilines.values():
             l = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
             if l.type == 'LineString' and not l.is_empty:
-                lns[uni.id] = l
+                lns.append((uni.id, l))
+            if l.type == 'MultiLineString':
+                for ll in l:
+                    if ll.type == 'LineString' and not ll.is_empty:
+                        lns.append((uni.id, ll))
         # split boundaries
         edges = splitme(bnd[0]) + splitme(bnd[1]) + splitme(bnd[2]) + splitme(bnd[3])
         # polygonize
-        polys = list(polygonize(edges + list(lns.values())))
+        polys = list(polygonize(edges + [l for _, l in lns]))
         # create shapes
         shapes = {}
         unilists = {}
         for ix, poly in enumerate(polys):
             unilist = []
-            for uni_id, ln in lns.items():
+            for uni_id, ln in lns:
                 if ln.relate_pattern(poly, '*1*F*****'):
                     unilist.append(uni_id)
             phases = set.intersection(*(self.unilines[id].phases for id in unilist))

@@ -30,7 +30,7 @@ from matplotlib.widgets import Cursor
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from descartes import PolygonPatch
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString, Polygon
 from scipy.interpolate import interp1d
 
 try:
@@ -224,7 +224,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionSave.triggered.connect(self.saveProject)
         self.actionSave_as.triggered.connect(self.saveProjectAs)
         self.actionQuit.triggered.connect(self.close)
-        # self.actionExport_Drawpd.triggered.connect(self.gendrawpd)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
@@ -347,7 +346,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.presenthigh = None
         self.statusBar().showMessage('Ready')
 
-    def import_from_prj(self):
+    def import_from_old(self): ## FIXME:
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
@@ -464,6 +463,52 @@ class BuildersBase(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
+
+    def import_from_prj(self):
+        if self.ready:
+            qd = QtWidgets.QFileDialog
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
+                                          self.builder_file_selector)[0]
+            if Path(projfile).is_file():
+                with gzip.open(projfile, 'rb') as stream:
+                    data = pickle.load(stream)
+                if 'section' in data: # NEW
+                    workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
+                    if workdir == self.tc.workdir:
+                        bnd, area = self.ps.range_shapes
+                        # views
+                        id_lookup = {0:0}
+                        for id, inv in data['section'].invpoints.items():
+                            if area.intersects(inv.shape()):
+                                isnew, id_inv = self.ps.getidinv(inv)
+                                if isnew:
+                                    id_lookup[id] = id_inv
+                                    inv.id = id_inv
+                                    self.invmodel.appendRow(id_inv, inv)
+                        self.invview.resizeColumnsToContents()
+                        for id, uni in data['section'].unilines.items():
+                            if area.intersects(uni.shape()):
+                                isnew, id_uni = self.ps.getiduni(uni)
+                                if isnew:
+                                    uni.id = id_uni
+                                    uni.begin = id_lookup.get(uni.begin, 0)
+                                    uni.end = id_lookup.get(uni.end, 0)
+                                    self.unimodel.appendRow(id_uni, uni)
+                                    self.ps.trim_uni(id_uni)
+                        self.uniview.resizeColumnsToContents()
+                        #if hasattr(data['section'], 'dogmins'):
+                        #    for id, dgm in data['section'].dogmins.items():
+                        #        self.dogmodel.appendRow(id, dgm)
+                        #    self.dogview.resizeColumnsToContents()
+                        self.changed = True
+                        self.refresh_gui()
+                        self.statusBar().showMessage('Data imported.')
+                    else:
+                        qb = QtWidgets.QMessageBox
+                        qb.critical(self, 'Workdir error', 'You can import only from projects with same working directory', qb.Abort)
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
 
     def saveProject(self):
         """Open working directory and initialize project
@@ -840,6 +885,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if len(candidates) == 2:
                     menu_item2 = menu.addAction('Autoconnect')
                     menu_item2.triggered.connect(lambda: self.uni_connect(id, candidates, plot=True))
+            if self.unihigh is not None:
+                menu = QtWidgets.QMenu(self)
+                menu_item1 = menu.addAction('Remove nodes')
+                menu_item1.triggered.connect(lambda: self.remove_from_uni(uni))
             menu.exec(self.uniview.mapToGlobal(QPos))
 
     def uni_connect(self, id, candidates, plot=False):
@@ -883,6 +932,23 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.ax.set_ylim([uni.y.min() - dp, uni.y.max() + dp])
         self.canvas.toolbar.push_current()
         self.canvas.draw()
+
+    def remove_from_uni(self, uni):
+        xrange = self.ax.get_xlim()
+        yrange = self.ax.get_ylim()
+        area = Polygon([(xrange[0], yrange[0]), (xrange[1], yrange[0]),
+                        (xrange[1], yrange[1]),(xrange[0], yrange[1])])
+        idx = []
+        for ix, x, y in zip(range(len(uni._x)), uni._x, uni._y):
+            if not Point(x, y).within(area):
+                idx.append(ix)
+        if len(idx) > 1:
+            uni._x = uni._x[idx]
+            uni._y = uni._y[idx]
+            uni.results = [r for ix, r in enumerate(uni.results) if ix in idx]
+            self.ps.trim_uni(uni.id)
+            self.changed = True
+            self.plot()
 
     def remove_inv(self):
         if self.invsel.hasSelection():
@@ -1372,6 +1438,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
         self.pushCalcTatP.clicked.connect(lambda: self.do_calc(True))
         self.pushCalcPatT.clicked.connect(lambda: self.do_calc(False))
         self.actionImport_drfile.triggered.connect(self.import_drfile)
+        self.actionImport_from_old.triggered.connect(self.import_from_old)
         # additional keyboard shortcuts
         self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
@@ -1631,10 +1698,6 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                         self.unimodel.appendRow(row[0], uni)
                         self.ps.trim_uni(row[0])
                     self.uniview.resizeColumnsToContents()
-                    # cutting
-                    #for row in self.unimodel.unilist:
-                    #    self.trimuni(row)
-                    # all done
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -1870,7 +1933,9 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
                                     idx = []
                                     for p in uni_old.phases.difference(uni_old.out):
                                         q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+                                        q_val = q(res['data'][p]['mode'])
+                                        if np.isfinite(q_val):
+                                            idx.append(np.ceil(q_val))
 
                                     idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
                                     values, counts = np.unique(idx_clip, return_counts=True)
@@ -1981,6 +2046,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
     def builder_ui_settings(self):
         # CONNECT SIGNALS
         self.pushCalc.clicked.connect(self.do_calc)
+        self.actionImport_from_PT.triggered.connect(self.import_from_pt)
         # additional keyboard shortcuts
         self.scCalc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalc.activated.connect(self.do_calc)
@@ -2166,6 +2232,64 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.recent.pop(self.recent.index(projfile))
                 self.app_settings(write=True)
                 self.populate_recent()
+
+    def import_from_pt(self):
+        if self.ready:
+            qd = QtWidgets.QFileDialog
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
+                                          'PSBuilder project (*.psb)')[0]
+            if Path(projfile).is_file():
+                with gzip.open(projfile, 'rb') as stream:
+                    data = pickle.load(stream)
+                if 'section' in data: # NEW
+                    pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
+                    extend = self.spinOver.value()
+                    trange = self.ax.get_xlim()
+                    ts = extend * (trange[1] - trange[0]) / 100
+                    trange = (max(trange[0] - ts, 11), trange[1] + ts)
+                    # seek line
+                    pt_line = LineString([(trange[0], pm), (trange[1], pm)])
+                    prange = (max(self.tc.prange[0] - self.rangeSpin.value() / 2, 0.01),
+                              self.tc.prange[1] + self.rangeSpin.value() / 2)
+                    crange = self.ax.get_ylim()
+                    cs = extend * (crange[1] - crange[0]) / 100
+                    crange = (crange[0] - cs, crange[1] + cs)
+                    #
+                    self.statusBar().showMessage('Importing from PT section...')
+                    QtWidgets.QApplication.processEvents()
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                    # change bulk
+                    bulk = self.tc.interpolate_bulk(crange)
+                    self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+                    # only uni
+                    last = None
+                    for id, uni in data['section'].unilines.items():
+                        if pt_line.intersects(uni.shape()):
+                            isnew, id_uni = self.ps.getiduni(uni)
+                            if isnew:
+                                tcout, ans = self.tc.calc_tx(uni.phases, uni.out, trange=trange)
+                                status, variance, pts, ptcoords, res, output = self.tc.parse_logfile(tx=True)
+                                if status != 'bombed' and status != 'nir' and len(res) > 1:
+                                    # rescale pts from zoomed composition
+                                    pts[0] = crange[0] + pts[0] * (crange[1] - crange[0])
+                                    uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
+                                                     variance=variance, y=pts[0], x=pts[1], output=output, results=res)
+                                    self.unimodel.appendRow(id_uni, uni_ok)
+                                    self.changed = True
+                                    last = id_uni
+
+                    if last is not None:
+                        self.uniview.resizeColumnsToContents()
+                        idx = self.unimodel.getIndexID(last)
+                        self.uniview.selectRow(idx.row())
+                    # restore bulk
+                    self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+                    self.refresh_gui()
+                    QtWidgets.QApplication.restoreOverrideCursor()
+                    self.statusBar().showMessage('Data imported.')
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
 
     @property
     def plot_title(self):
@@ -2406,19 +2530,22 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                     idx = []
                                     for p in uni_old.phases.difference(uni_old.out):
                                         q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+                                        q_val = q(res['data'][p]['mode'])
+                                        if np.isfinite(q_val):
+                                            idx.append(np.ceil(q_val))
 
                                     idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
                                     values, counts = np.unique(idx_clip, return_counts=True)
-                                    nix = values[np.argmax(counts)]
-                                    # insert data to temporary dict
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        dt[p].insert(nix, res['data'][p]['mode'])
-                                    # insert real data
-                                    uni_old.results.insert(nix, res)
-                                    uni_old._x = np.insert(uni_old._x, nix, x)
-                                    uni_old._y = np.insert(uni_old._y, nix, y)
-                                    N += 1
+                                    if counts.size > 0:
+                                        nix = values[np.argmax(counts)]
+                                        # insert data to temporary dict
+                                        for p in uni_old.phases.difference(uni_old.out):
+                                            dt[p].insert(nix, res['data'][p]['mode'])
+                                        # insert real data
+                                        uni_old.results.insert(nix, res)
+                                        uni_old._x = np.insert(uni_old._x, nix, x)
+                                        uni_old._y = np.insert(uni_old._y, nix, y)
+                                        N += 1
                                 uni_old.output += uni.output
                                 self.ps.trim_uni(id_uni)
                                 if self.checkAutoconnectUni.isChecked():
@@ -2533,6 +2660,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
     def builder_ui_settings(self):
         # CONNECT SIGNALS
         self.pushCalc.clicked.connect(self.do_calc)
+        self.actionImport_from_PT.triggered.connect(self.import_from_pt)
         # additional keyboard shortcuts
         self.scCalc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalc.activated.connect(self.do_calc)
@@ -2718,6 +2846,52 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.recent.pop(self.recent.index(projfile))
                 self.app_settings(write=True)
                 self.populate_recent()
+
+    def import_from_pt(self): ## FIXME:
+        if self.ready:
+            qd = QtWidgets.QFileDialog
+            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
+                                          self.builder_file_selector)[0]
+            if Path(projfile).is_file():
+                with gzip.open(projfile, 'rb') as stream:
+                    data = pickle.load(stream)
+                if 'section' in data: # NEW
+                    workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
+                    if workdir == self.tc.workdir:
+                        bnd, area = self.ps.range_shapes
+                        # views
+                        id_lookup = {0:0}
+                        for id, inv in data['section'].invpoints.items():
+                            if area.intersects(inv.shape()):
+                                isnew, id_inv = self.ps.getidinv(inv)
+                                if isnew:
+                                    id_lookup[id] = id_inv
+                                    inv.id = id_inv
+                                    self.invmodel.appendRow(id_inv, inv)
+                        self.invview.resizeColumnsToContents()
+                        for id, uni in data['section'].unilines.items():
+                            if area.intersects(uni.shape()):
+                                isnew, id_uni = self.ps.getiduni(uni)
+                                if isnew:
+                                    uni.id = id_uni
+                                    uni.begin = id_lookup.get(uni.begin, 0)
+                                    uni.end = id_lookup.get(uni.end, 0)
+                                    self.unimodel.appendRow(id_uni, uni)
+                                    self.ps.trim_uni(id_uni)
+                        self.uniview.resizeColumnsToContents()
+                        #if hasattr(data['section'], 'dogmins'):
+                        #    for id, dgm in data['section'].dogmins.items():
+                        #        self.dogmodel.appendRow(id, dgm)
+                        #    self.dogview.resizeColumnsToContents()
+                        self.changed = True
+                        self.refresh_gui()
+                        self.statusBar().showMessage('Data imported.')
+                    else:
+                        qb = QtWidgets.QMessageBox
+                        qb.critical(self, 'Workdir error', 'You can import only from projects with same working directory', qb.Abort)
+                else:
+                    qb = QtWidgets.QMessageBox
+                    qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
 
     @property
     def plot_title(self):
@@ -2958,7 +3132,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                     idx = []
                                     for p in uni_old.phases.difference(uni_old.out):
                                         q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        idx.append(np.ceil(q(res['data'][p]['mode'])))
+                                        q_val = q(res['data'][p]['mode'])
+                                        if np.isfinite(q_val):
+                                            idx.append(np.ceil(q_val))
 
                                     idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
                                     values, counts = np.unique(idx_clip, return_counts=True)
