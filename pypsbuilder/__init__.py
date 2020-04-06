@@ -17,6 +17,8 @@ __all__ = (
     "TXsection",
     "PXsection",
     "PTPS",
+    "TXPS",
+    "PXPS",
     "TCAPI",
 )
 

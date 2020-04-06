@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PSBuilder</class>
- <widget class="QMainWindow" name="PSBuilder">
+ <class>PTBuilder</class>
+ <widget class="QMainWindow" name="PTBuilder">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>PS Builder</string>
+   <string>PT Builder</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">

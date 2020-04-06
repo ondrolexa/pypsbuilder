@@ -1,6 +1,6 @@
 # Changes
 
-## 2.2 (XX YY 2019)
+## 2.2 (XX YY 2020)
 
 * pseudosection builders major update and refactoring
   - psbuilder, txbuilder and pxbuilder implemented
@@ -10,10 +10,13 @@
   - autoconnect implemented
   - invariant point search implemented
   - merge of partially calculated univariant lines implemented
+  - possibility to remove parts of univariant lines implemented
   - zoom to uni added to context menu
   - option to extend calculation range to extend univariant lines gently out of defined region
 * psexplorers updated
   - PTPS, TXPS and PXPS implemented
+  - possibility to merge several parts of pseudosection. Invariant points and
+    univariant lines must be unique in single project.
   - calc along PT path implemented (now only for PT sections)
 
 ### 2.1.5 (25 Mar 2019)

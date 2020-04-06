@@ -36,7 +36,7 @@ setup(
     package_data={'pypsbuilder.images': ['*.png']},
     entry_points="""
     [console_scripts]
-    psbuilder=pypsbuilder.psbuilders:psbuilder
+    ptbuilder=pypsbuilder.psbuilders:ptbuilder
     txbuilder=pypsbuilder.psbuilders:txbuilder
     pxbuilder=pypsbuilder.psbuilders:pxbuilder
     psshow=pypsbuilder.psexplorer:ps_show

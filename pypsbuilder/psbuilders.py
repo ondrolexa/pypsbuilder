@@ -39,7 +39,7 @@ try:
 except ImportError as e:
     NX_OK = False
 
-from .ui_psbuilder import Ui_PSBuilder
+from .ui_ptbuilder import Ui_PTBuilder
 from .ui_txbuilder import Ui_TXBuilder
 from .ui_pxbuilder import Ui_PXBuilder
 from .ui_addinv import Ui_AddInv
@@ -60,7 +60,7 @@ invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
 presenthigh_kw = dict(lw=9, alpha=0.6, marker=None, ms=4, color='grey', zorder=-10)
 
-app_icons = dict(PSBuilder='images/psbuilder.png',
+app_icons = dict(PTBuilder='images/ptbuilder.png',
                  TXBuilder='images/txbuilder.png',
                  PXBuilder='images/pxbuilder.png')
 
@@ -154,7 +154,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.populate_recent()
         self.ready = False
         self.project = None
-        self.statusBar().showMessage('PSBuilder version {} (c) Ondrej Lexa 2020'. format(__version__))
+        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2020'. format(self.builder_name, __version__))
 
     def initViewModels(self):
         # INVVIEW
@@ -1424,14 +1424,14 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
 
-class PSBuilder(BuildersBase, Ui_PSBuilder):
-    """Main class for psbuilder
+class PTBuilder(BuildersBase, Ui_PTBuilder):
+    """Main class for ptbuilder
     """
     def __init__(self, parent=None):
-        self.builder_name = 'PSBuilder'
-        self.builder_extension = '.psb'
+        self.builder_name = 'PTBuilder'
+        self.builder_extension = '.ptb'
         self.ps = PTsection()
-        super(PSBuilder, self).__init__(parent)
+        super(PTBuilder, self).__init__(parent)
 
     def builder_ui_settings(self):
         # CONNECT SIGNALS
@@ -1447,7 +1447,7 @@ class PSBuilder(BuildersBase, Ui_PSBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings('LX', 'psbuilder')
+        builder_settings = QtCore.QSettings('LX', 'ptbuilder')
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
@@ -2237,7 +2237,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          'PSBuilder project (*.psb)')[0]
+                                          'PTBuilder project (*.ptb)')[0]
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
@@ -3793,9 +3793,9 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     xy0 = xy0.T
     return xy0[:, 0], xy0[:, 1] / ratio
 
-def psbuilder():
+def ptbuilder():
     application = QtWidgets.QApplication(sys.argv)
-    window = PSBuilder()
+    window = PTBuilder()
     desktop = QtWidgets.QDesktopWidget().availableGeometry()
     width = (desktop.width() - window.width()) / 2
     height = (desktop.height() - window.height()) / 2

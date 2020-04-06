@@ -1,4 +1,4 @@
-pyuic5 psbuilder.ui > ../ui_psbuilder.py
+pyuic5 ptbuilder.ui > ../ui_ptbuilder.py
 pyuic5 txbuilder.ui > ../ui_txbuilder.py
 pyuic5 pxbuilder.ui > ../ui_pxbuilder.py
 pyuic5 adduni.ui > ../ui_adduni.py
