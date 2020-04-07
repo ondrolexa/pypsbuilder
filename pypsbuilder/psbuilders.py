@@ -1407,8 +1407,11 @@ class BuildersBase(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.restoreOverrideCursor()
             else:
                 self.textOutput.clear()
-                self.figure.clear()
-                self.plot()
+                for p in reversed(self.ax.patches):
+                    p.remove()
+                if hasattr(self.ax, 'areas_shown'):
+                    del self.ax.areas_shown
+                self.figure.canvas.draw()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 

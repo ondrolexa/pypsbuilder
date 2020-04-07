@@ -507,6 +507,9 @@ class PS:
         high = kwargs.get('high', [])
         connect = kwargs.get('connect', False)
         show_vertices = kwargs.get('show_vertices', False)
+        fig_kw = kwargs.get('fig_kw', {})
+        filename = kwargs.get('filename', None)
+        save_kw = kwargs.get('save_kw', {})
 
         if self.shapes:
             if isinstance(out, str):
@@ -519,7 +522,7 @@ class PS:
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
             norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(**fig_kw)
             for k, shape in self.shapes.items():
                 patch = PolygonPatch(shape, fc=pscmap(norm(self.variance[k])), ec='none')
                 ax.add_patch(patch)
@@ -592,7 +595,10 @@ class PS:
             # connect button press
             if connect:
                 cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
-            plt.show()
+            if filename is not None:
+                plt.savefig(filename, **save_kw)
+            else:
+                plt.show()
             # return ax
         else:
             print('There is no single area defined in your pseudosection. Check topology.')
