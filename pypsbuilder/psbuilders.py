@@ -1785,6 +1785,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
             cand = []
+            line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
                 nout = out.union(set([ophase]))
                 self.tc.calc_pt(phases, nout, prange = prange, trange=trange)
@@ -1797,7 +1798,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         exists, inv_id = '', ''
                     else:
                         exists, inv_id = '*', str(id)
-                    cand.append((inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
+                    cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
 
             for ophase in set(self.tc.phases).difference(self.ps.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
@@ -1812,7 +1813,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         exists, inv_id = '', ''
                     else:
                         exists, inv_id = '*', str(id)
-                    cand.append((inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
+                    cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
 
             # set original ptguesses when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
@@ -1821,8 +1822,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             if cand:
                 txt = '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
-                for cc in sorted(cand, reverse=True):
-                    txt += n_format.format(*cc)
+                for cc in sorted(cand):
+                    txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
@@ -2336,6 +2337,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
 
             out_section = []
             cand = []
+            line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
                 nout = out.union(set([ophase]))
                 self.tc.calc_tx(phases, nout, prange = prange, trange=trange)
@@ -2356,7 +2358,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
                         else:
                             ix = abs(ptcoords[0] - pm).argmin()
                             out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
@@ -2384,7 +2386,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
                         else:
                             ix = abs(ptcoords[0] - pm).argmin()
                             out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
@@ -2401,8 +2403,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
             if cand:
                 txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
-                for cc in sorted(cand, reverse=True):
-                    txt += n_format.format(*cc)
+                for cc in sorted(cand):
+                    txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
@@ -2938,6 +2940,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
 
             out_section = []
             cand = []
+            line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
                 nout = out.union(set([ophase]))
                 self.tc.calc_px(phases, nout, prange = prange, trange=trange)
@@ -2958,7 +2961,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
-                            cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
                         else:
                             ix = abs(ptcoords[1] - tm).argmin()
                             out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
@@ -2986,7 +2989,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
-                            cand.append((Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
                         else:
                             ix = abs(ptcoords[1] - tm).argmin()
                             out_section.append((ptcoords[1][ix], ptcoords[0][ix], exists, ' '.join(inv.out), inv_id))
@@ -3003,8 +3006,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
             if cand:
                 txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
-                for cc in sorted(cand, reverse=True):
-                    txt += n_format.format(*cc)
+                for cc in sorted(cand):
+                    txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))

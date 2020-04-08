@@ -619,6 +619,10 @@ class PS:
             if label:
                 # multiline for long labels
                 tl = sorted(list(k.difference(self.tc.excess)))
+                extra = self.tc.excess.difference(self.tc.excess.intersection(k))
+                # if excess in scriptfile is not accurate
+                if extra:
+                    tl += ['-{}'.format(pp) for pp in extra]
                 wp = len(tl) // 4 + int(len(tl) % 4 > 1)
                 txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
                 if shape.type == 'MultiPolygon':
