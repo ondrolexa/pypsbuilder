@@ -350,7 +350,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          self.builder_file_selector)[0]
+                                           'PSBuilder 1.X project (*.psb)')[0]
             if Path(projfile).exists():
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -1554,7 +1554,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Open project', openin,
-                                          self.builder_file_selector)[0]
+                                          self.builder_file_selector + ';;PSBuilder 1.X project (*.psb)')[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
