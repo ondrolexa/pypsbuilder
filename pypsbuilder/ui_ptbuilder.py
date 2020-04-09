@@ -587,6 +587,8 @@ class Ui_PTBuilder(object):
         self.actionImport_from_old.setObjectName("actionImport_from_old")
         self.actionImport_drfile = QtWidgets.QAction(PTBuilder)
         self.actionImport_drfile.setObjectName("actionImport_drfile")
+        self.actionCleanup = QtWidgets.QAction(PTBuilder)
+        self.actionCleanup.setObjectName("actionCleanup")
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_old)
         self.menuImport.addAction(self.actionImport_drfile)
@@ -600,6 +602,7 @@ class Ui_PTBuilder(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuTools.addAction(self.actionReload)
+        self.menuTools.addAction(self.actionCleanup)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
         self.menuHelp.addAction(self.actionAbout)
@@ -721,4 +724,5 @@ class Ui_PTBuilder(object):
         self.actionImport_project.setText(_translate("PTBuilder", "&Import into range..."))
         self.actionImport_from_old.setText(_translate("PTBuilder", "Import from old..."))
         self.actionImport_drfile.setText(_translate("PTBuilder", "Import from drfile..."))
+        self.actionCleanup.setText(_translate("PTBuilder", "Cleanup storage"))
 

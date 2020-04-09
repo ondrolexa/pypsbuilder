@@ -1061,6 +1061,7 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="actionReload"/>
+    <addaction name="actionCleanup"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
    </widget>
@@ -1149,6 +1150,11 @@
   <action name="actionImport_from_PT">
    <property name="text">
     <string>Import from PT section</string>
+   </property>
+  </action>
+  <action name="actionCleanup">
+   <property name="text">
+    <string>Cleanup storage</string>
    </property>
   </action>
  </widget>

@@ -226,6 +226,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionQuit.triggered.connect(self.close)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
+        self.actionCleanup.triggered.connect(self.cleanup_storage)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
         self.actionShow_topology.triggered.connect(self.show_topology)
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -509,6 +510,19 @@ class BuildersBase(QtWidgets.QMainWindow):
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
+
+    def cleanup_storage(self):
+        if self.ready:
+            qb = QtWidgets.QMessageBox
+            reply = qb.question(self, 'Remove redundant calculations',
+                                'Are you sure?', qb.Yes, qb.No)
+            if reply == qb.Yes:
+                self.ps.cleanup_data()
+                self.changed = True
+                self.refresh_gui()
+                self.statusBar().showMessage('Unilines cleaned.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProject(self):
         """Open working directory and initialize project

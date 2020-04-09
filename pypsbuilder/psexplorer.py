@@ -56,10 +56,11 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point
 from descartes import PolygonPatch
-from scipy.interpolate import Rbf
+from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning
 from scipy.interpolate import griddata
 from tqdm import tqdm, trange
@@ -224,6 +225,18 @@ class PS:
         return {phase for key in self.keys for phase in key}
 
     @property
+    def endmembers(self):
+        """Returns dictionary with phases and their end-members names"""
+        em = {}
+        for comp in set(self.all_data_keys.keys()).difference(self.phases).difference(set(['bulk', 'sys'])):
+            k, v = comp.split(')')[0].split('(')
+            if k in em:
+                em[k].append(v)
+            else:
+                em[k] = [v]
+        return em
+
+    @property
     def variance(self):
         """Returns dictionary of variances"""
         v = self._variance[0].copy()
@@ -239,6 +252,17 @@ class PS:
         for shapes in self._shapes.values():
             keylist.extend(list(shapes.keys()))
         return set(keylist)
+
+    def get_section_id(self, x, y):
+        """Return index of pseudosection and grid containing point
+        """
+        ix_ok = None
+        for ix, ps in enumerate(self.sections.values()):
+            _, area = ps.range_shapes
+            if area.contains(Point(x, y)):
+                ix_ok = ix
+                break
+        return ix_ok
 
     def invs_from_unilist(self, ix, unilist):
         """Return set of IDs of invariant points associated with unilines.
@@ -284,6 +308,22 @@ class PS:
                     grid.masks[key] = np.array(list(map(shapes[key].contains, points))).reshape(grid.xg.shape)
         else:
             print('Not yet gridded...')
+
+    def common_grid_and_masks(self, **kwargs):
+        """Initialize common grid and mask for all partial grids
+        """
+        nx = kwargs.get('nx', np.round(np.diff(self.xrange)[0]/self.gridxstep).astype(int))
+        ny = kwargs.get('ny', np.round(np.diff(self.yrange)[0]/self.gridystep).astype(int))
+        self.xstep = np.diff(self.xrange)[0] / nx
+        self.ystep = np.diff(self.yrange)[0] / ny
+        self.xspace = np.linspace(self.xrange[0] + self.xstep/2, self.xrange[1] - self.xstep/2, nx)
+        self.yspace = np.linspace(self.yrange[0] + self.ystep/2, self.yrange[1] - self.ystep/2, ny)
+        self.xg, self.yg = np.meshgrid(self.xspace, self.yspace)
+        # Create data masks
+        self.masks = {}
+        points = MultiPoint(list(zip(self.xg.flatten(), self.yg.flatten())))
+        for key in self.shapes:
+            self.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.xg.shape)
 
     def collect_all_data_keys(self):
         """Collect all phases and variables calculated on grid.
@@ -407,6 +447,26 @@ class PS:
             print('Not yet gridded...')
         return dt
 
+    def get_nearest_grid_data(self, x, y):
+        """Retrieve nearest results from GridData to point.
+
+        Args:
+            x (float): x-coordinate of point
+            y (float): y-coordiante of point
+
+         Returns:
+            THERMOCALC result set a assemblage key
+        """
+        dt = dict(pts=[], data=[])
+        if self.gridded:
+            ix = self.get_section_id(x, y)
+            if ix is not None:
+                r, c = self.grids[ix].get_indexes(x, y)
+                dt = self.grids[ix].gridcalcs[r, c]
+            return dt
+        else:
+            print('Not yet gridded...')
+
     def collect_data(self, key, phase, expr, which=7):
         """Convinient function to retrieve values of expression
         for given phase for user-defined combination of results of divariant
@@ -429,7 +489,8 @@ class PS:
         """
         dt = dict(pts=[], data=[])
         # check if phase or end-member is in assemblage
-        if re.sub(r'[\(].*?[\)]', '', phase) in key:
+        #if re.sub(r'[\(].*?[\)]', '', phase) in key:
+        if phase in self.all_data_keys:
             if which & (1 << 0):
                 d = self.collect_inv_data(key, phase, expr)
                 dt['pts'].extend(d['pts'])
@@ -582,9 +643,24 @@ class PS:
                 else:
                     ax.set_xlabel(self.name)
                 # bulk composition
-                ox, vals = self.sections[0].get_bulk_composition() # FIXME: TX has another bulk format
-                table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
-                plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
+                if self.section_class.__name__ == 'PTsection':
+                    ox = self.sections[0].get_bulk_composition()
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                            ' & '.join(ox) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
+                            r'''\end{tabular}'''
+                    plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
+                else:
+                    ox = self.sections[0].get_bulk_composition()
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                            ' & '.join(ox) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v[1]) for v in ox.values()]) + \
+                            r'''\end{tabular}'''
+                    plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
             else:
                 if label:
                     ax.set_title(self.name + (len(self.tc.excess) * ' +{}').format(*self.tc.excess))
@@ -772,6 +848,49 @@ class PS:
         else:
             print('Not yet gridded...')
 
+    def show_bulk_deviations(self, label=False):
+        """Shows mean chi-squares deviations of recalculated bulk from assemblage
+
+        Args:
+            label (bool): Whether to label divariant fields. Default False.
+        """
+        if self.gridded:
+            fig, ax = plt.subplots()
+            chi_devs = {}
+            mn, mx = sys.float_info.max, -sys.float_info.max
+            for ix, grid in self.grids.items():
+                oxides = self.sections[ix].get_bulk_composition()
+                elem = np.array([sum([int(count or '1') for element, count in re.findall('([A-Z][a-z]?)([0-9]*)', ox)]) for ox in oxides])
+                chi = np.empty(grid.xg.shape)
+                chi[:] = np.nan
+                for key in tqdm(grid.masks, desc='Recalculating bulk... {}/{}'.format(ix + 1, len(self.sections)), total=len(grid.masks)):
+                    for r, c in zip(*np.nonzero(grid.masks[key])):
+                        dt = grid.gridcalcs[r, c]
+                        if dt is not None:
+                            BM = np.array([[dt['data'][phase][ox] for ox in oxides] for phase in key])
+                            atoms = np.array([sum(rbi*elem) for rbi in BM])
+                            mode = np.array([dt['data'][phase]['mode'] for phase in key])
+                            rbi_sum = np.array([rbi*c for rbi, c in zip(BM, mode/atoms)]).sum(axis=0)
+                            bulk_r = 100 * rbi_sum / sum(rbi_sum)
+                            bulk_n = np.array([v for v in oxides.values()])
+                            chi[r, c] = np.mean((bulk_r - bulk_n)**2 / bulk_n)
+                chi_devs[ix] = chi
+                mn = min(np.nanmin(chi), mn)
+                mx = max(np.nanmax(chi), mx)
+            for grid, chi in zip(self.grids.values(), chi_devs.values()):
+                im = ax.imshow(chi, extent=grid.extent, aspect='auto',
+                               origin='lower', vmin=mn, vmax=mx)
+            self.add_overlay(ax, label=label)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
+            cbar = fig.colorbar(im)
+            cbar.set_label(r'$\chi^2$')
+            ax.set_title('Chi-square bulk deviations - {}'.format(self.name))
+            fig.tight_layout()
+            plt.show()
+        else:
+            print('Not yet gridded...')
+
     def identify(self, x, y):
         """Return key (frozenset) of divariant field for given temperature and pressure.
 
@@ -801,6 +920,21 @@ class PS:
         x, y = plt.ginput(1)[0]
         return self.identify(x, y)
 
+    def ginput_path(self, label=False):
+        """Collect Path data by mouse digitizing.
+
+        Args:
+            label (bool): Whether to label divariant fields. Default False.
+        """
+        fig, ax = plt.subplots()
+        ax.autoscale_view()
+        self.add_overlay(ax, label=label)
+        ax.set_xlim(self.xrange)
+        ax.set_ylim(self.yrange)
+        ax.format_coord = self.format_coord
+        xy = plt.ginput(0)
+        return np.array(xy).T
+
     def onclick(self, event):
         if event.button == 1:
             if event.inaxes:
@@ -822,7 +956,7 @@ class PS:
             expr (str): Expression to evaluate. It could use any variable
                 existing for given phase. Check `all_data_keys` property for
                 possible variables.
-            N (int): Number of contours. Default 10.
+            N (int): Max number of contours. Default 10.
             step (int): Step between contour levels. If defined, N is ignored.
                 Default None.
             which (int): Bitopt defining from where data are collected. 0 bit -
@@ -901,9 +1035,11 @@ class PS:
                 cntv = np.arange(0, mx + step, step)
                 cntv = cntv[cntv >= mn - step]
             else:
-                dm = (mx - mn) / 25
-                #cntv = np.linspace(max(0, mn - dm), mx + dm, N)
-                cntv = np.linspace(mn - dm, mx + dm, N)
+                #dm = (mx - mn) / 25
+                ##cntv = np.linspace(max(0, mn - dm), mx + dm, N)
+                #cntv = np.linspace(mn - dm, mx + dm, N)
+                ml = ticker.MaxNLocator(nbins=N)
+                cntv = ml.tick_values(vmin=mn, vmax=mx)
             # Thin-plate contouring of areas
             fig, ax = plt.subplots()
             for key in recs:
@@ -997,9 +1133,24 @@ class PS:
                 else:
                     ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
                 # bulk composition
-                ox, vals = self.sections[0].get_bulk_composition()
-                table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + ' & '.join(ox) + r''' \\\hline ''' + ' & '.join(vals) + r'''\end{tabular}'''
-                plt.figtext(0.08, 0.94, table, size=10, va='top', usetex=True)
+                if self.section_class.__name__ == 'PTsection':
+                    ox = self.sections[0].get_bulk_composition()
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                            ' & '.join(ox) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
+                            r'''\end{tabular}'''
+                    plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
+                else:
+                    ox = self.sections[0].get_bulk_composition()
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                            ' & '.join(ox) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
+                            r''' \\\hline ''' + \
+                            ' & '.join(['{:.3g}'.format(v[1]) for v in ox.values()]) + \
+                            r'''\end{tabular}'''
+                    plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
             else:
                 if only is None:
                     ax.set_xlim(self.xrange)
@@ -1012,8 +1163,8 @@ class PS:
             # connect button press
             #cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
-# # TODO:
-    def gendrawpd(self, export_areas=True):
+
+    def gendrawpd(self, export_areas=True): # FIXME:
         """Method to write drawpd file
 
         Args:
@@ -1116,48 +1267,55 @@ class PS:
             print('Drawpd sucessfully executed.')
         else:
             print('Drawpd error!', str(err))
-## TODO:
-    def save_tab(self, tabfile=None, comps=None): # FIXME:
+
+    def save_tab(self, comps, tabfile=None):
+        """Export gridded values to Perpex tab format
+        """
         if not tabfile:
             tabfile = self.name + '.tab'
-        if not comps:
-            comps = self.all_data_keys
         data = []
-        for comp in tqdm(comps, desc='Exporting'):
-            data.append(self.get_gridded(comp).flatten())
+        comps_labels = []
+        for phase, expr in tqdm(comps, desc='Collecting data...'):
+            data.append(self.get_gridded(phase, expr).flatten())
+            comps_labels.append('{}({})'.format(phase, expr))
         with Path(tabfile).open('wb') as f:
             head = ['ptbuilder', self.name + '.tab', '{:12d}'.format(2),
-                    'T(°C)', '   {:16.16f}'.format(self.ps.trange[0])[:19],
+                    'T(°C)', '   {:16.16f}'.format(self.xrange[0])[:19],
                     '   {:16.16f}'.format(self.xstep)[:19], '{:12d}'.format(len(self.xspace)),
-                    'p(kbar)', '   {:16.16f}'.format(self.ps.prange[0])[:19],
+                    'p(kbar)', '   {:16.16f}'.format(self.yrange[0])[:19],
                     '   {:16.16f}'.format(self.ystep)[:19], '{:12d}'.format(len(self.yspace)),
-                    '{:12d}'.format(len(data)), (len(data) * '{:15s}').format(*comps)]
+                    '{:12d}'.format(len(data)), (len(data) * '{:15s}').format(*comps_labels)]
             for ln in head:
                 f.write(bytes(ln + '\n', 'utf-8'))
             np.savetxt(f, np.transpose(data), fmt='%15.6f', delimiter='')
         print('Saved.')
 
-    def get_gridded(self, phase, expr=None, which=7, smooth=0): # FIXME:
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+    def get_gridded(self, phase, expr=None, which=7, smooth=0):
+        if self.gridded:
+            if expr is None:
+                msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
+                print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+            else:
+                if not hasattr(self, 'masks'):
+                    self.common_grid_and_masks()
+                #  interpolate on common grid
+                recs, mn, mx = self.merge_data(phase, expr, which=which)
+                gd = np.empty(self.xg.shape)
+                gd[:] = np.nan
+                for key in recs:
+                    xmin, ymin, xmax, ymax = self.shapes[key].bounds
+                    xxind = np.logical_and(self.xspace >= xmin - self.xstep, self.xspace <= xmax + self.xstep)
+                    yyind = np.logical_and(self.yspace >= ymin - self.ystep, self.yspace <= ymax + self.ystep)
+                    slc = np.ix_(yyind, xxind)
+                    tg, pg = self.xg[slc], self.yg[slc]
+                    x, y = np.array(recs[key]['pts']).T
+                    # Use scaling
+                    rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
+                    zg = rbf(tg, self.ratio * pg)
+                    gd[self.masks[key]] = zg[self.masks[key][slc]]
+                return gd
         else:
-            recs, mn, mx = self.merge_data(phase, expr, which=which)
-            gd = np.empty(self.grid.xg.shape)
-            gd[:] = np.nan
-            for key in recs:
-                tmin, pmin, tmax, pmax = self.shapes[key].bounds
-                ttind = np.logical_and(self.grid.xspace >= tmin - self.grid.xstep, self.grid.xspace <= tmax + self.grid.xstep)
-                ppind = np.logical_and(self.grid.yspace >= pmin - self.grid.ystep, self.grid.yspace <= pmax + self.grid.ystep)
-                slc = np.ix_(ppind, ttind)
-                tg, pg = self.grid.xg[slc], self.grid.yg[slc]
-                x, y = np.array(recs[key]['pts']).T
-                # Use scaling
-                rbf = Rbf(x, self.ps.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
-                zg = rbf(tg, self.ps.ratio * pg)
-                gd[self.grid.masks[key]] = zg[self.grid.masks[key][slc]]
-            return gd
-
+            print('Not yet gridded...')
 
 class PTPS(PS):
     """PTPS - class to postprocess ptbuilder project
@@ -1291,7 +1449,7 @@ class PTPS(PS):
                 print('\n'.join(log))
         else:
             print('Not yet gridded...')
-# # TODO:
+
     def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
         """Method to collect THERMOCALC calculations along defined PT path.
 
@@ -1322,33 +1480,32 @@ class PTPS(PS):
             for step in tqdm(np.linspace(0, 1, N), desc='Calculating'):
                 t, p = splt(step), splp(step)
                 key = self.identify(t, p)
-                mask = self.grid.masks[key]
-                dst = (t - self.grid.xg)**2 + (self.ps.ratio * (p - self.grid.yg))**2
-                dst[~mask] = np.nan
-                r, c = np.unravel_index(np.nanargmin(dst), self.grid.xg.shape)
-                calc = None
-                if self.grid.status[r, c] == 1:
-                    calc = self.grid.gridcalcs[r, c]
-                else:
-                    for rn, cn in self.grid.neighs(r, c):
-                        if self.grid.status[rn, cn] == 1:
-                            calc = self.grid.gridcalcs[rn, cn]
-                            break
-                if calc is not None:
-                    self.tc.update_scriptfile(guesses=calc['ptguess'])
-                    tcout, ans = self.tc.calc_assemblage(key.difference(self.ps.excess), p, t)
-                    status, variance, pts, res, output = self.tc.parse_logfile()
-                    if len(res) == 1:
-                        points.append((t, p))
-                        results.append(res[0])
-                else:
-                    err += 1
+                ix = self.get_section_id(t, p)
+                if ix is not None:
+                    r, c = self.grids[ix].get_indexes(t, p)
+                    calc = None
+                    if self.grids[ix].status[r, c] == 1:
+                        calc = self.grids[ix].gridcalcs[r, c]
+                    else:
+                        for rn, cn in self.grids[ix].neighs(r, c):
+                            if self.grids[ix].status[rn, cn] == 1:
+                                calc = self.grids[ix].gridcalcs[rn, cn]
+                                break
+                    if calc is not None:
+                        self.tc.update_scriptfile(guesses=calc['ptguess'])
+                        tcout, ans = self.tc.calc_assemblage(key.difference(self.tc.excess), p, t)
+                        status, variance, pts, res, output = self.tc.parse_logfile()
+                        if len(res) == 1:
+                            points.append((t, p))
+                            results.append(res[0])
+                    else:
+                        err += 1
             if err > 0:
                 print('Solution not found on {} points'.format(err))
             return PTpath(points, results)
         else:
             print('Not yet gridded...')
-## TODO:
+
     def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
         """Show values of expression for given phase calculated along PTpath.
 
@@ -1388,11 +1545,11 @@ class PTPS(PS):
                 self.add_overlay(ax, label=label)
             cbar = fig.colorbar(line, ax=ax)
             cbar.set_label('{}[{}]'.format(phase, expr))
-            ax.set_xlim(self.ps.xrange)
-            ax.set_ylim(self.ps.yrange)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
             ax.set_title('PT path - {}'.format(self.name))
             plt.show()
-## TODO:
+
     def show_path_modes(self, ptpath, exclude=[], cmap='tab20'):
         """Show stacked area diagram of phase modes along PT path
 
@@ -1773,6 +1930,22 @@ class GridData:
         return tmpl.format(len(self.xspace), len(self.yspace),
                            ok, fail, np.prod(self.xg.shape) - ok - fail)
 
+    def get_indexes(self, x, y):
+        """Return row and column index tuple of nearest grid point
+
+        Args:
+            x (float): x-coordinate of point
+            y (float): y-coordiante of point
+
+        """
+        c = np.searchsorted(self.xspace, x)
+        r = np.searchsorted(self.yspace, y)
+        return r, c
+
+    def contains(self, x, y):
+        xmin, xmax, ymin, ymax = self.extent
+        return (x >= xmin) & (x < xmax) & (y >= ymin) & (y < ymax)
+
     def neighs(self, r, c):
         """Returns list of row, column tuples of neighbouring points on grid.
 
@@ -1839,11 +2012,10 @@ def eval_expr(expr, dt):
         float: value evaluated from epxression
 
     Example:
-        >>> pt.ps.invpoints[5].data()['g'].keys()
-        dict_keys(['mode', 'x', 'z', 'm', 'f', 'xMgX', 'xFeX', 'xMnX', 'xCaX', 'xAlY', 'xFe3Y', 'H2O', 'SiO2', 'Al2O3', 'CaO', 'MgO', 'FeO', 'K2O', 'Na2O', 'TiO2', 'MnO', 'O', 'factor', 'G', 'H', 'S', 'V', 'rho'])
-        >>> eval_expr('mode', pt.ps.invpoints[5].data()['g'])
+        >>> ps = pt.sections[0]
+        >>> eval_expr('mode', ps.invpoints[5].data()['g'])
         0.02496698
-        >>> eval_expr('xMgX/(xFeX+xMgX)', pt.ps.invpoints[5].data()['g'])
+        >>> eval_expr('xMgX/(xFeX+xMgX)', ps.invpoints[5].data()['g'])
         0.12584215591915301
     """
     def eval_(node):

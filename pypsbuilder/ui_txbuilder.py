@@ -583,6 +583,8 @@ class Ui_TXBuilder(object):
         self.actionImport_project.setObjectName("actionImport_project")
         self.actionImport_from_PT = QtWidgets.QAction(TXBuilder)
         self.actionImport_from_PT.setObjectName("actionImport_from_PT")
+        self.actionCleanup = QtWidgets.QAction(TXBuilder)
+        self.actionCleanup.setObjectName("actionCleanup")
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_PT)
         self.menuFile.addAction(self.actionNew)
@@ -595,6 +597,7 @@ class Ui_TXBuilder(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuTools.addAction(self.actionReload)
+        self.menuTools.addAction(self.actionCleanup)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
         self.menuHelp.addAction(self.actionAbout)
@@ -712,4 +715,5 @@ class Ui_TXBuilder(object):
         self.actionShow_topology.setText(_translate("TXBuilder", "Show &topology"))
         self.actionImport_project.setText(_translate("TXBuilder", "&Import into range..."))
         self.actionImport_from_PT.setText(_translate("TXBuilder", "Import from PT section"))
+        self.actionCleanup.setText(_translate("TXBuilder", "Cleanup storage"))
 

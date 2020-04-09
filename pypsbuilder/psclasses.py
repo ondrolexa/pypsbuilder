@@ -490,11 +490,11 @@ class TCAPI(object):
                 if variance < 3:
                     l1, l2 = sections[3].split('\n')[1:3]
                     ccs = l1.split()
-                    nccs = len(ccs)
-                    bulk = {}
-                    for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
-                        bulk[cc] = float(vv)
-                    data['bulk'] = bulk
+                    #nccs = len(ccs)
+                    #bulk = {}
+                    #for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
+                    #    bulk[cc] = float(vv)
+                    #data['bulk'] = bulk
                     for ln in sections[3].split('\n')[3:]:
                         oxp = {}
                         phase, lnr = ln.split(maxsplit=1)
@@ -506,11 +506,11 @@ class TCAPI(object):
                 else:
                     l1, l2 = sections[3].split('\n')[1:]
                     ccs = l1.split()
-                    nccs = len(ccs)
-                    bulk = {}
-                    for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
-                        bulk[cc] = float(vv)
-                    data['bulk'] = bulk
+                    #nccs = len(ccs)
+                    #bulk = {}
+                    #for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
+                    #    bulk[cc] = float(vv)
+                    #data['bulk'] = bulk
                     for ln in sections[4].split('\n'):
                         oxp = {}
                         phase, lnr = ln.split(maxsplit=1)
@@ -1174,8 +1174,8 @@ class UniLine(PseudoBase):
         self.out = kwargs.get('out')
         self.cmd = kwargs.get('cmd', '')
         self.variance = kwargs.get('variance', 0)
-        self._x = kwargs.get('x', [])
-        self._y = kwargs.get('y', [])
+        self._x = kwargs.get('x', np.array([]))
+        self._y = kwargs.get('y', np.array([]))
         self.results = kwargs.get('results', [dict(data=None, ptguess=None)])
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
@@ -1190,7 +1190,7 @@ class UniLine(PseudoBase):
 
     @property
     def midix(self):
-        return len(self.results) // 2
+        return (self.used.start + self.used.stop) // 2
 
     @property
     def connected(self):
@@ -1334,6 +1334,25 @@ class SectionBase:
         self.dogmins[id] = dgm
         self.dogmins[id].id = id
 
+    def cleanup_data(self):
+        for id_uni, uni in self.unilines.items():
+            if not uni.manual:
+                keep = slice(max(uni.used.start - 1, 0), min(uni.used.stop + 1, len(uni._x)))
+                uni._x = uni._x[keep]
+                uni._y = uni._y[keep]
+                uni.results = uni.results[keep]
+            else:
+                uni.cmd = ''
+                uni.variance = 0
+                uni._x = np.array([])
+                uni._y = np.array([])
+                uni.results = [dict(data=None, ptguess=None)]
+                uni.output = 'User-defined'
+                uni.used = slice(0, 0)
+                uni.x = np.array([])
+                uni.y = np.array([])
+            self.trim_uni(id_uni)
+
     def getidinv(self, inv=None):
         '''Return id of either new or existing invariant point'''
         ids = 0
@@ -1420,198 +1439,6 @@ class SectionBase:
         uni.x = np.hstack((x1, xx, x2))
         uni.y = np.hstack((y1, yy, y2))
 
-############# OLD ################
-#
-#
-    def construct_areas(self):
-        def area_exists(indexes):
-            def dfs_visit(graph, u, found_cycle, pred_node, marked, path):
-                if found_cycle[0]:
-                    return
-                marked[u] = True
-                path.append(u)
-                for v in graph[u]:
-                    if marked[v] and v != pred_node:
-                        found_cycle[0] = True
-                        return
-                    if not marked[v]:
-                        dfs_visit(graph, v, found_cycle, u, marked, path)
-            # create graph
-            graph = {}
-            for ix in indexes:
-                b, e = self.unilines[ix].begin, self.unilines[ix].end
-                if b == 0:
-                    nix = max(list(inv_coords.keys())) + 1
-                    inv_coords[nix] = self.unilines[ix].x[0], self.unilines[ix].y[0]
-                    b = nix
-                if e == 0:
-                    nix = max(list(inv_coords.keys())) + 1
-                    inv_coords[nix] = self.unilines[ix].x[-1], self.unilines[ix].y[-1]
-                    e = nix
-                if b in graph:
-                    graph[b] = graph[b] + (e,)
-                else:
-                    graph[b] = (e,)
-                if e in graph:
-                    graph[e] = graph[e] + (b,)
-                else:
-                    graph[e] = (b,)
-                uni_index[(b, e)] = self.unilines[ix].id
-                uni_index[(e, b)] = self.unilines[ix].id
-            # do search
-            path = []
-            marked = {u: False for u in graph}
-            found_cycle = [False]
-            for u in graph:
-                if not marked[u]:
-                    dfs_visit(graph, u, found_cycle, u, marked, path)
-                if found_cycle[0]:
-                    break
-            return found_cycle[0], path
-        # starts here
-        log = []
-        vertices, edges, phases = [], [], []
-        tedges, tphases = [], []
-        uni_index = {}
-        for uni in self.unilines.values():
-            uni_index[(uni.begin, uni.end)] = uni.id
-            uni_index[(uni.end, uni.begin)] = uni.id
-        inv_coords = {}
-        for inv in self.invpoints.values():
-            inv_coords[inv.id] = inv._x, inv._y
-        faces = {}
-        for ix, uni in self.unilines.items():
-            f1 = frozenset(uni.phases)
-            f2 = frozenset(uni.phases.difference(uni.out))
-            if f1 in faces:
-                faces[f1].append(ix)
-            else:
-                faces[f1] = [ix]
-            if f2 in faces:
-                faces[f2].append(ix)
-            else:
-                faces[f2] = [ix]
-            # topology of polymorphs is degenerated
-            for poly in polymorphs:
-                if poly.issubset(uni.phases):
-                    f2 = frozenset(uni.phases.difference(poly.difference(uni.out)))
-                    if f2 in faces:
-                        faces[f2].append(ix)
-                    else:
-                        faces[f2] = [ix]
-        if uni_index and inv_coords and faces:
-            for f in faces:
-                exists, path = area_exists(faces[f])
-                if exists:
-                    edge = []
-                    vert = []
-                    for b, e in zip(path, path[1:] + path[:1]):
-                        edge.append(uni_index.get((b, e), None))
-                        vert.append(inv_coords[b])
-                    # check for bad topology
-                    if None not in edge:
-                        edges.append(edge)
-                        vertices.append(vert)
-                        phases.append(f)
-                    else:
-                        #raise Exception('Topology error in path {}. Edges {}'.format(path, edge))
-                        log.append('Topology error in path {}. Edges {}'.format(path, edge))
-                else:
-                    # loop not found, search for range crossing chain
-                    _, section_area = self.range_shapes
-                    for ppath in itertools.permutations(path):
-                        edge = []
-                        vert = []
-                        for b, e in zip(ppath[:-1], ppath[1:]):
-                            edge.append(uni_index.get((b, e), None))
-                            vert.append(inv_coords[b])
-                        vert.append(inv_coords[e])
-                        if None not in edge: # FIXME: do it better
-                            if not Point(*vert[0]).within(section_area) and not Point(*vert[-1]).within(section_area):
-                                tedges.append(edge)
-                                tphases.append(f)
-                            break
-        return vertices, edges, phases, tedges, tphases, log
-
-    def create_shapes_old(self, tolerance=None): # TODO: use simplified geometries...
-        shapes = OrderedDict()
-        shape_edges = OrderedDict()
-        bad_shapes = OrderedDict()
-        ignored_shapes = OrderedDict()
-        # traverse pseudosection
-        vertices, edges, phases, tedges, tphases, log = self.construct_areas()
-        # get range shapes
-        section_boundaries, section_area = self.range_shapes
-        # Create all full areas
-        for ind in range(len(edges)):
-            e, f = edges[ind], phases[ind]
-            lns = [self.unilines[fid].shape(ratio=self.ratio, tolerance=tolerance) for fid in e]
-            pp = polygonize(lns)
-            invalid = True
-            for ppp in pp:
-                if not ppp.is_valid:
-                    # fix topologically correct but self-intersecting shapes
-                    # You need to be a little careful with the buffer(0) technique. We've had bowtie cases where it destroyed the big part of the polygon and left just a small bowtied corner.
-                    log.append('WARNING: Area {} defined by edges {} is not valid. Trying to fix it....'.format(' '.join(f), e))
-                    ppp = ppp.buffer(0)
-                ppok = section_area.intersection(ppp)
-                if not ppok.is_empty and ppok.geom_type == 'Polygon':
-                    invalid = False
-                    shape_edges[f] = e
-                    if f in shapes:
-                        # is it always self-crossing case?
-                        shapes[f] = shapes[f].union(ppok)
-                    else:
-                        shapes[f] = ppok
-            if invalid:
-                log.append('ERROR: Area defined by edges {} is not valid.'.format(e))
-                for e1, e2 in itertools.combinations(e, 2):
-                    l1 = self.unilines[e1].shape(ratio=self.ratio, tolerance=tolerance)
-                    l2 = self.unilines[e2].shape(ratio=self.ratio, tolerance=tolerance)
-                    if l1.crosses(l2):
-                        log.append('   - Uniline {} crosses uniline {}'.format(e1, e2))
-                bad_shapes[f] = e
-        # Create all partial areas
-        for ind in range(len(tedges)):
-            e, f = tedges[ind], tphases[ind]
-            lns = [self.unilines[fid].shape(ratio=self.ratio, tolerance=tolerance) for fid in e]
-            pp = linemerge(lns)
-            invalid = True
-            if pp.geom_type == 'LineString':
-                bndu = unary_union([s for s in section_boundaries if pp.crosses(s)])
-                if not bndu.is_empty:
-                    pps = pp.difference(bndu)
-                    bnds = bndu.difference(pp)
-                    pp = polygonize(pps.union(bnds))
-                    for ppp in pp:
-                        ppok = section_area.intersection(ppp)
-                        if ppok.geom_type == 'Polygon':
-                            invalid = False
-                            shape_edges[f] = e
-                            if f in shapes:
-                                shapes[f] = shapes[f].union(ppok)
-                            else:
-                                shapes[f] = ppok
-            if invalid:
-                ignored_shapes[f] = e
-        # Fix possible overlaps of partial areas
-        todel = set()
-        for k1, k2 in itertools.combinations(shapes, 2):
-            if shapes[k1].within(shapes[k2]):
-                shapes[k2] = shapes[k2].difference(shapes[k1])
-                if shapes[k2].is_empty:
-                    todel.add(k2)
-            if shapes[k2].within(shapes[k1]):
-                shapes[k1] = shapes[k1].difference(shapes[k2])
-                if shapes[k1].is_empty:
-                    todel.add(k1)
-        # remove degenerated polygons
-        for k in todel:
-            shapes.pop(k)
-        return shapes, shape_edges, bad_shapes, ignored_shapes, log
-#
-#
-############# OLD ################
     def create_shapes(self, tolerance=None):
         def splitme(seg):
             '''Recursive boundary splitter'''
@@ -1727,15 +1554,15 @@ class PTsection(SectionBase):
         super(PTsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
-        bc = ([], [])
+        bc = None
         for inv in self.invpoints.values():
             if not inv.manual:
                 if 'composition (from setbulk script)\n' in inv.output:
                     cout = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
-                    bc = (cout[0].split(), cout[1].split())
+                    bc = {k:float(v) for k, v in zip(cout[0].split(), cout[1].split())}
                 if 'composition (from script)\n' in inv.output:
                     cout = inv.output.split('composition (from script)\n')[1].split('\n')
-                    bc = (cout[0].split(), cout[1].split())
+                    bc = {k:float(v) for k, v in zip(cout[0].split(), cout[1].split())}
                 break
         return bc
 
@@ -1752,15 +1579,13 @@ class TXsection(SectionBase):
         super(TXsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
-        bc = ([], [], [])
+        bc = None
         for inv in self.invpoints.values():
             if not inv.manual:
                 if 'composition (from script)\n' in inv.output:
                     tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
                     nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = [[r[0] for r in nested],
-                          [r[1] for r in nested],
-                          [r[-1] for r in nested]]
+                    bc = {r[0]: (float(r[1]),float(r[-1])) for r in nested}
                 break
         return bc
 
@@ -1777,14 +1602,12 @@ class PXsection(SectionBase):
         super(PXsection, self).__init__(**kwargs)
 
     def get_bulk_composition(self):
-        bc = ([], [], [])
+        bc = None
         for inv in self.invpoints.values():
             if not inv.manual:
                 if 'composition (from script)\n' in inv.output:
                     tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
                     nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = [[r[0] for r in nested],
-                          [r[1] for r in nested],
-                          [r[-1] for r in nested]]
+                    bc = {r[0]: (float(r[1]),float(r[-1])) for r in nested}
                 break
         return bc
