@@ -3718,7 +3718,7 @@ class TopologyGraph(QtWidgets.QDialog):
                                    width=2 + 6*widths(ix), alpha=0.5, edge_color=len(edges[out]) * [color(ix)], label=list(out)[0])
 
         nx.draw_networkx_nodes(G, npos, ax=ax, node_color='k')
-        nx.draw_networkx_labels(G, npos, labels, ax=ax, font_size=12, font_weight='bold', font_color='w')
+        nx.draw_networkx_labels(G, npos, labels, ax=ax, font_size=9, font_weight='bold', font_color='w')
 
         # Shrink current axis by 20%
         self.figure.tight_layout()
