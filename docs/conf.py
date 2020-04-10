@@ -37,7 +37,8 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'IPython.sphinxext.ipython_console_highlighting'
 ]
 
 napoleon_google_docstring = True
@@ -81,7 +82,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

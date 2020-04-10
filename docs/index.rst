@@ -5,8 +5,9 @@ Welcome to pypsbuilder documentation!
    :maxdepth: 1
 
    installation
-   psbuilder-tutorial
+   psbuilders-tutorial
    psexplorer-tutorial
+   command-line
    api
    authors
 
@@ -22,7 +23,7 @@ and more enjoyable while keeping the concept to force users understand the Phase
 Rule, Schreinemaker's analysis, and how variance changes across field
 boundaries.
 
-Check :doc:`psbuilder-tutorial` and :doc:`psexplorer-tutorial` or watch video
+Check :doc:`psbuilders-tutorial` and :doc:`psexplorer-tutorial` or watch video
 below to see **pypsbuilder** in action.
 
 .. raw:: html

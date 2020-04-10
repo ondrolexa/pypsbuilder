@@ -1,148 +1,233 @@
-``psexplorer`` tutorial
-=======================
+Pseudosection explorers tutorial
+================================
 
-Using ``psexplorer`` from command-line
---------------------------------------
+Using psexplorers in Python (or Jupyter notebook)
+-------------------------------------------------
 
-``psexplorer`` allows you visualize finalized pseudosection, create isopleths
-diagrams or generate `drawpd` file. It provides four command-line scipts
-`psgrid`, `psdrawpd`, `psshow` and `psiso`.
+**psexplorers** provides several post-processing methods and visualizations of
+already constructed pseudosections. You can also create isopleths diagrams or do
+calculations along paths.
 
-To use ``psexplorer`` interactively in Python or Jupyter notebook check
-:doc:`api`.
+It also provides four command-line scipts `psgrid`, `psshow` and
+`psiso` for quick visualizations.
 
-Draw pseudosections
--------------------
+To use **psexplorers** we need to import appropriate class, which contains most
+of the methods to work with pseudosection. We need to use ``PTPS`` class for
+P-T pseudosection constructed with ``ptbuilder``, ``TXPS`` class for
+T-X pseudosection constructed with ``txbuilder`` an ``PXPS`` class for
+P-X pseudosection constructed with ``pxbuilder``
 
-Before any further calculations you can check and draw your pseudosection using
-`psshow` command which construct finished areas within your project. It has few
-options to label pseudosection with assamblages or highlight out phase lines.::
+.. code:: ipython3
 
-    $ psshow -h
-		usage: psshow [-h] [-o OUT [OUT ...]] [-l] [-b] [--cmap CMAP] [--alpha ALPHA]
-		              [--connect] [--high HIGH [HIGH ...]]
-		              project
+    from pypsbuilder import PTPS
 
-		Draw pseudosection from project file
+The second step is to create instance of pseudosection using existing project file.
 
-		positional arguments:
-		  project               builder project file
+.. code:: ipython3
 
-		optional arguments:
-		  -h, --help            show this help message and exit
-		  -o OUT [OUT ...], --out OUT [OUT ...]
-		                        highlight out lines for given phases
-		  -l, --label           show area labels
-		  -b, --bulk            show bulk composition on figure
-		  --cmap CMAP           name of the colormap
-		  --alpha ALPHA         alpha of colormap
-		  --connect             whether mouse click echo stable assemblage
-		  --high HIGH [HIGH ...]
-		                        highlight field defined by set of phases
+    pt = PTPS('/some/path/project.ptb')
 
-For example, to draw pseudosection with marked epidote-out and chlorite-out
-lines execute::
+We can check, whether the pseudosection already contains gridded
+calculations. If not, we can use ``calculate_composition`` method to
+calculate compositional variations on grid. The resulting data are stored in
+project file. Note that any new modifications of the project by *pypsbuilder**
+will discard compositional variations on grid and must be calculated again.
 
-    $ psshow '/path/to/project.psb' -o ep chl
+.. code:: ipython3
 
-.. image:: images/psshow_out.png
+    if not pt.gridded:
+        pt.calculate_composition(nx=50, ny=50)
 
-Draw isopleths diagrams
+.. parsed-literal::
+
+    Gridding 1/1: 100%|██████████| 2500/2500 [03:10<00:00, 13.12it/s]
+    Grid search done. 0 empty points left.
+
+Visualize pseudosection
 -----------------------
 
-To create isopleths diagrams the pseudoction should be gridded at first (In
-other case only values from univariant lines and invariant points are used and
-interpolated accross areas). Command `psgrid` will do all calculations and
-result are saved afterwards, so next time results are automatically loaded. Be
-aware that calculations takes some time.::
+To show pseudosection, we can use ``show`` method
 
-    $ psgrid -h
-		usage: psgrid [-h] [--nx NX] [--ny NY] project
+.. code:: ipython3
 
-		Calculate compositions in grid
+    pt.show()
 
-		positional arguments:
-		  project     builder project file
+.. image:: images/show_plain.png
 
-		optional arguments:
-		  -h, --help  show this help message and exit
-		  --nx NX     number of T steps
-		  --ny NY     number of P steps
+The keyword arguments ``cmap`` and ``out`` could be used to modify colormap and
+highlight zero mode lines across pseudosection.
 
-For gridding pseudosection with grid 50x50 run following command::
+.. code:: ipython3
 
-    $ psgrid '/path/to/project.psb' --nx 50 --ny 50
-		Gridding: 100%|█████████████████████████████| 2500/2500 [01:30<00:00, 27.62it/s]
-		Grid search done. 0 empty grid points left.
+    pt.show(cmap='viridis', out=['g', 'chl'])
 
-Once gridded you can draw isopleths diagrams using `psiso` command::
 
-		$ psiso -h
-		usage: psiso [-h] [-e EXPR] [-f] [-o] [--nosplit] [-b] [--step STEP]
-		             [--ncont NCONT] [--colors COLORS] [--cmap CMAP] [--smooth SMOOTH]
-		             [--clabel CLABEL [CLABEL ...]] [--high HIGH [HIGH ...]]
-		             project phase
+.. image:: images/show_out.png
 
-		Draw isopleth diagrams
 
-		positional arguments:
-		  project               builder project file
-		  phase                 phase used for contouring
+The keyword arguments ``bulk`` and ``label`` set whether the bulk composition
+is shown on figure and whether the fields are labeled by phases.
 
-		optional arguments:
-		  -h, --help            show this help message and exit
-		  -e EXPR, --expr EXPR  expression evaluated to calculate values
-		  -f, --filled          filled contours
-		  -o, --out             highlight out line for given phase
-		  --nosplit             controls whether the underlying contour is removed or
-		                        not
-		  -b, --bulk            show bulk composition on figure
-		  --step STEP           contour step
-		  --ncont NCONT         number of contours
-		  --colors COLORS       color for all levels
-		  --cmap CMAP           name of the colormap
-		  --smooth SMOOTH       smoothness of the approximation
-		  --clabel CLABEL [CLABEL ...]
-		                        label contours in field defined by set of phases
-		  --high HIGH [HIGH ...]
-		                        highlight field defined by set of phases
+.. code:: ipython3
 
-Following example shows isopleths of garnet mode::
+    pt.show(cmap='viridis', bulk=True, label=True)
 
-    $ psiso '/path/to/project.psb' -f g -e mode
 
-.. image:: images/psiso_mode.png
+.. image:: images/show_label.png
 
-If the *expression* argument is not provided, the ``psexplorer`` shows list of
-all calculated variables available for given phase. ::
+The pseudosection ``identify`` method could be used to identify stable assemblage for
+given *p* and *T* conditions. Note that returned key (Python frozenset) is used
+to identify stable assemblage in many ``PTPS`` methods.
 
-		$ psiso '/path/to/project.psb' -f g
-		Missing expression argument. Available variables for phase g are:
-		mode x z m f xMgX xFeX xMnX xCaX xAlY xFe3Y H2O SiO2 Al2O3 CaO MgO FeO K2O
-		Na2O TiO2 MnO O factor G H S V rho
+.. code:: ipython3
 
-To draw isopleths of almandine garnet proportion you can use expression from a-x
-file `alm = x + (-m) x + (-x) z`::
+    key = pt.identify(550, 13)
+    print(key)
 
-    $ psiso '/path/to/project.psb' -f g -e 'x-m*x-x*z'
 
-or use variable `xFeX`::
+.. parsed-literal::
 
-		$ psiso tutorial.psb -f g -e xFeX
+    frozenset({'pa', 'g', 'bi', 'mu', 'H2O', 'q', 'sph'})
 
-.. image:: images/psiso_alm.png
 
-If you need to label contour lines, you can use clabel option to define field,
-where contour labels are plotted::
+Access data and variables stored in project
+-------------------------------------------
 
-    $ psiso '/path/to/project.psb' g -e mode --clabel H2O bi g mu pa pl q ru
-		--step 0.005 --colors m
+The calculated data are usually accessed using stable assemblage key (see above).
+Theera are three groups of data stored 1) at invariant points, 2) along univariant
+lines and 3) on grid covering multivariate fields. To see data coverage and all
+available variables, you can use ``show_data`` method. When no variable (or expression)
+is provided, method will show available variables.
 
-.. image:: images/psiso_clabels.png
+.. code:: ipython3
 
-Another example of some other options::
+    pt.show_data(key, 'g')
 
-    $ psiso tutorial.psb -f g -e mode --step 0.005 --high H2O bi g mu pa pl q ru
-    --out chl ep --cmap YlGnBu_r
 
-.. image:: images/psiso_other.png
+.. parsed-literal::
+
+    Missing expression argument. Available variables for phase g are:
+    mode x z m f xMgX xFeX xMnX xCaX xAlY xFe3Y H2O SiO2 Al2O3 CaO MgO FeO K2O Na2O TiO2 MnO O factor G H S V rho
+
+
+Once variable is provided, the all available data are shown.
+
+.. code:: ipython3
+
+    pt.show_data(key, 'g', 'xCaX')
+
+
+.. image:: images/show_data.png
+
+
+For data on the grid you can visualize them for all diagram in once using
+``show_grid`` method.
+
+.. code:: ipython3
+
+    pt.show_grid('g', 'xCaX')
+
+
+
+.. image:: images/show_grid.png
+
+
+To create isopleths diagram you can use ``isopleths`` method. Note that
+contours are created separately for each stable assemblage allowing
+proper geometry of isopleths.
+
+.. code:: ipython3
+
+    pt.isopleths('g', 'xCaX', N=14)
+
+
+.. image:: images/isopleths_1.png
+
+
+.. code:: ipython3
+
+    pt.isopleths('chl')
+
+
+.. parsed-literal::
+
+    Missing expression argument. Available variables for phase chl are:
+    mode x y f m QAl Q1 Q4 xMgM1 xMnM1 xFeM1 xAlM1 xMgM23 xMnM23 xFeM23 xMgM4 xFeM4 xFe3M4 xAlM4 xSiT2 xAlT2 H2O SiO2 Al2O3 CaO MgO FeO K2O Na2O TiO2 MnO O factor G H S V rho
+
+
+.. code:: ipython3
+
+    pt.isopleths('chl', 'mode')
+
+
+.. image:: images/isopleths_2.png
+
+
+Calculations along PT paths
+---------------------------
+
+``PTPS`` allows you to evaluate equilibria along user-defined PT
+path. PT path is defined by series of points (path is interpolated) and
+method ``collect_ptpath`` do actual calculations. It runs THERMOCALC
+with ptguesses obtained from existing calculations.
+
+.. code:: ipython3
+
+    t = [409, 432, 468, 503, 525, 547, 575, 593, 617, 621, 616, 591, 553, 526]
+    p = [10.25, 10.84, 11.72, 12.49, 12.89, 12.87, 12.44, 12.01, 11.02, 9.96,  9.13,  8.49,  7.88,  7.61]
+    pa = pt.collect_ptpath(t, p)
+
+
+.. parsed-literal::
+
+    Calculating: 100%|██████████| 100/100 [00:03<00:00, 25.86it/s]
+
+
+You can see phase modes along PT path using ``show_path_modes`` method.
+
+.. code:: ipython3
+
+    pt.show_path_modes(pa, exclude=['H2O'])
+
+
+.. image:: images/modes.png
+
+or show value of user-defined expression shown as colored strip on PT
+space.
+
+.. code:: ipython3
+
+    pt.show_path_data(pa, 'g', 'mode')
+
+
+.. image:: images/ptpath.png
+
+
+Extra
+-----
+
+``show_status`` method shows status of calculations on the grid.
+Possible failed calculations are shown.
+
+.. code:: ipython3
+
+    pt.show_status()
+
+
+
+.. image:: images/status.png
+
+
+Do you want to know execution time of THERMOCALC on individual grid
+points? Check ``show_delta`` method.
+
+.. code:: ipython3
+
+    pt.show_delta(pointsec=True)
+
+
+.. image:: images/delta.png
+
+
+
+**For full description of Python API check:** :doc:`api`.

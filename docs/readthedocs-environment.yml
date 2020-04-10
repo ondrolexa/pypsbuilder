@@ -1,0 +1,14 @@
+channels:
+  - conda-forge
+dependencies:
+  - python==3.8
+  - pandoc
+  - nbformat
+  - jupyter_client
+  - ipython
+  - nbconvert
+  - sphinx>=1.5.1
+  - ipykernel
+  - sphinx_rtd_theme
+  - pip:
+    - nbsphinx
