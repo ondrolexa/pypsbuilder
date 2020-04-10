@@ -1,0 +1,104 @@
+[display/print with fixed width font (eg Monaco)]
+
+
+
+THERMOCALC 3.50  running at 11.54 on Tue 17 Mar,2020
+the summary output is in the file, "tc-avgpelite-o.txt"
+other (eg drawpd) output is in the file, "tc-avgpelite-dr.txt"
+details of calc results is in the file, "tc-avgpelite-ic.txt"
+initial tables are in the file, "tc-avgpelite-it.txt"
+csv format in the file, "tc-avgpelite-csv.txt"
+more csv format in the file, "tc-avgpelite-csv2.txt"
+ 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+THERMOCALC 3.50 running at 11.54 on Tue 17 Mar,2020
+using tc-ds62.txt produced at 20.08 on Mon 6 Feb,2012
+with axfile tc-mp50MnNCKFMASHTO.txt and scriptfile tc-avgpelite.txt
+
+g  L  plc  ksp  ep  ma  mu  bi  opx  sa  cd  st  chl  ctd  sp  ilmm  
+ilm  mt1  ksp0  heme  mt0  ilm0  ab  Ni  NiO  ru  sill  and  ky  q  H2O  abh  
+sph  cz  ta  
+
+phases ignored this run: plc opx sp ilm mt1 ksp0 heme mt0 ilm0 Ni NiO abh ta  (from script)
+
+choose from: g  L  pl  ksp  ep  ma  mu  pa  bi  sa  cd  st  chl  ctd  ilmm  ab  ru  sill  and  ky  q  H2O  sph  cz  
+q  H2O  H2O  - automatically included (from script)
+which phases :  chl H2O q g sph ab bi pa ep mu 
+variance of required equilibrium (3?) : (nothing input)
+you may set zero modal proportions, from: g ep mu pa bi chl ab q H2O sph 
+which to set :  chl ab 
+equilibia now effectively invariant (eg a point in PT)
+
+specification of PT window:
+PT window within which invariant points expected to lie
+T low,high, P low,high :  385.000 715.000 6.550 16.450 
+composition (from setbulk script)
+      H2O     SiO2    Al2O3      CaO      MgO      FeO      K2O     Na2O     TiO2      MnO        O
+   49.998   35.563    5.805    0.695    2.325    2.890    1.340    0.995    0.335    0.050    0.005
+<==================================================>
+phases: g ep mu pa bi chl ab sph (q, fluid) 
+
+--------------------------------------------------------------------
+ P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)    x(chl)
+  7.0359   504.062    0.9065    0.3269    0.2403  0.002797   0.01533   0.01489    0.4063    0.9184 0.0002266    0.2087  0.007762    0.4063    0.9982  3.269e-5    0.8725   0.05923    0.5532  0.005669   0.08458  0.002562   0.06614    0.1689    0.4141
+                      y(chl)    f(chl)    m(chl)  QAl(chl)   Q1(chl)   Q4(chl)
+                      0.5537  0.008403  0.007045    0.4378    0.1021   0.06937
+
+ mode            g        ep        mu        pa        bi       chl        ab         q       H2O       sph           G
+          0.001762   0.01164   0.06499    0.1412    0.1287                        0.2021    0.4440  0.005655  -661.51463
+  zeroed  0.003170   0.02094    0.1169    0.2539    0.2314                        0.3635             0.01017
+
+% --------------------------------------------------------
+% at P = 7.0, T = 504, for: g ep mu pa bi chl ab q sph  with chl = 0, ab = 0
+% --------------------------------------------------------
+ptguess 7.0 504
+% --------------------------------------------------------
+xyzguess x(g)          0.906531
+xyzguess z(g)          0.326877
+xyzguess m(g)          0.240296
+xyzguess f(g)        0.00279670
+xyzguess f(ep)        0.0153317
+xyzguess Q(ep)        0.0148872  range  0.000 0.500
+xyzguess x(mu)         0.406287
+xyzguess y(mu)         0.918378
+xyzguess f(mu)      0.000226631
+xyzguess n(mu)         0.208671
+xyzguess c(mu)       0.00776199
+xyzguess x(pa)         0.406287
+xyzguess y(pa)         0.998209
+xyzguess f(pa)       3.26871e-5
+xyzguess n(pa)         0.872473
+xyzguess c(pa)        0.0592285
+xyzguess x(bi)         0.553224
+xyzguess m(bi)       0.00566868
+xyzguess y(bi)        0.0845839
+xyzguess f(bi)       0.00256220
+xyzguess t(bi)        0.0661367
+xyzguess Q(bi)         0.168928
+xyzguess x(chl)        0.414101
+xyzguess y(chl)        0.553717
+xyzguess f(chl)      0.00840314
+xyzguess m(chl)      0.00704466
+xyzguess QAl(chl)      0.437819  range -1.000 1.000
+xyzguess Q1(chl)       0.102070  range -1.000 1.000
+xyzguess Q4(chl)      0.0693655  range -1.000 1.000
+% --------------------------------------------------------
+
+% ========================================================
+rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
+rbi       g    0.001762           0    3.000000    0.997203    0.980632    0.121368    1.182706           0           0           0    0.720888    0.002797
+rbi      ep    0.011642    0.500000           3    1.484668           2           0    0.030663           0           0           0           0    0.015332
+rbi      mu    0.064991    1.000000    3.073860    1.422146    0.007762    0.048460    0.033389    0.391784    0.104335           0           0    0.000113
+rbi      pa    0.141163           1    2.942563    1.527806    0.059228    0.001064    0.000761    0.034149    0.436236           0           0    0.000016
+rbi      bi    0.128669    0.933863    2.912854    0.585865           0    1.264247    1.568026    0.500000           0    0.066137    0.017006    0.001281
+rbi     chl           0    4.000000    2.884163    1.111636           0    2.840988    2.016354           0           0           0    0.035223    0.004202
+rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
+rbi       q    0.202097           0           1           0           0           0           0           0           0           0           0           0
+rbi     H2O    0.444021           1           0           0           0           0           0           0           0           0           0           0
+rbi     sph    0.005655           0           1           0           1           0           0           0           0           1           0           0
+% ========================================================
+
+more phase diagram calculations ? no
+===============================================
+all done - hit return to exit ? yes

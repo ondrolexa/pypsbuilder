@@ -18,8 +18,11 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+#sys.path.insert(0, os.path.abspath('../pypsbuilder'))
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- General configuration ------------------------------------------------
@@ -31,8 +34,18 @@ import os
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.todo']
+extensions = [
+    'sphinx.ext.todo',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary'
+]
 
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+
+autodoc_mock_imports = ['numpy', 'matplotlib', 'scipy', 'shapely',
+                        'descartes', 'networkx', 'tqdm', 'mpl_toolkits']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -47,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'pypsbuilder'
-copyright = '2019, Ondrej Lexa'
+copyright = '2020, Ondrej Lexa'
 author = 'Ondrej Lexa'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -69,7 +82,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -77,18 +90,21 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-
+autodoc_default_options = {'member-order': 'bysource',
+                           'show-inheritance': True}
+autosummary_generate = True
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'alabaster'
+#if on_rtd:
+#    html_theme = 'sphinx_rtd_theme'
+#else:
+#    html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -159,6 +175,3 @@ texinfo_documents = [
      author, 'pypsbuilder', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

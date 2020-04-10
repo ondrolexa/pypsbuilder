@@ -52,8 +52,13 @@ coverage.xml
 # Django stuff:
 *.log
 
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
 # Sphinx documentation
 docs/_build/
+docs/api/
 
 # PyBuilder
 target/

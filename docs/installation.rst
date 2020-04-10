@@ -1,34 +1,20 @@
-============
 Installation
 ============
 
-For Anaconda distribution (for now only Linux64, Win64 and Win32 supported) you can install dependencies using conda::
+Easiest way is to use `Anaconda <https://www.anaconda.com/distribution>`_/
+`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ distribution.
 
-    conda install -c conda-forge numpy matplotlib scipy pyqt shapely descartes tqdm
+You can create an environment from an ``environment.yml`` file. Use the terminal
+or an Anaconda Prompt for the following steps:
 
-and than install pypsbuilder from ondrolexa channel::
+  1. Create the environment from the ``environment.yml`` file::
 
-    conda install -c ondrolexa pypsbuilder
+      conda env create -f environment.yml
 
-Alternatively you can install everything in one step::
+  2. Activate the new environment::
 
-    conda install -c conda-forge -c ondrolexa pypsbuilder
+      conda activate pyps
 
-For other platforms install dependencies using conda::
+  3. Install pypsbuilder directly from github using pip::
 
-    conda install -c conda-forge numpy matplotlib scipy pyqt shapely descartes tqdm
-
-or by any other mechanism (see `Installing Scientific Packages <https://packaging.python.org/science/>`_).
-
-and than install pypsbuilder directly from github using pip::
-
-    pip install https://github.com/ondrolexa/pypsbuilder/archive/master.zip
-
-For upgrade use::
-
-    pip install --upgrade --upgrade-strategy only-if-needed \
-      https://github.com/ondrolexa/pypsbuilder/archive/master.zip
-
-To install most recent (and likely less stable) development version use::
-
-    pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
+		  pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip

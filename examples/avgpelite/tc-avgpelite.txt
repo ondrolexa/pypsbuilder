@@ -1,0 +1,174 @@
+% =======================
+% axfile to use
+% =======================
+
+axfile mp50MnNCKFMASHTO
+
+% =======================
+% which phases
+% =======================
+
+setexcess q
+%tozero H2O
+
+omit  sp0 sp1 Ni NiO opx sp ta plc abh ilm ilm0 ksp0 mt0 mt1 heme
+
+% =======================
+% which conditions
+% =======================
+
+setdefTwindow   400 700
+setdefPwindow   7  16
+
+seta no
+setmu no
+setiso no
+
+% =======================
+% which calcs
+% =======================
+
+usecalcq no
+
+%{PSBDOGMIN-BEGIN}
+dogmin no
+%{PSBDOGMIN-END}
+
+calctatp ask
+
+project no
+%pseudo no
+
+calcah2o no
+calcsdnle no
+
+printbulkinfo yes
+
+pseudosection yes
+% ---------------------------------
+%
+% ---------------------------------
+%            H2O SiO2   Al2O3   CaO   MgO   FeO   K2O Na2O TiO2 MnO   O
+%{PSBBULK-BEGIN}
+setbulk yes  100 71.13  11.61   1.39  4.65  5.78 2.68 1.99 0.67 0.10 0.01
+%{PSBBULK-END}
+% ---------------------------------
+
+project no
+
+setmodeiso yes
+zeromodeiso yes
+
+samecoding mu pa
+samecoding plc pl      % rename Cbar1 plagioclase as 'pl'
+
+% =======================
+% output form/content
+% =======================
+
+c8 no
+incnler no
+drawpd yes
+
+% =======================
+% starting guess-related
+% =======================
+
+printxyz yes
+
+%{PSBGUESS-BEGIN}
+% --------------------------------------------------------
+% at P = 12.2, T = 530, for: g ep mu pa bi chl q sph  with ep = 0, chl = 0
+% --------------------------------------------------------
+ptguess 12.2 530
+% --------------------------------------------------------
+xyzguess x(g)          0.895746
+xyzguess z(g)          0.363468
+xyzguess m(g)         0.0410350
+xyzguess f(g)        0.00678038
+xyzguess f(ep)        0.0276849
+xyzguess Q(ep)        0.0267815  range  0.000 0.500
+xyzguess x(mu)         0.393592
+xyzguess y(mu)         0.793974
+xyzguess f(mu)      0.000608974
+xyzguess n(mu)         0.131763
+xyzguess c(mu)       0.00424356
+xyzguess x(pa)         0.393592
+xyzguess y(pa)         0.996170
+xyzguess f(pa)       7.88569e-5
+xyzguess n(pa)         0.935367
+xyzguess c(pa)        0.0262858
+xyzguess x(bi)         0.510023
+xyzguess m(bi)      0.000903727
+xyzguess y(bi)        0.0482653
+xyzguess f(bi)       0.00269214
+xyzguess t(bi)        0.0701203
+xyzguess Q(bi)         0.165029
+xyzguess x(chl)        0.387705
+xyzguess y(chl)        0.522592
+xyzguess f(chl)       0.0158079
+xyzguess m(chl)     0.000912921
+xyzguess QAl(chl)      0.461482  range -1.000 1.000
+xyzguess Q1(chl)       0.101436  range -1.000 1.000
+xyzguess Q4(chl)      0.0564528  range -1.000 1.000
+% --------------------------------------------------------
+%{PSBGUESS-END}
+
+% sundry starting guesses for samecoding phases
+% (over-ridden by any above)
+% ----------------------
+xyzguess  x(mu)   0.25
+xyzguess  y(mu)   0.60
+xyzguess  f(mu)   0.17
+xyzguess  n(mu)   0.06
+xyzguess  c(mu)   0.01
+% ----------------------
+xyzguess  x(pa)   0.35
+xyzguess  y(pa)   0.99
+xyzguess  f(pa)   0.02
+xyzguess  n(pa)   0.98
+xyzguess  c(pa)   0.01
+% ----------------------
+xyzguess ca(pl)       0.181802
+xyzguess k(pl)      0.00969922
+
+
+xyzguess x(cd)         0.390336
+xyzguess m(cd)        0.0555000
+xyzguess h(cd)         0.440912
+
+xyzguess i(hem)        0.200072
+xyzguess g(hem)      0.00459917
+xyzguess m(hem)               0.02  % boiled down
+xyzguess Q(hem)     -0.00224120  range -0.050 0.050
+
+xyzguess x(st)         0.936288
+xyzguess m(st)                0.04  % boiled down
+xyzguess f(st)        0.0862254
+xyzguess t(st)        0.0376599
+
+xyzguess   q(L)          0.1814
+xyzguess   fsp(L)        0.3490
+xyzguess   na(L)           0.5
+xyzguess   an(L)           0.02
+xyzguess   ol(L)        0.01373
+xyzguess   x(L)          0.7333
+xyzguess   h2o(L)        0.4276
+
+
+xyzguess i(hem)        0.200072
+xyzguess g(hem)      0.00459917
+xyzguess m(hem)               0.02  % boiled down
+xyzguess Q(hem)     -0.00224120  range -0.050 0.050
+
+
+
+xyzguess   q(L)          0.1814
+xyzguess   fsp(L)        0.3490
+xyzguess   na(L)           0.5
+xyzguess   an(L)           0.02
+xyzguess   ol(L)        0.01373
+xyzguess   x(L)          0.7333
+xyzguess   h2o(L)        0.4276
+
+*
