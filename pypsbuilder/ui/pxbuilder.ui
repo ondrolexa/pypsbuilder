@@ -477,7 +477,7 @@
               <item row="3" column="1">
                <widget class="QCheckBox" name="checkLabelInvText">
                 <property name="text">
-                 <string>Use zero phases instead numbers</string>
+                 <string>Show zero phases with numbers</string>
                 </property>
                </widget>
               </item>
@@ -494,7 +494,7 @@
               <item row="4" column="1">
                <widget class="QCheckBox" name="checkLabelUniText">
                 <property name="text">
-                 <string>Use zero phase instead numbers</string>
+                 <string>Show zero phase with numbers</string>
                 </property>
                </widget>
               </item>
@@ -598,7 +598,7 @@
               <item row="5" column="1">
                <widget class="QCheckBox" name="checkLabelDogText">
                 <property name="text">
-                 <string>Use phases instead numbers</string>
+                 <string>Show phases instead numbers</string>
                 </property>
                </widget>
               </item>

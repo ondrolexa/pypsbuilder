@@ -1349,8 +1349,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                                bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
+            invlabel_unc_kw = dict(ha='center', va='center', size=fsize,
+                                   bbox=dict(boxstyle="round,pad=0.2", fc='orange', alpha=lalfa, pad=2))
             doglabel_kw = dict(ha='center', va='center', size=fsize,
-                               bbox=dict(boxstyle="round,pad=0.2", fc='sandybrown', alpha=lalfa, pad=2))
+                               bbox=dict(boxstyle="round,pad=0.2", fc='orchid', alpha=lalfa, pad=2))
             axs = self.figure.get_axes()
             if axs:
                 self.ax = axs[0]
@@ -1368,11 +1370,23 @@ class BuildersBase(QtWidgets.QMainWindow):
                     xl, yl = uni.get_label_point()
                     self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
             for inv in self.ps.invpoints.values():
+                all_uni = inv.all_unilines()
+                isnew1, _ = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
+                isnew2, _ = self.ps.getiduni(UniLine(phases=all_uni[1][0], out=all_uni[1][1]))
+                isnew3, _ = self.ps.getiduni(UniLine(phases=all_uni[2][0], out=all_uni[2][1]))
+                isnew4, _ = self.ps.getiduni(UniLine(phases=all_uni[3][0], out=all_uni[3][1]))
+                unconnected = isnew1 or isnew2 or isnew3 or isnew4
                 if self.checkLabelInv.isChecked():
-                    self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
+                    if unconnected:
+                        self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_unc_kw)
+                    else:
+                        self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
                 else:
                     if self.checkDotInv.isChecked():
-                        self.ax.plot(inv.x, inv.y, 'k.')
+                        if unconnected:
+                            self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
+                        else:
+                            self.ax.plot(inv.x, inv.y, 'k.', ms=8)
             if self.checkLabelDog.isChecked():
                 for dgm in self.ps.dogmins.values():
                     self.ax.annotate(s=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
@@ -3285,8 +3299,14 @@ class InvModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return None
         inv = self.ps.invpoints[self.invlist[index.row()]]
-        # elif role == QtCore.Qt.ForegroundRole:
-        #     if self.invlist[index.row()][self.header.index('Data')]['manual']:
+        # highlight not finished invpoints - move to plot ???
+        # if role == QtCore.Qt.ForegroundRole:
+        #     all_uni = inv.all_unilines()
+        #     isnew1, id = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
+        #     isnew2, id = self.ps.getiduni(UniLine(phases=all_uni[1][0], out=all_uni[1][1]))
+        #     isnew3, id = self.ps.getiduni(UniLine(phases=all_uni[2][0], out=all_uni[2][1]))
+        #     isnew4, id = self.ps.getiduni(UniLine(phases=all_uni[3][0], out=all_uni[3][1]))
+        #     if isnew1 or isnew2 or isnew3 or isnew4:
         #         brush = QtGui.QBrush()
         #         brush.setColor(QtGui.QColor('red'))
         #         return brush
