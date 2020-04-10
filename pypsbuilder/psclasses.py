@@ -47,7 +47,7 @@ class TCError(Exception):
 
 
 class TCAPI(object):
-    """Class to access TC functionality in given working directory.
+    """THERMOCALC working directory API.
 
     Attributes:
         workdir (pathlib.Path): Path instance pointing to working directory.
@@ -1026,6 +1026,7 @@ class Dogmin:
 
 class PseudoBase:
     """Base class with common methods for InvPoint and UniLine.
+
     """
     def label(self, excess={}):
         """str: full label with space delimeted phases - zero mode phase."""
@@ -1292,6 +1293,9 @@ class UniLine(PseudoBase):
 
 
 class SectionBase:
+    """Base class for PTsection, TXsection and PX section
+
+    """
     def __init__(self, **kwargs):
         self.excess = kwargs.get('excess', set())
         self.invpoints = {}
@@ -1542,6 +1546,9 @@ class SectionBase:
 
 
 class PTsection(SectionBase):
+    """P-T pseudosection class
+
+    """
     def __init__(self, **kwargs):
         self.xrange = kwargs.get('trange', (200., 1000.))
         self.yrange = kwargs.get('prange', (0.1, 20.))
@@ -1567,6 +1574,9 @@ class PTsection(SectionBase):
         return bc
 
 class TXsection(SectionBase):
+    """T-X pseudosection class
+
+    """
     def __init__(self, **kwargs):
         self.xrange = kwargs.get('trange', (200., 1000.))
         self.yrange = (0., 1.)
@@ -1590,6 +1600,9 @@ class TXsection(SectionBase):
         return bc
 
 class PXsection(SectionBase):
+    """P-X pseudosection class
+
+    """
     def __init__(self, **kwargs):
         self.xrange = (0., 1.)
         self.yrange = kwargs.get('prange', (0.1, 20.))

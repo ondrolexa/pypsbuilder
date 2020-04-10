@@ -37,7 +37,8 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary'
 ]
 
 napoleon_google_docstring = True
@@ -89,7 +90,9 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-
+autodoc_default_options = {'member-order': 'bysource',
+                           'show-inheritance': True}
+autosummary_generate = True
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

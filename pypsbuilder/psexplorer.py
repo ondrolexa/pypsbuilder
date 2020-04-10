@@ -11,25 +11,10 @@ It provides four command line scipts `psgrid`, `psdrawpd`, `psshow` and `psiso`,
 or could be used interactively, e.g. within jupyter notebooks.
 
 Example:
-    Use of command line scripts::
 
-        $ psshow myproject.ptb
-
-    Interctive use::
-
-        >>> from pypsbuilder import PTPS
-        >>> pt = PTPS('/path/to/myproject.ptb')
-
-Attributes:
-    tc (TCAPI): THERMOCALC API to working directory
-    sections (dict): Storage of pseudosections
-    grids (dict): Storage of THERMOCALC calculations on grid
-    all_data_keys (dict): Dictionary of phases, end-members and variables
-    shapes (dict): Divariant field key based dictionary of shapely.Polygon
-        representation of areas
-    variance (dict): Divariant field key based dictionary of variances
-    unilists (dict): Divariant field key based dictionary of lists of
-        univariant lines IDs surrounding each field.
+    >>> from pypsbuilder import PTPS
+    >>> pt = PTPS('/path/to/myproject.ptb')
+    >>> pt.show()
 
 """
 # author: Ondrej Lexa 2020
@@ -71,7 +56,7 @@ from .psclasses import polymorphs
 
 
 class PS:
-    """Main class for pseudosections
+    """Base class for PTPS, TXPS and PXPS classes
     """
     def __init__(self, *args, **kwargs):
         """Create PTPS class instance from builder project file.
@@ -1318,7 +1303,7 @@ class PS:
             print('Not yet gridded...')
 
 class PTPS(PS):
-    """PTPS - class to postprocess ptbuilder project
+    """Class to postprocess ptbuilder project
     """
     def __init__(self, *args, **kwargs):
         self.section_class = PTsection
@@ -1599,7 +1584,7 @@ class PTPS(PS):
 
 
 class TXPS(PS):
-    """TXPS - class to postprocess txbuilder project
+    """Class to postprocess txbuilder project
     """
     def __init__(self, *args, **kwargs):
         self.section_class = TXsection
@@ -1747,7 +1732,7 @@ class TXPS(PS):
 
 
 class PXPS(PS):
-    """PXPS - class to postprocess pxbuilder project
+    """Class to postprocess pxbuilder project
     """
     def __init__(self, *args, **kwargs):
         self.section_class = PXsection

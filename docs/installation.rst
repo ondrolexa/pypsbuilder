@@ -1,10 +1,8 @@
 Installation
 ============
 
-Before release of stable version, you can install development version directly
-from GitHub. Easiest way is to use `Anaconda
-<https://www.anaconda.com/distribution>`_/`Miniconda
-<https://docs.conda.io/en/latest/miniconda.html>`_ distribution.
+Easiest way is to use `Anaconda <https://www.anaconda.com/distribution>`_/
+`Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ distribution.
 
 You can create an environment from an ``environment.yml`` file. Use the terminal
 or an Anaconda Prompt for the following steps:
