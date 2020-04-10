@@ -1,3 +1,4 @@
+name: pypsbuilder
 channels:
   - conda-forge
 dependencies:
