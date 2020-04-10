@@ -37,8 +37,7 @@ sys.path.insert(0, os.path.abspath('../'))
 extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'IPython.sphinxext.ipython_console_highlighting'
+    'sphinx.ext.napoleon'
 ]
 
 napoleon_google_docstring = True

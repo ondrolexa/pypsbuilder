@@ -3,7 +3,9 @@ Command line scripts
 
 Before any further calculations you can check and draw your pseudosection using
 `psshow` command which construct finished areas within your project. It has few
-options to label pseudosection with assamblages or highlight out phase lines.::
+options to label pseudosection with assamblages or highlight out phase lines.
+
+.. parsed-literal::
 
     $ psshow -h
     usage: psshow [-h] [-o OUT [OUT ...]] [-l] [--origwd] [-b] [--cmap CMAP]
@@ -31,7 +33,9 @@ options to label pseudosection with assamblages or highlight out phase lines.::
                             tolerance to simplify univariant lines
 
 To draw pseudosection with marked epidote-out and chlorite-out
-lines execute::
+lines execute:
+
+.. parsed-literal::
 
     $ psshow '/path/to/project.ptb' -o ep chl
 
@@ -44,7 +48,9 @@ To create isopleths diagrams the pseudoction should be gridded at first (In
 other case only values from univariant lines and invariant points are used and
 interpolated accross areas). Command `psgrid` will do all calculations and
 result are saved afterwards, so next time results are automatically loaded. Be
-aware that calculations takes some time.::
+aware that calculations takes some time.
+
+.. parsed-literal::
 
     $ psgrid -h
     usage: psgrid [-h] [--nx NX] [--ny NY] [--origwd] [--tolerance TOLERANCE]
@@ -64,13 +70,17 @@ aware that calculations takes some time.::
                             tolerance to simplify univariant lines
 
 
-For gridding pseudosection with grid 50x50 run following command::
+For gridding pseudosection with grid 50x50 run following command:
+
+.. parsed-literal::
 
     $ psgrid '/path/to/project.ptb' --nx 50 --ny 50
 		Gridding: 100%|█████████████████████████████| 2500/2500 [01:30<00:00, 27.62it/s]
 		Grid search done. 0 empty grid points left.
 
-Once gridded you can draw isopleths diagrams using `psiso` command::
+Once gridded you can draw isopleths diagrams using `psiso` command:
+
+.. parsed-literal::
 
 		$ psiso -h
     usage: psiso [-h] [-e EXPR] [-f] [--origwd] [-o OUT [OUT ...]] [--nosplit]
@@ -105,15 +115,18 @@ Once gridded you can draw isopleths diagrams using `psiso` command::
       --tolerance TOLERANCE
                             tolerance to simplify univariant lines
 
+Following example shows isopleths of garnet mode:
 
-Following example shows isopleths of garnet mode::
+.. parsed-literal::
 
     $ psiso '/path/to/project.ptb' -f g -e mode
 
 .. image:: images/psiso_mode.png
 
 If the *expression* argument is not provided, the ``psexplorer`` shows list of
-all calculated variables available for given phase. ::
+all calculated variables available for given phase.
+
+.. parsed-literal::
 
 		$ psiso '/path/to/project.ptb' -f g
 		Missing expression argument. Available variables for phase g are:
@@ -121,25 +134,33 @@ all calculated variables available for given phase. ::
 		Na2O TiO2 MnO O factor G H S V rho
 
 To draw isopleths of almandine garnet proportion you can use expression from a-x
-file `alm = x + (-m) x + (-x) z`::
+file `alm = x + (-m) x + (-x) z`:
+
+.. parsed-literal::
 
     $ psiso '/path/to/project.ptb' -f g -e 'x-m*x-x*z'
 
-or use variable `xFeX`::
+or use variable `xFeX`:
+
+.. parsed-literal::
 
 		$ psiso tutorial.ptb -f g -e xFeX
 
 .. image:: images/psiso_alm.png
 
 If you need to label contour lines, you can use labelkey option to define field,
-where contour labels are plotted::
+where contour labels are plotted.
+
+.. parsed-literal::
 
     $ psiso '/path/to/project.ptb' g -e mode --labelkey "H2O bi g mu pa pl q ru"
 		--step 0.005 --colors m
 
 .. image:: images/psiso_labelkey.png
 
-Another example of some other options::
+Another example of some other options.
+
+.. parsed-literal::
 
     $ psiso tutorial.ptb -f g -e mode --step 0.005 --high "H2O bi g mu pa pl q ru"
     --out chl ep --cmap YlGnBu_r

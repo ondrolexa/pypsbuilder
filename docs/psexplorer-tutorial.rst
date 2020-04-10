@@ -12,18 +12,19 @@ It also provides four command-line scipts `psgrid`, `psshow` and
 `psiso` for quick visualizations.
 
 To use **psexplorers** we need to import appropriate class, which contains most
-of the methods to work with pseudosection. We need to use ``PTPS`` class for
-P-T pseudosection constructed with ``ptbuilder``, ``TXPS`` class for
-T-X pseudosection constructed with ``txbuilder`` an ``PXPS`` class for
-P-X pseudosection constructed with ``pxbuilder``
+of the methods to work with pseudosection.
 
-.. code:: ipython3
+  - ``PTPS`` class for P-T pseudosection constructed with ``ptbuilder``
+  - ``TXPS`` class for T-X pseudosection constructed with ``txbuilder``
+  - ``PXPS`` class for P-X pseudosection constructed with ``pxbuilder``
+
+.. code:: python
 
     from pypsbuilder import PTPS
 
 The second step is to create instance of pseudosection using existing project file.
 
-.. code:: ipython3
+.. code:: python
 
     pt = PTPS('/some/path/project.ptb')
 
@@ -33,7 +34,7 @@ calculate compositional variations on grid. The resulting data are stored in
 project file. Note that any new modifications of the project by *pypsbuilder**
 will discard compositional variations on grid and must be calculated again.
 
-.. code:: ipython3
+.. code:: python
 
     if not pt.gridded:
         pt.calculate_composition(nx=50, ny=50)
@@ -48,7 +49,7 @@ Visualize pseudosection
 
 To show pseudosection, we can use ``show`` method
 
-.. code:: ipython3
+.. code:: python
 
     pt.show()
 
@@ -57,7 +58,7 @@ To show pseudosection, we can use ``show`` method
 The keyword arguments ``cmap`` and ``out`` could be used to modify colormap and
 highlight zero mode lines across pseudosection.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show(cmap='viridis', out=['g', 'chl'])
 
@@ -68,7 +69,7 @@ highlight zero mode lines across pseudosection.
 The keyword arguments ``bulk`` and ``label`` set whether the bulk composition
 is shown on figure and whether the fields are labeled by phases.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show(cmap='viridis', bulk=True, label=True)
 
@@ -79,7 +80,7 @@ The pseudosection ``identify`` method could be used to identify stable assemblag
 given *p* and *T* conditions. Note that returned key (Python frozenset) is used
 to identify stable assemblage in many ``PTPS`` methods.
 
-.. code:: ipython3
+.. code:: python
 
     key = pt.identify(550, 13)
     print(key)
@@ -99,7 +100,7 @@ lines and 3) on grid covering multivariate fields. To see data coverage and all
 available variables, you can use ``show_data`` method. When no variable (or expression)
 is provided, method will show available variables.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_data(key, 'g')
 
@@ -112,7 +113,7 @@ is provided, method will show available variables.
 
 Once variable is provided, the all available data are shown.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_data(key, 'g', 'xCaX')
 
@@ -123,7 +124,7 @@ Once variable is provided, the all available data are shown.
 For data on the grid you can visualize them for all diagram in once using
 ``show_grid`` method.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_grid('g', 'xCaX')
 
@@ -136,7 +137,7 @@ To create isopleths diagram you can use ``isopleths`` method. Note that
 contours are created separately for each stable assemblage allowing
 proper geometry of isopleths.
 
-.. code:: ipython3
+.. code:: python
 
     pt.isopleths('g', 'xCaX', N=14)
 
@@ -144,7 +145,7 @@ proper geometry of isopleths.
 .. image:: images/isopleths_1.png
 
 
-.. code:: ipython3
+.. code:: python
 
     pt.isopleths('chl')
 
@@ -155,7 +156,7 @@ proper geometry of isopleths.
     mode x y f m QAl Q1 Q4 xMgM1 xMnM1 xFeM1 xAlM1 xMgM23 xMnM23 xFeM23 xMgM4 xFeM4 xFe3M4 xAlM4 xSiT2 xAlT2 H2O SiO2 Al2O3 CaO MgO FeO K2O Na2O TiO2 MnO O factor G H S V rho
 
 
-.. code:: ipython3
+.. code:: python
 
     pt.isopleths('chl', 'mode')
 
@@ -171,7 +172,7 @@ path. PT path is defined by series of points (path is interpolated) and
 method ``collect_ptpath`` do actual calculations. It runs THERMOCALC
 with ptguesses obtained from existing calculations.
 
-.. code:: ipython3
+.. code:: python
 
     t = [409, 432, 468, 503, 525, 547, 575, 593, 617, 621, 616, 591, 553, 526]
     p = [10.25, 10.84, 11.72, 12.49, 12.89, 12.87, 12.44, 12.01, 11.02, 9.96,  9.13,  8.49,  7.88,  7.61]
@@ -185,7 +186,7 @@ with ptguesses obtained from existing calculations.
 
 You can see phase modes along PT path using ``show_path_modes`` method.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_path_modes(pa, exclude=['H2O'])
 
@@ -195,7 +196,7 @@ You can see phase modes along PT path using ``show_path_modes`` method.
 or show value of user-defined expression shown as colored strip on PT
 space.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_path_data(pa, 'g', 'mode')
 
@@ -209,7 +210,7 @@ Extra
 ``show_status`` method shows status of calculations on the grid.
 Possible failed calculations are shown.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_status()
 
@@ -221,7 +222,7 @@ Possible failed calculations are shown.
 Do you want to know execution time of THERMOCALC on individual grid
 points? Check ``show_delta`` method.
 
-.. code:: ipython3
+.. code:: python
 
     pt.show_delta(pointsec=True)
 
