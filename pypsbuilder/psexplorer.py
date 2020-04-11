@@ -47,7 +47,7 @@ from shapely.geometry import MultiPoint, Point
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning
-from scipy.interpolate import griddata
+from scipy.interpolate import griddata, interp2d
 from tqdm import tqdm, trange
 
 from .psclasses import TCAPI
@@ -332,12 +332,11 @@ class PS:
             for ix, grid in self.grids.items():
                 shapes = self._shapes[ix]
                 for key in shapes:
-                    res = grid.gridcalcs[grid.masks[key]]
+                    res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
                     if len(res) > 0:
-                        if np.any(res != None):
-                            res[res != None]
-                            for k in res[0]['data'].keys():
-                                data[k] = list(res[0]['data'][k].keys())
+                        for k in res[0]['data'].keys():
+                            data[k] = list(res[0]['data'][k].keys())
+
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
@@ -417,7 +416,7 @@ class PS:
         if self.gridded:
             for ix, grid in self.grids.items():
                 if key in grid.masks:
-                    results = grid.gridcalcs[grid.masks[key]]
+                    results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
                     if len(results) > 0:
                         if phase in results[0]['data']:
                             gdt = zip(grid.xg[grid.masks[key]],
@@ -750,7 +749,7 @@ class PS:
                     gd = np.empty(grid.xg.shape)
                     gd[:] = np.nan
                     for key in grid.masks:
-                        res = grid.gridcalcs[grid.masks[key]]
+                        res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
                         if len(res) > 0:
                             if phase in res[0]['data']:
                                 rows, cols = np.nonzero(grid.masks[key])
@@ -946,8 +945,7 @@ class PS:
                 Default None.
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
-                points
-
+                points. Default 4 (GridData)
             smooth (int): Values greater than zero increase the smoothness
                 of the approximation. 0 is for interpolation (default).
             refine (int): Degree of grid refinement. Default 1
@@ -977,7 +975,7 @@ class PS:
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
         else:
             # parse kwargs
-            which = kwargs.get('which', 7)
+            which = kwargs.get('which', 4)
             smooth = kwargs.get('smooth', 0)
             filled = kwargs.get('filled', True)
             out = kwargs.get('out', None)
@@ -1028,53 +1026,72 @@ class PS:
             # Thin-plate contouring of areas
             fig, ax = plt.subplots()
             for key in recs:
-                tmin, pmin, tmax, pmax = self.shapes[key].bounds
-                # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
-                # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
-                ttspace = np.arange(tmin - self.gridxstep, tmax + self.gridxstep, self.gridxstep / refine)
-                ppspace = np.arange(pmin - self.gridystep, pmax + self.gridystep, self.gridystep / refine)
-                tg, pg = np.meshgrid(ttspace, ppspace)
-                x, y = np.array(recs[key]['pts']).T
-                try:
-                    # Use scaling
+                if phase in key:
+                    tmin, pmin, tmax, pmax = self.shapes[key].bounds
+                    # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
+                    # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
+                    ttspace = np.arange(tmin - self.gridxstep, tmax + self.gridxstep, self.gridxstep / refine)
+                    ppspace = np.arange(pmin - self.gridystep, pmax + self.gridystep, self.gridystep / refine)
+                    tg, pg = np.meshgrid(ttspace, ppspace)
+                    x, y = np.array(recs[key]['pts']).T
+                    pts = recs[key]['pts']
+                    data = recs[key]['data']
+                    try:
+                        # Firstly try Rbf Use scaling
+                        with warnings.catch_warnings():
+                            warnings.filterwarnings("error")
+                            rbf = Rbf(x, self.ratio * y, data, function='thin_plate', smooth=smooth)
+                            zg = rbf(tg, self.ratio * pg)
+                    except Exception as e:
+                        # read inv and uni data in case of not enough grid points
+                        d = self.collect_data(key, phase, expr, which=7)
+                        pts = d['pts']
+                        data = d['data']
+                        try:
+                            # preprocess with griddata cubic
+                            zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
+                            # locate valid data
+                            ri, ci = np.nonzero(np.isfinite(zg_tmp))
+                            x, y, z = np.array([[tg[r, c], pg[r, c], zg_tmp[r, c]] for r,c in zip(ri, ci)]).T
+                            # do Rbf extrapolation
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings("ignore", category=LinAlgWarning)
+                                rbf = Rbf(x, self.ratio * y, z, function='multiquadric', smooth=smooth)
+                                zg = rbf(tg, self.ratio * pg)
+                        except Exception as e:
+                            print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
+                            zg = griddata(np.array(pts), data, (tg, pg), method='nearest', rescale=True)
+                    # experimental
+                    if gradient:
+                        grd = np.gradient(zg, self.gridxstep, self.gridystep)
+                        if dx:
+                            zg = grd[0]
+                        else:
+                            zg = -grd[1]
+                        if N:
+                            cntv = N
+                        else:
+                            cntv = 10
+                    # ------------
                     with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", category=LinAlgWarning)
-                        rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
-                        zg = rbf(tg, self.ratio * pg)
-                except Exception as e:
-                    print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
-                    zg = griddata(np.array(recs[key]['pts']), recs[key]['data'], (tg,pg), method='nearest', rescale=True)
-                # experimental
-                if gradient:
-                    grd = np.gradient(zg, self.gridxstep, self.gridystep)
-                    if dx:
-                        zg = grd[0]
-                    else:
-                        zg = -grd[1]
-                    if N:
-                        cntv = N
-                    else:
-                        cntv = 10
-                # ------------
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=UserWarning)
-                    if filled:
-                        cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
-                    else:
-                        cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
-                patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
-                ax.add_patch(patch)
-                for col in cont.collections:
-                    col.set_clip_path(patch)
-                # label if needed
-                if not filled and key in labelkyes_ok:
-                    positions = []
+                        warnings.filterwarnings("ignore", category=UserWarning)
+                        if filled:
+                            cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                        else:
+                            cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                    patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
+                    ax.add_patch(patch)
                     for col in cont.collections:
-                        for seg in col.get_segments():
-                            inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
-                            if np.any(inside):
-                                positions.append(seg[inside].mean(axis=0))
-                    ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
+                        col.set_clip_path(patch)
+                    # label if needed
+                    if not filled and key in labelkyes_ok:
+                        positions = []
+                        for col in cont.collections:
+                            for seg in col.get_segments():
+                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
+                                if np.any(inside):
+                                    positions.append(seg[inside].mean(axis=0))
+                        ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
             if only is None:
                 self.add_overlay(ax)
                 # zero mode lines
@@ -1391,10 +1408,10 @@ class PTPS(PS):
         if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
-        # update variable lookup table
-        self.collect_all_data_keys()
         # save
         self.save()
+        # update variable lookup table
+        self.collect_all_data_keys()
 
     def fix_solutions(self):
         """Method try to find solution for grid points with failed status.
