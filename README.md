@@ -1,7 +1,7 @@
 # pypsbuilder
 
 [![Build Status](https://travis-ci.org/ondrolexa/pypsbuilder.svg?branch=master)](https://travis-ci.org/github/ondrolexa/pypsbuilder)
-[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=master)](https://pypsbuilder.readthedocs.io/en/latest/?badge=master)
+[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=latest)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
 [![HitCount](http://hits.dwyl.com/ondrolexa/pypsbuilder.svg)](http://hits.dwyl.com/ondrolexa/pypsbuilder)
 [![Twitter](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)
 
@@ -29,7 +29,7 @@ or if you downloaded pypsbuilder repository, run in unzipped folder:
 
     pip install .
 
-## Documentation an tutorials
+## Documentation and tutorials
 
 Check documentation and tutorials on RTD [https://pypsbuilder.readthedocs.io/en/latest/](https://pypsbuilder.readthedocs.io/en/latest/)
 

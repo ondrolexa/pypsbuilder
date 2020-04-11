@@ -3,7 +3,7 @@
 ## 2.2 (11 Apr 2020) - COVID-19 release
 
 * pseudosection builders major update and refactoring
-  - psbuilder, txbuilder and pxbuilder implemented
+  - ptbuilder, txbuilder and pxbuilder implemented
   - compatible with TC 3.50
   - topology graph window added
   - dogmin implemented (results stored in projects)
