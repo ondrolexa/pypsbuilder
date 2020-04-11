@@ -1,6 +1,6 @@
 # Changes
 
-## 2.2 (XX YY 2020)
+## 2.2 (11 Apr 2020) - COVID-19 release
 
 * pseudosection builders major update and refactoring
   - psbuilder, txbuilder and pxbuilder implemented
