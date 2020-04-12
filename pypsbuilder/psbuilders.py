@@ -227,6 +227,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
         self.actionCleanup.triggered.connect(self.cleanup_storage)
+        self.actionFixphase.triggered.connect(self.fix_phasenames)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
         self.actionShow_topology.triggered.connect(self.show_topology)
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
@@ -521,6 +522,45 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.changed = True
                 self.refresh_gui()
                 self.statusBar().showMessage('Unilines cleaned.')
+        else:
+            self.statusBar().showMessage('Project is not yet initialized.')
+
+    def fix_phasenames(self):
+        if self.ready:
+            used_phases = set()
+            for inv in self.ps.invpoints.values():
+                used_phases.update(inv.phases)
+            for uni in self.ps.unilines.values():
+                used_phases.update(uni.phases)
+            for old_phase in used_phases.difference(set(self.tc.phases)):
+                text, ok = QtWidgets.QInputDialog.getText(self, 'Replace phase {} with'.format(old_phase),
+                                                               'Enter new name:')
+                if ok:
+                    new_phase = str(text).strip()
+                    for inv in self.ps.invpoints.values():
+                        if old_phase in inv.phases:
+                            inv.phases.remove(old_phase)
+                            inv.phases.add(new_phase)
+                            if not inv.manual:
+                                for res in inv.results:
+                                    if old_phase in res['data']:
+                                        res['data'][new_phase] = res['data'].pop(old_phase)
+                        if old_phase in inv.out:
+                            inv.out.remove(old_phase)
+                            inv.out.add(new_phase)
+                    for uni in self.ps.unilines.values():
+                        if old_phase in uni.phases:
+                            uni.phases.remove(old_phase)
+                            uni.phases.add(new_phase)
+                            if not uni.manual:
+                                for res in uni.results:
+                                    if old_phase in res['data']:
+                                        res['data'][new_phase] = res['data'].pop(old_phase)
+                        if old_phase in uni.out:
+                            uni.out.remove(old_phase)
+                            uni.out.add(new_phase)
+            self.changed = True
+            self.refresh_gui()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1523,7 +1563,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
                 builder_settings.setArrayIndex(ix)
-                self.recent.append(builder_settings.value("projfile", type=str))
+                projfile = builder_settings.value("projfile", type=str)
+                if Path(projfile).is_file():
+                    self.recent.append(projfile)
             builder_settings.endArray()
 
     def builder_refresh_gui(self):
@@ -1728,6 +1770,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         self.unimodel.appendRow(row[0], uni)
                         self.ps.trim_uni(row[0])
                     self.uniview.resizeColumnsToContents()
+                    self.bulk = self.tc.bulk
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -2130,7 +2173,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
                 builder_settings.setArrayIndex(ix)
-                self.recent.append(builder_settings.value("projfile", type=str))
+                projfile = builder_settings.value("projfile", type=str)
+                if Path(projfile).is_file():
+                    self.recent.append(projfile)
             builder_settings.endArray()
 
     def builder_refresh_gui(self):
@@ -2745,7 +2790,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
                 builder_settings.setArrayIndex(ix)
-                self.recent.append(builder_settings.value("projfile", type=str))
+                projfile = builder_settings.value("projfile", type=str)
+                if Path(projfile).is_file():
+                    self.recent.append(projfile)
             builder_settings.endArray()
 
     def builder_refresh_gui(self):

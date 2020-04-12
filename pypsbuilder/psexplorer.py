@@ -119,14 +119,21 @@ class PS:
             else:
                 # calculate variance
                 variance = {}
+                ok = True
                 for key in self._shapes[ix]:
-                    ans = '{}\nkill\n\n'.format(' '.join(key))
-                    tcout = self.tc.runtc(ans)
-                    for ln in tcout.splitlines():
-                        if 'variance of required equilibrium' in ln:
-                            break
-                    variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                    try:
+                        ans = '{}\nkill\n\n'.format(' '.join(key))
+                        tcout = self.tc.runtc(ans)
+                        for ln in tcout.splitlines():
+                            if 'variance of required equilibrium' in ln:
+                                break
+                        variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                    except Exception as e:
+                        variance[key] = 0
+                        ok = False
                 self._variance[ix] = variance
+                if not ok:
+                    print('Variance calculation failed.')
             # bulk
             if self.bulk is None:
                 if 'bulk' in data:
