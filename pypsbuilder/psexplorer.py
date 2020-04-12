@@ -945,7 +945,7 @@ class PS:
                 Default None.
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
-                points. Default 4 (GridData)
+                points. Default 7 (all data)
             smooth (int): Values greater than zero increase the smoothness
                 of the approximation. 0 is for interpolation (default).
             refine (int): Degree of grid refinement. Default 1
@@ -975,7 +975,7 @@ class PS:
             print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
         else:
             # parse kwargs
-            which = kwargs.get('which', 4)
+            which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
             filled = kwargs.get('filled', True)
             out = kwargs.get('out', None)
@@ -988,6 +988,7 @@ class PS:
             dx = kwargs.get('dx', True)
             only = kwargs.get('only', None)
             refine = kwargs.get('refine', 1)
+            rbf_method = kwargs.get('rbf_method', 'linear')
             colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
             labelkeys = kwargs.get('labelkeys', [])
@@ -1040,13 +1041,9 @@ class PS:
                         # Firstly try Rbf Use scaling
                         with warnings.catch_warnings():
                             warnings.filterwarnings("error")
-                            rbf = Rbf(x, self.ratio * y, data, function='thin_plate', smooth=smooth)
+                            rbf = Rbf(x, self.ratio * y, data, function=rbf_method, smooth=smooth)
                             zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
-                        # read inv and uni data in case of not enough grid points
-                        d = self.collect_data(key, phase, expr, which=7)
-                        pts = d['pts']
-                        data = d['data']
                         try:
                             # preprocess with griddata cubic
                             zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
@@ -1056,7 +1053,7 @@ class PS:
                             # do Rbf extrapolation
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("ignore", category=LinAlgWarning)
-                                rbf = Rbf(x, self.ratio * y, z, function='multiquadric', smooth=smooth)
+                                rbf = Rbf(x, self.ratio * y, z, function=rbf_method, smooth=smooth)
                                 zg = rbf(tg, self.ratio * pg)
                         except Exception as e:
                             print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
