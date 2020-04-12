@@ -182,12 +182,18 @@ class PS:
 
     @property
     def gridxstep(self):
-        v = [grid.xstep for grid in self.grids.values()]
+        if self.gridded:
+            v = [grid.xstep for grid in self.grids.values()]
+        else:
+            v = [(self.xrange[1] - self.xrange[0]) / 50]
         return sum(v) / len(v)
 
     @property
     def gridystep(self):
-        v = [grid.ystep for grid in self.grids.values()]
+        if self.gridded:
+            v = [grid.ystep for grid in self.grids.values()]
+        else:
+            v = [(self.yrange[1] - self.yrange[0]) / 50]
         return sum(v) / len(v)
 
     @property
@@ -328,15 +334,48 @@ class PS:
                 ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
         """
         data = dict()
-        if self.gridded:
-            for ix, grid in self.grids.items():
-                shapes = self._shapes[ix]
-                for key in shapes:
-                    res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
-                    if len(res) > 0:
-                        for k in res[0]['data'].keys():
-                            data[k] = list(res[0]['data'][k].keys())
-
+        for phase in self.phases:
+            # Search in invpoints
+            for ix, ps in self.sections.items():
+                for inv in ps.invpoints.values():
+                    if not inv.manual:
+                        if phase in inv.phases:
+                            data[phase] = list(inv.data()[phase].keys())
+                            break
+                if phase in data:
+                    break
+            if not phase in data:
+                # Search in unilines
+                for ix, ps in self.sections.items():
+                    for uni in ps.unilines.values():
+                        if not uni.manual:
+                            if phase in uni.phases:
+                                data[phase] = list(uni.data()[phase].keys())
+                                break
+                    if phase in data:
+                        break
+                if not phase in data:
+                    # Search in griddata
+                    for ix, grid in self.grids.items():
+                        shapes = self._shapes[ix]
+                        for key in shapes:
+                            if phase in key:
+                                res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                                if len(res) > 0:
+                                    data[phase] = list(res[0]['data'][phase].keys())
+                                    break
+                        if phase in data:
+                            break
+                    if not phase in data:
+                        print('{} not calculated.'.format(phase))
+        # if self.gridded:
+        #     for ix, grid in self.grids.items():
+        #         shapes = self._shapes[ix]
+        #         for key in shapes:
+        #             res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+        #             if len(res) > 0:
+        #                 for k in res[0]['data'].keys():
+        #                     data[k] = list(res[0]['data'][k].keys())
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
@@ -427,8 +466,8 @@ class PS:
                                 if ok == 1:
                                     dt['pts'].append((x, y))
                                     dt['data'].append(eval_expr(expr, res['data'][phase]))
-        else:
-            print('Not yet gridded...')
+        #else:
+            #print('Not yet gridded...')
         return dt
 
     def get_nearest_grid_data(self, x, y):
