@@ -1050,7 +1050,10 @@ class PseudoBase:
             idx (int): index which guesses to get.
         """
         idx = kwargs.get('idx', self.midix)
-        return self.results[idx]['ptguess']
+        try:
+            return self.results[idx]['ptguess']
+        except Exception as e:
+            return None
 
     def data(self, **kwargs):
         """dict: Get stored calculation data.
