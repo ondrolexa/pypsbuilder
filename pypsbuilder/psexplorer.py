@@ -355,49 +355,40 @@ class PS:
                 ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
         """
         data = dict()
-        for phase in self.phases:
-            # Search in invpoints
+        valid_phases = self.phases
+        for ix, ps in self.sections.items():
+            for inv in ps.invpoints.values():
+                if not inv.manual:
+                    for comp in set(inv.data().keys()).difference(set(['bulk', 'sys'])):
+                        k = comp.split(')')[0].split('(')
+                        if k[0] in valid_phases:
+                            data[comp] = list(inv.data()[comp].keys())
+
+        if not valid_phases.issubset(data.keys()):
+            # Search in unilines
             for ix, ps in self.sections.items():
-                for inv in ps.invpoints.values():
-                    if not inv.manual:
-                        if phase in inv.phases:
-                            for comp in set(inv.data().keys()).difference(set(['bulk', 'sys'])):
-                                k = comp.split(')')[0].split('(')
-                                if k[0] == phase:
-                                    data[comp] = list(inv.data()[comp].keys())
-                            break
-                if phase in data:
-                    break
-            if not phase in data:
-                # Search in unilines
-                for ix, ps in self.sections.items():
-                    for uni in ps.unilines.values():
-                        if not uni.manual:
-                            if phase in uni.phases:
-                                for comp in set(uni.data().keys()).difference(set(['bulk', 'sys'])):
+                for uni in ps.unilines.values():
+                    if not uni.manual:
+                        for comp in set(uni.data().keys()).difference(set(['bulk', 'sys'])):
+                            k = comp.split(')')[0].split('(')
+                            if k[0] in valid_phases:
+                                data[comp] = list(uni.data()[comp].keys())
+
+            if not valid_phases.issubset(data.keys()):
+                # Search in griddata
+                for ix, grid in self.grids.items():
+                    shapes = self._shapes[ix]
+                    for key in shapes:
+                        if phase in key:
+                            res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                            if len(res) > 0:
+                                for comp in set(res[0]['data'].keys()).difference(set(['bulk', 'sys'])):
                                     k = comp.split(')')[0].split('(')
-                                    if k[0] == phase:
-                                        data[comp] = list(uni.data()[comp].keys())
-                                break
-                    if phase in data:
-                        break
-                if not phase in data:
-                    # Search in griddata
-                    for ix, grid in self.grids.items():
-                        shapes = self._shapes[ix]
-                        for key in shapes:
-                            if phase in key:
-                                res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
-                                if len(res) > 0:
-                                    for comp in set(res[0]['data'].keys()).difference(set(['bulk', 'sys'])):
-                                        k = comp.split(')')[0].split('(')
-                                        if k[0] == phase:
-                                            data[comp] = list(res[0]['data'][comp].keys())
-                                    break
-                        if phase in data:
-                            break
-                    if not phase in data:
-                        print('{} not calculated.'.format(phase))
+                                    if k[0] in valid_phases:
+                                        data[comp] = list(res[0]['data'][comp].keys())
+
+                if not valid_phases.issubset(data.keys()):
+                    print('{} not calculated.'.format(phase))
         # if self.gridded:
         #     for ix, grid in self.grids.items():
         #         shapes = self._shapes[ix]
