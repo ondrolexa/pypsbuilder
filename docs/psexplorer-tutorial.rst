@@ -109,6 +109,7 @@ is provided, method will show available variables.
 
     Missing expression argument. Available variables for phase g are:
     mode x z m f xMgX xFeX xMnX xCaX xAlY xFe3Y H2O SiO2 Al2O3 CaO MgO FeO K2O Na2O TiO2 MnO O factor G H S V rho
+    Available end-members for g: kho gr alm py spss
 
 
 Once variable is provided, the all available data are shown.
@@ -154,6 +155,7 @@ proper geometry of isopleths.
 
     Missing expression argument. Available variables for phase chl are:
     mode x y f m QAl Q1 Q4 xMgM1 xMnM1 xFeM1 xAlM1 xMgM23 xMnM23 xFeM23 xMgM4 xFeM4 xFe3M4 xAlM4 xSiT2 xAlT2 H2O SiO2 Al2O3 CaO MgO FeO K2O Na2O TiO2 MnO O factor G H S V rho
+    Available end-members for chl: ames mmchl ochl1 f3clin afchl ochl4 clin daph
 
 
 .. code:: python
