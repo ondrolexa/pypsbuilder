@@ -251,6 +251,20 @@ class PS:
             keylist.extend(list(shapes.keys()))
         return set(keylist)
 
+    def check_phase_expr(self, phase, expr):
+        if phase in self.all_data_keys:
+            if expr is None:
+                msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
+                print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
+                if phase in self.endmembers:
+                    print('Available end-members for {}: {}'.format(phase, ' '.join(self.endmembers[phase])))
+                return False
+            else:
+                return True
+        else:
+            print('Unknown phase {}'.format(phase))
+            return False
+
     def get_section_id(self, x, y):
         """Return index of pseudosection and grid containing point
         """
@@ -347,7 +361,10 @@ class PS:
                 for inv in ps.invpoints.values():
                     if not inv.manual:
                         if phase in inv.phases:
-                            data[phase] = list(inv.data()[phase].keys())
+                            for comp in set(inv.data().keys()).difference(set(['bulk', 'sys'])):
+                                k = comp.split(')')[0].split('(')
+                                if k[0] == phase:
+                                    data[comp] = list(inv.data()[comp].keys())
                             break
                 if phase in data:
                     break
@@ -357,7 +374,10 @@ class PS:
                     for uni in ps.unilines.values():
                         if not uni.manual:
                             if phase in uni.phases:
-                                data[phase] = list(uni.data()[phase].keys())
+                                for comp in set(uni.data().keys()).difference(set(['bulk', 'sys'])):
+                                    k = comp.split(')')[0].split('(')
+                                    if k[0] == phase:
+                                        data[comp] = list(uni.data()[comp].keys())
                                 break
                     if phase in data:
                         break
@@ -369,7 +389,10 @@ class PS:
                             if phase in key:
                                 res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
                                 if len(res) > 0:
-                                    data[phase] = list(res[0]['data'][phase].keys())
+                                    for comp in set(res[0]['data'].keys()).difference(set(['bulk', 'sys'])):
+                                        k = comp.split(')')[0].split('(')
+                                        if k[0] == phase:
+                                            data[comp] = list(res[0]['data'][comp].keys())
                                     break
                         if phase in data:
                             break
@@ -758,10 +781,7 @@ class PS:
             Dictionary with 'pts' key storing list of coordinate tuples(t,p) and
             'data' key  storing list of thermocalc results.
         """
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-        else:
+        if self.check_phase_expr(phase, expr):
             dt = self.collect_data(key, phase, expr, which=which)
             x, y = np.array(dt['pts']).T
             fig, ax = plt.subplots()
@@ -784,10 +804,7 @@ class PS:
             label (bool): Whether to label divariant fields. Default False.
         """
         if self.gridded:
-            if expr is None:
-                msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-                print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-            else:
+            if self.check_phase_expr(phase, expr):
                 fig, ax = plt.subplots()
                 cgd = {}
                 mn, mx = sys.float_info.max, -sys.float_info.max
@@ -1016,10 +1033,7 @@ class PS:
             dt (bool): Whether the gradient should be calculated along
                 temperature or pressure. Default True.
         """
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-        else:
+        if self.check_phase_expr(phase, expr):
             # parse kwargs
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
@@ -1034,7 +1048,7 @@ class PS:
             dx = kwargs.get('dx', True)
             only = kwargs.get('only', None)
             refine = kwargs.get('refine', 1)
-            rbf_method = kwargs.get('rbf_method', 'linear')
+            rbf_func = kwargs.get('rbf_func', 'thin_plate')
             colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
             labelkeys = kwargs.get('labelkeys', [])
@@ -1073,7 +1087,8 @@ class PS:
             # Thin-plate contouring of areas
             fig, ax = plt.subplots()
             for key in recs:
-                if phase in key:
+                phase_parts = phase.split(')')[0].split('(')
+                if phase_parts[0] in key:
                     tmin, pmin, tmax, pmax = self.shapes[key].bounds
                     # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
                     # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
@@ -1087,7 +1102,7 @@ class PS:
                         # Firstly try Rbf Use scaling
                         with warnings.catch_warnings():
                             warnings.filterwarnings("error")
-                            rbf = Rbf(x, self.ratio * y, data, function=rbf_method, smooth=smooth)
+                            rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
                             zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
                         try:
@@ -1099,7 +1114,7 @@ class PS:
                             # do Rbf extrapolation
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("ignore", category=LinAlgWarning)
-                                rbf = Rbf(x, self.ratio * y, z, function=rbf_method, smooth=smooth)
+                                rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth)
                                 zg = rbf(tg, self.ratio * pg)
                         except Exception as e:
                             print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
@@ -1337,10 +1352,7 @@ class PS:
 
     def get_gridded(self, phase, expr=None, which=7, smooth=0):
         if self.gridded:
-            if expr is None:
-                msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-                print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-            else:
+            if self.check_phase_expr(phase, expr):
                 if not hasattr(self, 'masks'):
                     self.common_grid_and_masks()
                 #  interpolate on common grid
@@ -1567,10 +1579,7 @@ class PTPS(PS):
             pathwidth (int): Width of colored strip. Default 4.
             allpath (bool): Whether to plot full PT path (dashed line).
         """
-        if expr is None:
-            msg = 'Missing expression argument. Available variables for phase {} are:\n{}'
-            print(msg.format(phase, ' '.join(self.all_data_keys[phase])))
-        else:
+        if self.check_phase_expr(phase, expr):
             ex = ptpath.get_path_data(phase, expr)
             fig, ax = plt.subplots()
             if allpath:
