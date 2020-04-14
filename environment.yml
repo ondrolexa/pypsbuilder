@@ -11,4 +11,3 @@ dependencies:
 - descartes
 - tqdm
 - notebook
-- jupyterlab
