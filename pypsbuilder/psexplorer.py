@@ -94,11 +94,11 @@ class PS:
             self.sections[ix] = data['section']
             # check if workdir exists
             if not 'workdir' in data:
-                data['workdir'] = projfile.parent
+                data['workdir'] = str(projfile.parent)
             # check workdit compatibility
             if self.tc is None:
                 if origwd:
-                    tc = TCAPI(data['workdir'])
+                    tc = TCAPI(Path(data['workdir']))
                     assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc.status)
                 else:
                     tc = TCAPI(projfile.parent)
@@ -106,7 +106,7 @@ class PS:
                 self.tc = tc
             else:
                 if origwd:
-                    assert data['workdir'] == tc.workdir, 'Workdirs of merged profiles must be same.'
+                    assert data['workdir'] == str(tc.workdir), 'Workdirs of merged profiles must be same.'
                 else:
                     assert projfile.parent == tc.workdir, 'Workdirs of merged profiles must be same.'
 

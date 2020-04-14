@@ -475,7 +475,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
                 if 'section' in data: # NEW
-                    workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
+                    workdir = Path(data.get('workdir', Path(projfile).resolve().parent)).resolve()
                     if workdir == self.tc.workdir:
                         bnd, area = self.ps.range_shapes
                         # views
@@ -631,7 +631,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 'out': out,
                 'section': self.ps,
                 'tcversion': self.tc.tcversion,
-                'workdir': self.tc.workdir,
+                'workdir': str(self.tc.workdir),
                 'bulk': self.bulk,
                 'datetime': datetime.now(),
                 'version': __version__}
@@ -1630,8 +1630,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 data = pickle.load(stream)
             ##### NEW FORMAT ####
             if 'section' in data: # NEW
-                workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
-                if workdir != Path(projfile).resolve().parent:
+                active = Path(projfile).resolve().parent
+                workdir = Path(data.get('workdir', active)).resolve()
+                if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
                     reply = qb.question(self, 'Warning', move_msg,
@@ -1639,7 +1640,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                         qb.No)
 
                     if reply == qb.Yes:
-                        workdir = Path(projfile).resolve().parent
+                        workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 tc = TCAPI(workdir)
@@ -1660,11 +1661,14 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         if item.text() in data['out']:
                             item.setCheckState(QtCore.Qt.Checked)
                     # views
+                    used_phases = set()
                     for id, inv in data['section'].invpoints.items():
                         self.invmodel.appendRow(id, inv)
+                        used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
                         self.unimodel.appendRow(id, uni)
+                        used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
                     if hasattr(data['section'], 'dogmins'):
                         for id, dgm in data['section'].dogmins.items():
@@ -1682,12 +1686,30 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'])
-                        self.read_scriptfile()
+                        if data['bulk'] != self.tc.bulk:
+                            qb = QtWidgets.QMessageBox
+                            bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
+                            reply = qb.question(self, 'Bulk changed', move_msg,
+                                                qb.Yes | qb.No,
+                                                qb.No)
+                            if reply == qb.Yes:
+                                self.bulk = data['bulk']
+                                self.tc.update_scriptfile(bulk=data['bulk'])
+                                self.read_scriptfile()
+                            else:
+                                self.bulk = self.tc.bulk
+                        else:
+                            self.bulk = self.tc.bulk
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
+                    if not used_phases.issubset(set(self.tc.phases)):
+                        qb = QtWidgets.QMessageBox
+                        missing = used_phases.difference(set(self.tc.phases))
+                        if len(missing) > 1:
+                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                        else:
+                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc.status, qb.Abort)
@@ -1699,8 +1721,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                             qb.Abort)
             ##### OLD FORMAT ####
             elif data.get('version', '1.0.0') < '2.3.0':
-                workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
-                if workdir != Path(projfile).resolve().parent:
+                active = Path(projfile).resolve().parent
+                workdir = Path(data.get('workdir', active)).resolve()
+                if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
                     reply = qb.question(self, 'Warning', move_msg,
@@ -1708,7 +1731,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                         qb.No)
 
                     if reply == qb.Yes:
-                        workdir = Path(projfile).resolve().parent
+                        workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 tc = TCAPI(workdir)
@@ -2238,8 +2261,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
             if 'section' in data:
-                workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
-                if workdir != Path(projfile).resolve().parent:
+                active = Path(projfile).resolve().parent
+                workdir = Path(data.get('workdir', active)).resolve()
+                if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
                     reply = qb.question(self, 'Warning', move_msg,
@@ -2247,7 +2271,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                         qb.No)
 
                     if reply == qb.Yes:
-                        workdir = Path(projfile).resolve().parent
+                        workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 tc = TCAPI(workdir)
@@ -2267,11 +2291,14 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         if item.text() in data['out']:
                             item.setCheckState(QtCore.Qt.Checked)
                     # views
+                    used_phases = set()
                     for id, inv in data['section'].invpoints.items():
                         self.invmodel.appendRow(id, inv)
+                        used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
                         self.unimodel.appendRow(id, uni)
+                        used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
                     if hasattr(data['section'], 'dogmins'):
                         for id, dgm in data['section'].dogmins.items():
@@ -2289,13 +2316,31 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'],
-                                                  xsteps=self.spinSteps.value())
-                        self.read_scriptfile()
+                        if data['bulk'] != self.tc.bulk:
+                            qb = QtWidgets.QMessageBox
+                            bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
+                            reply = qb.question(self, 'Bulk changed', move_msg,
+                                                qb.Yes | qb.No,
+                                                qb.No)
+                            if reply == qb.Yes:
+                                self.bulk = data['bulk']
+                                self.tc.update_scriptfile(bulk=data['bulk'],
+                                                          xsteps=self.spinSteps.value())
+                                self.read_scriptfile()
+                            else:
+                                self.bulk = self.tc.bulk
+                        else:
+                            self.bulk = self.tc.bulk
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
+                    if not used_phases.issubset(set(self.tc.phases)):
+                        qb = QtWidgets.QMessageBox
+                        missing = used_phases.difference(set(self.tc.phases))
+                        if len(missing) > 1:
+                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                        else:
+                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc.status, qb.Abort)
@@ -2855,8 +2900,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
             if 'section' in data:
-                workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
-                if workdir != Path(projfile).resolve().parent:
+                active = Path(projfile).resolve().parent
+                workdir = Path(data.get('workdir', active)).resolve()
+                if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
                     reply = qb.question(self, 'Warning', move_msg,
@@ -2864,7 +2910,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                         qb.No)
 
                     if reply == qb.Yes:
-                        workdir = Path(projfile).resolve().parent
+                        workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 tc = TCAPI(workdir)
@@ -2884,11 +2930,14 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         if item.text() in data['out']:
                             item.setCheckState(QtCore.Qt.Checked)
                     # views
+                    used_phases = set()
                     for id, inv in data['section'].invpoints.items():
                         self.invmodel.appendRow(id, inv)
+                        used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
                         self.unimodel.appendRow(id, uni)
+                        used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
                     if hasattr(data['section'], 'dogmins'):
                         for id, dgm in data['section'].dogmins.items():
@@ -2906,13 +2955,31 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     if 'bulk' in data:
-                        self.bulk = data['bulk']
-                        self.tc.update_scriptfile(bulk=data['bulk'],
-                                                  xsteps=self.spinSteps.value())
-                        self.read_scriptfile()
+                        if data['bulk'] != self.tc.bulk:
+                            qb = QtWidgets.QMessageBox
+                            bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
+                            reply = qb.question(self, 'Bulk changed', move_msg,
+                                                qb.Yes | qb.No,
+                                                qb.No)
+                            if reply == qb.Yes:
+                                self.bulk = data['bulk']
+                                self.tc.update_scriptfile(bulk=data['bulk'],
+                                                          xsteps=self.spinSteps.value())
+                                self.read_scriptfile()
+                            else:
+                                self.bulk = self.tc.bulk
+                        else:
+                            self.bulk = self.tc.bulk
                     else:
                         self.bulk = self.tc.bulk
                     self.statusBar().showMessage('Project loaded.')
+                    if not used_phases.issubset(set(self.tc.phases)):
+                        qb = QtWidgets.QMessageBox
+                        missing = used_phases.difference(set(self.tc.phases))
+                        if len(missing) > 1:
+                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                        else:
+                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc.status, qb.Abort)
@@ -2935,7 +3002,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
                 if 'section' in data: # NEW
-                    workdir = data.get('workdir', Path(projfile).resolve().parent).resolve()
+                    workdir = Path(data.get('workdir', Path(projfile).resolve().parent)).resolve()
                     if workdir == self.tc.workdir:
                         bnd, area = self.ps.range_shapes
                         # views

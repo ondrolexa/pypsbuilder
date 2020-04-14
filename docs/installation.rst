@@ -17,4 +17,4 @@ or an Anaconda Prompt for the following steps:
 
   3. Install pypsbuilder directly from github using pip::
 
-		  pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
+		  pip install https://github.com/ondrolexa/pypsbuilder/archive/master.zip
