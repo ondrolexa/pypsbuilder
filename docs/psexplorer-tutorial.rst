@@ -60,7 +60,7 @@ highlight zero mode lines across pseudosection.
 
 .. code:: python
 
-    pt.show(cmap='viridis', out=['g', 'chl'])
+    pt.show(cmap='viridis', out=['g', 'chl', 'ep', 'law'])
 
 
 .. image:: images/show_out.png
@@ -88,7 +88,7 @@ to identify stable assemblage in many ``PTPS`` methods.
 
 .. parsed-literal::
 
-    frozenset({'pa', 'g', 'bi', 'mu', 'H2O', 'q', 'sph'})
+    frozenset({'sph', 'pa', 'q', 'g', 'mu', 'H2O', 'bi'})
 
 
 Access data and variables stored in project
@@ -176,8 +176,8 @@ with ptguesses obtained from existing calculations.
 
 .. code:: python
 
-    t = [409, 432, 468, 503, 525, 547, 575, 593, 617, 621, 616, 591, 553, 526]
-    p = [10.25, 10.84, 11.72, 12.49, 12.89, 12.87, 12.44, 12.01, 11.02, 9.96,  9.13,  8.49,  7.88,  7.61]
+    t = [380, 480, 580, 640, 500]
+    p = [7, 12, 15, 9, 5.5]
     pa = pt.collect_ptpath(t, p)
 
 

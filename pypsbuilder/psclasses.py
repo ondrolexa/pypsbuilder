@@ -448,10 +448,12 @@ class TCAPI(object):
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
                 variance = int(varpat.search(sections[0]).group().replace(';', ''))
                 #seenvariance = int(varpat.search(sections[0]).group())
-                if variance < 3:
-                    offset = 0
-                else:
-                    offset = 1
+                # This was needed for same cases with variance 2 ???? Need to be explored 
+                # if variance < 3:
+                #     offset = 0
+                # else:
+                #     offset = 1
+                offset = 1
                 # parse mode
                 if not sections[4 + offset].startswith('mode'): # For some reasons there is no mode in output
                     break
@@ -487,7 +489,7 @@ class TCAPI(object):
                     dt.update(sfp)
                     data[phase] = dt
                 # parse oxides
-                if variance < 3:
+                if variance < 2:
                     l1, l2 = sections[3].split('\n')[1:3]
                     ccs = l1.split()
                     #nccs = len(ccs)

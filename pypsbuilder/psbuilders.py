@@ -1689,7 +1689,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         if data['bulk'] != self.tc.bulk:
                             qb = QtWidgets.QMessageBox
                             bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
-                            reply = qb.question(self, 'Bulk changed', move_msg,
+                            reply = qb.question(self, 'Bulk changed', bulk_msg,
                                                 qb.Yes | qb.No,
                                                 qb.No)
                             if reply == qb.Yes:
