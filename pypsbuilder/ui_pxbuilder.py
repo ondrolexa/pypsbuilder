@@ -583,6 +583,8 @@ class Ui_PXBuilder(object):
         self.actionImport_from_PT.setObjectName("actionImport_from_PT")
         self.actionCleanup = QtWidgets.QAction(PXBuilder)
         self.actionCleanup.setObjectName("actionCleanup")
+        self.actionFixphase = QtWidgets.QAction(PXBuilder)
+        self.actionFixphase.setObjectName("actionFixphase")
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_PT)
         self.menuFile.addAction(self.actionNew)
@@ -596,6 +598,7 @@ class Ui_PXBuilder(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuTools.addAction(self.actionReload)
         self.menuTools.addAction(self.actionCleanup)
+        self.menuTools.addAction(self.actionFixphase)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
         self.menuHelp.addAction(self.actionAbout)
@@ -714,4 +717,5 @@ class Ui_PXBuilder(object):
         self.actionImport_project.setText(_translate("PXBuilder", "&Import into range..."))
         self.actionImport_from_PT.setText(_translate("PXBuilder", "Import from PT section"))
         self.actionCleanup.setText(_translate("PXBuilder", "Cleanup storage"))
+        self.actionFixphase.setText(_translate("PXBuilder", "Fix phasenames"))
 

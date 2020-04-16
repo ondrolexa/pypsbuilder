@@ -1056,6 +1056,7 @@
     </property>
     <addaction name="actionReload"/>
     <addaction name="actionCleanup"/>
+    <addaction name="actionFixphase"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
    </widget>
@@ -1149,6 +1150,11 @@
   <action name="actionCleanup">
    <property name="text">
     <string>Cleanup storage</string>
+   </property>
+  </action>
+  <action name="actionFixphase">
+   <property name="text">
+    <string>Fix phasenames</string>
    </property>
   </action>
  </widget>
