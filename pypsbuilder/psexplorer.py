@@ -359,7 +359,7 @@ class PS:
         for ix, ps in self.sections.items():
             for inv in ps.invpoints.values():
                 if not inv.manual:
-                    for comp in set(inv.data().keys()).difference(set(['bulk', 'sys'])):
+                    for comp in inv.data().phases:
                         k = comp.split(')')[0].split('(')
                         if k[0] in valid_phases:
                             data[comp] = list(inv.data()[comp].keys())
@@ -369,7 +369,7 @@ class PS:
             for ix, ps in self.sections.items():
                 for uni in ps.unilines.values():
                     if not uni.manual:
-                        for comp in set(uni.data().keys()).difference(set(['bulk', 'sys'])):
+                        for comp in uni.data().phases:
                             k = comp.split(')')[0].split('(')
                             if k[0] in valid_phases:
                                 data[comp] = list(uni.data()[comp].keys())
@@ -380,12 +380,12 @@ class PS:
                     shapes = self._shapes[ix]
                     for key in shapes:
                         if phase in key:
-                            res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
-                            if len(res) > 0:
-                                for comp in set(res[0]['data'].keys()).difference(set(['bulk', 'sys'])):
+                            results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                            if len(results) > 0:
+                                for comp in res[0].phases:
                                     k = comp.split(')')[0].split('(')
                                     if k[0] in valid_phases:
-                                        data[comp] = list(res[0]['data'][comp].keys())
+                                        data[comp] = list(res[0][comp].keys())
 
                 if not valid_phases.issubset(data.keys()):
                     print('{} not calculated.'.format(phase))
@@ -420,10 +420,10 @@ class PS:
                 for id_inv in self.invs_from_unilist(ix, self.unilists[ix][key]):
                     inv = ps.invpoints[id_inv]
                     if not inv.manual:
-                        if phase in inv.results[0]['data']:
+                        if phase in inv.results.phases:
                             if self.shapes[key].intersects(Point(inv._x, inv._y)):
                                 dt['pts'].append((inv._x, inv._y))
-                                dt['data'].append(eval_expr(expr, inv.results[0]['data'][phase]))
+                                dt['data'].append(eval_expr(expr, inv.data()[phase]))
         return dt
 
     def collect_uni_data(self, key, phase, expr):
@@ -447,14 +447,14 @@ class PS:
                 for id_uni in self.unilists[ix][key]:
                     uni = ps.unilines[id_uni]
                     if not uni.manual:
-                        if phase in uni.results[uni.midix]['data']:
+                        if phase in uni.results.phases:
                             edt = zip(uni._x[uni.used],
                                       uni._y[uni.used],
                                       uni.results[uni.used],)
                             for x, y, res in edt:
                                 if self.shapes[key].intersects(Point(x, y)):
                                     dt['pts'].append((x, y))
-                                    dt['data'].append(eval_expr(expr, res['data'][phase]))
+                                    dt['data'].append(eval_expr(expr, res[phase]))
         return dt
 
     def collect_grid_data(self, key, phase, expr):
@@ -478,7 +478,7 @@ class PS:
                 if key in grid.masks:
                     results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
                     if len(results) > 0:
-                        if phase in results[0]['data']:
+                        if phase in results[0].phases:
                             gdt = zip(grid.xg[grid.masks[key]],
                                       grid.yg[grid.masks[key]],
                                       results,
@@ -486,7 +486,7 @@ class PS:
                             for x, y, res, ok in gdt:
                                 if ok == 1:
                                     dt['pts'].append((x, y))
-                                    dt['data'].append(eval_expr(expr, res['data'][phase]))
+                                    dt['data'].append(eval_expr(expr, res[phase]))
         #else:
             #print('Not yet gridded...')
         return dt
@@ -803,13 +803,13 @@ class PS:
                     gd = np.empty(grid.xg.shape)
                     gd[:] = np.nan
                     for key in grid.masks:
-                        res = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
-                        if len(res) > 0:
-                            if phase in res[0]['data']:
+                        results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                        if len(results) > 0:
+                            if phase in results[0].phases:
                                 rows, cols = np.nonzero(grid.masks[key])
                                 for r, c in zip(rows, cols):
                                     if grid.status[r, c] == 1:
-                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c]['data'][phase])
+                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c][phase])
                     cgd[ix] = gd
                     mn = min(np.nanmin(gd), mn)
                     mx = max(np.nanmax(gd), mx)
@@ -1418,8 +1418,8 @@ class PTPS(PS):
                     start_time = time.time()
                     tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                     delta = time.time() - start_time
-                    status, variance, pts, res, output = self.tc.parse_logfile()
-                    if len(res) == 1:
+                    status, res, output = self.tc.parse_logfile()
+                    if res is not None:
                         grid.gridcalcs[r, c] = res[0]
                         grid.status[r, c] = 1
                         grid.delta[r, c] = delta
@@ -1438,8 +1438,8 @@ class PTPS(PS):
                         start_time = time.time()
                         tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                         delta = time.time() - start_time
-                        status, variance, pts, res, output = self.tc.parse_logfile()
-                        if len(res) == 1:
+                        status, res, output = self.tc.parse_logfile()
+                        if res is not None:
                             grid.gridcalcs[r, c] = res[0]
                             grid.status[r, c] = 1
                             grid.delta[r, c] = delta
@@ -1479,12 +1479,12 @@ class PTPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn]['ptguess'])
+                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn].ptguess)
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                                 delta = time.time() - start_time
-                                status, variance, pts, res, output = self.tc.parse_logfile()
-                                if len(res) == 1:
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
                                     grid.gridcalcs[r, c] = res[0]
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
@@ -1540,10 +1540,10 @@ class PTPS(PS):
                                 calc = self.grids[ix].gridcalcs[rn, cn]
                                 break
                     if calc is not None:
-                        self.tc.update_scriptfile(guesses=calc['ptguess'])
+                        self.tc.update_scriptfile(guesses=calc.ptguess)
                         tcout, ans = self.tc.calc_assemblage(key.difference(self.tc.excess), p, t)
-                        status, variance, pts, res, output = self.tc.parse_logfile()
-                        if len(res) == 1:
+                        status, res, output = self.tc.parse_logfile()
+                        if res is not None:
                             points.append((t, p))
                             results.append(res[0])
                     else:
@@ -1612,15 +1612,11 @@ class PTPS(PS):
         splp = interp1d(nd, ptpath.p, kind='quadratic')
         pset = set()
         for res in ptpath.results:
-            pset.update(res['data'].keys())
-
-        pset = set()
-        for res in ptpath.results:
-            for key in res['data']:
-                if 'mode' in res['data'][key] and key not in exclude:
+            for key in res.phases:
+                if key not in exclude:
                     pset.add(key)
         phases = sorted(list(pset))
-        modes = np.array([[res['data'][phase]['mode'] if phase in res['data'] else 0 for res in ptpath.results] for phase in phases])
+        modes = np.array([[res[phase]['mode'] if phase in res.phases else 0 for res in ptpath.results] for phase in phases])
         modes = 100 * modes / modes.sum(axis=0)
         cm = plt.get_cmap(cmap)
         fig, ax = plt.subplots(figsize=(12, 5))
@@ -1702,8 +1698,8 @@ class TXPS(PS):
                             start_time = time.time()
                             tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
                             delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
+                            status, res, output = self.tc.parse_logfile()
+                            if res is not None:
                                 grid.gridcalcs[r, c] = res[0]
                                 grid.status[r, c] = 1
                                 grid.delta[r, c] = delta
@@ -1722,8 +1718,8 @@ class TXPS(PS):
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
                                 delta = time.time() - start_time
-                                status, variance, pts, res, output = self.tc.parse_logfile()
-                                if len(res) == 1:
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
                                     grid.gridcalcs[r, c] = res[0]
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
@@ -1773,8 +1769,8 @@ class TXPS(PS):
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
                                 delta = time.time() - start_time
-                                status, variance, pts, res, output = self.tc.parse_logfile()
-                                if len(res) == 1:
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
                                     grid.gridcalcs[r, c] = res[0]
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
@@ -1850,8 +1846,8 @@ class PXPS(PS):
                             start_time = time.time()
                             tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
                             delta = time.time() - start_time
-                            status, variance, pts, res, output = self.tc.parse_logfile()
-                            if len(res) == 1:
+                            status, res, output = self.tc.parse_logfile()
+                            if res is not None:
                                 grid.gridcalcs[r, c] = res[0]
                                 grid.status[r, c] = 1
                                 grid.delta[r, c] = delta
@@ -1870,8 +1866,8 @@ class PXPS(PS):
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
                                 delta = time.time() - start_time
-                                status, variance, pts, res, output = self.tc.parse_logfile()
-                                if len(res) == 1:
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
                                     grid.gridcalcs[r, c] = res[0]
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
@@ -1921,8 +1917,8 @@ class PXPS(PS):
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
                                 delta = time.time() - start_time
-                                status, variance, pts, res, output = self.tc.parse_logfile()
-                                if len(res) == 1:
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
                                     grid.gridcalcs[r, c] = res[0]
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
@@ -2042,7 +2038,7 @@ class PTpath:
         self.results = results
 
     def get_path_data(self, phase, expr):
-        ex = np.array([eval_expr(expr, res['data'][phase]) if phase in res['data'] else np.nan for res in self.results])
+        ex = np.array([eval_expr(expr, res[phase]) if phase in res.phases else np.nan for res in self.results])
         return ex
 
 
