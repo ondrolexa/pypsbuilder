@@ -438,14 +438,15 @@ class BuildersBase(QtWidgets.QMainWindow):
                             self.tc.update_scriptfile(guesses=uni.ptguess())
                         tcout = self.tc.runtc(uni.cmd)
                         status, res, output = self.tc.parse_logfile()
-                        if status == 'ok' and len(res) > 1:
-                            self.ps.unilines[uni.id].variance = res.variance
-                            self.ps.unilines[uni.id]._x = res.x
-                            self.ps.unilines[uni.id]._y = res.y
-                            self.ps.unilines[uni.id].output = output
-                            self.ps.unilines[uni.id].results = res
-                            self.ps.unilines[uni.id].manual = False
-                            self.ps.trim_uni(uni.id)
+                        if status == 'ok':
+                            if len(res) > 1:
+                                self.ps.unilines[uni.id].variance = res.variance
+                                self.ps.unilines[uni.id]._x = res.x
+                                self.ps.unilines[uni.id]._y = res.y
+                                self.ps.unilines[uni.id].output = output
+                                self.ps.unilines[uni.id].results = res
+                                self.ps.unilines[uni.id].manual = False
+                                self.ps.trim_uni(uni.id)
                     if progress.wasCanceled():
                         break
                 progress.setValue(len(self.ps.unilines))
@@ -2417,14 +2418,15 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             if isnew:
                                 tcout, ans = self.tc.calc_tx(uni.phases, uni.out, trange=trange)
                                 status, res, output = self.tc.parse_logfile()
-                                if status != 'bombed' and status != 'nir' and len(res) > 1:
-                                    # rescale pts from zoomed composition
-                                    X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
-                                    uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
-                                                     variance=res.variance, y=X, x=res.x, output=output, results=res)
-                                    self.unimodel.appendRow(id_uni, uni_ok)
-                                    self.changed = True
-                                    last = id_uni
+                                if status == 'ok':
+                                    if len(res) > 1:
+                                        # rescale pts from zoomed composition
+                                        X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
+                                        uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
+                                                         variance=res.variance, y=X, x=res.x, output=output, results=res)
+                                        self.unimodel.appendRow(id_uni, uni_ok)
+                                        self.changed = True
+                                        last = id_uni
 
                     if last is not None:
                         self.uniview.resizeColumnsToContents()
@@ -3034,48 +3036,61 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.app_settings(write=True)
                 self.populate_recent()
 
-    def import_from_pt(self): ## FIXME:
+    def import_from_pt(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          self.builder_file_selector)[0]
+                                          'PTBuilder project (*.ptb)')[0]
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
                 if 'section' in data: # NEW
-                    workdir = Path(data.get('workdir', Path(projfile).resolve().parent)).resolve()
-                    if workdir == self.tc.workdir:
-                        bnd, area = self.ps.range_shapes
-                        # views
-                        id_lookup = {0:0}
-                        for id, inv in data['section'].invpoints.items():
-                            if area.intersects(inv.shape()):
-                                isnew, id_inv = self.ps.getidinv(inv)
-                                if isnew:
-                                    id_lookup[id] = id_inv
-                                    inv.id = id_inv
-                                    self.invmodel.appendRow(id_inv, inv)
-                        self.invview.resizeColumnsToContents()
-                        for id, uni in data['section'].unilines.items():
-                            if area.intersects(uni.shape()):
-                                isnew, id_uni = self.ps.getiduni(uni)
-                                if isnew:
-                                    uni.id = id_uni
-                                    uni.begin = id_lookup.get(uni.begin, 0)
-                                    uni.end = id_lookup.get(uni.end, 0)
-                                    self.unimodel.appendRow(id_uni, uni)
-                                    self.ps.trim_uni(id_uni)
+                    tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+                    extend = self.spinOver.value()
+                    prange = self.ax.get_ylim()
+                    ps = extend * (prange[1] - prange[0]) / 100
+                    prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
+                    # seek line
+                    pt_line = LineString([(tm, prange[0]), (tm, trange[1])])
+                    trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
+                              self.tc.trange[1] + self.rangeSpin.value() / 2)
+                    crange = self.ax.get_ylim()
+                    cs = extend * (crange[1] - crange[0]) / 100
+                    crange = (crange[0] - cs, crange[1] + cs)
+                    #
+                    self.statusBar().showMessage('Importing from PT section...')
+                    QtWidgets.QApplication.processEvents()
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                    # change bulk
+                    bulk = self.tc.interpolate_bulk(crange)
+                    self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+                    # only uni
+                    last = None
+                    for id, uni in data['section'].unilines.items():
+                        if pt_line.intersects(uni.shape()):
+                            isnew, id_uni = self.ps.getiduni(uni)
+                            if isnew:
+                                tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange)
+                                status, res, output = self.tc.parse_logfile()
+                                if status == 'ok':
+                                    if len(res) > 1:
+                                        # rescale pts from zoomed composition
+                                        pts[0] = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
+                                        uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
+                                                         variance=variance, y=pts[0], x=pts[1], output=output, results=res)
+                                        self.unimodel.appendRow(id_uni, uni_ok)
+                                        self.changed = True
+                                        last = id_uni
+
+                    if last is not None:
                         self.uniview.resizeColumnsToContents()
-                        #if hasattr(data['section'], 'dogmins'):
-                        #    for id, dgm in data['section'].dogmins.items():
-                        #        self.dogmodel.appendRow(id, dgm)
-                        #    self.dogview.resizeColumnsToContents()
-                        self.changed = True
-                        self.refresh_gui()
-                        self.statusBar().showMessage('Data imported.')
-                    else:
-                        qb = QtWidgets.QMessageBox
-                        qb.critical(self, 'Workdir error', 'You can import only from projects with same working directory', qb.Abort)
+                        idx = self.unimodel.getIndexID(last)
+                        self.uniview.selectRow(idx.row())
+                    # restore bulk
+                    self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+                    self.refresh_gui()
+                    QtWidgets.QApplication.restoreOverrideCursor()
+                    self.statusBar().showMessage('Data imported.')
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
