@@ -359,20 +359,20 @@ class PS:
         for ix, ps in self.sections.items():
             for inv in ps.invpoints.values():
                 if not inv.manual:
-                    for comp in inv.data().phases:
+                    for comp in inv.phases:
                         k = comp.split(')')[0].split('(')
                         if k[0] in valid_phases:
-                            data[comp] = list(inv.data()[comp].keys())
+                            data[comp] = inv.datakeys(comp)
 
         if not valid_phases.issubset(data.keys()):
             # Search in unilines
             for ix, ps in self.sections.items():
                 for uni in ps.unilines.values():
                     if not uni.manual:
-                        for comp in uni.data().phases:
+                        for comp in uni.phases:
                             k = comp.split(')')[0].split('(')
                             if k[0] in valid_phases:
-                                data[comp] = list(uni.data()[comp].keys())
+                                data[comp] = uni.datakeys(comp)
 
             if not valid_phases.issubset(data.keys()):
                 # Search in griddata
@@ -423,7 +423,7 @@ class PS:
                         if phase in inv.results.phases:
                             if self.shapes[key].intersects(Point(inv._x, inv._y)):
                                 dt['pts'].append((inv._x, inv._y))
-                                dt['data'].append(eval_expr(expr, inv.data()[phase]))
+                                dt['data'].append(eval_expr(expr, inv.results[phase]))
         return dt
 
     def collect_uni_data(self, key, phase, expr):
@@ -2054,9 +2054,9 @@ def eval_expr(expr, dt):
 
     Example:
         >>> ps = pt.sections[0]
-        >>> eval_expr('mode', ps.invpoints[5].data()['g'])
+        >>> eval_expr('mode', ps.invpoints[5].results['g'])
         0.02496698
-        >>> eval_expr('xMgX/(xFeX+xMgX)', ps.invpoints[5].data()['g'])
+        >>> eval_expr('xMgX/(xFeX+xMgX)', ps.invpoints[5].results['g'])
         0.12584215591915301
     """
     def eval_(node):

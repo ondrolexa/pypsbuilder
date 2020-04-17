@@ -1070,11 +1070,13 @@ class TCResult():
             data[phase].update({ox: float(val) for ox, val in zip(oxhead.split(), vals)})
         # modes
         head, vals = mode.split('\n')
-        for phase, val in zip(head.split()[1:], vals.split()):
+        phases = head.split()[1:]
+        for phase, val in zip(phases, vals.split()[-len(phases):]):
             data[phase].update({'mode': float(val)})
         # factors
         head, vals = factor.split('\n')
-        for phase, val in zip(head.split()[1:], vals.split()):
+        phases = head.split()[1:]
+        for phase, val in zip(phases, vals.split()[-len(phases):]):
             data[phase].update({'factor': float(val)})
         # thermodynamic state
         head, *rows = td.split('\n')
@@ -1248,19 +1250,15 @@ class PseudoBase:
             idx (int): index which guesses to get.
         """
         idx = kwargs.get('idx', self.midix)
-        return self.results.ptguess(idx)
+        return self.results[idx].ptguess
 
-    def data(self, **kwargs):
-        """dict: Get stored calculation data.
-
-        InvPoint has just single ptguess, but for UniLine idx need to be
-        specified. If omitted, the middle point from calculated ones is used.
+    def datakeys(self, phase):
+        """list: Get list of variables for phase.
 
         Args:
-            idx (int): index which guesses to get.
+            phase (str): name of phase
         """
-        idx = kwargs.get('idx', self.midix)
-        return self.results[idx]
+        return list(self.results[self.midix].data.keys())
 
 class InvPoint(PseudoBase):
     """Class to store invariant point
@@ -1290,7 +1288,7 @@ class InvPoint(PseudoBase):
         self.variance = kwargs.get('variance', 0)
         self.x = kwargs.get('x', [])
         self.y = kwargs.get('y', [])
-        self.results = kwargs.get('results', [])
+        self.results = kwargs.get('results', None)
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
 
@@ -1375,7 +1373,7 @@ class UniLine(PseudoBase):
         self.variance = kwargs.get('variance', 0)
         self._x = kwargs.get('x', np.array([]))
         self._y = kwargs.get('y', np.array([]))
-        self.results = kwargs.get('results', [])
+        self.results = kwargs.get('results', None)
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
         self.begin = kwargs.get('begin', 0)

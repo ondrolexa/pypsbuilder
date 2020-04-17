@@ -2481,7 +2481,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             # change bulk
             bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
-
             out_section = []
             cand = []
             line = uni._shape()
@@ -2748,7 +2747,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     Ym = splx([pm])
                     if np.isnan(Xm[0]):
                         status = 'nir'
-                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in p range {:.2f} - {:.2f}.'.format(min(ptcoords[0]), max(ptcoords[0])))
+                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in p range {:.2f} - {:.2f}.'.format(min(res.y), max(res.y)))
                     else:
                         ix = np.argmin((res.x - Xm)**2)
                         inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
@@ -3051,10 +3050,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     ps = extend * (prange[1] - prange[0]) / 100
                     prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
                     # seek line
-                    pt_line = LineString([(tm, prange[0]), (tm, trange[1])])
+                    pt_line = LineString([(tm, prange[0]), (tm, prange[1])])
                     trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
                               self.tc.trange[1] + self.rangeSpin.value() / 2)
-                    crange = self.ax.get_ylim()
+                    crange = self.ax.get_xlim()
                     cs = extend * (crange[1] - crange[0]) / 100
                     crange = (crange[0] - cs, crange[1] + cs)
                     #
@@ -3070,14 +3069,16 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         if pt_line.intersects(uni.shape()):
                             isnew, id_uni = self.ps.getiduni(uni)
                             if isnew:
+                                #if uni.ptguess():
+                                #    self.tc.update_scriptfile(guesses=uni.ptguess())
                                 tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange)
                                 status, res, output = self.tc.parse_logfile()
                                 if status == 'ok':
                                     if len(res) > 1:
                                         # rescale pts from zoomed composition
-                                        pts[0] = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
+                                        X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
                                         uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
-                                                         variance=variance, y=pts[0], x=pts[1], output=output, results=res)
+                                                         variance=res.variance, y=res.y, x=X, output=output, results=res)
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
@@ -3135,7 +3136,6 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             # change bulk
             bulk = self.tc.interpolate_bulk(crange)
             self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
-
             out_section = []
             cand = []
             line = uni._shape()
@@ -3401,7 +3401,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     Xm = splx([tm])
                     if np.isnan(Ym[0]):
                         status = 'nir'
-                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in p range {:.2f} - {:.2f}.'.format(min(ptcoords[0]), max(ptcoords[0])))
+                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in T range {:.2f} - {:.2f}.'.format(min(res.x), max(res.x)))
                     else:
                         ix = np.argmin((res.y - Ym)**2)
                         inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
