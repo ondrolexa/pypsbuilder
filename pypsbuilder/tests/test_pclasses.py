@@ -18,27 +18,24 @@ def test_parse_ini1(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     inv = InvPoint(phases={'bi', 'mu', 'chl', 'H2O', 'ep', 'q', 'g', 'sph', 'pa'},
                    out={'ep', 'chl'},
-                   variance=variance,
-                   x=pts[1],
-                   y=pts[0],
+                   variance=res.variance,
+                   x=res.x,
+                   y=res.y,
                    results=res,
                    output=output)
     pytest.ps.add_inv(1, inv)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 4, 'Wromg variance'
-    assert pts.shape == (2, 1), 'Wrong pts shape'
-    assert pts[0][0] == 12.2438, 'Wrong pressure'
-    assert pts[1][0] == 530.136, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 4, 'Wrong variance'
+    assert res[0].p == 12.2438, 'Wrong pressure'
+    assert res[0].T == 530.136, 'Wrong temperature'
     assert len(res) == 1, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 
 def test_parse_ini2(mock_tc):
@@ -52,27 +49,24 @@ def test_parse_ini2(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     inv = InvPoint(phases={'ep', 'pa', 'sph', 'q', 'H2O', 'mu', 'chl', 'g', 'ab', 'bi'},
                    out={'ab', 'chl'},
-                   variance=variance,
-                   x=pts[1],
-                   y=pts[0],
+                   variance=res.variance,
+                   x=res.x,
+                   y=res.y,
                    results=res,
                    output=output)
     pytest.ps.add_inv(2, inv)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 3, 'Wromg variance'
-    assert pts.shape == (2, 1), 'Wrong pts shape'
-    assert pts[0][0] == 7.0359, 'Wrong pressure'
-    assert pts[1][0] == 504.062, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 3, 'Wrong variance'
+    assert res[0].p == 7.0359, 'Wrong pressure'
+    assert res[0].T == 504.062, 'Wrong temperature'
     assert len(res) == 1, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 def test_parse_ini3(mock_tc):
     test = 'inv3'
@@ -85,27 +79,24 @@ def test_parse_ini3(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     inv = InvPoint(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep', 'ab'},
                    out={'ab', 'ep'},
-                   variance=variance,
-                   x=pts[1],
-                   y=pts[0],
+                   variance=res.variance,
+                   x=res.x,
+                   y=res.y,
                    results=res,
                    output=output)
     pytest.ps.add_inv(3, inv)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 4, 'Wromg variance'
-    assert pts.shape == (2, 1), 'Wrong pts shape'
-    assert pts[0][0] == 11.908, 'Wrong pressure'
-    assert pts[1][0] == 561.425, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 4, 'Wrong variance'
+    assert res[0].p == 11.908, 'Wrong pressure'
+    assert res[0].T == 561.425, 'Wrong temperature'
     assert len(res) == 1, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 def test_parse_uni1(mock_tc):
     test = 'uni1'
@@ -118,29 +109,26 @@ def test_parse_uni1(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     uni = UniLine(phases={'bi', 'mu', 'chl', 'H2O', 'ep', 'q', 'g', 'sph', 'pa'},
                   out={'chl'},
-                  variance=variance,
-                  x=pts[1],
-                  y=pts[0],
+                  variance=res.variance,
+				  x=res.x,
+				  y=res.y,
                   begin=2,
                   end=1,
                   results=res,
                   output=output)
     pytest.ps.add_uni(1, uni)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 4, 'Wromg variance'
-    assert pts.shape == (2, 29), 'Wrong pts shape'
-    assert pts[0][15] == 9.52, 'Wrong pressure'
-    assert pts[1][15] == 526.322, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 4, 'Wrong variance'
+    assert res[15].p == 9.52, 'Wrong pressure'
+    assert res[15].T == 526.322, 'Wrong temperature'
     assert len(res) == 29, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 def test_parse_uni2(mock_tc):
     test = 'uni2'
@@ -153,29 +141,26 @@ def test_parse_uni2(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep'},
                   out={'ep'},
-                  variance=variance,
-                  x=pts[1],
-                  y=pts[0],
+                  variance=res.variance,
+				  x=res.x,
+				  y=res.y,
                   begin=1,
                   end=3,
                   results=res,
                   output=output)
     pytest.ps.add_uni(2, uni)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 5, 'Wromg variance'
-    assert pts.shape == (2, 51), 'Wrong pts shape'
-    assert pts[0][25] == 12.0314, 'Wrong pressure'
-    assert pts[1][25] == 550.0, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 5, 'Wrong variance'
+    assert res[25].p == 12.0314, 'Wrong pressure'
+    assert res[25].T == 550.0, 'Wrong temperature'
     assert len(res) == 51, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 def test_parse_uni3(mock_tc):
     test = 'uni3'
@@ -188,29 +173,26 @@ def test_parse_uni3(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, variance, pts, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
 
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep', 'ab'},
                   out={'ab'},
-                  variance=variance,
-                  x=pts[1],
-                  y=pts[0],
+                  variance=res.variance,
+				  x=res.x,
+				  y=res.y,
                   begin=2,
                   end=3,
                   results=res,
                   output=output)
     pytest.ps.add_uni(3, uni)
 
-    assert status == 'ok', 'Wromg status'
-    assert variance == 4, 'Wromg variance'
-    assert pts.shape == (2, 28), 'Wrong pts shape'
-    assert pts[0][14] == 9.322, 'Wrong pressure'
-    assert pts[1][14] == 543.12, 'Wrong temperature'
+    assert status == 'ok', 'Wrong status'
+    assert res.variance == 4, 'Wrong variance'
+    assert res[14].p == 9.322, 'Wrong pressure'
+    assert res[14].T == 543.12, 'Wrong temperature'
     assert len(res) == 28, 'Wrong results length'
-    assert 'data' in res[0], 'No data key in results'
-    assert 'ptguess' in res[0], 'No ptguess key in results'
-    assert type(res[0]['data']) == dict, 'Wrong data type data'
-    assert type(res[0]['ptguess']) == list, 'Wrong data type of ptguess'
+    assert type(res[0].data) == dict, 'Wrong data type data'
+    assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
 def test_contains_inv():
     for uni in pytest.ps.unilines.values():
