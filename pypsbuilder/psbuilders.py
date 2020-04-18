@@ -1663,24 +1663,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     # views
                     used_phases = set()
                     for id, inv in data['section'].invpoints.items():
-                        if data.get('version') < '2.2.1':
-                            if inv.manual:
-                                inv.results = None
-                            else:
-                                inv.results = TCResultSet([TCResult(inv.x, inv.y, variance=inv.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in inv.results])
                         self.invmodel.appendRow(id, inv)
                         used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
-                        if data.get('version') < '2.2.1':
-                            if uni.manual:
-                                uni.results = None
-                            else:
-                                uni.results = TCResultSet([TCResult(uni.x, uni.y, variance=uni.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in uni.results])
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()

@@ -1252,13 +1252,16 @@ class PseudoBase:
         idx = kwargs.get('idx', self.midix)
         return self.results[idx].ptguess
 
-    def datakeys(self, phase):
+    def datakeys(self, phase=None):
         """list: Get list of variables for phase.
 
         Args:
             phase (str): name of phase
         """
-        return list(self.results[self.midix].data.keys())
+        if phase is None:
+            return list(self.results[self.midix].data.keys())
+        else:
+            return list(self.results[self.midix].data[phase].keys())
 
 class InvPoint(PseudoBase):
     """Class to store invariant point
@@ -1523,10 +1526,24 @@ class SectionBase:
         return bnd, next(polygonize(bnd))
 
     def add_inv(self, id, inv):
+        if inv.manual:
+            inv.results = None
+        else:  # temporary compatibility with 2.2.0
+            if not isinstance(inv.results, TCResultSet):
+                inv.results = TCResultSet([TCResult(float(x), float(y), variance=inv.variance,
+                                                    data=r['data'], ptguess=r['ptguess'])
+                                           for r, x, y in zip(inv.results, inv.x, inv.y)])
         self.invpoints[id] = inv
         self.invpoints[id].id = id
 
     def add_uni(self, id, uni):
+        if uni.manual:
+            uni.results = None
+        else:  # temporary compatibility with 2.2.0
+            if not isinstance(uni.results, TCResultSet):
+                uni.results = TCResultSet([TCResult(float(x), float(y), variance=uni.variance,
+                                                    data=r['data'], ptguess=r['ptguess'])
+                                           for r, x, y in zip(uni.results, uni._x, uni._y)])
         self.unilines[id] = uni
         self.unilines[id].id = id
 

@@ -359,7 +359,7 @@ class PS:
         for ix, ps in self.sections.items():
             for inv in ps.invpoints.values():
                 if not inv.manual:
-                    for comp in inv.phases:
+                    for comp in inv.datakeys():
                         k = comp.split(')')[0].split('(')
                         if k[0] in valid_phases:
                             data[comp] = inv.datakeys(comp)
@@ -369,7 +369,7 @@ class PS:
             for ix, ps in self.sections.items():
                 for uni in ps.unilines.values():
                     if not uni.manual:
-                        for comp in uni.phases:
+                        for comp in uni.datakeys():
                             k = comp.split(')')[0].split('(')
                             if k[0] in valid_phases:
                                 data[comp] = uni.datakeys(comp)
