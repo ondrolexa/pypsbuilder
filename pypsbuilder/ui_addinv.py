@@ -23,6 +23,9 @@ class Ui_AddInv(object):
         self.labelEdit.setReadOnly(True)
         self.labelEdit.setObjectName("labelEdit")
         self.horizontalLayout_2.addWidget(self.labelEdit)
+        self.checkKeep = QtWidgets.QCheckBox(AddInv)
+        self.checkKeep.setObjectName("checkKeep")
+        self.horizontalLayout_2.addWidget(self.checkKeep)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -54,6 +57,7 @@ class Ui_AddInv(object):
         _translate = QtCore.QCoreApplication.translate
         AddInv.setWindowTitle(_translate("AddInv", "Add invariant point"))
         self.label.setText(_translate("AddInv", "Label"))
+        self.checkKeep.setText(_translate("AddInv", "Keep results"))
         self.x_label.setText(_translate("AddInv", "X"))
         self.y_label.setText(_translate("AddInv", "Y"))
 

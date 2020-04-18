@@ -984,6 +984,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.ax.set_xlim([uni.x.min() - dT, uni.x.max() + dT])
         self.ax.set_ylim([uni.y.min() - dp, uni.y.max() + dp])
         self.canvas.toolbar.push_current()
+        # also highlight
+        self.clean_high()
+        self.set_phaselist(uni, show_output=True)
+        self.unihigh = self.ax.plot(uni.x, uni.y, '-', **unihigh_kw)
         self.canvas.draw()
 
     def remove_from_uni(self, uni):
@@ -1180,7 +1184,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             inv = InvPoint(phases=phases, out=out, manual=True,
                            output='User-defined invariant point.')
             isnew, id_inv = self.ps.getidinv(inv)
-            addinv = AddInv(self.ps, inv, parent=self)
+            addinv = AddInv(self.ps, inv, isnew, parent=self)
             addinv.set_from_event(event)
             respond = addinv.exec()
             if respond == QtWidgets.QDialog.Accepted:
@@ -1203,7 +1207,11 @@ class BuildersBase(QtWidgets.QMainWindow):
                                     self.uni_connect(uni.id, candidates)
                                     self.uniview.resizeColumnsToContents()
                 else:
-                    self.ps.invpoints[id_inv] = inv
+                    if addinv.checkKeep.isChecked():
+                        self.ps.invpoints[id_inv].x = inv.x
+                        self.ps.invpoints[id_inv].y = inv.y
+                    else:
+                        self.ps.invpoints[id_inv] = inv
                     for uni in self.ps.unilines.values():
                         if uni.begin == id_inv or uni.end == id_inv:
                             self.ps.trim_uni(uni.id)
@@ -1386,6 +1394,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             lalfa = self.spinAlpha.value() / 100
             fsize = self.spinFontsize.value()
             unilabel_kw = dict(ha='center', va='center', size=fsize,
+                               bbox=dict(boxstyle="round,pad=0.2", fc='lightskyblue', alpha=lalfa, pad=2))
+            unilabel_unc_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
@@ -1407,26 +1417,39 @@ class BuildersBase(QtWidgets.QMainWindow):
             for uni in self.ps.unilines.values():
                 self.ax.plot(uni.x, uni.y, 'k')
                 if self.checkLabelUni.isChecked():
-                    xl, yl = uni.get_label_point()
-                    self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
+                    if uni.connected < 2:
+                        xl, yl = uni.get_label_point()
+                        self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_unc_kw)
+                    else:
+                        if not self.checkHidedone.isChecked():
+                            xl, yl = uni.get_label_point()
+                            self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
             for inv in self.ps.invpoints.values():
                 all_uni = inv.all_unilines()
-                isnew1, _ = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
-                isnew2, _ = self.ps.getiduni(UniLine(phases=all_uni[1][0], out=all_uni[1][1]))
-                isnew3, _ = self.ps.getiduni(UniLine(phases=all_uni[2][0], out=all_uni[2][1]))
-                isnew4, _ = self.ps.getiduni(UniLine(phases=all_uni[3][0], out=all_uni[3][1]))
+                isnew1, id_uni = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
+                if not isnew1:
+                    isnew1 = not (self.ps.unilines[id_uni].begin == inv.id or self.ps.unilines[id_uni].end == inv.id)
+                isnew2, id_uni = self.ps.getiduni(UniLine(phases=all_uni[1][0], out=all_uni[1][1]))
+                if not isnew2:
+                    isnew2 = not (self.ps.unilines[id_uni].begin == inv.id or self.ps.unilines[id_uni].end == inv.id)
+                isnew3, id_uni = self.ps.getiduni(UniLine(phases=all_uni[2][0], out=all_uni[2][1]))
+                if not isnew3:
+                    isnew3 = not (self.ps.unilines[id_uni].begin == inv.id or self.ps.unilines[id_uni].end == inv.id)
+                isnew4, id_uni = self.ps.getiduni(UniLine(phases=all_uni[3][0], out=all_uni[3][1]))
+                if not isnew4:
+                    isnew4 = not (self.ps.unilines[id_uni].begin == inv.id or self.ps.unilines[id_uni].end == inv.id)
                 unconnected = isnew1 or isnew2 or isnew3 or isnew4
                 if self.checkLabelInv.isChecked():
                     if unconnected:
                         self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_unc_kw)
                     else:
-                        self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
+                        if not self.checkHidedone.isChecked():
+                            self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
                 else:
-                    if self.checkDotInv.isChecked():
-                        if unconnected:
-                            self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
-                        else:
-                            self.ax.plot(inv.x, inv.y, 'k.', ms=8)
+                    if unconnected:
+                        self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
+                    else:
+                        self.ax.plot(inv.x, inv.y, 'k.', ms=8)
             if self.checkLabelDog.isChecked():
                 for dgm in self.ps.dogmins.values():
                     self.ax.annotate(s=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
@@ -1529,7 +1552,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
+            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -1552,7 +1575,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -1863,13 +1886,15 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             uni = self.ps.unilines[self.unimodel.data(idx[0])]
             phases = uni.phases
             out = uni.out
+            old_guesses = None
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
-                old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                if not self.ps.invpoints[inv_id].manual:
+                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -1909,14 +1934,14 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         exists, inv_id = '*', str(id)
                     cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
 
-            # set original ptguesses when asked
-            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+            # set original ptguesses when neede
+            if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
                 txt = '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
-                for cc in sorted(cand):
+                for cc in sorted(cand, key=lambda elem: elem[0]):
                     txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
@@ -2162,7 +2187,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
+            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -2185,7 +2210,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -2447,13 +2472,15 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             uni = self.ps.unilines[self.unimodel.data(idx[0])]
             phases = uni.phases
             out = uni.out
+            old_guesses = None
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
-                old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                if not self.ps.invpoints[inv_id].manual:
+                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -2525,8 +2552,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     else:
                         out_section.append((res.x[0], res.y[0], exists, ' '.join(inv.out), inv_id))
 
-            # set original ptguesses when asked
-            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+            # set original ptguesses when needed
+            if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
@@ -2535,7 +2562,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
             if cand:
                 txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
-                for cc in sorted(cand):
+                for cc in sorted(cand, key=lambda elem: elem[0]):
                     txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
@@ -2815,7 +2842,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("dot_inv", self.checkDotInv.checkState())
+            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -2838,7 +2865,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkDotInv.setCheckState(builder_settings.value("dot_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -3102,13 +3129,15 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             uni = self.ps.unilines[self.unimodel.data(idx[0])]
             phases = uni.phases
             out = uni.out
+            old_guesses = None
             self.statusBar().showMessage('Searching for invariant points...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
-                old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                if not self.ps.invpoints[inv_id].manual:
+                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
             trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
@@ -3180,8 +3209,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     else:
                         out_section.append((res.x[0], pres.y[0], exists, ' '.join(inv.out), inv_id))
 
-            # set original ptguesses when asked
-            if uni.connected == 1 and self.checkUseInvGuess.isChecked():
+            # set original ptguesses when needed
+            if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
@@ -3190,7 +3219,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
             if cand:
                 txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
-                for cc in sorted(cand):
+                for cc in sorted(cand, key=lambda elem: elem[0]):
                     txt += n_format.format(*cc[1:])
 
                 self.textOutput.setPlainText(txt)
@@ -3703,13 +3732,19 @@ class DogminModel(QtCore.QAbstractTableModel):
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
     """Add inv dialog class
     """
-    def __init__(self, ps, inv, parent=None):
+    def __init__(self, ps, inv, isnew, parent=None):
         super(AddInv, self).__init__(parent)
         self.setupUi(self)
         self.labelEdit.setText(inv.label(ps.excess))
         # labels
         self.x_label.setText(ps.x_var)
         self.y_label.setText(ps.y_var)
+        # Keep Results
+        self.checkKeep.setCheckState(QtCore.Qt.Unchecked)
+        if isnew:
+            self.checkKeep.setEnabled(False)
+        else:
+            self.checkKeep.setEnabled(True)
         # validator
         validator = QtGui.QDoubleValidator()
         validator.setLocale(QtCore.QLocale.c())

@@ -1,5 +1,13 @@
 # Changes
 
+### 2.2.1 (XX YY 2020)
+
+ * bugfix release
+ * option to to move invpoint and keep results
+   (useful to fine-tune topology)
+ * tool to cleanup storage (trim metastable calculations)
+ * option to hide labels of connected lines and points
+
 ## 2.2 (11 Apr 2020) - COVID-19 release
 
 * pseudosection builders major update and refactoring

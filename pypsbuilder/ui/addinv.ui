@@ -30,6 +30,13 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QCheckBox" name="checkKeep">
+       <property name="text">
+        <string>Keep results</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
