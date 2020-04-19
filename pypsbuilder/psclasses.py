@@ -1062,7 +1062,7 @@ class TCResult():
         oxhead, vals = bulk.split('\n')[1:]
         for ox, val in zip(oxhead.split(), vals.split()[1:]): # skip oxide compositions row
             bulk_vals[ox] = float(val)
-        data['bulk'] = bulk
+        data['bulk'] = bulk_vals
         step = float(vals.split()[-1]) - 1 # steps should starts with 0
         # rbi
         for row in rbi.split('\n'):
