@@ -84,6 +84,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.outhigh = None
         self.presenthigh = None
         self.cid = None
+        self.did = None
 
         # Create figure
         self.figure = Figure(facecolor='white')
@@ -1068,6 +1069,11 @@ class BuildersBase(QtWidgets.QMainWindow):
 
     def add_userdefined(self, checked=True):
         if self.ready:
+            if self.did is not None:
+                self.canvas.mpl_disconnect(self.did)
+                #self.did.disconnect_events()
+                self.did = None
+                self.pushDogmin.setChecked(False)
             phases, out = self.get_phases_out()
             if len(out) == 1:
                 if checked:
@@ -1159,16 +1165,25 @@ class BuildersBase(QtWidgets.QMainWindow):
                             self.toolbar.pan()
                         elif self.toolbar._active == "ZOOM":
                             self.toolbar.zoom()
-                        self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
-                        self.cid.connect_event('button_press_event', self.clicker)
+                        #self.cid = Cursor(self.ax, useblit=True, color='red', linewidth=1)
+                        #self.cid.connect_event('button_press_event', self.clicker)
+                        self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
                         self.tabMain.setCurrentIndex(0)
                         self.statusBar().showMessage('Click on canvas to add invariant point.')
+                        QtWidgets.QApplication.processEvents()
+                        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
+                        #self.pushDogmin.toggled.disconnect()
+                        #self.pushDogmin.setCheckable(False)
                 else:
+                    #self.pushDogmin.toggled.connect(self.do_dogmin)
+                    #self.pushDogmin.setCheckable(True)
+                    self.statusBar().showMessage('')
                     if self.cid is not None:
                         self.canvas.mpl_disconnect(self.cid)
-                        self.statusBar().showMessage('')
-                        self.cid.disconnect_events()
+                        #self.cid.disconnect_events()
                         self.cid = None
+                        self.pushManual.setChecked(False)
+                    QtWidgets.QApplication.restoreOverrideCursor()
             else:
                 self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
                 self.pushManual.setChecked(False)
@@ -1177,9 +1192,9 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.pushManual.setChecked(False)
 
     def clicker(self, event):
-        self.cid.onmove(event)
+        #self.cid.onmove(event)
         if event.inaxes is not None:
-            self.cid.clear(event)
+            #self.cid.clear(event)
             phases, out = self.get_phases_out()
             inv = InvPoint(phases=phases, out=out, manual=True,
                            output='User-defined invariant point.')
@@ -1330,6 +1345,11 @@ class BuildersBase(QtWidgets.QMainWindow):
 
     def do_dogmin(self, checked=True):
         if self.ready:
+            if self.cid is not None:
+                self.canvas.mpl_disconnect(self.cid)
+                #self.cid.disconnect_events()
+                self.cid = None
+                self.pushManual.setChecked(False)
             if checked:
                 phases, out = self.get_phases_out()
                 which = phases.difference(self.ps.excess)
@@ -1339,23 +1359,26 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.toolbar.pan()
                     elif self.toolbar._active == "ZOOM":
                         self.toolbar.zoom()
-                    self.cid = Cursor(self.ax, useblit=False, color='red', linewidth=1)
-                    self.cid.connect_event('button_press_event', self.dogminer)
+                    #self.did = Cursor(self.ax, useblit=True, color='red', linewidth=1)
+                    #self.did.connect_event('button_press_event', self.dogminer)
+                    self.did = self.canvas.mpl_connect('button_press_event', self.dogminer)
                     self.tabMain.setCurrentIndex(0)
                     self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
-                    self.pushManual.toggled.disconnect()
-                    self.pushManual.setCheckable(False)
+                    QtWidgets.QApplication.processEvents()
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
+                    #self.pushManual.toggled.disconnect()
+                    #self.pushManual.setCheckable(False)
                 else:
                     self.statusBar().showMessage('You need to select phases to consider for dogmin.')
+                    self.pushDogmin.setChecked(False)
             else:
-                self.tc.update_scriptfile(dogmin='no')
-                self.read_scriptfile()
+                #self.pushManual.toggled.connect(self.add_userdefined)
+                #self.pushManual.setCheckable(True)
+                if self.did is not None:
+                    self.canvas.mpl_disconnect(self.did)
+                    #self.did.disconnect_events()
+                    self.did = None
                 QtWidgets.QApplication.restoreOverrideCursor()
-                self.statusBar().showMessage('')
-                self.pushManual.toggled.connect(self.add_userdefined)
-                self.pushManual.setCheckable(True)
-                self.cid.disconnect_events()
-                self.cid = None
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
             self.pushDogmin.setChecked(False)
@@ -1950,9 +1973,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        self.cid.onmove(event)
+        #self.did.onmove(event)
         if event.inaxes is not None:
-            self.cid.clear(event)
+            #self.did.clear(event)
             phases, out = self.get_phases_out()
             which = phases.difference(self.ps.excess)
             variance = self.spinVariance.value()
@@ -1966,6 +1989,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            # restore scriptfile
+            self.tc.update_scriptfile(dogmin='no')
+            self.read_scriptfile()
+            QtWidgets.QApplication.restoreOverrideCursor()
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
@@ -2579,9 +2606,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        self.cid.onmove(event)
+        #self.did.onmove(event)
         if event.inaxes is not None:
-            self.cid.clear(event)
+            #self.did.clear(event)
             phases, out = self.get_phases_out()
             which = phases.difference(self.ps.excess)
             variance = self.spinVariance.value()
@@ -2599,6 +2626,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            # restore scriptfile
+            self.tc.update_scriptfile(dogmin='no')
+            self.read_scriptfile()
+            QtWidgets.QApplication.restoreOverrideCursor()
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
@@ -3236,9 +3267,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        self.cid.onmove(event)
+        #self.did.onmove(event)
         if event.inaxes is not None:
-            self.cid.clear(event)
+            #self.did.clear(event)
             phases, out = self.get_phases_out()
             which = phases.difference(self.ps.excess)
             variance = self.spinVariance.value()
@@ -3256,6 +3287,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(variance)
+            # restore scriptfile
+            self.tc.update_scriptfile(dogmin='no')
+            self.read_scriptfile()
+            QtWidgets.QApplication.restoreOverrideCursor()
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
             output, resic = self.tc.parse_dogmin()
             if output is not None:
