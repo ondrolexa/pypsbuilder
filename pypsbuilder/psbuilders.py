@@ -2089,25 +2089,27 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    idx = []
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        q_val = q(res[p]['mode'])
-                                        if np.isfinite(q_val):
-                                            idx.append(np.ceil(q_val))
+                                    if not x in uni_old._x and not y in uni_old._y:
+                                        idx = []
+                                        for p in uni_old.phases.difference(uni_old.out):
+                                            q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                            q_val = q(res[p]['mode'])
+                                            if np.isfinite(q_val):
+                                                idx.append(np.ceil(q_val))
 
-                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
-                                    values, counts = np.unique(idx_clip, return_counts=True)
-                                    nix = values[np.argmax(counts)]
-                                    # insert data to temporary dict
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        dt[p].insert(nix, res[p]['mode'])
-                                    # insert real data
-                                    uni_old.results.insert(nix, res)
-                                    uni_old._x = np.insert(uni_old._x, nix, x)
-                                    uni_old._y = np.insert(uni_old._y, nix, y)
-                                    N += 1
-                                uni_old.output += uni.output
+                                        idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                        values, counts = np.unique(idx_clip, return_counts=True)
+                                        if counts.size > 0:
+                                            nix = values[np.argmax(counts)]
+                                            # insert data to temporary dict
+                                            for p in uni_old.phases.difference(uni_old.out):
+                                                dt[p].insert(nix, res[p]['mode'])
+                                            # insert real data
+                                            uni_old.results.insert(nix, res)
+                                            uni_old._x = np.insert(uni_old._x, nix, x)
+                                            uni_old._y = np.insert(uni_old._y, nix, y)
+                                            N += 1
+                                uni_old.output += uni.output # Really
                                 self.ps.trim_uni(id_uni)
                                 if self.checkAutoconnectUni.isChecked():
                                     if len(candidates) == 2:
@@ -2731,25 +2733,26 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    idx = []
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        q_val = q(res[p]['mode'])
-                                        if np.isfinite(q_val):
-                                            idx.append(np.ceil(q_val))
-
-                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
-                                    values, counts = np.unique(idx_clip, return_counts=True)
-                                    if counts.size > 0:
-                                        nix = values[np.argmax(counts)]
-                                        # insert data to temporary dict
+                                    if not x in uni_old._x and not y in uni_old._y:
+                                        idx = []
                                         for p in uni_old.phases.difference(uni_old.out):
-                                            dt[p].insert(nix, res[p]['mode'])
-                                        # insert real data
-                                        uni_old.results.insert(nix, res)
-                                        uni_old._x = np.insert(uni_old._x, nix, x)
-                                        uni_old._y = np.insert(uni_old._y, nix, y)
-                                        N += 1
+                                            q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                            q_val = q(res[p]['mode'])
+                                            if np.isfinite(q_val):
+                                                idx.append(np.ceil(q_val))
+
+                                        idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                        values, counts = np.unique(idx_clip, return_counts=True)
+                                        if counts.size > 0:
+                                            nix = values[np.argmax(counts)]
+                                            # insert data to temporary dict
+                                            for p in uni_old.phases.difference(uni_old.out):
+                                                dt[p].insert(nix, res[p]['mode'])
+                                            # insert real data
+                                            uni_old.results.insert(nix, res)
+                                            uni_old._x = np.insert(uni_old._x, nix, x)
+                                            uni_old._y = np.insert(uni_old._y, nix, y)
+                                            N += 1
                                 uni_old.output += uni.output
                                 self.ps.trim_uni(id_uni)
                                 if self.checkAutoconnectUni.isChecked():
@@ -3392,24 +3395,26 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    idx = []
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
-                                        q_val = q(res[p]['mode'])
-                                        if np.isfinite(q_val):
-                                            idx.append(np.ceil(q_val))
+                                    if not x in uni_old._x and not y in uni_old._y:
+                                        idx = []
+                                        for p in uni_old.phases.difference(uni_old.out):
+                                            q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
+                                            q_val = q(res[p]['mode'])
+                                            if np.isfinite(q_val):
+                                                idx.append(np.ceil(q_val))
 
-                                    idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
-                                    values, counts = np.unique(idx_clip, return_counts=True)
-                                    nix = values[np.argmax(counts)]
-                                    # insert data to temporary dict
-                                    for p in uni_old.phases.difference(uni_old.out):
-                                        dt[p].insert(nix, res['data'][p]['mode'])
-                                    # insert real data
-                                    uni_old.results.insert(nix, res)
-                                    uni_old._x = np.insert(uni_old._x, nix, x)
-                                    uni_old._y = np.insert(uni_old._y, nix, y)
-                                    N += 1
+                                        idx_clip = np.clip(np.array(idx, dtype=int), 0, N)
+                                        values, counts = np.unique(idx_clip, return_counts=True)
+                                        if counts.size > 0:
+                                            nix = values[np.argmax(counts)]
+                                            # insert data to temporary dict
+                                            for p in uni_old.phases.difference(uni_old.out):
+                                                dt[p].insert(nix, res['data'][p]['mode'])
+                                            # insert real data
+                                            uni_old.results.insert(nix, res)
+                                            uni_old._x = np.insert(uni_old._x, nix, x)
+                                            uni_old._y = np.insert(uni_old._y, nix, y)
+                                            N += 1
                                 uni_old.output += uni.output
                                 self.ps.trim_uni(id_uni)
                                 if self.checkAutoconnectUni.isChecked():

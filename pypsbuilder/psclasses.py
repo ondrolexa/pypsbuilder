@@ -1399,7 +1399,7 @@ class UniLine(PseudoBase):
 
     @property
     def midix(self):
-        return (self.used.start + self.used.stop) // 2
+        return int((self.used.start + self.used.stop) // 2)
 
     @property
     def connected(self):
@@ -1643,8 +1643,8 @@ class SectionBase:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            uni.used = slice(np.flatnonzero(vdst >= d1)[0],
-                             np.flatnonzero(vdst <= d2)[-1] + 1)
+            uni.used = slice(np.flatnonzero(vdst >= d1)[0].item(),
+                             np.flatnonzero(vdst <= d2)[-1].item() + 1)
 
         # concatenate begin, keep, end
         if uni.begin > 0:
