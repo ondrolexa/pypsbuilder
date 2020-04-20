@@ -329,6 +329,14 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.phasemodel.itemChanged.disconnect(self.phase_changed)
         except Exception:
             pass
+        if self.cid is not None:
+            self.canvas.mpl_disconnect(self.cid)
+            self.cid = None
+            self.pushManual.setChecked(False)
+        if self.did is not None:
+            self.canvas.mpl_disconnect(self.did)
+            self.did = None
+            self.pushDogmin.setChecked(False)
         self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + self.tc.tcout)
         self.phasemodel.clear()
         self.outmodel.clear()
@@ -348,6 +356,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.invhigh = None
         self.outhigh = None
         self.presenthigh = None
+        self.tabMain.setCurrentIndex(0)
         self.statusBar().showMessage('Ready')
 
     def import_from_old(self): ## FIXME:
@@ -1378,6 +1387,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.canvas.mpl_disconnect(self.did)
                     #self.did.disconnect_events()
                     self.did = None
+                    self.pushDogmin.setChecked(False)
                 QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
