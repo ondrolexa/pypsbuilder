@@ -422,19 +422,30 @@ class TCAPI(object):
         if do_parse:
             lines = [ln for ln in output.splitlines() if ln != '']
             # parse ptguesses
-            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith('ptguess')]
+            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith('--------------------------------------------------------------------')]
             bstarts.append(len(lines))
             ptguesses = []
+            corrects = []
             for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                block = lines[bs - 3:be]
+                block = lines[bs:be]
+                if block[2].startswith('#'):
+                    corrects.append(False)
+                else:
+                    corrects.append(True)
                 xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                ptguesses.append(block[:xyz[-1] + 2])
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                gixe = xyz[-1] + 2
+                ptguesses.append(block[gixs:gixe])
             # parse icfile
             blocks = resic.split('\n===========================================================\n\n')[1:]
             # done
             if len(blocks) > 0:
-                status = 'ok'
-                results = TCResultSet([TCResult.from_block(block, ptguess) for block, ptguess in zip(blocks, ptguesses)])
+                rlist = [TCResult.from_block(block, ptguess) for block, ptguess, correct in zip(blocks, ptguesses, corrects) if correct]
+                if len(rlist) > 0:
+                    status = 'ok'
+                    results = TCResultSet(rlist)
+                else:
+                    status = 'nir'
             else:
                 status = 'nir'
         return status, results, output
