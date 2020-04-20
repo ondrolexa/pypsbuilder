@@ -422,15 +422,13 @@ class TCAPI(object):
         if do_parse:
             lines = [ln for ln in output.splitlines() if ln != '']
             # parse ptguesses
-            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
+            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith('ptguess')]
             bstarts.append(len(lines))
             ptguesses = []
             for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                block = lines[bs:be]
+                block = lines[bs - 3:be]
                 xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
-                gixe = xyz[-1] + 2
-                ptguesses.append(block[gixs:gixe])
+                ptguesses.append(block[:xyz[-1] + 2])
             # parse icfile
             blocks = resic.split('\n===========================================================\n\n')[1:]
             # done
