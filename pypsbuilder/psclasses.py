@@ -434,7 +434,7 @@ class TCAPI(object):
             # parse icfile
             blocks = resic.split('\n===========================================================\n\n')[1:]
             # done
-            if len(block) > 0:
+            if len(blocks) > 0:
                 status = 'ok'
                 results = TCResultSet([TCResult.from_block(block, ptguess) for block, ptguess in zip(blocks, ptguesses)])
             else:
