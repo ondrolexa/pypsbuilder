@@ -1692,7 +1692,7 @@ class TXPS(PS):
                                 if d2 < dst:
                                     dst = d2
                                     id_close = id_inv
-                            if id_close != last_inv:
+                            if id_close != last_inv and not ps.invpoints[id_close].manual:
                                 self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
                                 last_inv = id_close
                             grid.status[r, c] = 0
@@ -1709,12 +1709,13 @@ class TXPS(PS):
                                 dst = sys.float_info.max
                                 for id_uni in self.unilists[ix][k]:
                                     uni = ps.unilines[id_uni]
-                                    for vix in list(range(len(uni._x))[uni.used]):
-                                        d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
-                                        if d2 < dst:
-                                            dst = d2
-                                            id_close = id_uni
-                                            vix_close = vix
+                                    if not uni.manual:
+                                        for vix in list(range(len(uni._x))[uni.used]):
+                                            d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                            if d2 < dst:
+                                                dst = d2
+                                                id_close = id_uni
+                                                vix_close = vix
                                 self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
@@ -1840,7 +1841,7 @@ class PXPS(PS):
                                 if d2 < dst:
                                     dst = d2
                                     id_close = id_inv
-                            if id_close != last_inv:
+                            if id_close != last_inv and not ps.invpoints[id_close].manual:
                                 self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
                                 last_inv = id_close
                             grid.status[r, c] = 0
@@ -1857,12 +1858,13 @@ class PXPS(PS):
                                 dst = sys.float_info.max
                                 for id_uni in self.unilists[ix][k]:
                                     uni = ps.unilines[id_uni]
-                                    for vix in list(range(len(uni._x))[uni.used]):
-                                        d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
-                                        if d2 < dst:
-                                            dst = d2
-                                            id_close = id_uni
-                                            vix_close = vix
+                                    if not uni.manual:
+                                        for vix in list(range(len(uni._x))[uni.used]):
+                                            d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                            if d2 < dst:
+                                                dst = d2
+                                                id_close = id_uni
+                                                vix_close = vix
                                 self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
