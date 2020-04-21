@@ -423,7 +423,7 @@ class PS:
                         if phase in inv.results.phases:
                             if self.shapes[key].intersects(Point(inv._x, inv._y)):
                                 dt['pts'].append((inv._x, inv._y))
-                                dt['data'].append(eval_expr(expr, inv.results[phase]))
+                                dt['data'].append(eval_expr(expr, inv.results[0][phase]))
         return dt
 
     def collect_uni_data(self, key, phase, expr):
