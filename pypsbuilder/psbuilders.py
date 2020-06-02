@@ -1687,7 +1687,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             ##### NEW FORMAT ####
             if 'section' in data: # NEW
                 active = Path(projfile).resolve().parent
-                workdir = Path(data.get('workdir', active)).resolve()
+                try:
+                    workdir = Path(data.get('workdir', active)).resolve()
+                except PermissionError:
+                    workdir = active
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
@@ -1778,7 +1781,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             ##### OLD FORMAT ####
             elif data.get('version', '1.0.0') < '2.3.0':
                 active = Path(projfile).resolve().parent
-                workdir = Path(data.get('workdir', active)).resolve()
+                try:
+                    workdir = Path(data.get('workdir', active)).resolve()
+                except PermissionError:
+                    workdir = active
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
@@ -2326,7 +2332,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 data = pickle.load(stream)
             if 'section' in data:
                 active = Path(projfile).resolve().parent
-                workdir = Path(data.get('workdir', active)).resolve()
+                try:
+                    workdir = Path(data.get('workdir', active)).resolve()
+                except PermissionError:
+                    workdir = active
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
@@ -2986,7 +2995,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 data = pickle.load(stream)
             if 'section' in data:
                 active = Path(projfile).resolve().parent
-                workdir = Path(data.get('workdir', active)).resolve()
+                try:
+                    workdir = Path(data.get('workdir', active)).resolve()
+                except PermissionError:
+                    workdir = active
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
