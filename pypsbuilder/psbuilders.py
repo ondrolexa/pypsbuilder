@@ -3263,7 +3263,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                             ix = abs(res.x - tm).argmin()
                             out_section.append((res.x[ix], res.y[ix], exists, ' '.join(inv.out), inv_id))
                     else:
-                        out_section.append((res.x[0], pres.y[0], exists, ' '.join(inv.out), inv_id))
+                        out_section.append((res.x[0], res.y[0], exists, ' '.join(inv.out), inv_id))
 
             # set original ptguesses when needed
             if old_guesses is not None:
