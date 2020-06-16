@@ -401,6 +401,56 @@ class TCAPI(object):
             return self.parse_logfile_old(output=kwargs.get('output', None))
 
     def parse_logfile_new(self, **kwargs):
+        output = kwargs.get('output', None)
+        resic = kwargs.get('resic', None)
+        if output is None:
+            with self.logfile.open('r', encoding=self.TCenc) as f:
+                output = f.read()
+        lines = [ln for ln in output.splitlines() if ln != '']
+        results = None
+        do_parse = True
+        if resic is None:
+            if not self.icfile.exists():
+                if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+                    status = 'bombed'
+                else:
+                    status = 'nir'
+                do_parse = False
+            else:
+                with self.icfile.open('r', encoding=self.TCenc) as f:
+                    resic = f.read()
+        if do_parse:
+            lines = [ln for ln in output.splitlines() if ln != '']
+            # parse ptguesses
+            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith('--------------------------------------------------------------------')]
+            bstarts.append(len(lines))
+            ptguesses = []
+            corrects = []
+            for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                block = lines[bs:be]
+                if block[2].startswith('#'):
+                    corrects.append(False)
+                else:
+                    corrects.append(True)
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                gixe = xyz[-1] + 2
+                ptguesses.append(block[gixs:gixe])
+            # parse icfile
+            blocks = resic.split('\n===========================================================\n\n')[1:]
+            # done
+            if len(blocks) > 0:
+                rlist = [TCResult.from_block(block, ptguess) for block, ptguess, correct in zip(blocks, ptguesses, corrects) if correct]
+                if len(rlist) > 0:
+                    status = 'ok'
+                    results = TCResultSet(rlist)
+                else:
+                    status = 'nir'
+            else:
+                status = 'nir'
+        return status, results, output
+
+    def parse_logfile_new_backup(self, **kwargs):
         tx = kwargs.get('tx', False)
         px = kwargs.get('px', False)
         output = kwargs.get('output', None)
@@ -448,7 +498,7 @@ class TCAPI(object):
                 pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
                 variance = int(varpat.search(sections[0]).group().replace(';', ''))
                 #seenvariance = int(varpat.search(sections[0]).group())
-                # This was needed for same cases with variance 2 ???? Need to be explored 
+                # This was needed for same cases with variance 2 ???? Need to be explored
                 # if variance < 3:
                 #     offset = 0
                 # else:
@@ -985,6 +1035,163 @@ class TCAPI(object):
             print('No drawpd executable identified in working directory.')
             return False
 
+
+class TCResult():
+
+    def __init__(self, T, p, variance=0, step=1, data={}, ptguess=['']):
+        self.data = data
+        self.ptguess = ptguess
+        self.T = T
+        self.p = p
+        self.variance = variance
+        self.step = step
+
+    @classmethod
+    def from_block(cls, block, ptguess):
+        info, ax, sf, bulk, rbi, mode, factor, td, sys, *mems, pems = block.split('\n\n')
+        if 'var = 2; seen' in info:
+            # no step in bulk
+            info, ax, sf, rbi, mode, factor, td, sys, *mems, pems = block.split('\n\n')
+            bulk = '\n'.join(rbi.split('\n')[:3])
+            rbi = '\n'.join(rbi.split('\n')[3:])
+        # heading
+        data = {phase: {} for phase in info.split('{')[0].split()}
+        p, T = (float(v.strip()) for v in info.split('{')[1].split('}')[0].split(','))
+        variance = int(info.split('var = ')[1].split(' ')[0].replace(';', ''))
+        # a-x variables
+        for head, vals in zip(ax.split('\n')[::2], ax.split('\n')[1::2]):
+            phase, *names = head.split()
+            data[phase].update({name.replace('({})'.format(phase), ''): float(val) for name, val in zip(names, vals.split())})
+        # site fractions
+        for head, vals in zip(sf.split('\n')[1::2], sf.split('\n')[2::2]): # skip site fractions row
+            phase, *names = head.split()
+            data[phase].update({name: float(val) for name, val in zip(names, vals.split())})
+        # bulk composition
+        bulk_vals = {}
+        oxhead, vals = bulk.split('\n')[1:]
+        for ox, val in zip(oxhead.split(), vals.split()[1:]): # skip oxide compositions row
+            bulk_vals[ox] = float(val)
+        data['bulk'] = bulk_vals
+        step = float(vals.split()[-1]) - 1 # steps should starts with 0
+        # rbi
+        for row in rbi.split('\n'):
+            phase, *vals = row.split()
+            data[phase].update({ox: float(val) for ox, val in zip(oxhead.split(), vals)})
+        # modes
+        head, vals = mode.split('\n')
+        phases = head.split()[1:]
+        for phase, val in zip(phases, vals.split()[-len(phases):]):
+            data[phase].update({'mode': float(val)})
+        # factors
+        head, vals = factor.split('\n')
+        phases = head.split()[1:]
+        for phase, val in zip(phases, vals.split()[-len(phases):]):
+            data[phase].update({'factor': float(val)})
+        # thermodynamic state
+        head, *rows = td.split('\n')
+        for row in rows:
+            phase, *vals = row.split()
+            data[phase].update({name: float(val) for name, val in zip(head.split(), vals)})
+        # bulk thermodynamics
+        sys = {}
+        for name, val in zip(head.split(), row.split()[1:]):
+            sys[name] = float(val)
+        data['sys'] = sys
+        # model end-members
+        if len(mems) > 0:
+            _, mem0 = mems[0].split('\n', maxsplit=1)
+            head = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
+            mems[0] = mem0
+            for mem in mems:
+                ems = mem.split('\n')
+                phase, ems0 = ems[0].split(maxsplit=1)
+                ems[0] = ems0
+                for row in ems:
+                    em, *vals = row.split()
+                    phase_em = '{}({})'.format(phase, em)
+                    data[phase_em] = {name: float(val) for name, val in zip(head, vals)}
+        # pure end-members
+        for row in pems.split('\n')[:-1]:
+            pem, val = row.split()
+            data[pem].update({'mu': float(val)})
+        # Finally
+        return cls(T, p, variance=variance, step=step, data=data, ptguess=ptguess)
+
+    def __repr__(self):
+        return 'p:{:g} T:{:g} V:{} Phases: {}'.format(self.p, self.T, self.variance, ' '.join(self.phases))
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            if key not in self.phases:
+                raise IndexError('The index (%d) do not exists.'.format(key))
+            return self.data[key]
+        else:
+            raise TypeError('Invalid argument type.')
+
+    @property
+    def phases(self):
+        return set(self.data.keys())
+
+    def rename_phase(self, old, new):
+        self.data[new] = self.data.pop(old)
+        for ix, ln in enumerate(self.ptguess):
+            self.ptguess[ix] = ln.replace('({})'.format(old), '({})'.format(new))
+
+
+class TCResultSet:
+
+    def __init__(self, results):
+        self.results = results
+        self.x = np.array([res.T for res in results])
+        self.y = np.array([res.p for res in results])
+        self.steps = np.array([res.step for res in results])
+
+    def __repr__(self):
+        return '{} results'.format(len(self.results))
+
+    def __len__(self):
+        return len(self.results)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            #Get the start, stop, and step from the slice
+            return TCResultSet(self.results[key])
+        elif isinstance(key, int) :
+            if key < 0 : #Handle negative indices
+                key += len(self.results)
+            if key < 0 or key >= len(self.results):
+                raise IndexError('The index (%d) is out of range.'.format(key))
+            return self.results[key]
+        elif isinstance(key, list) :
+            return TCResultSet([self.results[ix] for ix in key])
+        else:
+            raise TypeError('Invalid argument type.')
+
+    @property
+    def variance(self):
+        return self.results[0].variance
+
+    @property
+    def phases(self):
+        return self.results[0].phases
+
+    def ptguess(self, ix):
+        try:
+            return self.results[ix].ptguess
+        except Exception as e:
+            return None
+
+    def rename_phase(self, old, new):
+        for r in self.results:
+            r.rename_phase(old, new)
+
+    def insert(self, ix, result):
+        self.results.insert(ix, result)
+        self.x = np.insert(self.x, ix, result.T)
+        self.y = np.insert(self.y, ix, result.p)
+        self.steps = np.insert(self.steps, ix, result.step)
+
+
 class Dogmin:
     def __init__(self, **kwargs):
         assert 'output' in kwargs, 'Dogmin output must be provided'
@@ -1052,22 +1259,18 @@ class PseudoBase:
             idx (int): index which guesses to get.
         """
         idx = kwargs.get('idx', self.midix)
-        try:
-            return self.results[idx]['ptguess']
-        except Exception as e:
-            return None
+        return self.results[idx].ptguess
 
-    def data(self, **kwargs):
-        """dict: Get stored calculation data.
-
-        InvPoint has just single ptguess, but for UniLine idx need to be
-        specified. If omitted, the middle point from calculated ones is used.
+    def datakeys(self, phase=None):
+        """list: Get list of variables for phase.
 
         Args:
-            idx (int): index which guesses to get.
+            phase (str): name of phase
         """
-        idx = kwargs.get('idx', self.midix)
-        return self.results[idx]['data']
+        if phase is None:
+            return list(self.results[self.midix].data.keys())
+        else:
+            return list(self.results[self.midix].data[phase].keys())
 
 class InvPoint(PseudoBase):
     """Class to store invariant point
@@ -1097,7 +1300,7 @@ class InvPoint(PseudoBase):
         self.variance = kwargs.get('variance', 0)
         self.x = kwargs.get('x', [])
         self.y = kwargs.get('y', [])
-        self.results = kwargs.get('results', [dict(data=None, ptguess=None)])
+        self.results = kwargs.get('results', None)
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
 
@@ -1182,7 +1385,7 @@ class UniLine(PseudoBase):
         self.variance = kwargs.get('variance', 0)
         self._x = kwargs.get('x', np.array([]))
         self._y = kwargs.get('y', np.array([]))
-        self.results = kwargs.get('results', [dict(data=None, ptguess=None)])
+        self.results = kwargs.get('results', None)
         self.output = kwargs.get('output', 'User-defined')
         self.manual = kwargs.get('manual', False)
         self.begin = kwargs.get('begin', 0)
@@ -1196,7 +1399,7 @@ class UniLine(PseudoBase):
 
     @property
     def midix(self):
-        return (self.used.start + self.used.stop) // 2
+        return int((self.used.start + self.used.stop) // 2)
 
     @property
     def connected(self):
@@ -1332,10 +1535,24 @@ class SectionBase:
         return bnd, next(polygonize(bnd))
 
     def add_inv(self, id, inv):
+        if inv.manual:
+            inv.results = None
+        else:  # temporary compatibility with 2.2.0
+            if not isinstance(inv.results, TCResultSet):
+                inv.results = TCResultSet([TCResult(float(x), float(y), variance=inv.variance,
+                                                    data=r['data'], ptguess=r['ptguess'])
+                                           for r, x, y in zip(inv.results, inv.x, inv.y)])
         self.invpoints[id] = inv
         self.invpoints[id].id = id
 
     def add_uni(self, id, uni):
+        if uni.manual:
+            uni.results = None
+        else:  # temporary compatibility with 2.2.0
+            if not isinstance(uni.results, TCResultSet):
+                uni.results = TCResultSet([TCResult(float(x), float(y), variance=uni.variance,
+                                                    data=r['data'], ptguess=r['ptguess'])
+                                           for r, x, y in zip(uni.results, uni._x, uni._y)])
         self.unilines[id] = uni
         self.unilines[id].id = id
 
@@ -1426,8 +1643,8 @@ class SectionBase:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            uni.used = slice(np.flatnonzero(vdst >= d1)[0],
-                             np.flatnonzero(vdst <= d2)[-1] + 1)
+            uni.used = slice(np.flatnonzero(vdst >= d1)[0].item(),
+                             np.flatnonzero(vdst <= d2)[-1].item() + 1)
 
         # concatenate begin, keep, end
         if uni.begin > 0:

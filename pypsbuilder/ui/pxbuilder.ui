@@ -554,9 +554,9 @@
                </widget>
               </item>
               <item row="8" column="0">
-               <widget class="QCheckBox" name="checkDotInv">
+               <widget class="QCheckBox" name="checkHidedone">
                 <property name="text">
-                 <string>Show dot at invariant point when not labelled</string>
+                 <string>Hide labels of fully connected lines and points</string>
                 </property>
                </widget>
               </item>
