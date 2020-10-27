@@ -1215,7 +1215,7 @@ class PS:
             #cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
 
-    def gendrawpd(self, export_areas=True): # FIXME:
+    def gendrawpd(self, export_areas=True):
         """Method to write drawpd file
 
         Args:
@@ -1232,77 +1232,73 @@ class PS:
             output.write('2 1  %% which columns to be x,y in phase diagram\n')
             output.write('\n')
             output.write('% Points\n')
-            for inv in self.ps.invpoints.values():
-                output.write('% ------------------------------\n')
-                output.write('i{}   {}\n'.format(inv.id, inv.label(excess=self.ps.excess)))
-                output.write('\n')
-                output.write('{} {}\n'.format(inv._y, inv._x))
-                output.write('\n')
+            # global numbering
+            all_points = dict()
+            all_points_number = 0
+            for ix, ps in self.sections.items():
+                all_points[ix] = dict()
+                for inv in ps.invpoints.values():
+                    all_points_number += 1
+                    all_points[ix][inv.id] = all_points_number
+                    output.write('% ------------------------------\n')
+                    output.write('i{}   {}\n'.format(all_points_number, inv.label(excess=ps.excess)))
+                    output.write('\n')
+                    output.write('{} {}\n'.format(inv._y, inv._x))
+                    output.write('\n')
             output.write('% Lines\n')
-            for uni in self.ps.unilines.values():
-                output.write('% ------------------------------\n')
-                output.write('u{}   {}\n'.format(uni.id, uni.label(excess=self.ps.excess)))
-                output.write('\n')
-                if uni.begin == 0:
-                    b1 = 'begin'
-                else:
-                    b1 = 'i{}'.format(uni.begin)
-                if uni.end == 0:
-                    b2 = 'end'
-                else:
-                    b2 = 'i{}'.format(uni.end)
-                if uni.manual:
-                    output.write('{} {} connect\n'.format(b1, b2))
+            # global numbering
+            all_lines = dict()
+            all_lines_number = 0
+            for ix, ps in self.sections.items():
+                all_lines[ix] = dict()
+                for uni in ps.unilines.values():
+                    all_lines_number += 1
+                    all_lines[ix][uni.id] = all_lines_number
+                    output.write('% ------------------------------\n')
+                    output.write('u{}   {}\n'.format(all_lines_number, uni.label(excess=ps.excess)))
                     output.write('\n')
-                else:
-                    output.write('{} {}\n'.format(b1, b2))
-                    output.write('\n')
-                    for p, t in zip(uni.y, uni.x):
-                        output.write('{} {}\n'.format(p, t))
-                    output.write('\n')
+                    if uni.begin == 0:
+                        b1 = 'begin'
+                    else:
+                        b1 = 'i{}'.format(all_points[ix][uni.begin])
+                    if uni.end == 0:
+                        b2 = 'end'
+                    else:
+                        b2 = 'i{}'.format(all_points[ix][uni.end])
+                    if uni.manual:
+                        output.write('{} {} connect\n'.format(b1, b2))
+                        output.write('\n')
+                    else:
+                        output.write('{} {}\n'.format(b1, b2))
+                        output.write('\n')
+                        for p, t in zip(uni.y, uni.x):
+                            output.write('{} {}\n'.format(p, t))
+                        output.write('\n')
             output.write('*\n')
             output.write('% ----------------------------------------------\n\n')
             if export_areas:
-                # phases in areas for TC-Investigator
-                with self.tc.workdir.joinpath('assemblages.txt').open('w') as tcinv:
-                    vertices, edges, phases, tedges, tphases, log = self.ps.construct_areas()
-                    if log:
-                        print('\n'.join(log))
-                    # write output
-                    output.write('% Areas\n')
-                    output.write('% ------------------------------\n')
-                    maxpf = max([len(p) for p in phases]) + 1
-                    for ed, ph, ve in zip(edges, phases, vertices):
-                        v = np.array(ve)
-                        if not (np.all(v[:, 0] < self.ps.xrange[0]) or
-                                np.all(v[:, 0] > self.ps.xrange[1]) or
-                                np.all(v[:, 1] < self.ps.yrange[0]) or
-                                np.all(v[:, 1] > self.ps.yrange[1])):
-                            d = ('{:.2f} '.format(len(ph) / maxpf) +
-                                 ' '.join(['u{}'.format(e) for e in ed]) +
-                                 ' % ' + ' '.join(ph) + '\n')
-                            output.write(d)
-                            tcinv.write(' '.join(ph.union(exc)) + '\n')
-                    for ed, ph in zip(tedges, tphases):
-                        d = ('{:.2f} '.format(len(ph) / maxpf) +
-                             ' '.join(['u{}'.format(e) for e in ed]) +
-                             ' %- ' + ' '.join(ph) + '\n')
-                        output.write(d)
-                        tcinv.write(' '.join(ph.union(exc)) + '\n')
+                output.write('% Areas\n')
+                output.write('% ------------------------------\n')
+                for key in self.shapes:
+                    uids = [all_lines[ix][uid] for ix in self.unilists if key in self.unilists[ix] for uid in self.unilists[ix][key] if uid in all_lines[ix]]
+                    d = ('{:.2f} '.format(self.variance[key]) +
+                         ' '.join(['u{}'.format(e) for e in uids]) +
+                         ' % ' + ' '.join(sorted(key)) + '\n')
+                    output.write(d)
             output.write('\n')
             output.write('*\n')
             output.write('\n')
-            output.write('window {} {} '.format(*self.ps.xrange) +
-                         '{} {}\n\n'.format(*self.ps.yrange))
+            output.write('window {} {} '.format(*self.xrange) +
+                         '{} {}\n\n'.format(*self.yrange))
             output.write('darkcolour  56 16 101\n\n')
-            dt = self.ps.xrange[1] - self.ps.xrange[0]
-            dp = self.ps.yrange[1] - self.ps.yrange[0]
+            dt = self.xrange[1] - self.xrange[0]
+            dp = self.yrange[1] - self.yrange[0]
             ts = np.power(10, np.int(np.log10(dt)))
             ps = np.power(10, np.int(np.log10(dp)))
-            tg = np.arange(0, self.ps.xrange[1] + ts, ts)
-            tg = tg[tg >= self.ps.xrange[0]]
-            pg = np.arange(0, self.ps.yrange[1] + ps, ps)
-            pg = pg[pg >= self.ps.yrange[0]]
+            tg = np.arange(0, self.xrange[1] + ts, ts)
+            tg = tg[tg >= self.xrange[0]]
+            pg = np.arange(0, self.yrange[1] + ps, ps)
+            pg = pg[pg >= self.yrange[0]]
             output.write('bigticks ' +
                          '{} {} '.format(tg[1] - tg[0], tg[0]) +
                          '{} {}\n\n'.format(pg[1] - pg[0], pg[0]))
@@ -1314,10 +1310,10 @@ class PS:
             output.write('*\n')
             print('Drawpd file generated successfully.')
 
-        if self.tc.rundr():
-            print('Drawpd sucessfully executed.')
-        else:
-            print('Drawpd error!', str(err))
+        #if self.tc.rundr():
+        #    print('Drawpd sucessfully executed.')
+        #else:
+        #    print('Drawpd error!', str(err))
 
     def save_tab(self, comps, tabfile=None):
         """Export gridded values to Perpex tab format

@@ -1452,11 +1452,11 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if self.checkLabelUni.isChecked():
                     if uni.connected < 2:
                         xl, yl = uni.get_label_point()
-                        self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_unc_kw)
+                        self.ax.annotate(text=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_unc_kw)
                     else:
                         if not self.checkHidedone.isChecked():
                             xl, yl = uni.get_label_point()
-                            self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
+                            self.ax.annotate(text=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
             for inv in self.ps.invpoints.values():
                 all_uni = inv.all_unilines()
                 isnew1, id_uni = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
@@ -1474,10 +1474,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                 unconnected = isnew1 or isnew2 or isnew3 or isnew4
                 if self.checkLabelInv.isChecked():
                     if unconnected:
-                        self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_unc_kw)
+                        self.ax.annotate(text=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_unc_kw)
                     else:
                         if not self.checkHidedone.isChecked():
-                            self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
+                            self.ax.annotate(text=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
                 else:
                     if unconnected:
                         self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
@@ -1485,7 +1485,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.ax.plot(inv.x, inv.y, 'k.', ms=8)
             if self.checkLabelDog.isChecked():
                 for dgm in self.ps.dogmins.values():
-                    self.ax.annotate(s=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
+                    self.ax.annotate(text=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
             self.ax.set_xlabel(self.ps.x_var_label)
             self.ax.set_ylabel(self.ps.y_var_label)
             self.ax.set_title(self.plot_title)

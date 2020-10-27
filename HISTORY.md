@@ -7,6 +7,7 @@
    (useful to fine-tune topology)
  * tool to cleanup storage (trim metastable calculations)
  * option to hide labels of connected lines and points
+ * gendrawpd fixed
 
 ## 2.2 (11 Apr 2020) - COVID-19 release
 
