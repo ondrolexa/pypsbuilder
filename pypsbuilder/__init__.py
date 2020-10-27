@@ -22,6 +22,6 @@ __all__ = (
     "TCAPI",
 )
 
-__version__ = "2.2.1"
+__version__ = "2.2.2"
 __author__ = "Ondrej Lexa"
 __email__ = "lexa.ondrej@gmail.com"
