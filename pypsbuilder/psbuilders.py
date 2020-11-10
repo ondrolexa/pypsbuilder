@@ -1169,10 +1169,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                                 self.pushManual.setChecked(False)
                                 done = True
                     if not done:
-                        # cancle zoom and pan action on toolbar
-                        if self.toolbar._active == "PAN":
+                        # cancel zoom and pan action on toolbar
+                        if self.toolbar.mode.name == "PAN":
                             self.toolbar.pan()
-                        elif self.toolbar._active == "ZOOM":
+                        elif self.toolbar.mode.name == "ZOOM":
                             self.toolbar.zoom()
                         #self.cid = Cursor(self.ax, useblit=True, color='red', linewidth=1)
                         #self.cid.connect_event('button_press_event', self.clicker)
@@ -1363,10 +1363,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                 phases, out = self.get_phases_out()
                 which = phases.difference(self.ps.excess)
                 if which:
-                    # cancle zoom and pan action on toolbar
-                    if self.toolbar._active == "PAN":
+                    # cancel zoom and pan action on toolbar
+                    if self.toolbar.mode.name == "PAN":
                         self.toolbar.pan()
-                    elif self.toolbar._active == "ZOOM":
+                    elif self.toolbar.mode.name == "ZOOM":
                         self.toolbar.zoom()
                     #self.did = Cursor(self.ax, useblit=True, color='red', linewidth=1)
                     #self.did.connect_event('button_press_event', self.dogminer)
