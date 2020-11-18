@@ -1276,12 +1276,20 @@ class PS:
                         output.write('\n')
             output.write('*\n')
             output.write('% ----------------------------------------------\n\n')
+            ## FIXME for areas unilines are not ordered !!!
             if export_areas:
                 output.write('% Areas\n')
                 output.write('% ------------------------------\n')
+                mxv, mnv = sys.float_info.min, sys.float_info.max 
+                for key in self.shapes:
+                    if self.variance[key] < mnv:
+                        mnv = self.variance[key]
+                    if self.variance[key] > mxv:
+                        mxv = self.variance[key]
+                shades = np.linspace(0, 1, mxv - mnv + 3)[1:-1] # exclude extreme values
                 for key in self.shapes:
                     uids = [all_lines[ix][uid] for ix in self.unilists if key in self.unilists[ix] for uid in self.unilists[ix][key] if uid in all_lines[ix]]
-                    d = ('{:.2f} '.format(self.variance[key]) +
+                    d = ('{:.2f} '.format(shades[self.variance[key] - mnv]) +
                          ' '.join(['u{}'.format(e) for e in uids]) +
                          ' % ' + ' '.join(sorted(key)) + '\n')
                     output.write(d)
