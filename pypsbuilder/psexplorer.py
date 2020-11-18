@@ -44,6 +44,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point
+from shapely.ops import linemerge
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning
@@ -1249,6 +1250,7 @@ class PS:
             # global numbering
             all_lines = dict()
             all_lines_number = 0
+            all_lines_topology = dict()
             for ix, ps in self.sections.items():
                 all_lines[ix] = dict()
                 for uni in ps.unilines.values():
@@ -1265,6 +1267,7 @@ class PS:
                         b2 = 'end'
                     else:
                         b2 = 'i{}'.format(all_points[ix][uni.end])
+                    all_lines_topology[all_lines_number] = uni
                     if uni.manual:
                         output.write('{} {} connect\n'.format(b1, b2))
                         output.write('\n')
@@ -1276,7 +1279,6 @@ class PS:
                         output.write('\n')
             output.write('*\n')
             output.write('% ----------------------------------------------\n\n')
-            ## FIXME for areas unilines are not ordered !!!
             if export_areas:
                 output.write('% Areas\n')
                 output.write('% ------------------------------\n')
@@ -1286,11 +1288,14 @@ class PS:
                         mnv = self.variance[key]
                     if self.variance[key] > mxv:
                         mxv = self.variance[key]
-                shades = np.linspace(0, 1, mxv - mnv + 3)[1:-1] # exclude extreme values
+                shades = np.linspace(1, 0, mxv - mnv + 3)[1:-1] # exclude extreme values
                 for key in self.shapes:
                     uids = [all_lines[ix][uid] for ix in self.unilists if key in self.unilists[ix] for uid in self.unilists[ix][key] if uid in all_lines[ix]]
+                    poly = linemerge([all_lines_topology[uid].shape() for uid in uids])
+                    positions = [poly.project(Point(*all_lines_topology[uid].get_label_point())) for uid in uids]
+                    orderix = sorted(range(len(positions)), key=lambda k: positions[k])
                     d = ('{:.2f} '.format(shades[self.variance[key] - mnv]) +
-                         ' '.join(['u{}'.format(e) for e in uids]) +
+                         ' '.join(['u{}'.format(uids[ix]) for ix in orderix]) +
                          ' % ' + ' '.join(sorted(key)) + '\n')
                     output.write(d)
             output.write('\n')
