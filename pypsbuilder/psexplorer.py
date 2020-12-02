@@ -1623,7 +1623,7 @@ class PTPS(PS):
         pset = set()
         for res in ptpath.results:
             for key in res.phases:
-                if key not in exclude:
+                if key not in exclude and 'mode' in res[key]:
                     pset.add(key)
         phases = sorted(list(pset))
         modes = np.array([[res[phase]['mode'] if phase in res.phases else 0 for res in ptpath.results] for phase in phases])
