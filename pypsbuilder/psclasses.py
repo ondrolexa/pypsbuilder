@@ -699,9 +699,14 @@ class TCAPI(object):
                 res.append(dict(data=data, ptguess=ptguess))
             if res:
                 status = 'ok'
+                pp, TT = np.array(pts).T
+                results = TCResultSet([TCResult(T, p, variance=variance, step=0.0, data=r['data'], ptguess=r['ptguess']) for (r, p, T) in zip(res, pp, TT)])
             else:
                 status = 'nir'
-        return status, variance, np.array(pts).T, res, output
+                results = None
+        #return status, variance, np.array(pts).T, res, output
+        return status, results, output
+
 
     def parse_dogmin_old(self):
         """Dogmin parser."""

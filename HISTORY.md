@@ -1,8 +1,9 @@
 # Changes
 
-### 2.2.1 (XX YYY 2020)
+### 2.2.2 (dev - XX YYY 2020)
 
  * gendrawpd fixed
+ * fix to partially support TC347
 
 ### 2.2.1 (16 Jun 2020)
 
