@@ -1273,7 +1273,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                                 qb.Cancel | qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
-                self.do_save()
+                self.saveProject()
                 if self.project is not None:
                     self.app_settings(write=True)
                     event.accept()
@@ -1938,10 +1938,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 11), trange[1] + ts)
+            trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
+            prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
             cand = []
             line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
@@ -1993,18 +1993,14 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         if event.inaxes is not None:
             #self.did.clear(event)
             phases, out = self.get_phases_out()
-            which = phases.difference(self.ps.excess)
             variance = self.spinVariance.value()
             doglevel = self.spinDoglevel.value()
             prec = self.spinPrec.value()
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
-            self.tc.update_scriptfile(dogmin='yes {}'.format(doglevel), which=which,
-                                       T='{:.{prec}f}'.format(event.xdata, prec=prec),
-                                       p='{:.{prec}f}'.format(event.ydata, prec=prec))
             #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            tcout = self.tc.dogmin(variance)
+            tcout = self.tc.dogmin(phases, event.ydata, event.xdata, variance, doglevel=doglevel)
             # restore scriptfile
             self.tc.update_scriptfile(dogmin='no')
             self.read_scriptfile()
@@ -2043,10 +2039,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 11), trange[1] + ts)
+            trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
+            prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
             steps = self.spinSteps.value()
 
             if len(out) == 1:
@@ -2195,6 +2191,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             else:
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
+            self.read_scriptfile()
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')

@@ -123,157 +123,101 @@ class TCAPI(object):
                     if kw[0] == 'calcmode':
                         if kw[1] != '1':
                             raise InitError('tc-prefs: calcmode must be 1.')
-
-            errinfo = 'Scriptfile error!'
-            self.excess = set()
-            self.trange = (200., 1000.)
-            self.prange = (0.1, 20.)
-            self.bulk = []
-            self.ptx_steps = 20
-            check = {'axfile': False, 'setbulk': False, 'printbulkinfo': False,
-                     'setexcess': False, 'printxyz': False}
-            errinfo = 'Check your scriptfile.'
-            with self.scriptfile.open('r', encoding=self.TCenc) as f:
-                lines = f.readlines()
-            gsb, gse = False, False
-            dgb, dge = False, False
-            bub, bue = False, False
-            for line in lines:
-                kw = line.split('%')[0].split()
-                if '{PSBGUESS-BEGIN}' in line:
-                    gsb = True
-                if '{PSBGUESS-END}' in line:
-                    gse = True
-                if '{PSBDOGMIN-BEGIN}' in line:
-                    dgb = True
-                if '{PSBDOGMIN-END}' in line:
-                    dge = True
-                if '{PSBBULK-BEGIN}' in line:
-                    bub = True
-                if '{PSBBULK-END}' in line:
-                    bue = True
-                if kw == ['*']:
-                    break
-                if kw:
-                    if kw[0] == 'axfile':
-                        errinfo = 'Wrong argument for axfile keyword in scriptfile.'
-                        self.axname = kw[1]
-                        if not self.axfile.exists():
-                            raise ScriptfileError('Axfile ' + str(self.axfile) + ' does not exists in working directory')
-                        check['axfile'] = True
-                    elif kw[0] == 'setdefTwindow':
-                        errinfo = 'Wrong arguments for setdefTwindow keyword in scriptfile.'
-                        self.trange = (float(kw[-2]), float(kw[-1]))
-                    elif kw[0] == 'setdefPwindow':
-                        errinfo = 'Wrong arguments for setdefPwindow keyword in scriptfile.'
-                        self.prange = (float(kw[-2]), float(kw[-1]))
-                    elif kw[0] == 'setbulk':
-                        errinfo = 'Wrong arguments for setbulk keyword in scriptfile.'
-                        bulk = kw[1:]
-                        if 'ask' in bulk:
-                            raise ScriptfileError('Setbulk must not be set to ask.')
-                        if 'yes' in bulk:
-                            bulk.remove('yes')
-                        if not 'no' in bulk:
-                            if len(self.bulk) == 1:
-                                if len(self.bulk[0]) < len(bulk):
-                                    self.ptx_steps = int(bulk[-1])
-                                    bulk = bulk[:-1]
-                            self.bulk.append(bulk)
-                            check['setbulk'] = True
-
-                    elif kw[0] == 'setexcess':
-                        errinfo = 'Wrong argument for setexcess keyword in scriptfile.'
-                        self.excess = set(kw[1:])
-                        if 'yes' in self.excess:
-                            self.excess.remove('yes')
-                        if 'no' in self.excess:
-                            self.excess = set()
-                        if 'ask' in self.excess:
-                            raise ScriptfileError('Setexcess must not be set to ask.')
-                        check['setexcess'] = True
-                    elif kw[0] == 'calctatp':
-                        errinfo = 'Wrong argument for calctatp keyword in scriptfile.'
-                        if not kw[1] == 'ask':
-                            raise ScriptfileError('Calctatp must be set to ask.')
-                    # elif kw[0] == 'drawpd':
-                    #     errinfo = 'Wrong argument for drawpd keyword in scriptfile.'
-                    #     if kw[1] == 'no':
-                    #         raise ScriptfileError('Drawpd must be set to yes.')
-                    #     check['drawpd'] = True
-                    elif kw[0] == 'printbulkinfo':
-                        errinfo = 'Wrong argument for printbulkinfo keyword in scriptfile.'
-                        if kw[1] == 'no':
-                            raise ScriptfileError('Printbulkinfo must be set to yes.')
-                        check['printbulkinfo'] = True
-                    elif kw[0] == 'printxyz':
-                        errinfo = 'Wrong argument for printxyz keyword in scriptfile.'
-                        if kw[1] == 'no':
-                            raise ScriptfileError('Printxyz must be set to yes.')
-                        check['printxyz'] = True
-                    elif kw[0] == 'dogmin':
-                        errinfo = 'Wrong argument for dogmin keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            raise ScriptfileError('Dogmin must be set to no.')
-                    elif kw[0] == 'fluidpresent':
-                        raise ScriptfileError('Fluidpresent must be deleted from scriptfile.')
-                    elif kw[0] == 'seta':
-                        errinfo = 'Wrong argument for seta keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            raise ScriptfileError('Seta must be set to no.')
-                    elif kw[0] == 'setmu':
-                        errinfo = 'Wrong argument for setmu keyword in scriptfile.'
-                        if not kw[1] == 'no':
-                            raise ScriptfileError('Setmu must be set to no.')
-                    elif kw[0] == 'usecalcq':
-                        errinfo = 'Wrong argument for usecalcq keyword in scriptfile.'
-                        if kw[1] == 'ask':
-                            raise ScriptfileError('Usecalcq must be yes or no.')
-                    elif kw[0] == 'pseudosection':
-                        errinfo = 'Wrong argument for pseudosection keyword in scriptfile.'
-                        if kw[1] == 'ask':
-                            raise ScriptfileError('Pseudosection must be yes or no.')
-                    elif kw[0] == 'zeromodeiso':
-                        errinfo = 'Wrong argument for zeromodeiso keyword in scriptfile.'
-                        if not kw[1] == 'yes':
-                            raise ScriptfileError('Zeromodeiso must be set to yes.')
-                    elif kw[0] == 'setmodeiso':
-                        errinfo = 'Wrong argument for setmodeiso keyword in scriptfile.'
-                        if not kw[1] == 'yes':
-                            raise ScriptfileError('Setmodeiso must be set to yes.')
-                    elif kw[0] == 'convliq':
-                        raise ScriptfileError('Convliq not yet supported.')
-                    elif kw[0] == 'setiso':
-                        errinfo = 'Wrong argument for setiso keyword in scriptfile.'
+                    if kw[0] == 'dontwrap':
                         if kw[1] != 'no':
-                            raise ScriptfileError('Setiso must be set to no.')
+                            raise InitError('tc-prefs: dontwrap must be no.')
 
-            if not check['axfile']:
-                raise ScriptfileError('Axfile name must be provided in scriptfile.')
-            if not check['setbulk']:
-                raise ScriptfileError('Setbulk must be provided in scriptfile.')
-            if not check['setexcess']:
-                raise ScriptfileError('Setexcess must not be set to ask. To suppress this error put empty setexcess keyword to your scriptfile.')
-            # if not check['drawpd']:
-            #     raise ScriptfileError('Drawpd must be set to yes. To suppress this error put drawpd yes keyword to your scriptfile.')
-            if not check['printbulkinfo']:
-                raise ScriptfileError('Printbulkinfo must be set to yes. To suppress this error put printbulkinfo yes keyword to your scriptfile.')
-            if not check['printxyz']:
-                raise ScriptfileError('Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile.')
-            if not (gsb and gse):
+            # defaults
+            self.ptx_steps = 20  # IS IT NEEDED ????
+            # Checks various settings
+            errinfo = 'Scriptfile error!'
+            with self.scriptfile.open('r', encoding=self.TCenc) as f:
+                r = f.read()
+            lines = [ln.strip() for ln in r.splitlines() if ln.strip() != '']
+            lines = lines[:lines.index('*')]  # remove part not used by TC
+            # Check pypsbuilder blocks
+            if not ('%{PSBCALC-BEGIN}' in lines and '%{PSBCALC-END}' in lines):
+                raise ScriptfileError('There are not {PSBCALC-BEGIN} and {PSBCALC-END} tags in your scriptfile.')
+            if not ('%{PSBGUESS-BEGIN}' in lines and '%{PSBGUESS-END}' in lines):
                 raise ScriptfileError('There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.')
-            if not (dgb and dge):
-                raise ScriptfileError('There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile.')
-            if not (bub and bue):
+            if not ('%{PSBBULK-BEGIN}' in lines and '%{PSBBULK-END}' in lines):
                 raise ScriptfileError('There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile.')
-
-            # TC
-            self.tcout = self.runtc('\nkill\n\n')
-            if 'BOMBED' in self.tcout:
-                raise TCError(self.tcout.split('BOMBED')[1].split('\n')[0])
+            # Create scripts directory
+            scripts = {}
+            for ln in lines:
+                ln_clean = ln.split('%')[0].strip()
+                if ln_clean != '':
+                    tokens = ln_clean.split(maxsplit=1)
+                    if len(tokens) > 1:
+                        if tokens[0] in scripts:
+                            scripts[tokens[0]].append(tokens[1].strip())
+                        else:
+                            scripts[tokens[0]] = [tokens[1].strip()]
+                    else:
+                        scripts[tokens[0]] = []
+            # axfile
+            if not 'axfile' in scripts:
+                raise ScriptfileError('No axfile script, axfile is mandatory script.')
+            errinfo = 'Missing argument for axfile script in scriptfile.'
+            self.axname = scripts['axfile'][0]
+            if not self.axfile.exists():
+                raise ScriptfileError('axfile ' + str(self.axfile) + ' does not exists in working directory')
+            # diagramPT
+            if not 'diagramPT' in scripts:
+                raise ScriptfileError('No diagramPT script, diagramPT is mandatory script.')
+            errinfo = 'Wrong arguments for diagramPT script in scriptfile.'
+            pmin, pmax, tmin, tmax = scripts['diagramPT'][0].split()
+            self.prange = float(pmin), float(pmax)
+            self.trange = float(tmin), float(tmax)
+            # bulk
+            errinfo = 'Wrong bulk in scriptfile.'
+            if not 'bulk' in scripts:
+                raise ScriptfileError('No bulk script, bulk must be provided.')
+            if not (1 < len(scripts['bulk']) < 4):
+                raise ScriptfileError('Bulk script must have 2 or 3 lines.')
+            self.bulk = []
+            self.bulk.append(scripts['bulk'][0].split())
+            self.bulk.append(scripts['bulk'][1].split())
+            if len(scripts['bulk']) == 3:
+                self.bulk.append(scripts['bulk'][2].split()[:len(self.bulk[0])])  # remove possible number of steps
+            # inexcess
+            if 'setexcess' in scripts:
+                raise ScriptfileError('setexcess script depreceated, use inexcess instead.')
+            if 'inexcess' in scripts:
+                self.excess = set(scripts['inexcess'][0].split())
             else:
-                self.phases = self.tcout.split('choose from:')[1].split('\n')[0].split()
-                self.phases.sort()
+                self.excess = set()
+            # omit
+            if 'omit' in scripts:
+                self.omit = set(scripts['omit'][0].split())
+            else:
+                self.omit = set()
+            # samecoding
+            if 'samecoding' in scripts:
+                self.samecoding = [set(sc.split()) for sc in scripts['samecoding']]
+            # pseudosection
+            if not 'pseudosection' in scripts:
+                raise ScriptfileError('No pseudosection script, pseudosection is mandatory script.')
+            # autoexit
+            if not 'autoexit' in scripts:
+                raise ScriptfileError('No autoexit script, autoexit must be provided.')
+            # dogmin
+            if 'dogmin' in scripts:
+                raise ScriptfileError('Dogmin script should be removed from scriptfile.')
+            # TC
+            errinfo = 'Error during initial TC run.'
+            calcs = ['calcP {}'.format(sum(self.prange)/2),
+                     'calcT {}'.format(sum(self.trange)/2),
+                     'with xxx']
+            old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
+            output = self.runtc()
+            self.update_scriptfile(calcs=old_calcs)
+            if not '-- run bombed in whichphases' in output:
+                raise TCError(output)
+            self.tcout = output.split('-- run bombed in whichphases')[0].strip()                
+            ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
+            # union ax phases and samecoding and diff omit
+            self.phases = sorted(ax_phases.union(*self.samecoding) - self.omit)
             # OK
             self.status = 'Initial check done.'
             self.OK = True
@@ -302,6 +246,11 @@ class TCAPI(object):
     def scriptfile(self):
         """pathlib.Path: Path to scriptfile."""
         return self.workdir.joinpath('tc-' + self.name + '.txt')
+
+    def read_scriptfile(self):
+        with self.scriptfile.open('r', encoding=self.TCenc) as f:
+            r = f.read()
+        return r
 
     @property
     def drfile(self):
@@ -348,6 +297,11 @@ class TCAPI(object):
         """pathlib.Path: Path to THERMOCALC prefs file."""
         return self.workdir.joinpath('tc-prefs.txt')
 
+    def read_prefsfile(self):
+        with self.prefsfile.open('r', encoding=self.TCenc) as f:
+            r = f.read()
+        return r
+
     @property
     def tcversion(self):
         """str: Version identification of THERMCALC executable."""
@@ -380,13 +334,7 @@ class TCAPI(object):
 
         Returns:
             status (str): Result of parsing. 'ok', 'nir' (nothing in range) or 'bombed'.
-            variance (int): parsed variance?
-            pts (numpy.array): 2D array of calculated coordinates (p, T), (C, T)
-            or (p, C) for P-T, T-X or P-X pseudosections).
-            ptcoords (numpy.array): Array of calculated p, T values. Returned
-            only when tx od px is True.
-            res (list): List of dicts with data and ptguess keys. One item for
-            invariant points, more items for univariant lines.
+            results (TCResultSet): Results of TC calculation.
             output (str): Full nonparsed THERMOCALC output.
 
         Example:
@@ -398,9 +346,62 @@ class TCAPI(object):
         if self.tcnewversion:
             return self.parse_logfile_new(**kwargs)
         else:
-            return self.parse_logfile_old(output=kwargs.get('output', None))
+            return self.parse_logfile_old(**kwargs)
 
     def parse_logfile_new(self, **kwargs):
+        output = kwargs.get('output', None)
+        resic = kwargs.get('resic', None)
+        try:
+            if output is None:
+                with self.logfile.open('r', encoding=self.TCenc) as f:
+                    output = f.read().split('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n')[1]
+            lines = [ln for ln in output.splitlines() if ln != '']
+            results = None
+            do_parse = True
+            if resic is None:
+                if not self.icfile.exists():
+                    if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+                        status = 'bombed'
+                    else:
+                        status = 'nir'
+                    do_parse = False
+                else:
+                    with self.icfile.open('r', encoding=self.TCenc) as f:
+                        resic = f.read()
+            if do_parse:
+                lines = [ln for ln in output.splitlines() if ln != '']
+                # parse ptguesses
+                bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith('------------------------------------------------------------')]
+                bstarts.append(len(lines))
+                ptguesses = []
+                corrects = []
+                for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                    block = lines[bs:be]
+                    if block[2].startswith('#'):
+                        corrects.append(False)
+                    else:
+                        corrects.append(True)
+                    xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                    gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                    gixe = xyz[-1] + 2
+                    ptguesses.append(block[gixs:gixe])
+                # parse icfile
+                blocks = resic.split('\n===========================================================\n\n')[1:]
+                # done
+                if len(blocks) > 0:
+                    rlist = [TCResult.from_block(block, ptguess) for block, ptguess, correct in zip(blocks, ptguesses, corrects) if correct]
+                    if len(rlist) > 0:
+                        status = 'ok'
+                        results = TCResultSet(rlist)
+                    else:
+                        status = 'nir'
+                else:
+                    status = 'nir'
+            return status, results, output
+        except:
+            return 'bombed', None, None
+
+    def parse_logfile_new_backup(self, **kwargs):
         output = kwargs.get('output', None)
         resic = kwargs.get('resic', None)
         if output is None:
@@ -449,205 +450,6 @@ class TCAPI(object):
             else:
                 status = 'nir'
         return status, results, output
-
-    def parse_logfile_new_backup(self, **kwargs):
-        tx = kwargs.get('tx', False)
-        px = kwargs.get('px', False)
-        output = kwargs.get('output', None)
-        resic = kwargs.get('resic', None)
-        if output is None:
-            with self.logfile.open('r', encoding=self.TCenc) as f:
-                output = f.read()
-        lines = [ln for ln in output.splitlines() if ln != '']
-        pts = []
-        res = []
-        headers = []
-        variance = -1
-        do_parse = True
-        if resic is None:
-            if not self.icfile.exists():
-                if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-                    status = 'bombed'
-                else:
-                    status = 'nir'
-                do_parse = False
-            else:
-                with self.icfile.open('r', encoding=self.TCenc) as f:
-                    resic = f.read()
-        if do_parse:
-            # parse p, t from something 'g ep mu pa bi chl ab q H2O sph  {4.0000, 495.601}  kbar/°C\novar = 3; var = 1 (seen)'
-            ptpat = re.compile(r'(?<=\{)(.*?)(?=\})')
-            #ovarpat = re.compile(r'(?<=ovar = )(.*?)(?=\;)')
-            varpat = re.compile(r'(?<=var = )(.*?)(?=\ )')
-            # parse ptguesses
-            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
-            bstarts.append(len(lines))
-            ptguesses = []
-            for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                block = lines[bs:be]
-                # pts.append([float(n) for n in block[1].split()[:2]])
-                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
-                gixe = xyz[-1] + 2
-                ptguesses.append(block[gixs:gixe])
-            # parse icfile
-            alldata = []
-            for block in resic.split('\n===========================================================\n\n')[1:]:
-                sections = block.split('\n\n')
-                data = {}
-                pts.append([float(n) for n in ptpat.search(sections[0]).group().split(', ')])
-                variance = int(varpat.search(sections[0]).group().replace(';', ''))
-                #seenvariance = int(varpat.search(sections[0]).group())
-                # This was needed for same cases with variance 2 ???? Need to be explored
-                # if variance < 3:
-                #     offset = 0
-                # else:
-                #     offset = 1
-                offset = 1
-                # parse mode
-                if not sections[4 + offset].startswith('mode'): # For some reasons there is no mode in output
-                    break
-                l1, l2 = sections[4 + offset].split('\n')
-                if tx or px:
-                    for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
-                        dt = data.get(phase, {})
-                        dt['mode'] = float(vv)
-                        data[phase] = dt
-                else:
-                    for phase, vv in zip(l1.split()[1:], l2.split()):
-                        dt = data.get(phase, {})
-                        dt['mode'] = float(vv)
-                        data[phase] = dt
-                # parse a-x variables
-                lns = sections[1].split('\n')
-                for l1, l2 in zip(lns[::2], lns[1::2]):
-                    phase, l1r = l1.split(maxsplit=1)
-                    axp = {}
-                    for cc, vv in zip(l1r.split(), l2.split()):
-                        axp[cc.replace('({})'.format(phase), '')] = float(vv)
-                    dt = data.get(phase, {})
-                    dt.update(axp)
-                    data[phase] = dt
-                # parse site fractions
-                lns = sections[2].split('\n')[1:]
-                for l1, l2 in zip(lns[::2], lns[1::2]):
-                    phase, l1r = l1.split(maxsplit=1)
-                    sfp = {}
-                    for cc, vv in zip(l1r.split(), l2.split()):
-                        sfp[cc] = float(vv)
-                    dt = data.get(phase, {})
-                    dt.update(sfp)
-                    data[phase] = dt
-                # parse oxides
-                if variance < 2:
-                    l1, l2 = sections[3].split('\n')[1:3]
-                    ccs = l1.split()
-                    #nccs = len(ccs)
-                    #bulk = {}
-                    #for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
-                    #    bulk[cc] = float(vv)
-                    #data['bulk'] = bulk
-                    for ln in sections[3].split('\n')[3:]:
-                        oxp = {}
-                        phase, lnr = ln.split(maxsplit=1)
-                        for cc, vv in zip(ccs, lnr.split()):
-                            oxp[cc] = float(vv)
-                        dt = data.get(phase, {})
-                        dt.update(oxp)
-                        data[phase] = dt
-                else:
-                    l1, l2 = sections[3].split('\n')[1:]
-                    ccs = l1.split()
-                    #nccs = len(ccs)
-                    #bulk = {}
-                    #for cc, vv in zip(ccs, l2.split()[1:nccs+1]):
-                    #    bulk[cc] = float(vv)
-                    #data['bulk'] = bulk
-                    for ln in sections[4].split('\n'):
-                        oxp = {}
-                        phase, lnr = ln.split(maxsplit=1)
-                        for cc, vv in zip(ccs, lnr.split()):
-                            oxp[cc] = float(vv)
-                        dt = data.get(phase, {})
-                        dt.update(oxp)
-                        data[phase] = dt
-                # parse factor
-                l1, l2 = sections[5 + offset].split('\n')
-                if tx:
-                    for phase, vv in zip(l1.split()[1:], l2.split()[1:]):
-                        dt = data.get(phase, {})
-                        dt.update(dict(factor=float(vv)))
-                        data[phase] = dt
-                else:
-                    for phase, vv in zip(l1.split()[1:], l2.split()):
-                        dt = data.get(phase, {})
-                        dt.update(dict(factor=float(vv)))
-                        data[phase] = dt
-                # parse thermodynamic properties
-                props, lr = sections[6 + offset].split('\n', maxsplit=1)
-                for ln in lr.split('\n'):
-                    tdpp = {}
-                    phase, lnr = ln.split(maxsplit=1)
-                    for cc, vv in zip(props.split(), lnr.split()):
-                        tdpp[cc] = float(vv)
-                    dt = data.get(phase, {})
-                    dt.update(tdpp)
-                    data[phase] = dt
-                # sys
-                tdps = {}
-                header, lnr = sections[7 + offset].split(maxsplit=1)
-                for cc, vv in zip(props.split(), lnr.split()):
-                    tdps[cc] = float(vv)
-                dt = data.get('sys', {})
-                dt.update(tdps)
-                data['sys'] = dt
-                if tx or px:
-                    headers.append(float(header))
-                # parse endmembers and chemical potential
-                props = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
-                for section in sections[8 + offset:-1]:
-                    lns = [ln for ln in section.split('\n') if ln != '                    ideal       gamma    activity        prop          µ0     RT ln a']
-                    phase, lnr = lns[0].split(maxsplit=1)
-                    lns[0] = lnr
-                    for ln in lns:
-                        phase_em, lnr = ln.split(maxsplit=1)
-                        emp = {}
-                        for cc, vv in zip(props, lnr.split()):
-                            emp[cc] = float(vv)
-                        phase_comb = '{}({})'.format(phase, phase_em)
-                        dt = data.get(phase_comb, {})
-                        dt.update(emp)
-                        data[phase_comb] = dt
-                for ln in sections[-1].split('\n')[:-1]:
-                    phase, vv = ln.split()
-                    dt = data.get(phase, {})
-                    dt.update(dict(mu=float(vv)))
-                    data[phase] = dt
-                alldata.append(data)
-            if alldata:
-                res = [dict(data=data, ptguess=ptguess) for data, ptguess in zip(alldata, ptguesses)]
-            if res:
-                status = 'ok'
-            else:
-                status = 'nir'
-        if tx:
-            if status == 'ok':
-                comps = [ix for ix, ln in enumerate(lines) if ln.startswith('composition (from script)')][0]
-                steps = int(lines[comps + 1].split()[-1]) - 1
-                txcoords = np.array(((np.array(headers) - 1) / steps, np.array(pts).T[1]))
-            else:
-                txcoords = None
-            return status, variance, txcoords, np.array(pts).T, res, output
-        elif px:
-            if status == 'ok':
-                comps = [ix for ix, ln in enumerate(lines) if ln.startswith('composition (from script)')][0]
-                steps = int(lines[comps + 1].split()[-1]) - 1
-                pxcoords = np.array((np.array(pts).T[0], (np.array(headers) - 1) / steps))
-            else:
-                pxcoords = None
-            return status, variance, pxcoords, np.array(pts).T, res, output
-        else:
-            return status, variance, np.array(pts).T, res, output
 
     def parse_logfile_old(self, **kwargs):
         # res is list of dicts with data and ptguess keys
@@ -736,74 +538,67 @@ class TCAPI(object):
     def update_scriptfile(self, **kwargs):
         """Method to update scriptfile.
 
-        This methodcould be used to read or update ptguess or dogmin settings.
+        This method is used to programatically edit scriptfile.
 
-        Args:
-            guesses (list): List of lines defining ptguesses. If None guesses
-                are not modified. Default None.
-            get_old_guesses (bool): When True method returns existing ptguess
+        Kwargs:
+            calcs: List of lines defining fully hands-off calculations. Default None.
+            get_old_calcs: When True method returns existing calcs lines
                 before possible modification. Default False.
-            dogmin (str): Argument of dogmin script. Could be 'no' or 'yes' or
-                'yes X', where X is log level. When None no modification is
-                done. Default None.
-            which (set): Set of phases used for dogmin.
-            bulk (list): Bulk composition. Default None.
-            xvals (tuple): x values for compositions. Default (0, 1)
-            xsteps (int): Number of compositional steps between two bulks.
+            guesses: List of lines defining ptguesses. If None guesses
+                are not modified. Default None.
+            get_old_guesses: When True method returns existing ptguess lines
+                before possible modification. Default False.
+            bulk: List of lines defining bulk composition. Default None.
+            xvals: tuple of values passed to bulksubrange script. Default (0, 1)
+            xsteps: Number of compositional steps between two bulks.
                 Default 20.
-            p (float): Pressure for dogmin calculation
-            T (float): Temperature for dogmin calculation
         """
+        calcs = kwargs.get('calcs', None)
+        get_old_calcs = kwargs.get('get_old_calcs', False)
         guesses = kwargs.get('guesses', None)
         get_old_guesses = kwargs.get('get_old_guesses', False)
-        dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
-        which = kwargs.get('which', None)
         bulk = kwargs.get('bulk', None)
         xvals = kwargs.get('xvals', (0, 1))
         xsteps = kwargs.get('xsteps', 20)
-        p = kwargs.get('p', None)
-        T = kwargs.get('T', None)
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
-            sc = f.readlines()
+            scf = f.read()
         changed = False
-        gsb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-BEGIN}')]
-        gse = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBGUESS-END}')]
+        scf_1, rem = scf.split('%{PSBCALC-BEGIN}')
+        old, scf_2 = rem.split('%{PSBCALC-END}')
+        if get_old_calcs:
+            old_calcs = old.strip().splitlines()
+        if calcs is not None:
+            scf = scf_1 + '%{PSBCALC-BEGIN}\n' + '\n'.join(calcs) + '\n%{PSBCALC-END}' + scf_2
+            changed = True
+        scf_1, rem = scf.split('%{PSBGUESS-BEGIN}')
+        old, scf_2 = rem.split('%{PSBGUESS-END}')
         if get_old_guesses:
-            if gsb and gse:
-                old_guesses = [ln.strip() for ln in sc[gsb[0] + 1:gse[0]]]
+            old_guesses = old.strip().splitlines()
         if guesses is not None:
-            if gsb and gse:
-                sc = sc[:gsb[0] + 1] + [gln + '\n' for gln in guesses] + sc[gse[0]:]
-                changed = True
-        if dogmin is not None:
-            dgb = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBDOGMIN-BEGIN}')]
-            dge = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBDOGMIN-END}')]
-            dglines = []
-            dglines.append('dogmin {}\n'.format(dogmin))
-            if which is not None:
-                dglines.append('which {}\n'.format(' '.join(which)))
-                dglines.append('setPwindow {} {}\n'.format(p, p))
-                dglines.append('setTwindow {} {}\n'.format(T, T))
-            if dgb and dge:
-                sc = sc[:dgb[0] + 1] + dglines + sc[dge[0]:]
-                changed = True
+            scf = scf_1 + '%{PSBGUESS-BEGIN}\n' + '\n'.join(guesses) + '\n%{PSBGUESS-END}' + scf_2
+            changed = True
         if bulk is not None:
-            bub = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBBULK-BEGIN}')]
-            bue = [ix for ix, ln in enumerate(sc) if ln.startswith('%{PSBBULK-END}')]
-            bulines = []
+            scf_1, rem = scf.split('%{PSBBULK-BEGIN}')
+            old, scf_2 = rem.split('%{PSBBULK-END}')
+            bulk_lines = []
             if len(bulk) == 2:
-                bulines.append('setbulk yes {} % x={:g}\n'.format(' '.join(bulk[0]), xvals[0]))
-                bulines.append('setbulk yes {} {:d} % x={:g}\n'.format(' '.join(bulk[1]), xsteps, xvals[1]))
+                bulk_lines.append('bulk {}'.format(' '.join(bulk[0])))
+                bulk_lines.append('bulk {}'.format(' '.join(bulk[1])))
             else:
-                bulines.append('setbulk yes {}\n'.format(' '.join(bulk[0])))
-            if bub and bue:
-                sc = sc[:bub[0] + 1] + bulines + sc[bue[0]:]
-                changed = True
+                bulk_lines.append('bulk {}'.format(' '.join(bulk[0])))
+                bulk_lines.append('bulk {}'.format(' '.join(bulk[1])))
+                bulk_lines.append('bulk {} {}'.format(' '.join(bulk[2]), xsteps))
+            bulk_lines.append('bulksubrange {} {}'.format(*xvals))
+            scf = scf_1 + '%{PSBBULK-BEGIN}\n' + '\n'.join(bulk_lines) + '\n%{PSBBULK-END}' + scf_2
+            changed = True
         if changed:
             with self.scriptfile.open('w', encoding=self.TCenc) as f:
-                for ln in sc:
-                    f.write(ln)
-        if get_old_guesses:
+                f.write(scf)
+        if get_old_calcs and get_old_guesses:
+            return old_calcs, old_guesses
+        elif get_old_calcs:
+            return old_calcs
+        elif get_old_guesses:
             return old_guesses
         else:
             return None
@@ -858,10 +653,14 @@ class TCAPI(object):
         """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (prange[1] - prange[0]) / steps
-        tmpl = '{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-        ans = tmpl.format(' '.join(phases), ' '.join(out), *prange, *trange, step, prec=prec)
-        tcout = self.runtc(ans)
-        return tcout, ans
+        calcs = ['calcP {} {} {}'.format(*prange, step, prec=prec),
+                 'calcT {} {}'.format(*trange, prec=prec),
+                 'calctatp yes',
+                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'zeromodeisopleth {}'.format(' '.join(out))]
+        self.update_scriptfile(calcs=calcs)
+        tcout = self.runtc()
+        return tcout, calcs
 
     def calc_p(self, phases, out, **kwargs):
         """Method to run THERMOCALC to find univariant line using Calc P at T strategy.
@@ -879,10 +678,14 @@ class TCAPI(object):
         """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (trange[1] - trange[0]) / steps
-        tmpl = '{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n'
-        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, step, prec=prec)
-        tcout = self.runtc(ans)
-        return tcout, ans
+        calcs = ['calcP {} {}'.format(*prange, prec=prec),
+                 'calcT {} {} {}'.format(*trange, step, prec=prec),
+                 'calctatp no',
+                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'zeromodeisopleth {}'.format(' '.join(out))]
+        self.update_scriptfile(calcs=calcs)
+        tcout = self.runtc()
+        return tcout, calcs
 
     def calc_pt(self, phases, out, **kwargs):
         """Method to run THERMOCALC to find invariant point.
@@ -892,17 +695,19 @@ class TCAPI(object):
             out (set): Set of two zero mode phases
             prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
-            steps (int): Number of steps
 
         Returns:
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
-        tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
-        ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
-        tcout = self.runtc(ans)
-        return tcout, ans
+        calcs = ['calcP {} {}'.format(*prange, prec=prec),
+                 'calcT {} {}'.format(*trange, prec=prec),
+                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'zeromodeisopleth {}'.format(' '.join(out))]
+        self.update_scriptfile(calcs=calcs)
+        tcout = self.runtc()
+        return tcout, calcs
 
     def calc_tx(self, phases, out, **kwargs):
         """Method to run THERMOCALC for T-X pseudosection calculations.
@@ -964,12 +769,14 @@ class TCAPI(object):
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        tmpl = '{}\n\n\n{}\n{}\nkill\n\n'
-        ans = tmpl.format(' '.join(phases), p, t)
-        tcout = self.runtc(ans)
-        return tcout, ans
+        calcs = ['calcP {}'.format(p),
+                 'calcT {}'.format(t),
+                 'with  {}'.format(' '.join(phases - self.excess))]
+        self.update_scriptfile(calcs=calcs)
+        tcout = self.runtc('\nkill\n\n')
+        return tcout, calcs
 
-    def dogmin(self, variance):
+    def dogmin(self, phases, p, t, variance, doglevel=1):
         """Run THERMOCALC dogmin session.
 
         Args:
@@ -978,9 +785,14 @@ class TCAPI(object):
         Returns:
             str: THERMOCALC standard output
         """
-        tmpl = '{}\nn\n\n'
-        ans = tmpl.format(variance)
-        tcout = self.runtc(ans)
+        calcs = ['calcP {}'.format(p),
+                 'calcT {}'.format(t),
+                 'dogmin yes {}'.format(doglevel),
+                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'maxvar {}'.format(variance)]
+        old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
+        tcout = self.runtc('\nkill\n\n')
+        self.update_scriptfile(calcs=old_calcs)
         return tcout
 
     def calc_variance(self, phases):
@@ -993,14 +805,21 @@ class TCAPI(object):
             int: variance
         """
         variance = None
-        tcout = self.tc.runtc('{}\nkill\n\n'.format(' '.join(phases)))
+        calcs = ['calcP {} {}'.format(*self.prange),
+                 'calcT {} {}'.format(*self.trange),
+                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'acceptvar no']
+        old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
+        output = self.runtc()
+        self.update_scriptfile(calcs=old_calcs)
+        tcout = self.tc.runtc('kill\n\n')
         for ln in tcout.splitlines():
             if 'variance of required equilibrium' in ln:
                 variance = int(ln[ln.index('(') + 1:ln.index('?')])
                 break
         return variance
 
-    def runtc(self, instr):
+    def runtc(self, instr='kill\n\n'):
         """Low-level method to actually run THERMOCALC.
 
         Args:
@@ -1062,6 +881,7 @@ class TCResult():
         # heading
         data = {phase: {} for phase in info.split('{')[0].split()}
         p, T = (float(v.strip()) for v in info.split('{')[1].split('}')[0].split(','))
+        # var or ovar?
         variance = int(info.split('var = ')[1].split(' ')[0].replace(';', ''))
         # a-x variables
         for head, vals in zip(ax.split('\n')[::2], ax.split('\n')[1::2]):
@@ -1073,24 +893,30 @@ class TCResult():
             data[phase].update({name: float(val) for name, val in zip(names, vals.split())})
         # bulk composition
         bulk_vals = {}
-        oxhead, vals = bulk.split('\n')[1:]
-        for ox, val in zip(oxhead.split(), vals.split()[1:]): # skip oxide compositions row
+        oxhead, vals = bulk.split('\n')[1:] # skip oxide compositions row
+        for ox, val in zip(oxhead.split(), vals.split()[1:]):
             bulk_vals[ox] = float(val)
         data['bulk'] = bulk_vals
+        # FIXIT
         step = float(vals.split()[-1]) - 1 # steps should starts with 0
+        # FIXIT
         # rbi
         for row in rbi.split('\n'):
             phase, *vals = row.split()
             data[phase].update({ox: float(val) for ox, val in zip(oxhead.split(), vals)})
-        # modes
+        # modes (zero mode is empty field !!!)
         head, vals = mode.split('\n')
         phases = head.split()[1:]
-        for phase, val in zip(phases, vals.split()[-len(phases):]):
+        # DIRTY SOLUTION and CORRECT STEP?
+        step = int(vals[:6]) - 1
+        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(9)]
+        for phase, val in zip(phases, valsf):
             data[phase].update({'mode': float(val)})
         # factors
         head, vals = factor.split('\n')
         phases = head.split()[1:]
-        for phase, val in zip(phases, vals.split()[-len(phases):]):
+        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(9)]
+        for phase, val in zip(phases, valsf):
             data[phase].update({'factor': float(val)})
         # thermodynamic state
         head, *rows = td.split('\n')
@@ -1213,7 +1039,7 @@ class Dogmin:
 
     @property
     def phases(self):
-        return set(self.output.split('phases: ')[1].split('(gmin')[0].split())
+        return set(self.output.split('assemblage')[1].split('\n')[0].split())
 
     @property
     def out(self):
