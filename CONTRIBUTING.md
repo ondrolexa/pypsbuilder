@@ -48,24 +48,21 @@ If you are proposing a feature:
 
 Ready to contribute? Here's how to set up `pypsbuilder` for local development.
 
-1. Fork the `pypsbuilder` repo on GitHub
-2. Clone your fork locally
-```
-    $ git clone git@github.com:ondrolexa/pypsbuilder.git
-```
-3. Create a branch for local development
+1. Just head over to the [GitHub page](https://github.com/ondrolexa/pypsbuilder) and click the "Fork" button. It's just that simple. Once you've done that, you can use your favorite git client to clone your repo.
+
+2. Create a branch for local development
 ```
     $ git checkout -b name-of-your-bugfix-or-feature
 ```
    Now you can make your changes locally.
 
-4. Commit your changes and push your branch to GitHub
+3. Commit your changes and push your branch to GitHub
 ```
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 ```
-7. Submit a pull request through the GitHub website
+4. Submit a pull request through the GitHub website
 
 ## Pull Request Guidelines
 

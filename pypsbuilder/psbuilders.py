@@ -1169,10 +1169,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                                 self.pushManual.setChecked(False)
                                 done = True
                     if not done:
-                        # cancle zoom and pan action on toolbar
-                        if self.toolbar._active == "PAN":
+                        # cancel zoom and pan action on toolbar
+                        if self.toolbar.mode.name == "PAN":
                             self.toolbar.pan()
-                        elif self.toolbar._active == "ZOOM":
+                        elif self.toolbar.mode.name == "ZOOM":
                             self.toolbar.zoom()
                         #self.cid = Cursor(self.ax, useblit=True, color='red', linewidth=1)
                         #self.cid.connect_event('button_press_event', self.clicker)
@@ -1363,10 +1363,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                 phases, out = self.get_phases_out()
                 which = phases.difference(self.ps.excess)
                 if which:
-                    # cancle zoom and pan action on toolbar
-                    if self.toolbar._active == "PAN":
+                    # cancel zoom and pan action on toolbar
+                    if self.toolbar.mode.name == "PAN":
                         self.toolbar.pan()
-                    elif self.toolbar._active == "ZOOM":
+                    elif self.toolbar.mode.name == "ZOOM":
                         self.toolbar.zoom()
                     #self.did = Cursor(self.ax, useblit=True, color='red', linewidth=1)
                     #self.did.connect_event('button_press_event', self.dogminer)
@@ -1452,11 +1452,11 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if self.checkLabelUni.isChecked():
                     if uni.connected < 2:
                         xl, yl = uni.get_label_point()
-                        self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_unc_kw)
+                        self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_unc_kw)
                     else:
                         if not self.checkHidedone.isChecked():
                             xl, yl = uni.get_label_point()
-                            self.ax.annotate(s=uni.annotation(self.checkLabelUniText.isChecked()), xy=(xl, yl), **unilabel_kw)
+                            self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_kw)
             for inv in self.ps.invpoints.values():
                 all_uni = inv.all_unilines()
                 isnew1, id_uni = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
@@ -1474,10 +1474,10 @@ class BuildersBase(QtWidgets.QMainWindow):
                 unconnected = isnew1 or isnew2 or isnew3 or isnew4
                 if self.checkLabelInv.isChecked():
                     if unconnected:
-                        self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_unc_kw)
+                        self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_unc_kw)
                     else:
                         if not self.checkHidedone.isChecked():
-                            self.ax.annotate(s=inv.annotation(self.checkLabelInvText.isChecked()), xy=(inv.x, inv.y), **invlabel_kw)
+                            self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_kw)
                 else:
                     if unconnected:
                         self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
@@ -1485,7 +1485,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.ax.plot(inv.x, inv.y, 'k.', ms=8)
             if self.checkLabelDog.isChecked():
                 for dgm in self.ps.dogmins.values():
-                    self.ax.annotate(s=dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), xy=(dgm.x, dgm.y), **doglabel_kw)
+                    self.ax.annotate(dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), (dgm.x, dgm.y), **doglabel_kw)
             self.ax.set_xlabel(self.ps.x_var_label)
             self.ax.set_ylabel(self.ps.y_var_label)
             self.ax.set_title(self.plot_title)
@@ -3151,7 +3151,6 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
-
                     if last is not None:
                         self.uniview.resizeColumnsToContents()
                         idx = self.unimodel.getIndexID(last)

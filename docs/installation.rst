@@ -33,7 +33,3 @@ You can anytime upgrade your existing pypsbuilder to the latest version directly
 from github using pip::
 
 		  pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
-
-If you need to install for what ever reason development version, use::
-
-      pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
