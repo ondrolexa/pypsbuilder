@@ -549,7 +549,6 @@ class TCAPI(object):
             get_old_guesses: When True method returns existing ptguess lines
                 before possible modification. Default False.
             bulk: List of lines defining bulk composition. Default None.
-            xvals: tuple of values passed to bulksubrange script. Default (0, 1)
             xsteps: Number of compositional steps between two bulks.
                 Default 20.
         """
@@ -558,22 +557,19 @@ class TCAPI(object):
         guesses = kwargs.get('guesses', None)
         get_old_guesses = kwargs.get('get_old_guesses', False)
         bulk = kwargs.get('bulk', None)
-        xvals = kwargs.get('xvals', (0, 1))
         xsteps = kwargs.get('xsteps', 20)
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             scf = f.read()
         changed = False
         scf_1, rem = scf.split('%{PSBCALC-BEGIN}')
         old, scf_2 = rem.split('%{PSBCALC-END}')
-        if get_old_calcs:
-            old_calcs = old.strip().splitlines()
+        old_calcs = old.strip().splitlines()
         if calcs is not None:
             scf = scf_1 + '%{PSBCALC-BEGIN}\n' + '\n'.join(calcs) + '\n%{PSBCALC-END}' + scf_2
             changed = True
         scf_1, rem = scf.split('%{PSBGUESS-BEGIN}')
         old, scf_2 = rem.split('%{PSBGUESS-END}')
-        if get_old_guesses:
-            old_guesses = old.strip().splitlines()
+        old_guesses = old.strip().splitlines()
         if guesses is not None:
             scf = scf_1 + '%{PSBGUESS-BEGIN}\n' + '\n'.join(guesses) + '\n%{PSBGUESS-END}' + scf_2
             changed = True
@@ -588,7 +584,16 @@ class TCAPI(object):
                 bulk_lines.append('bulk {}'.format(' '.join(bulk[0])))
                 bulk_lines.append('bulk {}'.format(' '.join(bulk[1])))
                 bulk_lines.append('bulk {} {}'.format(' '.join(bulk[2]), xsteps))
-            bulk_lines.append('bulksubrange {} {}'.format(*xvals))
+            scf = scf_1 + '%{PSBBULK-BEGIN}\n' + '\n'.join(bulk_lines) + '\n%{PSBBULK-END}' + scf_2
+            changed = True
+        if xsteps != 20:
+            bulk_lines = []
+            scf_1, rem = scf.split('%{PSBBULK-BEGIN}')
+            old, scf_2 = rem.split('%{PSBBULK-END}')
+            if len(self.bulk) == 3:
+                bulk_lines.append('bulk {}'.format(' '.join(self.bulk[0])))
+                bulk_lines.append('bulk {}'.format(' '.join(self.bulk[1])))
+                bulk_lines.append('bulk {} {}'.format(' '.join(self.bulk[2]), xsteps))
             scf = scf_1 + '%{PSBBULK-BEGIN}\n' + '\n'.join(bulk_lines) + '\n%{PSBBULK-END}' + scf_2
             changed = True
         if changed:
@@ -625,17 +630,17 @@ class TCAPI(object):
             new_bulk = self.bulk[0]
         return new_bulk
 
-    def parse_kwargs(self, **kwargs):
-        prange = kwargs.get('prange', self.prange)
-        trange = kwargs.get('trange', self.trange)
-        steps = kwargs.get('steps', 50)
-        if np.diff(prange)[0] < 0.001:
-            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1)
-        elif np.diff(trange)[0] < 0.001:
-            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1)
-        else:
-            prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
-        return prange, trange, steps, prec
+    #def parse_kwargs(self, **kwargs):
+    #    prange = kwargs.get('prange', self.prange)
+    #    trange = kwargs.get('trange', self.trange)
+    #    steps = kwargs.get('steps', 50)
+    #    if np.diff(prange)[0] < 0.001:
+    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1)
+    #    elif np.diff(trange)[0] < 0.001:
+    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1)
+    #    else:
+    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
+    #    return prange, trange, steps, prec
 
     def calc_t(self, phases, out, **kwargs):
         """Method to run THERMOCALC to find univariant line using Calc T at P strategy.
@@ -651,10 +656,12 @@ class TCAPI(object):
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        steps = kwargs.get('steps', 50)
         step = (prange[1] - prange[0]) / steps
-        calcs = ['calcP {} {} {}'.format(*prange, step, prec=prec),
-                 'calcT {} {}'.format(*trange, prec=prec),
+        calcs = ['calcP {:g} {:g} {:g}'.format(*prange, step),
+                 'calcT {:g} {:g}'.format(*trange),
                  'calctatp yes',
                  'with  {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
@@ -676,10 +683,12 @@ class TCAPI(object):
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        steps = kwargs.get('steps', 50)
         step = (trange[1] - trange[0]) / steps
-        calcs = ['calcP {} {}'.format(*prange, prec=prec),
-                 'calcT {} {} {}'.format(*trange, step, prec=prec),
+        calcs = ['calcP {:g} {:g}'.format(*prange),
+                 'calcT {:g} {:g} {:g}'.format(*trange, step),
                  'calctatp no',
                  'with  {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
@@ -700,9 +709,10 @@ class TCAPI(object):
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
-        calcs = ['calcP {} {}'.format(*prange, prec=prec),
-                 'calcT {} {}'.format(*trange, prec=prec),
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        calcs = ['calcP {:g} {:g}'.format(*prange),
+                 'calcT {:g} {:g}'.format(*trange),
                  'with  {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
         self.update_scriptfile(calcs=calcs)
@@ -723,15 +733,28 @@ class TCAPI(object):
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
-        if len(out) > 1:
-            tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
-            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        xvals = kwargs.get('xvals', (0, 1))
+        steps = kwargs.get('steps', 20)
+        step = (prange[1] - prange[0]) / steps
+        if prange[0] == prange[1]:
+            calcs = ['calcP {:g} {:g}'.format(*prange),
+                     'calcT {:g} {:g}'.format(*trange),
+                     'calctatp yes',
+                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'zeromodeisopleth {}'.format(' '.join(out)),
+                     'bulksubrange {:g} {:g}'.format(*xvals)]
         else:
-            tmpl = '{}\n\n{}\ny\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n'
-            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, prec=prec)
-        tcout = self.runtc(ans)
-        return tcout, ans
+            calcs = ['calcP {:g} {:g} {:g}'.format(*prange, step),
+                     'calcT {:g} {:g}'.format(*trange),
+                     'calctatp yes',
+                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'zeromodeisopleth {}'.format(' '.join(out)),
+                     'bulksubrange {:g} {:g}'.format(*xvals)]
+        self.update_scriptfile(calcs=calcs, xsteps=steps)
+        tcout = self.runtc()
+        return tcout, calcs
 
     def calc_px(self, phases, out, **kwargs):
         """Method to run THERMOCALC for P-X pseudosection calculations.
@@ -776,7 +799,7 @@ class TCAPI(object):
         tcout = self.runtc('\nkill\n\n')
         return tcout, calcs
 
-    def dogmin(self, phases, p, t, variance, doglevel=1):
+    def dogmin(self, phases, p, t, variance, doglevel=1, onebulk=None):
         """Run THERMOCALC dogmin session.
 
         Args:
@@ -790,9 +813,11 @@ class TCAPI(object):
                  'dogmin yes {}'.format(doglevel),
                  'with  {}'.format(' '.join(phases - self.excess)),
                  'maxvar {}'.format(variance)]
-        old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
+        if onebulk is not None:
+            calcs.append('onebulk {}'.format(onebulk))
+        self.update_scriptfile(calcs=calcs)
         tcout = self.runtc('\nkill\n\n')
-        self.update_scriptfile(calcs=old_calcs)
+        #self.update_scriptfile(calcs=old_calcs)
         return tcout
 
     def calc_variance(self, phases):
@@ -862,13 +887,13 @@ class TCAPI(object):
 
 class TCResult():
 
-    def __init__(self, T, p, variance=0, step=1, data={}, ptguess=['']):
+    def __init__(self, T, p, variance=0, c=0, data={}, ptguess=['']):
         self.data = data
         self.ptguess = ptguess
         self.T = T
         self.p = p
         self.variance = variance
-        self.step = step
+        self.c = c
 
     @classmethod
     def from_block(cls, block, ptguess):
@@ -897,18 +922,19 @@ class TCResult():
         for ox, val in zip(oxhead.split(), vals.split()[1:]):
             bulk_vals[ox] = float(val)
         data['bulk'] = bulk_vals
-        # FIXIT
-        step = float(vals.split()[-1]) - 1 # steps should starts with 0
-        # FIXIT
+        # x for TX and pX
+        if 'step' in vals:
+            c = float(vals.split('step')[1].split(', x =')[1])
+        else:
+            c = 0
         # rbi
         for row in rbi.split('\n'):
             phase, *vals = row.split()
             data[phase].update({ox: float(val) for ox, val in zip(oxhead.split(), vals)})
-        # modes (zero mode is empty field !!!)
+        # modes (zero mode is empty field in tc350 !!!)
         head, vals = mode.split('\n')
         phases = head.split()[1:]
-        # DIRTY SOLUTION and CORRECT STEP?
-        step = int(vals[:6]) - 1
+        # fixed width parsing !!!
         valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
         for phase, val in zip(phases, valsf):
             data[phase].update({'mode': float(val)})
@@ -946,10 +972,10 @@ class TCResult():
             pem, val = row.split()
             data[pem].update({'mu': float(val)})
         # Finally
-        return cls(T, p, variance=variance, step=step, data=data, ptguess=ptguess)
+        return cls(T, p, variance=variance, c=c, data=data, ptguess=ptguess)
 
     def __repr__(self):
-        return 'p:{:g} T:{:g} V:{} Phases: {}'.format(self.p, self.T, self.variance, ' '.join(self.phases))
+        return 'p:{:g} T:{:g} V:{} c:{:g}, Phases: {}'.format(self.p, self.T, self.variance, self.c, ' '.join(self.phases))
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -973,9 +999,6 @@ class TCResultSet:
 
     def __init__(self, results):
         self.results = results
-        self.x = np.array([res.T for res in results])
-        self.y = np.array([res.p for res in results])
-        self.steps = np.array([res.step for res in results])
 
     def __repr__(self):
         return '{} results'.format(len(self.results))
@@ -999,9 +1022,21 @@ class TCResultSet:
             raise TypeError('Invalid argument type.')
 
     @property
+    def x(self):
+        return np.array([res.T for res in self.results])
+
+    @property
+    def y(self):
+        return np.array([res.p for res in self.results])
+
+    @property
     def variance(self):
         return self.results[0].variance
 
+    @property
+    def c(self):
+        return np.array([res.c for res in self.results])
+    
     @property
     def phases(self):
         return self.results[0].phases
