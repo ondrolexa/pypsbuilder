@@ -156,7 +156,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.populate_recent()
         self.ready = False
         self.project = None
-        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2020'. format(self.builder_name, __version__))
+        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2021'. format(self.builder_name, __version__))
 
     def initViewModels(self):
         # INVVIEW
@@ -1745,7 +1745,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     self.app_settings(write=True)
                     self.refresh_gui()
                     if 'bulk' in data:
-                        if data['bulk'] != self.tc.bulk:
+                        if data['bulk'] != self.tc.bulk and data['version'] >= "2.3.0":
                             qb = QtWidgets.QMessageBox
                             bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
                             reply = qb.question(self, 'Bulk changed', bulk_msg,

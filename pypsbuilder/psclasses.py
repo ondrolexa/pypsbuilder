@@ -909,13 +909,13 @@ class TCResult():
         phases = head.split()[1:]
         # DIRTY SOLUTION and CORRECT STEP?
         step = int(vals[:6]) - 1
-        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(9)]
+        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
         for phase, val in zip(phases, valsf):
             data[phase].update({'mode': float(val)})
         # factors
         head, vals = factor.split('\n')
         phases = head.split()[1:]
-        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(9)]
+        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
         for phase, val in zip(phases, valsf):
             data[phase].update({'factor': float(val)})
         # thermodynamic state
