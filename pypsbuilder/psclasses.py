@@ -184,7 +184,7 @@ class TCAPI(object):
             if 'setexcess' in scripts:
                 raise ScriptfileError('setexcess script depreceated, use inexcess instead.')
             if 'inexcess' in scripts:
-                self.excess = set(scripts['inexcess'][0].split())
+                self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
             else:
                 self.excess = set()
             # omit

@@ -545,31 +545,59 @@ class BuildersBase(QtWidgets.QMainWindow):
             for uni in self.ps.unilines.values():
                 used_phases.update(uni.phases)
             for old_phase in used_phases.difference(set(self.tc.phases)):
-                text, ok = QtWidgets.QInputDialog.getText(self, 'Replace phase {} with'.format(old_phase),
-                                                               'Enter new name:')
-                if ok:
-                    new_phase = str(text).strip()
-                    for inv in self.ps.invpoints.values():
-                        if old_phase in inv.phases:
-                            inv.phases.remove(old_phase)
-                            inv.phases.add(new_phase)
-                            if not inv.manual:
-                                if old_phase in inv.results.phases:
-                                    inv.results.rename_phase(old_phase, new_phase)
-                        if old_phase in inv.out:
-                            inv.out.remove(old_phase)
-                            inv.out.add(new_phase)
-                    for uni in self.ps.unilines.values():
-                        if old_phase in uni.phases:
-                            uni.phases.remove(old_phase)
-                            uni.phases.add(new_phase)
-                            if not uni.manual:
-                                if old_phase in uni.results.phases:
-                                    uni.results.rename_phase(old_phase, new_phase)
-                        if old_phase in uni.out:
-                            uni.out.remove(old_phase)
-                            uni.out.add(new_phase)
-            self.changed = True
+                text, ok = QtWidgets.QInputDialog.getText(self, 'Replace {} with'.format(old_phase),
+                                                               'Enter new name (- to remove):')
+                try:
+                    if ok:
+                        new_phase = str(text).strip()
+                        if new_phase == '-':
+                            for inv in self.ps.invpoints.values():
+                                if old_phase in inv.out:
+                                    qb = QtWidgets.QMessageBox
+                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', tc.status, qb.Abort)
+                                    raise ValueError()
+                                if old_phase in inv.phases:
+                                    inv.phases.remove(old_phase)
+                                    if not inv.manual:
+                                        if old_phase in inv.results.phases:
+                                            for res in inv.results.results:
+                                                del res.data[old_phase]
+                            for uni in self.ps.unilines.values():
+                                if old_phase in uni.out:
+                                    qb = QtWidgets.QMessageBox
+                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', tc.status, qb.Abort)
+                                    raise ValueError()
+                                if old_phase in uni.phases:
+                                    uni.phases.remove(old_phase)
+                                    if not uni.manual:
+                                        if old_phase in uni.results.phases:
+                                            for res in uni.results.results:
+                                                del res.data[old_phase]
+                        else:
+                            for inv in self.ps.invpoints.values():
+                                if old_phase in inv.phases:
+                                    inv.phases.remove(old_phase)
+                                    inv.phases.add(new_phase)
+                                    if not inv.manual:
+                                        if old_phase in inv.results.phases:
+                                            inv.results.rename_phase(old_phase, new_phase)
+                                if old_phase in inv.out:
+                                    inv.out.remove(old_phase)
+                                    inv.out.add(new_phase)
+                            for uni in self.ps.unilines.values():
+                                if old_phase in uni.phases:
+                                    uni.phases.remove(old_phase)
+                                    uni.phases.add(new_phase)
+                                    if not uni.manual:
+                                        if old_phase in uni.results.phases:
+                                            uni.results.rename_phase(old_phase, new_phase)
+                                if old_phase in uni.out:
+                                    uni.out.remove(old_phase)
+                                    uni.out.add(new_phase)
+                        self.changed = True
+                except ValueError:
+                    pass
+
             self.refresh_gui()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
