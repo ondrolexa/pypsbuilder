@@ -1,6 +1,10 @@
 # Changes
 
-### 2.2.2 (dev - XX YYY 2020)
+## 2.3 (dev - XX YYY 2021)
+
+ * compatible with latest THERMOCALC 3.50
+
+### 2.2.2 (25 Jan 2021)
 
  * gendrawpd fixed
  * fix to partially support TC347
@@ -63,7 +67,7 @@
 * Option to show bulk composition on psexplorer figures
 * psshow changed default color map to be darker for higher variance
 * manual or imported invariant points bub in psiso fixed
- * dio-o and gl-act-hb added to polymorphs
+* dio-o and gl-act-hb added to polymorphs
 
 ### 2.1.1 (28 Mar 2017)
 

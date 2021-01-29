@@ -18,21 +18,22 @@ except ImportError:
     import pickle
 import gzip
 import subprocess
-import itertools
-import re
+# import itertools
+# import re
 from pathlib import Path
-from collections import OrderedDict
+# from collections import OrderedDict
 
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point
-from shapely.ops import polygonize, linemerge, unary_union
+from shapely.ops import polygonize, linemerge   # unary_union
 
 popen_kw = dict(stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                 stderr=subprocess.STDOUT, universal_newlines=False)
 
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
 """list: List of two-element sets containing polymorphs."""
+
 
 class InitError(Exception):
     pass
@@ -107,8 +108,8 @@ class TCAPI(object):
                         break
             if not self.tcexe:
                 raise InitError('No THERMOCALC executable in working directory.')
-            #if not self.drexe:
-                #InitError('No drawpd executable in working directory.')
+            # if not self.drexe:
+            #     InitError('No drawpd executable in working directory.')
             # tc-prefs file
             if not self.workdir.joinpath('tc-prefs.txt').exists():
                 raise InitError('No tc-prefs.txt file in working directory.')
@@ -156,14 +157,14 @@ class TCAPI(object):
                     else:
                         scripts[tokens[0]] = []
             # axfile
-            if not 'axfile' in scripts:
+            if 'axfile' not in scripts:
                 raise ScriptfileError('No axfile script, axfile is mandatory script.')
             errinfo = 'Missing argument for axfile script in scriptfile.'
             self.axname = scripts['axfile'][0]
             if not self.axfile.exists():
                 raise ScriptfileError('axfile ' + str(self.axfile) + ' does not exists in working directory')
             # diagramPT
-            if not 'diagramPT' in scripts:
+            if 'diagramPT' not in scripts:
                 raise ScriptfileError('No diagramPT script, diagramPT is mandatory script.')
             errinfo = 'Wrong arguments for diagramPT script in scriptfile.'
             pmin, pmax, tmin, tmax = scripts['diagramPT'][0].split()
@@ -171,7 +172,7 @@ class TCAPI(object):
             self.trange = float(tmin), float(tmax)
             # bulk
             errinfo = 'Wrong bulk in scriptfile.'
-            if not 'bulk' in scripts:
+            if 'bulk' not in scripts:
                 raise ScriptfileError('No bulk script, bulk must be provided.')
             if not (1 < len(scripts['bulk']) < 4):
                 raise ScriptfileError('Bulk script must have 2 or 3 lines.')
@@ -196,25 +197,25 @@ class TCAPI(object):
             if 'samecoding' in scripts:
                 self.samecoding = [set(sc.split()) for sc in scripts['samecoding']]
             # pseudosection
-            if not 'pseudosection' in scripts:
+            if 'pseudosection' not in scripts:
                 raise ScriptfileError('No pseudosection script, pseudosection is mandatory script.')
             # autoexit
-            if not 'autoexit' in scripts:
+            if 'autoexit' not in scripts:
                 raise ScriptfileError('No autoexit script, autoexit must be provided.')
             # dogmin
             if 'dogmin' in scripts:
                 raise ScriptfileError('Dogmin script should be removed from scriptfile.')
             # TC
             errinfo = 'Error during initial TC run.'
-            calcs = ['calcP {}'.format(sum(self.prange)/2),
-                     'calcT {}'.format(sum(self.trange)/2),
+            calcs = ['calcP {}'.format(sum(self.prange) / 2),
+                     'calcT {}'.format(sum(self.trange) / 2),
                      'with xxx']
             old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
             output = self.runtc()
             self.update_scriptfile(calcs=old_calcs)
-            if not '-- run bombed in whichphases' in output:
+            if '-- run bombed in whichphases' not in output:
                 raise TCError(output)
-            self.tcout = output.split('-- run bombed in whichphases')[0].strip()                
+            self.tcout = output.split('-- run bombed in whichphases')[0].strip()
             ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
             # union ax phases and samecoding and diff omit
             self.phases = sorted(ax_phases.union(*self.samecoding) - self.omit)
@@ -398,7 +399,7 @@ class TCAPI(object):
                 else:
                     status = 'nir'
             return status, results, output
-        except:
+        except Exception:
             return 'bombed', None, None
 
     def parse_logfile_new_backup(self, **kwargs):
@@ -506,9 +507,7 @@ class TCAPI(object):
             else:
                 status = 'nir'
                 results = None
-        #return status, variance, np.array(pts).T, res, output
         return status, results, output
-
 
     def parse_dogmin_old(self):
         """Dogmin parser."""
@@ -518,7 +517,7 @@ class TCAPI(object):
             with self.logfile.open('r', encoding=self.TCenc) as f:
                 output = f.read()
             res = output.split('##########################################################\n')[-1]
-        except:
+        except Exception:
             res = None
             resic = None
         return res, resic
@@ -530,7 +529,7 @@ class TCAPI(object):
                 resic = f.read()
             with self.logfile.open('r', encoding=self.TCenc) as f:
                 output = f.read()
-        except:
+        except Exception:
             output = None
             resic = None
         return output, resic
@@ -612,7 +611,7 @@ class TCAPI(object):
         if len(self.bulk) == 2:
             new_bulk = []
             try:
-               _ = (e for e in x)
+                _ = (e for e in x)
             except TypeError:
                 b1 = np.array([float(v) for v in self.bulk[0]])
                 b2 = np.array([float(v) for v in self.bulk[1]])
@@ -629,18 +628,6 @@ class TCAPI(object):
         else:
             new_bulk = self.bulk[0]
         return new_bulk
-
-    #def parse_kwargs(self, **kwargs):
-    #    prange = kwargs.get('prange', self.prange)
-    #    trange = kwargs.get('trange', self.trange)
-    #    steps = kwargs.get('steps', 50)
-    #    if np.diff(prange)[0] < 0.001:
-    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1)
-    #    elif np.diff(trange)[0] < 0.001:
-    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1)
-    #    else:
-    #        prec = kwargs.get('prec', max(int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))), 0) + 1)
-    #    return prange, trange, steps, prec
 
     def calc_t(self, phases, out, **kwargs):
         """Method to run THERMOCALC to find univariant line using Calc T at P strategy.
@@ -927,12 +914,12 @@ class TCResult():
             phase, *names = head.split()
             data[phase].update({name.replace('({})'.format(phase), ''): float(val) for name, val in zip(names, vals.split())})
         # site fractions
-        for head, vals in zip(sf.split('\n')[1::2], sf.split('\n')[2::2]): # skip site fractions row
+        for head, vals in zip(sf.split('\n')[1::2], sf.split('\n')[2::2]):  # skip site fractions row
             phase, *names = head.split()
             data[phase].update({name: float(val) for name, val in zip(names, vals.split())})
         # bulk composition
         bulk_vals = {}
-        oxhead, vals = bulk.split('\n')[1:] # skip oxide compositions row
+        oxhead, vals = bulk.split('\n')[1:]  # skip oxide compositions row
         for ox, val in zip(oxhead.split(), vals.split()[1:]):
             bulk_vals[ox] = float(val)
         data['bulk'] = bulk_vals
@@ -949,13 +936,13 @@ class TCResult():
         head, vals = mode.split('\n')
         phases = head.split()[1:]
         # fixed width parsing !!!
-        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
+        valsf = [float(vals[6:][12 * i:12 * (i + 1)].strip()) if vals[6:][12 * i:12 * (i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
         for phase, val in zip(phases, valsf):
             data[phase].update({'mode': float(val)})
         # factors
         head, vals = factor.split('\n')
         phases = head.split()[1:]
-        valsf = [float(vals[6:][12*i:12*(i + 1)].strip()) if vals[6:][12*i:12*(i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
+        valsf = [float(vals[6:][12 * i:12 * (i + 1)].strip()) if vals[6:][12 * i:12 * (i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
         for phase, val in zip(phases, valsf):
             data[phase].update({'factor': float(val)})
         # thermodynamic state
@@ -994,7 +981,7 @@ class TCResult():
     def __getitem__(self, key):
         if isinstance(key, str):
             if key not in self.phases:
-                raise IndexError('The index (%d) do not exists.'.format(key))
+                raise IndexError('The index ({}) do not exists.'.format(key))
             return self.data[key]
         else:
             raise TypeError('Invalid argument type.')
@@ -1022,15 +1009,15 @@ class TCResultSet:
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            #Get the start, stop, and step from the slice
+            # Get the start, stop, and step from the slice
             return TCResultSet(self.results[key])
-        elif isinstance(key, int) :
-            if key < 0 : #Handle negative indices
+        elif isinstance(key, int):
+            if key < 0:  # Handle negative indices
                 key += len(self.results)
             if key < 0 or key >= len(self.results):
-                raise IndexError('The index (%d) is out of range.'.format(key))
+                raise IndexError('The index ({}) is out of range.'.format(key))
             return self.results[key]
-        elif isinstance(key, list) :
+        elif isinstance(key, list):
             return TCResultSet([self.results[ix] for ix in key])
         else:
             raise TypeError('Invalid argument type.')
@@ -1050,7 +1037,7 @@ class TCResultSet:
     @property
     def c(self):
         return np.array([res.c for res in self.results])
-    
+
     @property
     def phases(self):
         return self.results[0].phases
@@ -1058,7 +1045,7 @@ class TCResultSet:
     def ptguess(self, ix):
         try:
             return self.results[ix].ptguess
-        except Exception as e:
+        except Exception:
             return None
 
     def rename_phase(self, old, new):
@@ -1110,7 +1097,7 @@ class Dogmin:
         xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
         gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
         gixe = xyz[-1] + 2
-        return  block[gixs:gixe]
+        return block[gixs:gixe]
 
 
 class PseudoBase:
@@ -1119,9 +1106,10 @@ class PseudoBase:
     """
     def label(self, excess={}):
         """str: full label with space delimeted phases - zero mode phase."""
-        return (' '.join(sorted(list(self.phases.difference(excess)))) +
-                ' - ' +
-                ' '.join(sorted(list(self.out))))
+        phases_lbl = ' '.join(sorted(list(self.phases.difference(excess))))
+        out_lbl = ' '.join(sorted(list(self.out)))
+        return '{} - {}'.format(phases_lbl, out_lbl)
+
     def annotation(self, show_out=False):
         """str: String representation of ID with possible zermo mode phase."""
         if show_out:
@@ -1151,6 +1139,7 @@ class PseudoBase:
             return list(self.results[self.midix].data.keys())
         else:
             return list(self.results[self.midix].data[phase].keys())
+
 
 class InvPoint(PseudoBase):
     """Class to store invariant point
@@ -1218,14 +1207,14 @@ class InvPoint(PseudoBase):
                 fix = True
                 break
         if fix and (poly != self.out):   # on boundary
-                yespoly = poly.intersection(self.out)
-                nopoly = self.out.difference(yespoly)
-                aphases = self.phases.difference(yespoly)
-                bphases = self.phases.difference(poly.difference(self.out))
-                return((aphases, nopoly),
-                       (bphases, nopoly),
-                       (self.phases, yespoly),
-                       (self.phases.difference(nopoly), yespoly))
+            yespoly = poly.intersection(self.out)
+            nopoly = self.out.difference(yespoly)
+            aphases = self.phases.difference(yespoly)
+            bphases = self.phases.difference(poly.difference(self.out))
+            return((aphases, nopoly),
+                   (bphases, nopoly),
+                   (self.phases, yespoly),
+                   (self.phases.difference(nopoly), yespoly))
         else:
             return((self.phases, aset),
                    (self.phases, bset),
@@ -1494,7 +1483,7 @@ class SectionBase:
             if uni is not None:
                 if cuni.phases == uni.phases:
                     if cuni.out in outs:
-                        uni.out = cuni.out # switch to already used ??? Needed ???
+                        uni.out = cuni.out  # switch to already used ??? Needed ???
                         return False, uid
             ids = max(ids, uid)
         return True, ids + 1
@@ -1554,7 +1543,7 @@ class SectionBase:
                     m = linemerge([seg, l])
                     if m.type == 'MultiLineString':
                         p = seg.intersection(l)
-                        p_ok = l.interpolate(l.project(p)) # fit intersection to line
+                        p_ok = l.interpolate(l.project(p))  # fit intersection to line
                         t_seg = LineString([Point(seg.coords[0]), p_ok])
                         if t_seg.is_valid:
                             s_seg.append(t_seg)
@@ -1572,13 +1561,13 @@ class SectionBase:
         log = []
         # trim univariant lines
         for uni in self.unilines.values():
-            l = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
-            if l.type == 'LineString' and not l.is_empty:
-                lns.append((uni.id, l))
-            if l.type == 'MultiLineString':
-                for ll in l:
-                    if ll.type == 'LineString' and not ll.is_empty:
-                        lns.append((uni.id, ll))
+            ln = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
+            if ln.type == 'LineString' and not ln.is_empty:
+                lns.append((uni.id, ln))
+            if ln.type == 'MultiLineString':
+                for ln_part in ln:
+                    if ln_part.type == 'LineString' and not ln_part.is_empty:
+                        lns.append((uni.id, ln_part))
         # split boundaries
         edges = splitme(bnd[0]) + splitme(bnd[1]) + splitme(bnd[2]) + splitme(bnd[3])
         # polygonize
@@ -1603,7 +1592,6 @@ class SectionBase:
                             unilists[frozenset(phases)] = unilist
                     elif len(unilists[frozenset(phases)]) == 1:
                         if self.unilines[unilists[frozenset(phases)][0]].out.issubset(phases):
-                            orig_poly = shapes[frozenset(phases)]
                             orig_unilist = unilists[frozenset(phases)]
                             shapes[frozenset(phases)] = poly
                             unilists[frozenset(phases)] = unilist
@@ -1668,12 +1656,13 @@ class PTsection(SectionBase):
             if not inv.manual:
                 if 'composition (from setbulk script)\n' in inv.output:
                     cout = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
-                    bc = {k:float(v) for k, v in zip(cout[0].split(), cout[1].split())}
+                    bc = {k: float(v) for k, v in zip(cout[0].split(), cout[1].split())}
                 if 'composition (from script)\n' in inv.output:
                     cout = inv.output.split('composition (from script)\n')[1].split('\n')
-                    bc = {k:float(v) for k, v in zip(cout[0].split(), cout[1].split())}
+                    bc = {k: float(v) for k, v in zip(cout[0].split(), cout[1].split())}
                 break
         return bc
+
 
 class TXsection(SectionBase):
     """T-X pseudosection class
@@ -1697,9 +1686,10 @@ class TXsection(SectionBase):
                 if 'composition (from script)\n' in inv.output:
                     tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
                     nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = {r[0]: (float(r[1]),float(r[-1])) for r in nested}
+                    bc = {r[0]: (float(r[1]), float(r[-1])) for r in nested}
                 break
         return bc
+
 
 class PXsection(SectionBase):
     """P-X pseudosection class
@@ -1723,6 +1713,6 @@ class PXsection(SectionBase):
                 if 'composition (from script)\n' in inv.output:
                     tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
                     nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = {r[0]: (float(r[1]),float(r[-1])) for r in nested}
+                    bc = {r[0]: (float(r[1]), float(r[-1])) for r in nested}
                 break
         return bc

@@ -1,6 +1,4 @@
-"""
-Visual pseudosection builder for THERMOCALC
-"""
+"""Visual pseudosection builder for THERMOCALC."""
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
 
@@ -26,7 +24,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
-from matplotlib.widgets import Cursor
+# from matplotlib.widgets import Cursor
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from descartes import PolygonPatch
@@ -36,7 +34,7 @@ from scipy.interpolate import interp1d
 try:
     import networkx as nx
     NX_OK = True
-except ImportError as e:
+except ImportError:
     NX_OK = False
 
 from .ui_ptbuilder import Ui_PTBuilder
@@ -61,7 +59,11 @@ invhigh_kw = dict(alpha=1, ms=8, color='red', zorder=10)
 outhigh_kw = dict(lw=3, alpha=1, marker=None, ms=4, color='red', zorder=10)
 presenthigh_kw = dict(lw=9, alpha=0.6, marker=None, ms=4, color='grey', zorder=-10)
 
-fmt = lambda x: '{:g}'.format(x)
+
+def fmt(x):
+    """Format number."""
+    return '{:g}'.format(x)
+
 
 app_icons = dict(PTBuilder='images/ptbuilder.png',
                  TXBuilder='images/txbuilder.png',
@@ -69,8 +71,8 @@ app_icons = dict(PTBuilder='images/ptbuilder.png',
 
 
 class BuildersBase(QtWidgets.QMainWindow):
-    """Main base class for pseudosection builders
-    """
+    """Main base class for pseudosection builders."""
+
     def __init__(self, parent=None):
         super(BuildersBase, self).__init__(parent)
         self.setupUi(self)
@@ -166,8 +168,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.invview.setModel(self.invmodel)
         # enable sorting
         self.invview.setSortingEnabled(False)
-        # hide column
-        #self.invview.setColumnHidden(2, True)
         # select rows
         self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -175,9 +175,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
-        # default unconnected ghost
-        #self.invmodel.appendRow([0, 'Unconnected', {}])
-        #self.invview.setRowHidden(0, True)
         self.invview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # signals
         self.invsel.selectionChanged.connect(self.sel_changed)
@@ -254,7 +251,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.pushDogmin.toggled.connect(self.do_dogmin)
         self.pushDogmin.setCheckable(True)
         self.pushMerge.setCheckable(True)
-        #self.pushDogmin_select.clicked.connect(self.dogmin_select_phases)
         self.pushGuessDogmin.clicked.connect(self.dogmin_set_guesses)
         self.pushDogminRemove.clicked.connect(self.remove_dogmin)
         self.phaseview.doubleClicked.connect(self.show_out)
@@ -361,11 +357,11 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.tabMain.setCurrentIndex(0)
         self.statusBar().showMessage('Ready')
 
-    def import_from_old(self): ## FIXME:
+    def import_from_old(self):  # FIXME:
         if self.ready:
             qd = QtWidgets.QFileDialog
             projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                           'PSBuilder 1.X project (*.psb)')[0]
+                                          'PSBuilder 1.X project (*.psb)')[0]
             if Path(projfile).exists():
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -384,7 +380,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if item.text() in data['out']:
                         item.setCheckState(QtCore.Qt.Checked)
                 # Import
-                id_lookup = {0:0}
+                id_lookup = {0: 0}
                 for row in data['invlist']:
                     inv = InvPoint(phases=row[2]['phases'].union(self.ps.excess),
                                    out=row[2]['out'],
@@ -425,7 +421,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if inv.cmd and inv.output == 'Imported invariant point.':
                         if inv.ptguess():
                             self.tc.update_scriptfile(guesses=inv.ptguess())
-                        tcout = self.tc.runtc(inv.cmd)
+                        self.tc.runtc(inv.cmd)
                         status, res, output = self.tc.parse_logfile()
                         if status == 'ok':
                             self.ps.invpoints[inv.id].variance = res.variance
@@ -448,7 +444,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if uni.cmd and uni.output == 'Imported univariant line.':
                         if uni.ptguess():
                             self.tc.update_scriptfile(guesses=uni.ptguess())
-                        tcout = self.tc.runtc(uni.cmd)
+                        self.tc.runtc(uni.cmd)
                         status, res, output = self.tc.parse_logfile()
                         if status == 'ok':
                             if len(res) > 1:
@@ -488,12 +484,12 @@ class BuildersBase(QtWidgets.QMainWindow):
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
-                if 'section' in data: # NEW
+                if 'section' in data:   # NEW
                     workdir = Path(data.get('workdir', Path(projfile).resolve().parent)).resolve()
                     if workdir == self.tc.workdir:
                         bnd, area = self.ps.range_shapes
                         # views
-                        id_lookup = {0:0}
+                        id_lookup = {0: 0}
                         for id, inv in data['section'].invpoints.items():
                             if area.intersects(inv.shape()):
                                 isnew, id_inv = self.ps.getidinv(inv)
@@ -512,7 +508,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                                     self.unimodel.appendRow(id_uni, uni)
                                     self.ps.trim_uni(id_uni)
                         self.uniview.resizeColumnsToContents()
-                        #if hasattr(data['section'], 'dogmins'):
+                        # if hasattr(data['section'], 'dogmins'):
                         #    for id, dgm in data['section'].dogmins.items():
                         #        self.dogmodel.appendRow(id, dgm)
                         #    self.dogview.resizeColumnsToContents()
@@ -548,7 +544,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 used_phases.update(uni.phases)
             for old_phase in used_phases.difference(set(self.tc.phases)):
                 text, ok = QtWidgets.QInputDialog.getText(self, 'Replace {} with'.format(old_phase),
-                                                               'Enter new name (- to remove):')
+                                                          'Enter new name (- to remove):')
                 try:
                     if ok:
                         new_phase = str(text).strip()
@@ -722,7 +718,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.unihigh is not None:
             try:
                 self.unihigh[0].remove()
-            except:
+            except Exception:
                 pass
             self.unihigh = None
             self.textOutput.clear()
@@ -730,7 +726,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.invhigh is not None:
             try:
                 self.invhigh[0].remove()
-            except:
+            except Exception:
                 pass
             self.invhigh = None
             self.textOutput.clear()
@@ -738,13 +734,13 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.outhigh is not None:
             try:
                 self.outhigh[0].remove()
-            except:
+            except Exception:
                 pass
             self.outhigh = None
         if self.presenthigh is not None:
             try:
                 self.presenthigh[0].remove()
-            except:
+            except Exception:
                 pass
             self.presenthigh = None
         self.canvas.draw()
@@ -798,9 +794,9 @@ class BuildersBase(QtWidgets.QMainWindow):
     def get_phases_out(self):
         phases = []
         for i in range(self.phasemodel.rowCount()):
-                item = self.phasemodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
-                    phases.append(item.text())
+            item = self.phasemodel.item(i)
+            if item.checkState() == QtCore.Qt.Checked:
+                phases.append(item.text())
         out = []
         for i in range(self.outmodel.rowCount()):
             item = self.outmodel.item(i)
@@ -1033,7 +1029,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         xrange = self.ax.get_xlim()
         yrange = self.ax.get_ylim()
         area = Polygon([(xrange[0], yrange[0]), (xrange[1], yrange[0]),
-                        (xrange[1], yrange[1]),(xrange[0], yrange[1])])
+                        (xrange[1], yrange[1]), (xrange[0], yrange[1])])
         idx = []
         for ix, x, y in zip(range(len(uni._x)), uni._x, uni._y):
             if not Point(x, y).within(area):
@@ -1109,7 +1105,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             if self.did is not None:
                 self.canvas.mpl_disconnect(self.did)
-                #self.did.disconnect_events()
                 self.did = None
                 self.pushDogmin.setChecked(False)
             phases, out = self.get_phases_out()
@@ -1203,22 +1198,15 @@ class BuildersBase(QtWidgets.QMainWindow):
                             self.toolbar.pan()
                         elif self.toolbar.mode.name == "ZOOM":
                             self.toolbar.zoom()
-                        #self.cid = Cursor(self.ax, useblit=True, color='red', linewidth=1)
-                        #self.cid.connect_event('button_press_event', self.clicker)
                         self.cid = self.canvas.mpl_connect('button_press_event', self.clicker)
                         self.tabMain.setCurrentIndex(0)
                         self.statusBar().showMessage('Click on canvas to add invariant point.')
                         QtWidgets.QApplication.processEvents()
                         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
-                        #self.pushDogmin.toggled.disconnect()
-                        #self.pushDogmin.setCheckable(False)
                 else:
-                    #self.pushDogmin.toggled.connect(self.do_dogmin)
-                    #self.pushDogmin.setCheckable(True)
                     self.statusBar().showMessage('')
                     if self.cid is not None:
                         self.canvas.mpl_disconnect(self.cid)
-                        #self.cid.disconnect_events()
                         self.cid = None
                         self.pushManual.setChecked(False)
                     QtWidgets.QApplication.restoreOverrideCursor()
@@ -1230,9 +1218,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.pushManual.setChecked(False)
 
     def clicker(self, event):
-        #self.cid.onmove(event)
         if event.inaxes is not None:
-            #self.cid.clear(event)
             phases, out = self.get_phases_out()
             inv = InvPoint(phases=phases, out=out, manual=True,
                            output='User-defined invariant point.')
@@ -1342,11 +1328,11 @@ class BuildersBase(QtWidgets.QMainWindow):
             if (1 << 0) & bitopt:
                 if (float(self.tminEdit.text()), float(self.tmaxEdit.text())) != self.ps.xrange:
                     self.ps.xrange = (float(self.tminEdit.text()),
-                                       float(self.tmaxEdit.text()))
+                                      float(self.tmaxEdit.text()))
                     self.changed = True
                 if (float(self.pminEdit.text()), float(self.pmaxEdit.text())) != self.ps.yrange:
                     self.ps.yrange = (float(self.pminEdit.text()),
-                                       float(self.pmaxEdit.text()))
+                                      float(self.pmaxEdit.text()))
                     self.changed = True
                 self.ax.set_xlim(self.ps.xrange)
                 self.ax.set_ylim(self.ps.yrange)
@@ -1384,7 +1370,6 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             if self.cid is not None:
                 self.canvas.mpl_disconnect(self.cid)
-                #self.cid.disconnect_events()
                 self.cid = None
                 self.pushManual.setChecked(False)
             if checked:
@@ -1396,24 +1381,17 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.toolbar.pan()
                     elif self.toolbar.mode.name == "ZOOM":
                         self.toolbar.zoom()
-                    #self.did = Cursor(self.ax, useblit=True, color='red', linewidth=1)
-                    #self.did.connect_event('button_press_event', self.dogminer)
                     self.did = self.canvas.mpl_connect('button_press_event', self.dogminer)
                     self.tabMain.setCurrentIndex(0)
                     self.statusBar().showMessage('Click on canvas to run dogmin at this point.')
                     QtWidgets.QApplication.processEvents()
                     QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
-                    #self.pushManual.toggled.disconnect()
-                    #self.pushManual.setCheckable(False)
                 else:
                     self.statusBar().showMessage('You need to select phases to consider for dogmin.')
                     self.pushDogmin.setChecked(False)
             else:
-                #self.pushManual.toggled.connect(self.add_userdefined)
-                #self.pushManual.setCheckable(True)
                 if self.did is not None:
                     self.canvas.mpl_disconnect(self.did)
-                    #self.did.disconnect_events()
                     self.did = None
                     self.pushDogmin.setChecked(False)
                 QtWidgets.QApplication.restoreOverrideCursor()
@@ -1428,27 +1406,27 @@ class BuildersBase(QtWidgets.QMainWindow):
                 phases = set(dgtxt.split('phases: ')[1].split(' (')[0].split())
                 tmp = InvPoint(phases=phases, out=set(), output='User-defined')
                 self.set_phaselist(tmp, show_output=False)
-            except:
+            except Exception:
                 self.statusBar().showMessage('You need to run dogmin first.')
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
-    def dogmin_set_guesses(self):
-        if self.ready:
-            dgtxt = self.logDogmin.toPlainText()
-            try:
-                block = [ln for ln in dgtxt.splitlines() if ln != '']
-                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
-                gixe = xyz[-1] + 2
-                ptguess = block[gixs:gixe]
-                self.tc.update_scriptfile(guesses=ptguess)
-                self.read_scriptfile()
-                self.statusBar().showMessage('Dogmin ptuess set.')
-            except:
-                self.statusBar().showMessage('You need to run dogmin first.')
-        else:
-            self.statusBar().showMessage('Project is not yet initialized.')
+    # def dogmin_set_guesses(self):
+    #     if self.ready:
+    #         dgtxt = self.logDogmin.toPlainText()
+    #         try:
+    #             block = [ln for ln in dgtxt.splitlines() if ln != '']
+    #             xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+    #             gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+    #             gixe = xyz[-1] + 2
+    #             ptguess = block[gixs:gixe]
+    #             self.tc.update_scriptfile(guesses=ptguess)
+    #             self.read_scriptfile()
+    #             self.statusBar().showMessage('Dogmin ptuess set.')
+    #         except Exception:
+    #             self.statusBar().showMessage('You need to run dogmin first.')
+    #     else:
+    #         self.statusBar().showMessage('Project is not yet initialized.')
 
     def plot(self):
         if self.ready:
@@ -1457,7 +1435,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             unilabel_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='lightskyblue', alpha=lalfa, pad=2))
             unilabel_unc_kw = dict(ha='center', va='center', size=fsize,
-                               bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
+                                   bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
             invlabel_kw = dict(ha='center', va='center', size=fsize,
                                bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
             invlabel_unc_kw = dict(ha='center', va='center', size=fsize,
@@ -1538,7 +1516,6 @@ class BuildersBase(QtWidgets.QMainWindow):
             if not hasattr(self.ax, 'areas_shown'):
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                #shapes, shape_edges, bad_shapes, ignored_shapes, log = self.ps.create_shapes_old()
                 shapes, _, log = self.ps.create_shapes()
                 if log:
                     self.textOutput.setPlainText('\n'.join(log))
@@ -1547,7 +1524,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     poc = max(vari) - min(vari) + 1
                     pscolors = cm.get_cmap('cool')(np.linspace(0, 1, poc))
                     # Set alpha
-                    pscolors[:, -1] = 0.6 # alpha
+                    pscolors[:, -1] = 0.6  # alpha
                     pscmap = ListedColormap(pscolors)
                     norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
                     for key in shapes:
@@ -1712,8 +1689,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
-            ##### NEW FORMAT ####
-            if 'section' in data: # NEW
+            # NEW FORMAT
+            if 'section' in data:
                 active = Path(projfile).resolve().parent
                 try:
                     workdir = Path(data.get('workdir', active)).resolve()
@@ -1800,13 +1777,13 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc.status, qb.Abort)
-            ##### VERY OLD FORMAT ####
+            # VERY OLD FORMAT
             elif data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Old version',
                             'This project is created in older version.\nUse import from project.',
                             qb.Abort)
-            ##### OLD FORMAT ####
+            # OLD FORMAT
             elif data.get('version', '1.0.0') < '2.3.0':
                 active = Path(projfile).resolve().parent
                 try:
@@ -1973,7 +1950,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
                 nout = out.union(set([ophase]))
-                self.tc.calc_pt(phases, nout, prange = prange, trange=trange)
+                self.tc.calc_pt(phases, nout, prange=prange, trange=trange)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'ok':
                     inv = InvPoint(phases=phases, out=nout, variance=res.variance,
@@ -1988,7 +1965,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             for ophase in set(self.tc.phases).difference(self.ps.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
                 nout = out.union(set([ophase]))
-                self.tc.calc_pt(nphases, nout, prange = prange, trange=trange)
+                self.tc.calc_pt(nphases, nout, prange=prange, trange=trange)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'ok':
                     inv = InvPoint(phases=nphases, out=nout, variance=res.variance,
@@ -2000,7 +1977,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         exists, inv_id = '*', str(id)
                     cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
 
-            # set original ptguesses when neede
+            # set original ptguesses when needed
             if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -2016,14 +1993,11 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        #self.did.onmove(event)
         if event.inaxes is not None:
-            #self.did.clear(event)
             phases, out = self.get_phases_out()
             variance = self.spinVariance.value()
             doglevel = self.spinDoglevel.value()
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
-            #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(phases, event.ydata, event.xdata, variance, doglevel=doglevel)
@@ -2073,9 +2047,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 uni_tmp = UniLine(phases=phases, out=out)
                 isnew, id_uni = self.ps.getiduni(uni_tmp)
                 if calcT:
-                    tcout, ans = self.tc.calc_t(uni_tmp.phases, uni_tmp.out, prange = prange, trange=trange, steps=steps)
+                    tcout, ans = self.tc.calc_t(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
                 else:
-                    tcout, ans = self.tc.calc_p(uni_tmp.phases, uni_tmp.out, prange = prange, trange=trange, steps=steps)
+                    tcout, ans = self.tc.calc_p(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -2115,7 +2089,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    if not x in uni_old._x and not y in uni_old._y:
+                                    if x not in uni_old._x and y not in uni_old._y:
                                         idx = []
                                         for p in uni_old.phases.difference(uni_old.out):
                                             q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
@@ -2135,7 +2109,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                             uni_old._x = np.insert(uni_old._x, nix, x)
                                             uni_old._y = np.insert(uni_old._y, nix, y)
                                             N += 1
-                                uni_old.output += uni.output # Really
+                                uni_old.output += uni.output  # Really
                                 self.ps.trim_uni(id_uni)
                                 if self.checkAutoconnectUni.isChecked():
                                     if len(candidates) == 2:
@@ -2167,7 +2141,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             elif len(out) == 2:
                 inv_tmp = InvPoint(phases=phases, out=out)
                 isnew, id_inv = self.ps.getidinv(inv_tmp)
-                tcout, ans = self.tc.calc_pt(inv_tmp.phases, inv_tmp.out, prange = prange, trange=trange)
+                tcout, ans = self.tc.calc_pt(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange)
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -2470,7 +2444,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
-                if 'section' in data: # NEW
+                if 'section' in data:  # NEW
                     pm = sum(self.tc.prange) / 2
                     extend = self.spinOver.value()
                     trange = self.ax.get_xlim()
@@ -2486,8 +2460,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     QtWidgets.QApplication.processEvents()
                     QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                     # change bulk
-                    #bulk = self.tc.interpolate_bulk(crange)
-                    #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+                    # bulk = self.tc.interpolate_bulk(crange)
+                    # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
                     # only uni
                     last = None
                     for id, uni in data['section'].unilines.items():
@@ -2509,7 +2483,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         idx = self.unimodel.getIndexID(last)
                         self.uniview.selectRow(idx.row())
                     # restore bulk
-                    #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+                    # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
                     self.refresh_gui()
                     QtWidgets.QApplication.restoreOverrideCursor()
                     self.statusBar().showMessage('Data imported.')
@@ -2557,8 +2531,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
-            #bulk = self.tc.interpolate_bulk(crange)
-            #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+            # bulk = self.tc.interpolate_bulk(crange)
+            # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
             out_section = []
             cand = []
             line = uni._shape()
@@ -2617,7 +2591,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
-            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -2630,7 +2604,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
             elif out_section:
                 txt += 'Solutions with single point (need increase number of steps)\n'
-                txt += '         T         p E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
+                txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 for cc in out_section:
                     txt += n_format.format(*cc)
 
@@ -2640,17 +2614,15 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        #self.did.onmove(event)
         if event.inaxes is not None:
-            #self.did.clear(event)
             phases, out = self.get_phases_out()
             variance = self.spinVariance.value()
             doglevel = self.spinDoglevel.value()
             # change bulk
-            #bulk = self.tc.interpolate_bulk(event.ydata) # use onebulk
+            # bulk = self.tc.interpolate_bulk(event.ydata) # use onebulk
             pm = sum(self.tc.prange) / 2
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
-            #self.read_scriptfile()
+            # self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(phases, pm, event.xdata, variance, doglevel=doglevel, onebulk=event.ydata)
@@ -2698,8 +2670,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
-            #bulk = self.tc.interpolate_bulk(crange)
-            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            # bulk = self.tc.interpolate_bulk(crange)
+            # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
 
             if len(out) == 1:
                 uni_tmp = UniLine(phases=phases, out=out)
@@ -2745,7 +2717,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    if not x in uni_old._x and not y in uni_old._y:
+                                    if x not in uni_old._x and y not in uni_old._y:
                                         idx = []
                                         for p in uni_old.phases.difference(uni_old.out):
                                             q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
@@ -2859,7 +2831,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             # restore bulk
-            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -3114,7 +3086,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
-                if 'section' in data: # NEW
+                if 'section' in data:  # NEW
                     tm = sum(self.tc.trange) / 2
                     extend = self.spinOver.value()
                     prange = self.ax.get_ylim()
@@ -3130,8 +3102,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     QtWidgets.QApplication.processEvents()
                     QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                     # change bulk
-                    #bulk = self.tc.interpolate_bulk(crange)
-                    #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+                    # bulk = self.tc.interpolate_bulk(crange)
+                    # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
                     # only uni
                     last = None
                     for id, uni in data['section'].unilines.items():
@@ -3154,7 +3126,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         idx = self.unimodel.getIndexID(last)
                         self.uniview.selectRow(idx.row())
                     # restore bulk
-                    #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+                    # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
                     self.refresh_gui()
                     QtWidgets.QApplication.restoreOverrideCursor()
                     self.statusBar().showMessage('Data imported.')
@@ -3202,8 +3174,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
-            #bulk = self.tc.interpolate_bulk(crange)
-            #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+            # bulk = self.tc.interpolate_bulk(crange)
+            # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
             out_section = []
             cand = []
             line = uni._shape()
@@ -3262,7 +3234,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
-            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -3275,7 +3247,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('Searching done. Found {} invariant points.'.format(len(cand)))
             elif out_section:
                 txt += 'Solutions with single point (need increase number of steps)\n'
-                txt += '         T         p E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
+                txt += '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 for cc in out_section:
                     txt += n_format.format(*cc)
 
@@ -3285,17 +3257,15 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('No invariant points found.')
 
     def dogminer(self, event):
-        #self.did.onmove(event)
         if event.inaxes is not None:
-            #self.did.clear(event)
             phases, out = self.get_phases_out()
             variance = self.spinVariance.value()
             doglevel = self.spinDoglevel.value()
             # change bulk
-            #bulk = self.tc.interpolate_bulk(event.xdata) #use onebulk
+            # bulk = self.tc.interpolate_bulk(event.xdata) #use onebulk
             tm = sum(self.tc.trange) / 2
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
-            #self.read_scriptfile()
+            # self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             tcout = self.tc.dogmin(phases, event.ydata, tm, variance, doglevel=doglevel, onebulk=event.xdata)
@@ -3343,8 +3313,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
-            #bulk = self.tc.interpolate_bulk(crange)
-            #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+            # bulk = self.tc.interpolate_bulk(crange)
+            # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
                 uni_tmp = UniLine(phases=phases, out=out)
@@ -3390,7 +3360,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                         dt[p].append(res[p]['mode'])
                                 N = len(uni_old.results)
                                 for res, x, y in zip(uni.results, uni._x, uni._y):
-                                    if not x in uni_old._x and not y in uni_old._y:
+                                    if x not in uni_old._x and y not in uni_old._y:
                                         idx = []
                                         for p in uni_old.phases.difference(uni_old.out):
                                             q = interp1d(dt[p], np.arange(N), fill_value='extrapolate')
@@ -3504,7 +3474,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             # restore bulk
-            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -3679,7 +3649,6 @@ class ComboDelegate(QtWidgets.QItemDelegate):
         self.invmodel = invmodel
 
     def createEditor(self, parent, option, index):
-        #r = index.model().getData(index, 'Data')
         uni = self.ps.unilines[index.model().getRowID(index)]
         if index.column() == 2:
             other = uni.end
@@ -3703,7 +3672,7 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     def setEditorData(self, editor, index):
         editor.setCurrentText(str(index.model().data(index)))
         # auto open combobox
-        #editor.showPopup()
+        # editor.showPopup()
 
     def setModelData(self, editor, model, index):
         new = editor.currentData(1)
@@ -3727,16 +3696,6 @@ class DogminModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return None
         dgm = self.ps.dogmins[self.doglist[index.row()]]
-        # elif role == QtCore.Qt.ForegroundRole:
-        #     if self.invlist[index.row()][self.header.index('Data')]['manual']:
-        #         brush = QtGui.QBrush()
-        #         brush.setColor(QtGui.QColor('red'))
-        #         return brush
-        #if role == QtCore.Qt.FontRole:
-        #    if inv.manual:
-        #        font = QtGui.QFont()
-        #        font.setItalic(True)
-        #        return font
         if role != QtCore.Qt.DisplayRole:
             return None
         else:
@@ -3937,8 +3896,6 @@ class TopologyGraph(QtWidgets.QDialog):
         layout.addWidget(self.toolbar)
         self.setLayout(layout)
 
-        import networkx as nx
-
         self.figure.clear()
         ax = self.figure.add_subplot(111)
 
@@ -3962,15 +3919,15 @@ class TopologyGraph(QtWidgets.QDialog):
 
         import warnings
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore",category=FutureWarning)
+            warnings.filterwarnings("ignore", category=FutureWarning)
             npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
-        #npos = nx.planar_layout(G)
-        #npos = nx.kamada_kawai_layout(G, pos=pos)
+        # npos = nx.planar_layout(G)
+        # npos = nx.kamada_kawai_layout(G, pos=pos)
         widths = Normalize(vmin=0, vmax=len(edges))
         color = cm.get_cmap('tab20', len(edges))
         for ix, out in enumerate(edges):
             nx.draw_networkx_edges(G, npos, ax=ax, edgelist=edges[out],
-                                   width=2 + 6*widths(ix), alpha=0.5, edge_color=len(edges[out]) * [color(ix)], label=list(out)[0])
+                                   width=2 + 6 * widths(ix), alpha=0.5, edge_color=len(edges[out]) * [color(ix)], label=list(out)[0])
 
         nx.draw_networkx_nodes(G, npos, ax=ax, node_color='k')
         nx.draw_networkx_labels(G, npos, labels, ax=ax, font_size=9, font_weight='bold', font_color='w')
@@ -3984,6 +3941,7 @@ class TopologyGraph(QtWidgets.QDialog):
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         # refresh canvas
         self.canvas.draw()
+
 
 def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     """
@@ -4004,7 +3962,7 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
         S4 = np.tile(X2.min(axis=1), (n1, 1))
         return S1, S2, S3, S4
 
-    def _rectangle_intersection_(x1, y1 ,x2, y2):
+    def _rectangle_intersection_(x1, y1, x2, y2):
         S1, S2, S3, S4 = _rect_inter_inner(x1, x2)
         S5, S6, S7, S8 = _rect_inter_inner(y1, y2)
 
@@ -4017,26 +3975,26 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
         return ii, jj
 
     # Linear length along the line:
-    d1 = np.cumsum(np.sqrt(np.diff(uni1._x)**2 + np.diff(ratio*uni1._y)**2))
-    d1 = np.insert(d1, 0, 0)/d1[-1]
-    d2 = np.cumsum(np.sqrt(np.diff(uni2._x)**2 + np.diff(ratio*uni2._y)**2))
-    d2 = np.insert(d2, 0, 0)/d2[-1]
+    d1 = np.cumsum(np.sqrt(np.diff(uni1._x)**2 + np.diff(ratio * uni1._y)**2))
+    d1 = np.insert(d1, 0, 0) / d1[-1]
+    d2 = np.cumsum(np.sqrt(np.diff(uni2._x)**2 + np.diff(ratio * uni2._y)**2))
+    d2 = np.insert(d2, 0, 0) / d2[-1]
     try:
         s1x = interp1d(d1, uni1._x, kind='quadratic', fill_value='extrapolate')
-        s1y = interp1d(d1, ratio*uni1._y, kind='quadratic', fill_value='extrapolate')
+        s1y = interp1d(d1, ratio * uni1._y, kind='quadratic', fill_value='extrapolate')
         s2x = interp1d(d2, uni2._x, kind='quadratic', fill_value='extrapolate')
-        s2y = interp1d(d2, ratio*uni2._y, kind='quadratic', fill_value='extrapolate')
+        s2y = interp1d(d2, ratio * uni2._y, kind='quadratic', fill_value='extrapolate')
     except ValueError:
         s1x = interp1d(d1, uni1._x, fill_value='extrapolate')
-        s1y = interp1d(d1, ratio*uni1._y, fill_value='extrapolate')
+        s1y = interp1d(d1, ratio * uni1._y, fill_value='extrapolate')
         s2x = interp1d(d2, uni2._x, fill_value='extrapolate')
-        s2y = interp1d(d2, ratio*uni2._y, fill_value='extrapolate')
+        s2y = interp1d(d2, ratio * uni2._y, fill_value='extrapolate')
     p = np.linspace(-extra, 1 + extra, N)
     x1, y1 = s1x(p), s1y(p)
     x2, y2 = s2x(p), s2y(p)
 
-    ii,jj=_rectangle_intersection_(x1, y1, x2, y2)
-    n=len(ii)
+    ii, jj = _rectangle_intersection_(x1, y1, x2, y2)
+    n = len(ii)
 
     dxy1 = np.diff(np.c_[x1, y1], axis=0)
     dxy2 = np.diff(np.c_[x2, y2], axis=0)
@@ -4057,15 +4015,15 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     for i in range(n):
         try:
             T[:, i] = np.linalg.solve(AA[:, :, i], BB[:, i])
-        except:
+        except Exception:
             T[:, i] = np.NaN
 
-
-    in_range= (T[0, :] >= 0) & (T[1, :] >= 0) & (T[0, :] <= 1) & (T[1, :] <= 1)
+    in_range = (T[0, :] >= 0) & (T[1, :] >= 0) & (T[0, :] <= 1) & (T[1, :] <= 1)
 
     xy0 = T[2:, in_range]
     xy0 = xy0.T
     return xy0[:, 0], xy0[:, 1] / ratio
+
 
 def ptbuilder():
     application = QtWidgets.QApplication(sys.argv)
@@ -4077,6 +4035,7 @@ def ptbuilder():
     window.move(width, height)
     sys.exit(application.exec_())
 
+
 def txbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = TXBuilder()
@@ -4086,6 +4045,7 @@ def txbuilder():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
+
 
 def pxbuilder():
     application = QtWidgets.QApplication(sys.argv)

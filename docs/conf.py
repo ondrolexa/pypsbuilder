@@ -19,7 +19,7 @@
 #
 import os
 import sys
-#sys.path.insert(0, os.path.abspath('../pypsbuilder'))
+
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 sys.path.insert(0, os.path.abspath('../'))
@@ -97,13 +97,6 @@ autosummary_generate = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-#on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-#if on_rtd:
-#    html_theme = 'sphinx_rtd_theme'
-#else:
-#    html_theme = 'sphinx_rtd_theme'
 html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme

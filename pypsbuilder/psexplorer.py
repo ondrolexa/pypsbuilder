@@ -22,7 +22,7 @@ Example:
 
 import argparse
 import sys
-import os
+# import os
 try:
     import cPickle as pickle
 except ImportError:
@@ -48,11 +48,11 @@ from shapely.ops import linemerge
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning
-from scipy.interpolate import griddata, interp2d
+from scipy.interpolate import griddata  # interp2d
 from tqdm import tqdm, trange
 
 from .psclasses import TCAPI
-from .psclasses import InvPoint, UniLine, PTsection, TXsection, PXsection
+from .psclasses import PTsection, TXsection, PXsection  # InvPoint, UniLine
 from .psclasses import polymorphs
 
 
@@ -94,7 +94,7 @@ class PS:
             assert type(data['section']) == self.section_class, 'The provided project file is not {}.'.format(self.section_class.__name__)
             self.sections[ix] = data['section']
             # check if workdir exists
-            if not 'workdir' in data:
+            if 'workdir' not in data:
                 data['workdir'] = str(projfile.parent)
             # check workdit compatibility
             if self.tc is None:
@@ -129,7 +129,7 @@ class PS:
                             if 'variance of required equilibrium' in ln:
                                 break
                         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
-                    except Exception as e:
+                    except Exception:
                         variance[key] = 0
                         ok = False
                 self._variance[ix] = variance
@@ -325,12 +325,12 @@ class PS:
     def common_grid_and_masks(self, **kwargs):
         """Initialize common grid and mask for all partial grids
         """
-        nx = kwargs.get('nx', np.round(np.diff(self.xrange)[0]/self.gridxstep).astype(int))
-        ny = kwargs.get('ny', np.round(np.diff(self.yrange)[0]/self.gridystep).astype(int))
+        nx = kwargs.get('nx', np.round(np.diff(self.xrange)[0] / self.gridxstep).astype(int))
+        ny = kwargs.get('ny', np.round(np.diff(self.yrange)[0] / self.gridystep).astype(int))
         self.xstep = np.diff(self.xrange)[0] / nx
         self.ystep = np.diff(self.yrange)[0] / ny
-        self.xspace = np.linspace(self.xrange[0] + self.xstep/2, self.xrange[1] - self.xstep/2, nx)
-        self.yspace = np.linspace(self.yrange[0] + self.ystep/2, self.yrange[1] - self.ystep/2, ny)
+        self.xspace = np.linspace(self.xrange[0] + self.xstep / 2, self.xrange[1] - self.xstep / 2, nx)
+        self.yspace = np.linspace(self.yrange[0] + self.ystep / 2, self.yrange[1] - self.ystep / 2, ny)
         self.xg, self.yg = np.meshgrid(self.xspace, self.yspace)
         # Create data masks
         self.masks = {}
@@ -487,8 +487,8 @@ class PS:
                                 if ok == 1:
                                     dt['pts'].append((x, y))
                                     dt['data'].append(eval_expr(expr, res[phase]))
-        #else:
-            #print('Not yet gridded...')
+        # else:
+        #     print('Not yet gridded...')
         return dt
 
     def get_nearest_grid_data(self, x, y):
@@ -533,7 +533,6 @@ class PS:
         """
         dt = dict(pts=[], data=[])
         # check if phase or end-member is in assemblage
-        #if re.sub(r'[\(].*?[\)]', '', phase) in key:
         if phase in self.all_data_keys:
             if which & (1 << 0):
                 d = self.collect_inv_data(key, phase, expr)
@@ -622,7 +621,7 @@ class PS:
             vari = [self.variance[k] for k in self]
             poc = max(vari) - min(vari) + 1
             # skip extreme values to visually differs from empty areas
-            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, poc + 2))[1:-1,:]
+            pscolors = plt.get_cmap(cmap)(np.linspace(0, 1, poc + 2))[1:-1, :]
             # Set alpha
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
@@ -632,7 +631,6 @@ class PS:
                 patch = PolygonPatch(shape, fc=pscmap(norm(self.variance[k])), ec='none')
                 ax.add_patch(patch)
                 if show_vertices:
-                    #x, y = np.array(self.shapes[k].exterior.coords).T
                     x, y = zip(*patch.get_path().vertices)
                     ax.plot(x, y, 'k.', ms=3)
             ax.autoscale_view()
@@ -643,13 +641,11 @@ class PS:
                     for ix, ps in self.sections.items():
                         for uni in ps.unilines.values():
                             if o in uni.out:
-                                #xy.append((uni.x, uni.y))
                                 xy.append(np.array(uni.shape().coords).T)
                             for poly in polymorphs:
                                 if poly.issubset(uni.phases):
                                     if o in poly:
                                         if poly.difference({o}).issubset(uni.out):
-                                            #xy.append((uni.x, uni.y))
                                             xy.append(np.array(uni.shape().coords).T)
                     if xy:
                         ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
@@ -662,7 +658,6 @@ class PS:
                 ax.legend(loc='upper right', bbox_to_anchor=(-0.08, 1), title='Out', borderaxespad=0, frameon=False)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes('right', size='4%', pad=0.05)
-            #cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar = ColorbarBase(ax=cax, cmap=pscmap, norm=norm, orientation='vertical', ticks=np.arange(min(vari), max(vari) + 1))
             cbar.set_label('Variance')
             ax.set_xlim(self.xrange)
@@ -689,7 +684,7 @@ class PS:
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
                     ox = self.sections[0].get_bulk_composition()
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
                             ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
@@ -697,7 +692,7 @@ class PS:
                     plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
                 else:
                     ox = self.sections[0].get_bulk_composition()
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
                             ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
@@ -714,7 +709,7 @@ class PS:
             ax.format_coord = self.format_coord
             # connect button press
             if connect:
-                cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+                fig.canvas.mpl_connect('button_press_event', self.onclick)
             if filename is not None:
                 plt.savefig(filename, **save_kw)
             else:
@@ -819,7 +814,7 @@ class PS:
                 self.add_overlay(ax, label=label)
                 ax.set_xlim(self.xrange)
                 ax.set_ylim(self.yrange)
-                cbar = fig.colorbar(im)
+                fig.colorbar(im)
                 ax.set_title('{}({})'.format(phase, expr))
                 fig.tight_layout()
                 plt.show()
@@ -906,9 +901,9 @@ class PS:
                         dt = grid.gridcalcs[r, c]
                         if dt is not None:
                             BM = np.array([[dt['data'][phase][ox] for ox in oxides] for phase in key])
-                            atoms = np.array([sum(rbi*elem) for rbi in BM])
+                            atoms = np.array([sum(rbi * elem) for rbi in BM])
                             mode = np.array([dt['data'][phase]['mode'] for phase in key])
-                            rbi_sum = np.array([rbi*c for rbi, c in zip(BM, mode/atoms)]).sum(axis=0)
+                            rbi_sum = np.array([rbi * c for rbi, c in zip(BM, mode / atoms)]).sum(axis=0)
                             bulk_r = 100 * rbi_sum / sum(rbi_sum)
                             bulk_n = np.array([v for v in oxides.values()])
                             chi[r, c] = np.mean((bulk_r - bulk_n)**2 / bulk_n)
@@ -1070,9 +1065,8 @@ class PS:
                 cntv = np.arange(0, mx + step, step)
                 cntv = cntv[cntv >= mn - step]
             else:
-                #dm = (mx - mn) / 25
-                ##cntv = np.linspace(max(0, mn - dm), mx + dm, N)
-                #cntv = np.linspace(mn - dm, mx + dm, N)
+                # dm = (mx - mn) / 25
+                # cntv = np.linspace(mn - dm, mx + dm, N)
                 ml = ticker.MaxNLocator(nbins=N)
                 cntv = ml.tick_values(vmin=mn, vmax=mx)
             # Thin-plate contouring of areas
@@ -1095,19 +1089,19 @@ class PS:
                             warnings.filterwarnings("error")
                             rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
                             zg = rbf(tg, self.ratio * pg)
-                    except Exception as e:
+                    except Exception:
                         try:
                             # preprocess with griddata cubic
                             zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
                             # locate valid data
                             ri, ci = np.nonzero(np.isfinite(zg_tmp))
-                            x, y, z = np.array([[tg[r, c], pg[r, c], zg_tmp[r, c]] for r,c in zip(ri, ci)]).T
+                            x, y, z = np.array([[tg[r, c], pg[r, c], zg_tmp[r, c]] for r, c in zip(ri, ci)]).T
                             # do Rbf extrapolation
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("ignore", category=LinAlgWarning)
                                 rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth)
                                 zg = rbf(tg, self.ratio * pg)
-                        except Exception as e:
+                        except Exception:
                             print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
                             zg = griddata(np.array(pts), data, (tg, pg), method='nearest', rescale=True)
                     # experimental
@@ -1161,7 +1155,7 @@ class PS:
                                     np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
             try:
                 fig.colorbar(cont)
-            except:
+            except Exception:
                 print('There is trouble to draw colorbar. Sorry.')
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
@@ -1186,7 +1180,7 @@ class PS:
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
                     ox = self.sections[0].get_bulk_composition()
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
                             ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
@@ -1194,7 +1188,7 @@ class PS:
                     plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
                 else:
                     ox = self.sections[0].get_bulk_composition()
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox)*['c']) + '}' + \
+                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
                             ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
@@ -1212,7 +1206,7 @@ class PS:
             # coords
             ax.format_coord = self.format_coord
             # connect button press
-            #cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+            # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             plt.show()
 
     def gendrawpd(self, export_areas=True):
@@ -1221,7 +1215,6 @@ class PS:
         Args:
             export_areas (bool): Whether to include constructed areas. Default True.
         """
-        #self.refresh_geometry()
         with self.tc.drawpdfile.open('w', encoding=self.tc.TCenc) as output:
             output.write('% Generated by pypsbuilder (c) Ondrej Lexa 2020\n')
             output.write('2    % no. of variables in each line of data, in this case P, T\n')
@@ -1281,27 +1274,26 @@ class PS:
             if export_areas:
                 output.write('% Areas\n')
                 output.write('% ------------------------------\n')
-                mxv, mnv = sys.float_info.min, sys.float_info.max 
+                mxv, mnv = sys.float_info.min, sys.float_info.max
                 for key in self.shapes:
                     if self.variance[key] < mnv:
                         mnv = self.variance[key]
                     if self.variance[key] > mxv:
                         mxv = self.variance[key]
-                shades = np.linspace(1, 0, mxv - mnv + 3)[1:-1] # exclude extreme values
+                shades = np.linspace(1, 0, mxv - mnv + 3)[1:-1]  # exclude extreme values
                 for key in self.shapes:
                     uids = [all_lines[ix][uid] for ix in self.unilists if key in self.unilists[ix] for uid in self.unilists[ix][key] if uid in all_lines[ix]]
                     poly = linemerge([all_lines_topology[uid].shape() for uid in uids])
                     positions = [poly.project(Point(*all_lines_topology[uid].get_label_point())) for uid in uids]
                     orderix = sorted(range(len(positions)), key=lambda k: positions[k])
-                    d = ('{:.2f} '.format(shades[self.variance[key] - mnv]) +
-                         ' '.join(['u{}'.format(uids[ix]) for ix in orderix]) +
-                         ' % ' + ' '.join(sorted(key)) + '\n')
+                    d = '{:.2f} {} % {}\n'.format(shades[self.variance[key] - mnv],
+                                                  ' '.join(['u{}'.format(uids[ix]) for ix in orderix]),
+                                                  ' '.join(sorted(key)))
                     output.write(d)
             output.write('\n')
             output.write('*\n')
             output.write('\n')
-            output.write('window {} {} '.format(*self.xrange) +
-                         '{} {}\n\n'.format(*self.yrange))
+            output.write('window {} {} {} {}\n\n'.format(*self.xrange, *self.yrange))
             output.write('darkcolour  56 16 101\n\n')
             dt = self.xrange[1] - self.xrange[0]
             dp = self.yrange[1] - self.yrange[0]
@@ -1311,21 +1303,19 @@ class PS:
             tg = tg[tg >= self.xrange[0]]
             pg = np.arange(0, self.yrange[1] + ps, ps)
             pg = pg[pg >= self.yrange[0]]
-            output.write('bigticks ' +
-                         '{} {} '.format(tg[1] - tg[0], tg[0]) +
-                         '{} {}\n\n'.format(pg[1] - pg[0], pg[0]))
-            output.write('smallticks {} '.format((tg[1] - tg[0]) / 10) +
-                         '{}\n\n'.format((pg[1] - pg[0]) / 10))
+            output.write('bigticks {} {} {} {}\n\n'.format(tg[1] - tg[0], tg[0], pg[1] - pg[0], pg[0]))
+            output.write('smallticks {} {}\n\n'.format((tg[1] - tg[0]) / 10, (pg[1] - pg[0]) / 10))
             output.write('numbering yes\n\n')
             if export_areas:
                 output.write('doareas yes\n\n')
             output.write('*\n')
             print('Drawpd file generated successfully.')
 
-        #if self.tc.rundr():
-        #    print('Drawpd sucessfully executed.')
-        #else:
-        #    print('Drawpd error!', str(err))
+        if self.tx.drexe is not None:
+            if self.tc.rundr():
+                print('Drawpd sucessfully executed.')
+            else:
+                print('Drawpd error!')
 
     def save_tab(self, comps, tabfile=None):
         """Export gridded values to Perpex tab format
@@ -1373,6 +1363,7 @@ class PS:
         else:
             print('Not yet gridded...')
 
+
 class PTPS(PS):
     """Class to postprocess ptbuilder project
     """
@@ -1405,8 +1396,8 @@ class PTPS(PS):
             paxr = ps.xrange
             payr = ps.yrange
             grid = GridData(ps,
-                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
-                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+                            nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
+                            ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])))
             last_inv = 0
             for (r, c) in tqdm(np.ndindex(grid.xg.shape), desc='Gridding {}/{}'.format(ix + 1, len(self.sections)), total=np.prod(grid.xg.shape)):
                 x, y = grid.xg[r, c], grid.yg[r, c]
@@ -1507,7 +1498,7 @@ class PTPS(PS):
         else:
             print('Not yet gridded...')
 
-    def collect_ptpath(self, tpath, ppath, N=100, kind = 'quadratic'):
+    def collect_ptpath(self, tpath, ppath, N=100, kind='quadratic'):
         """Method to collect THERMOCALC calculations along defined PT path.
 
         PT path is interpolated from provided points using defined method. For
@@ -1629,11 +1620,11 @@ class PTPS(PS):
         modes = 100 * modes / modes.sum(axis=0)
         cm = plt.get_cmap(cmap)
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.set_prop_cycle(color=[cm(i/len(phases)) for i in range(len(phases))])
+        ax.set_prop_cycle(color=[cm(i / len(phases)) for i in range(len(phases))])
         bottom = np.zeros_like(modes[0])
         bars = []
         for n, mode in enumerate(modes):
-            h = ax.bar(nd, mode, bottom=bottom, width=nd[1]-nd[0])
+            h = ax.bar(nd, mode, bottom=bottom, width=nd[1] - nd[0])
             bars.append(h[0])
             bottom += mode
 
@@ -1644,7 +1635,7 @@ class PTPS(PS):
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
         # Put a legend to the right of the current axis
-        ax.legend(bars, phases, fancybox=True, loc='center left', bbox_to_anchor=(1.05,0.5))
+        ax.legend(bars, phases, fancybox=True, loc='center left', bbox_to_anchor=(1.05, 0.5))
         plt.show()
 
 
@@ -1680,8 +1671,8 @@ class TXPS(PS):
             paxr = ps.xrange
             payr = ps.yrange
             grid = GridData(ps,
-                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
-                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+                            nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
+                            ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])))
             last_inv = 0
             with tqdm(desc='Gridding {}/{}'.format(ix + 1, len(self.sections)), total=np.prod(grid.xg.shape)) as pbar:
                 pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
@@ -1829,8 +1820,8 @@ class PXPS(PS):
             paxr = ps.xrange
             payr = ps.yrange
             grid = GridData(ps,
-                            nx=round(nx*(paxr[1] - paxr[0])/(axr[1] - axr[0])),
-                            ny=round(ny*(payr[1] - payr[0])/(ayr[1] - ayr[0])))
+                            nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
+                            ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])))
             last_inv = 0
             with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
                 tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
@@ -1964,9 +1955,9 @@ class GridData:
     """
     def __init__(self, ps, nx, ny):
         dx = (ps.xrange[1] - ps.xrange[0]) / nx
-        self.xspace = np.linspace(ps.xrange[0] + dx/2, ps.xrange[1] - dx/2, nx)
+        self.xspace = np.linspace(ps.xrange[0] + dx / 2, ps.xrange[1] - dx / 2, nx)
         dy = (ps.yrange[1] - ps.yrange[0]) / ny
-        self.yspace = np.linspace(ps.yrange[0] + dy/2, ps.yrange[1] - dy/2, ny)
+        self.yspace = np.linspace(ps.yrange[0] + dy / 2, ps.yrange[1] - dy / 2, ny)
         self.xg, self.yg = np.meshgrid(self.xspace, self.yspace)
         self.gridcalcs = np.empty(self.xg.shape, np.dtype(object))
         self.status = np.empty(self.xg.shape)
@@ -2086,9 +2077,11 @@ def eval_expr(expr, dt):
            ast.Pow: np.power}
     return eval_(ast.parse(expr, mode='eval').body)
 
+
 explorers = {'.ptb': PTPS,
              '.txb': TXPS,
              '.pxb': PXPS}
+
 
 def ps_show():
     parser = argparse.ArgumentParser(description='Draw pseudosection from project file')

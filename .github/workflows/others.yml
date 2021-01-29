@@ -1,6 +1,9 @@
-name: Python Package using Conda
+name: FeatureCI
 
-on: [push]
+on:
+  push:
+    branches:
+      - '*'
 
 jobs:
   build-linux:
@@ -31,4 +34,4 @@ jobs:
     - name: Test with pytest
       run: |
         conda install pytest
-        pytest
+        pytest -v

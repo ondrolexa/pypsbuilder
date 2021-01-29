@@ -1,7 +1,6 @@
 name: base
 
 dependencies:
-- python=3.8
 - pyqt=5
 - numpy
 - matplotlib
@@ -10,3 +9,5 @@ dependencies:
 - shapely
 - descartes
 - tqdm
+- flake8
+- pytest

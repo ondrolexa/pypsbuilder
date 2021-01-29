@@ -3,9 +3,11 @@ from pypsbuilder import TCAPI, InvPoint, UniLine, PTsection
 
 pytest.ps = PTsection(trange=(400., 700.), prange=(7., 16.))
 
+
 @pytest.fixture
 def mock_tc():
     return TCAPI('./examples/outputs')
+
 
 def test_parse_ini1(mock_tc):
     test = 'inv1'
@@ -68,6 +70,7 @@ def test_parse_ini2(mock_tc):
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
+
 def test_parse_ini3(mock_tc):
     test = 'inv3'
     ofile = mock_tc.workdir / '{}-log.txt'.format(test)
@@ -97,6 +100,7 @@ def test_parse_ini3(mock_tc):
     assert len(res) == 1, 'Wrong results length'
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
+
 
 def test_parse_uni1(mock_tc):
     test = 'uni1'
@@ -130,6 +134,7 @@ def test_parse_uni1(mock_tc):
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
+
 def test_parse_uni2(mock_tc):
     test = 'uni2'
     ofile = mock_tc.workdir / '{}-log.txt'.format(test)
@@ -161,6 +166,7 @@ def test_parse_uni2(mock_tc):
     assert len(res) == 51, 'Wrong results length'
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
+
 
 def test_parse_uni3(mock_tc):
     test = 'uni3'
@@ -194,6 +200,7 @@ def test_parse_uni3(mock_tc):
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
+
 def test_contains_inv():
     for uni in pytest.ps.unilines.values():
         inv1 = pytest.ps.invpoints[uni.begin]
@@ -201,22 +208,26 @@ def test_contains_inv():
         assert uni.contains_inv(inv1), 'Error in UniLine.contains_inv method'
         assert uni.contains_inv(inv2), 'Error in UniLine.contains_inv method'
 
+
 def test_getidinv():
     for key, inv in pytest.ps.invpoints.items():
         is_new, id_found = pytest.ps.getidinv(inv)
-        assert is_new == False, 'Error chcecking existing invariant point'
+        assert is_new is False, 'Error chcecking existing invariant point'
         assert key == id_found, 'Error chcecking existing inv id'
+
 
 def test_getiduni():
     for key, uni in pytest.ps.unilines.items():
         is_new, id_found = pytest.ps.getiduni(uni)
-        assert is_new == False, 'Error chcecking existing univariant line'
+        assert is_new is False, 'Error chcecking existing univariant line'
         assert key == id_found, 'Error chcecking existing uni id'
+
 
 def test_auto_connect():
     for uni in pytest.ps.unilines.values():
         candidates = [inv for inv in pytest.ps.invpoints.values() if uni.contains_inv(inv)]
         assert len(candidates) == 2, 'Error to detect auto_connect possibility'
+
 
 def test_remaining_uni():
     for key, inv in pytest.ps.invpoints.items():
@@ -227,6 +238,7 @@ def test_remaining_uni():
             if is_new:
                 n += 1
         assert n == 2, 'Error in detection of remaining univariant lines'
+
 
 def test_trim_uni():
     uni = pytest.ps.unilines[1]
@@ -243,6 +255,7 @@ def test_trim_uni():
     assert uni.used == slice(0, 31), 'Wrong used slice before trimming uni 3'
     pytest.ps.trim_uni(3)
     assert uni.used == slice(10, 31), 'Wrong used slice after trimming uni 3'
+
 
 def test_create_shapes():
     shapes, shape_edges, log = pytest.ps.create_shapes()

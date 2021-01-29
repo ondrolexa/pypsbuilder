@@ -26,10 +26,17 @@ In the moment you need to have Python and needed modules installed locally and
 
   .. image:: images/install_locally.png
 
-Upgrade to latest Version
+Upgrade to latest version
 -------------------------
 
 You can anytime upgrade your existing pypsbuilder to the latest version directly
 from github using pip::
 
 		  pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+
+Development version
+-------------------
+
+To install latest development version, use develop branch at github::
+
+      pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
