@@ -376,20 +376,19 @@ class PS:
                                 data[comp] = uni.datakeys(comp)
 
             if not valid_phases.issubset(data.keys()):
-                # Search in griddata
+                # Search in griddata  NEED CHECK AND FIX
                 for ix, grid in self.grids.items():
                     shapes = self._shapes[ix]
                     for key in shapes:
-                        if phase in key:
-                            results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
-                            if len(results) > 0:
-                                for comp in res[0].phases:
-                                    k = comp.split(')')[0].split('(')
-                                    if k[0] in valid_phases:
-                                        data[comp] = list(res[0][comp].keys())
+                        results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                        if len(results) > 0:
+                            for comp in results[0].phases:
+                                k = comp.split(')')[0].split('(')
+                                if k[0] in valid_phases:
+                                    data[comp] = list(results[0][comp].keys())
 
                 if not valid_phases.issubset(data.keys()):
-                    print('{} not calculated.'.format(phase))
+                    print('Some phases not calculated.')
         # if self.gridded:
         #     for ix, grid in self.grids.items():
         #         shapes = self._shapes[ix]

@@ -7,9 +7,9 @@ Visual pseudosection builder for THERMOCALC
 import sys
 import os
 try:
-  import cPickle as pickle
+    import cPickle as pickle
 except ImportError:
-  import pickle
+    import pickle
 import gzip
 from pathlib import Path
 from datetime import datetime
@@ -556,7 +556,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                             for inv in self.ps.invpoints.values():
                                 if old_phase in inv.out:
                                     qb = QtWidgets.QMessageBox
-                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', tc.status, qb.Abort)
+                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', self.tc.status, qb.Abort)
                                     raise ValueError()
                                 if old_phase in inv.phases:
                                     inv.phases.remove(old_phase)
@@ -567,7 +567,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                             for uni in self.ps.unilines.values():
                                 if old_phase in uni.out:
                                     qb = QtWidgets.QMessageBox
-                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', tc.status, qb.Abort)
+                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', self.tc.status, qb.Abort)
                                     raise ValueError()
                                 if old_phase in uni.phases:
                                     uni.phases.remove(old_phase)
@@ -3138,7 +3138,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         if pt_line.intersects(uni.shape()):
                             isnew, id_uni = self.ps.getiduni(uni)
                             if isnew:
-                                tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange, trange=trange(tm, tm))
+                                tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange, trange=(tm, tm))
                                 status, res, output = self.tc.parse_logfile()
                                 if status == 'ok':
                                     if len(res) > 1:

@@ -5,7 +5,7 @@ pytest.ps = PTsection(trange=(400., 700.), prange=(7., 16.))
 
 @pytest.fixture
 def mock_tc():
-	return TCAPI('./examples/outputs')
+    return TCAPI('./examples/outputs')
 
 def test_parse_ini1(mock_tc):
     test = 'inv1'
@@ -114,8 +114,8 @@ def test_parse_uni1(mock_tc):
     uni = UniLine(phases={'bi', 'mu', 'chl', 'H2O', 'ep', 'q', 'g', 'sph', 'pa'},
                   out={'chl'},
                   variance=res.variance,
-				  x=res.x,
-				  y=res.y,
+                  x=res.x,
+                  y=res.y,
                   begin=2,
                   end=1,
                   results=res,
@@ -146,8 +146,8 @@ def test_parse_uni2(mock_tc):
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep'},
                   out={'ep'},
                   variance=res.variance,
-				  x=res.x,
-				  y=res.y,
+                  x=res.x,
+                  y=res.y,
                   begin=1,
                   end=3,
                   results=res,
@@ -178,8 +178,8 @@ def test_parse_uni3(mock_tc):
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep', 'ab'},
                   out={'ab'},
                   variance=res.variance,
-				  x=res.x,
-				  y=res.y,
+                  x=res.x,
+                  y=res.y,
                   begin=2,
                   end=3,
                   results=res,
