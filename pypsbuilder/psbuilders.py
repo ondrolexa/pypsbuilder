@@ -2475,7 +2475,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     extend = self.spinOver.value()
                     trange = self.ax.get_xlim()
                     ts = extend * (trange[1] - trange[0]) / 100
-                    trange = (max(trange[0] - ts, 11), trange[1] + ts)
+                    trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
                     # seek line
                     pt_line = LineString([(trange[0], pm), (trange[1], pm)])
                     crange = self.ax.get_ylim()
@@ -2504,7 +2504,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
-
                     if last is not None:
                         self.uniview.resizeColumnsToContents()
                         idx = self.unimodel.getIndexID(last)
@@ -2522,7 +2521,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
     def plot_title(self):
         ex = list(self.ps.excess)
         ex.insert(0, '')
-        return self.tc.axname + ' +'.join(ex) + ' (at {:g} kbar)'.format(np.mean(self.tc.prange))
+        pm = sum(self.tc.prange) / 2
+        return self.tc.axname + ' +'.join(ex) + ' (at {:g} kbar)'.format(pm)
 
     def reset_limits(self):
         if self.ready:
@@ -2550,7 +2550,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
-            trange = (max(trange[0] - ts, 11), trange[1] + ts)
+            trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
             pm = sum(self.tc.prange) / 2
             prange = (max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]), min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]))
             crange = self.ax.get_ylim()
@@ -2690,7 +2690,6 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
             extend = self.spinOver.value()
-
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
             trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
@@ -3053,10 +3052,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
-                    if hasattr(data['section'], 'dogmins'):
-                        for id, dgm in data['section'].dogmins.items():
-                            self.dogmodel.appendRow(id, dgm)
-                        self.dogview.resizeColumnsToContents()
+                    #if hasattr(data['section'], 'dogmins'):
+                    #    for id, dgm in data['section'].dogmins.items():
+                    #        self.dogmodel.appendRow(id, dgm)
+                    #    self.dogview.resizeColumnsToContents()
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -3116,15 +3115,13 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
                 if 'section' in data: # NEW
-                    tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
+                    tm = sum(self.tc.trange) / 2
                     extend = self.spinOver.value()
                     prange = self.ax.get_ylim()
                     ps = extend * (prange[1] - prange[0]) / 100
                     prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
                     # seek line
                     pt_line = LineString([(tm, prange[0]), (tm, prange[1])])
-                    trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
-                              self.tc.trange[1] + self.rangeSpin.value() / 2)
                     crange = self.ax.get_xlim()
                     cs = extend * (crange[1] - crange[0]) / 100
                     crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
@@ -3134,32 +3131,30 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                     # change bulk
                     #bulk = self.tc.interpolate_bulk(crange)
-                    self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+                    #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
                     # only uni
                     last = None
                     for id, uni in data['section'].unilines.items():
                         if pt_line.intersects(uni.shape()):
                             isnew, id_uni = self.ps.getiduni(uni)
                             if isnew:
-                                #if uni.ptguess():
-                                #    self.tc.update_scriptfile(guesses=uni.ptguess())
-                                tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange)
+                                tcout, ans = self.tc.calc_px(uni.phases, uni.out, prange=prange, trange=trange(tm, tm))
                                 status, res, output = self.tc.parse_logfile()
                                 if status == 'ok':
                                     if len(res) > 1:
                                         # rescale pts from zoomed composition
-                                        X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
                                         uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
-                                                         variance=res.variance, y=res.y, x=X, output=output, results=res)
+                                                         variance=res.variance, y=res.y, x=res.c, output=output, results=res)
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
+
                     if last is not None:
                         self.uniview.resizeColumnsToContents()
                         idx = self.unimodel.getIndexID(last)
                         self.uniview.selectRow(idx.row())
                     # restore bulk
-                    self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+                    #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
                     self.refresh_gui()
                     QtWidgets.QApplication.restoreOverrideCursor()
                     self.statusBar().showMessage('Data imported.')
@@ -3171,7 +3166,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
     def plot_title(self):
         ex = list(self.ps.excess)
         ex.insert(0, '')
-        return self.tc.axname + ' +'.join(ex) + ' (at {:g}°C)'.format(np.mean(self.tc.trange))
+        tm = sum(self.tc.trange) / 2
+        return self.tc.axname + ' +'.join(ex) + ' (at {:g}°C)'.format(tm)
 
     def reset_limits(self):
         if self.ready:
@@ -3180,7 +3176,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.pminEdit.setText(fmt(self.tc.prange[0]))
             self.pmaxEdit.setText(fmt(self.tc.prange[1]))
 
-    def uni_explore(self): ## TODO:
+    def uni_explore(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             uni = self.ps.unilines[self.unimodel.data(idx[0])]
@@ -3197,23 +3193,23 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
             # Try out from phases
             extend = self.spinOver.value()
-            trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
-                      self.tc.trange[1] + self.rangeSpin.value() / 2)
+            tm = sum(self.tc.trange) / 2
+            trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
+            prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
             crange = self.ax.get_xlim()
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
             #bulk = self.tc.interpolate_bulk(crange)
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+            #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
             out_section = []
             cand = []
             line = uni._shape()
             for ophase in phases.difference(out).difference(self.ps.excess):
                 nout = out.union(set([ophase]))
-                self.tc.calc_px(phases, nout, prange = prange, trange=trange)
+                self.tc.calc_px(phases, nout, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
                 status, res, output = self.tc.parse_logfile()
                 inv = InvPoint(phases=phases, out=nout)
                 isnew, id = self.ps.getidinv(inv)
@@ -3224,10 +3220,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         exists, inv_id = '*', str(id)
                     if len(res) > 1:
                         # rescale pts from zoomed composition
-                        X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
-                        tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
                         splt = interp1d(res.x, res.y, bounds_error=False, fill_value=np.nan)
-                        splx = interp1d(res.x, X, bounds_error=False, fill_value=np.nan)
+                        splx = interp1d(res.x, res.c, bounds_error=False, fill_value=np.nan)
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
@@ -3241,7 +3235,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             for ophase in set(self.tc.phases).difference(self.ps.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
                 nout = out.union(set([ophase]))
-                self.tc.calc_px(nphases, nout, prange = prange, trange=trange)
+                self.tc.calc_px(nphases, nout, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
                 status, res, output = self.tc.parse_logfile()
                 inv = InvPoint(phases=nphases, out=nout)
                 isnew, id = self.ps.getidinv(inv)
@@ -3252,10 +3246,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         exists, inv_id = '*', str(id)
                     if len(res) > 1:
                         # rescale pts from zoomed composition
-                        X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
-                        tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
                         splt = interp1d(res.x, res.y, bounds_error=False, fill_value=np.nan)
-                        splx = interp1d(res.x, X, bounds_error=False, fill_value=np.nan)
+                        splx = interp1d(res.x, res.c, bounds_error=False, fill_value=np.nan)
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
@@ -3270,7 +3262,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             if old_guesses is not None:
                 self.tc.update_scriptfile(guesses=old_guesses)
             # restore bulk
-            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
             txt = ''
             n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
@@ -3297,23 +3289,16 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
         if event.inaxes is not None:
             #self.did.clear(event)
             phases, out = self.get_phases_out()
-            which = phases.difference(self.ps.excess)
             variance = self.spinVariance.value()
             doglevel = self.spinDoglevel.value()
             # change bulk
             #bulk = self.tc.interpolate_bulk(event.xdata) #use onebulk
+            tm = sum(self.tc.trange) / 2
             self.statusBar().showMessage('Running dogmin with max variance of equilibria at {}...'.format(variance))
-            tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
-            self.tc.update_scriptfile(bulk=bulk,
-                                      dogmin='yes {}'.format(doglevel), which=which,
-                                      T='{:g}'.format(tm),
-                                      p='{:g}'.format(event.ydata))
             #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            tcout = self.tc.dogmin(variance)
-            # restore scriptfile
-            self.tc.update_scriptfile(dogmin='no')
+            tcout = self.tc.dogmin(phases, event.ydata, tm, variance, doglevel=doglevel, onebulk=event.ydata)
             self.read_scriptfile()
             QtWidgets.QApplication.restoreOverrideCursor()
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
@@ -3350,22 +3335,21 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
             extend = self.spinOver.value()
-            trange = (max(self.tc.trange[0] - self.rangeSpin.value() / 2, 11),
-                      self.tc.trange[1] + self.rangeSpin.value() / 2)
+            tm = sum(self.tc.trange) / 2
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
-            prange = (max(prange[0] - ps, 0.01), prange[1] + ps)
+            prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
             crange = self.ax.get_xlim()
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
             # change bulk
             #bulk = self.tc.interpolate_bulk(crange)
-            self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
+            #self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
 
             if len(out) == 1:
                 uni_tmp = UniLine(phases=phases, out=out)
                 isnew, id_uni = self.ps.getiduni(uni_tmp)
-                tcout, ans = self.tc.calc_px(uni_tmp.phases, uni_tmp.out, prange=prange)
+                tcout, ans = self.tc.calc_px(uni_tmp.phases, uni_tmp.out, prange=prange, trange=(tm, tm), xvals=crange, steps=self.spinSteps.value())
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -3376,9 +3360,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
                     # rescale pts from zoomed composition
-                    X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
                     uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
-                                  variance=res.variance, y=res.y, x=X, output=output, results=res)
+                                  variance=res.variance, y=res.y, x=res.c, output=output, results=res)
                     if self.checkAutoconnectUni.isChecked():
                         candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
                     if isnew:
@@ -3421,7 +3404,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                             nix = values[np.argmax(counts)]
                                             # insert data to temporary dict
                                             for p in uni_old.phases.difference(uni_old.out):
-                                                dt[p].insert(nix, res['data'][p]['mode'])
+                                                dt[p].insert(nix, res[p]['mode'])
                                             # insert real data
                                             uni_old.results.insert(nix, res)
                                             uni_old._x = np.insert(uni_old._x, nix, x)
@@ -3459,7 +3442,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             elif len(out) == 2:
                 inv_tmp = InvPoint(phases=phases, out=out)
                 isnew, id_inv = self.ps.getidinv(inv_tmp)
-                tcout, ans = self.tc.calc_px(inv_tmp.phases, inv_tmp.out, prange = prange, trange=trange)
+                trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
+                tcout, ans = self.tc.calc_px(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
                 self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -3470,10 +3454,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     self.statusBar().showMessage('Only one point calculated. Change steps.')
                 else:
                     # rescale pts from zoomed composition
-                    X = crange[0] + res.steps * (crange[1] - crange[0]) / self.spinSteps.value()
-                    tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
                     splp = interp1d(res.x, res.y, bounds_error=False, fill_value=np.nan)
-                    splx = interp1d(res.x, X, bounds_error=False, fill_value=np.nan)
+                    splx = interp1d(res.x, res.c, bounds_error=False, fill_value=np.nan)
                     Ym = splp([tm])
                     Xm = splx([tm])
                     if np.isnan(Ym[0]):
@@ -3522,7 +3504,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('{} zero mode phases selected. Select one or two!'.format(len(out)))
             #########
             # restore bulk
-            self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
+            #self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
             self.statusBar().showMessage('Project is not yet initialized.')

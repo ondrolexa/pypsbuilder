@@ -557,7 +557,7 @@ class TCAPI(object):
         guesses = kwargs.get('guesses', None)
         get_old_guesses = kwargs.get('get_old_guesses', False)
         bulk = kwargs.get('bulk', None)
-        xsteps = kwargs.get('xsteps', 20)
+        xsteps = kwargs.get('xsteps', None)
         with self.scriptfile.open('r', encoding=self.TCenc) as f:
             scf = f.read()
         changed = False
@@ -586,7 +586,7 @@ class TCAPI(object):
                 bulk_lines.append('bulk {} {}'.format(' '.join(bulk[2]), xsteps))
             scf = scf_1 + '%{PSBBULK-BEGIN}\n' + '\n'.join(bulk_lines) + '\n%{PSBBULK-END}' + scf_2
             changed = True
-        if xsteps != 20:
+        if xsteps is not None:
             bulk_lines = []
             scf_1, rem = scf.split('%{PSBBULK-BEGIN}')
             old, scf_2 = rem.split('%{PSBBULK-END}')
@@ -727,6 +727,7 @@ class TCAPI(object):
             out (set): Set of zero mode phases
             prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
+            xvals (tuple): range for X variable
             steps (int): Number of steps
 
         Returns:
@@ -757,28 +758,42 @@ class TCAPI(object):
         return tcout, calcs
 
     def calc_px(self, phases, out, **kwargs):
-        """Method to run THERMOCALC for P-X pseudosection calculations.
+        """Method to run THERMOCALC for p-X pseudosection calculations.
 
         Args:
             phases (set): Set of present phases
             out (set): Set of zero mode phases
             prange (tuple): Temperature range for calculation
             trange (tuple): Pressure range for calculation
+            xvals (tuple): range for X variable
             steps (int): Number of steps
 
         Returns:
             tuple: (tcout, ans) standard output and input for THERMOCALC run.
             Input ans could be used to reproduce calculation.
         """
-        prange, trange, steps, prec = self.parse_kwargs(**kwargs)
-        if len(out) > 1:
-            tmpl = '{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n'
-            ans = tmpl.format(' '.join(phases), ' '.join(out), *trange, *prange, prec=prec)
+        prange = kwargs.get('prange', self.prange)
+        trange = kwargs.get('trange', self.trange)
+        xvals = kwargs.get('xvals', (0, 1))
+        steps = kwargs.get('steps', 20)
+        step = (trange[1] - trange[0]) / steps
+        if trange[0] == trange[1]:
+            calcs = ['calcP {:g} {:g}'.format(*prange),
+                     'calcT {:g} {:g}'.format(*trange),
+                     'calctatp no',
+                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'zeromodeisopleth {}'.format(' '.join(out)),
+                     'bulksubrange {:g} {:g}'.format(*xvals)]
         else:
-            tmpl = '{}\n\n{}\nn\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n'
-            ans = tmpl.format(' '.join(phases), ' '.join(out), *prange, prec=prec)
-        tcout = self.runtc(ans)
-        return tcout, ans
+            calcs = ['calcP {:g} {:g}'.format(*prange),
+                     'calcT {:g} {:g} {:g}'.format(*trange, step),
+                     'calctatp no',
+                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'zeromodeisopleth {}'.format(' '.join(out)),
+                     'bulksubrange {:g} {:g}'.format(*xvals)]
+        self.update_scriptfile(calcs=calcs, xsteps=steps)
+        tcout = self.runtc()
+        return tcout, calcs
 
     def calc_assemblage(self, phases, p, t):
         """Method to run THERMOCALC to calculate compositions of stable assemblage.
@@ -815,9 +830,9 @@ class TCAPI(object):
                  'maxvar {}'.format(variance)]
         if onebulk is not None:
             calcs.append('onebulk {}'.format(onebulk))
-        self.update_scriptfile(calcs=calcs)
+        old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
         tcout = self.runtc('\nkill\n\n')
-        #self.update_scriptfile(calcs=old_calcs)
+        self.update_scriptfile(calcs=old_calcs)
         return tcout
 
     def calc_variance(self, phases):
@@ -835,9 +850,8 @@ class TCAPI(object):
                  'with  {}'.format(' '.join(phases - self.excess)),
                  'acceptvar no']
         old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
-        output = self.runtc()
+        tcout = self.runtc('kill\n\n')
         self.update_scriptfile(calcs=old_calcs)
-        tcout = self.tc.runtc('kill\n\n')
         for ln in tcout.splitlines():
             if 'variance of required equilibrium' in ln:
                 variance = int(ln[ln.index('(') + 1:ln.index('?')])
