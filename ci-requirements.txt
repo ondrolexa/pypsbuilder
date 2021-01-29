@@ -1,8 +1,0 @@
-mumpy
-matplotlib
-scipy
-networkx
-Shapely
-descartes
-tqdm
-
