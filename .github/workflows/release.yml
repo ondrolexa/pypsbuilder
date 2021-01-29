@@ -2,8 +2,6 @@ name: Release-GH
 
 on:
   push:
-    branches:
-      - develop
     tags:
       - 'v*'
 
