@@ -11,3 +11,4 @@ dependencies:
 - tqdm
 - flake8
 - pytest
+- pytest-cov
