@@ -2,1420 +2,1296 @@
 
 
 
-THERMOCALC 3.50  running at 15.23 on Tue 17 Mar,2020
-the summary output is in the file, "tc-avgpelite-o.txt"
-other (eg drawpd) output is in the file, "tc-avgpelite-dr.txt"
-details of calc results is in the file, "tc-avgpelite-ic.txt"
-initial tables are in the file, "tc-avgpelite-it.txt"
-csv format in the file, "tc-avgpelite-csv.txt"
-more csv format in the file, "tc-avgpelite-csv2.txt"
- 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+THERMOCALC 3.50  running at 1.42 on Fri 29 Jan,2021
+summary output in the file, "tc-avgpelite-o.txt"
+other (eg drawpd) output in the file, "tc-avgpelite-dr.txt"
+details of calc results in the file, "tc-avgpelite-ic.txt"
+initial tables in the file, "tc-avgpelite-it.txt"
+csv format in the file, "tc-avgpelite.csv"
+more csv format in the file, "tc-avgpelite2.csv"
+(these files may not all be populated yet, depending on the calcs;
+ thermocalc should delete empty files at the end of each run)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-THERMOCALC 3.50 running at 15.23 on Tue 17 Mar,2020
+THERMOCALC 3.50 running at 1.42 on Fri 29 Jan,2021
 using tc-ds62.txt produced at 20.08 on Mon 6 Feb,2012
 with axfile tc-mp50MnNCKFMASHTO.txt and scriptfile tc-avgpelite.txt
 
-g  L  plc  ksp  ep  ma  mu  bi  opx  sa  cd  st  chl  ctd  sp  ilmm  
-ilm  mt1  ksp0  heme  mt0  ilm0  ab  Ni  NiO  ru  sill  and  ky  q  H2O  abh  
-sph  cz  ta  
+reading ax: g L plc ksp ep ma mu bi opx sa cd st chl ctd sp ilmm ilm mt1 ksp0 heme 
+            mt0 ilm0 ab Ni NiO ru sill and ky q H2O abh sph cz ta law 
 
-phases ignored this run: plc opx sp ilm mt1 ksp0 heme mt0 ilm0 Ni NiO abh ta  (from script)
+phases ignored this run: plc opx sp ilmm hemm mt1 ksp0 heme mt0 ilm0 Ni NiO abh ta  (from script)
 
-choose from: g  L  pl  ksp  ep  ma  mu  pa  bi  sa  cd  st  chl  ctd  ilmm  ab  ru  sill  and  ky  q  H2O  sph  cz  
-q  H2O  H2O  - automatically included (from script)
-which phases :  sph H2O pa ab ep mu bi q g 
-variance of required equilibrium (4?) : (nothing input)
-you may set zero modal proportions, from: g ep mu pa bi ab q H2O sph 
-which to set : ab
-equilibia now effectively univariant (eg a line in PT)
-calculate T at  P (rather than P at T) ? yes
 
-specification of PT window:
-P range over which T of reactions to be calculated
-P window: P low,high :  6.550 16.450 
-T window within which reactions expected to lie
-T window: T low,high :  385.000 715.000 
-P window :6.55 <-> 16.45kbar : P interval : 0.198
-composition (from setbulk script)
-      H2O     SiO2    Al2O3      CaO      MgO      FeO      K2O     Na2O     TiO2      MnO        O
+with: g ep mu pa bi ab q H2O sph  (from script)
+fluid is just H2O
+in excess: q H2O
+
+specification of xyz starting guesses of phases
+in the scriptfile: g ep mu pa bi; not in the scriptfile: none
+
+specification of overall PT window:
+overall PT window is P: 5.0 to 16.0 kbar, and T: 350 to 700¡C (from script)
+
+accepting the calculated variance (from script)
+
+specification of mode isopleths
+mode of ab set to zero
+
+original variance = 4, effective variance = 1  (1, 0)
+
+specification of PT calcs:
+P at which T of reactions to be calculated: 5.000 to 16.000 kbar (from script)
+using overall T window for the T window within which reactions expected to lie
+P interval = 0.22 kbar (from script)
+
+specification of bulk composition
+composition (from bulk script)
+      H2O     SiO2    Al2O3      CaO      MgO     FeOt      K2O     Na2O     TiO2      MnO        O
    49.998   35.563    5.805    0.695    2.325    2.890    1.340    0.995    0.335    0.050    0.005
-<==================================================>
+<==========================================================>
 phases: g ep mu pa bi ab sph (q, fluid) 
 
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  6.5500   494.453    0.9088    0.3242    0.2663  0.002662   0.01548   0.01504    0.4014    0.9251 0.0002104    0.2124  0.007619    0.4014    0.9984  2.937e-5    0.8706   0.06022    0.5537  0.006147   0.08464  0.002574   0.06308    0.1719
+   5.000    462.36    0.9163    0.3156    0.3458  0.002270   0.01618   0.01578    0.3836    0.9444 0.0001639    0.2245  0.007076    0.3836    0.9991  2.028e-5    0.8663   0.06267    0.5544  0.007368   0.08356  0.002601   0.05332    0.1821
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.001372   0.01160   0.06470    0.1413    0.1290              0.2023    0.4440  0.005791  -661.41437
-  zeroed  0.002467   0.02087    0.1164    0.2540    0.2321              0.3638             0.01041
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+      0.0006284   0.01123   0.06463    0.1411    0.1297              0.2027    0.4438  0.006240  -661.00138  -578.09048    0.1127    2.1058    1.9887
 
-% --------------------------------------------------------
-% at P = 6.6, T = 494, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 6.6 494
-% --------------------------------------------------------
-xyzguess x(g)          0.908803
-xyzguess z(g)          0.324156
-xyzguess m(g)          0.266303
-xyzguess f(g)        0.00266185
-xyzguess f(ep)        0.0154751
-xyzguess Q(ep)        0.0150426  range  0.000 0.500
-xyzguess x(mu)         0.401394
-xyzguess y(mu)         0.925116
-xyzguess f(mu)      0.000210433
-xyzguess n(mu)         0.212414
-xyzguess c(mu)       0.00761868
-xyzguess x(pa)         0.401394
-xyzguess y(pa)         0.998450
-xyzguess f(pa)       2.93712e-5
-xyzguess n(pa)         0.870627
-xyzguess c(pa)        0.0602154
-xyzguess x(bi)         0.553714
-xyzguess m(bi)       0.00614664
-xyzguess y(bi)        0.0846421
-xyzguess f(bi)       0.00257350
-xyzguess t(bi)        0.0630837
-xyzguess Q(bi)         0.171886
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 5.0, T = 462, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 5.000 462.36
+% ----------------------------------------------------------
+xyzguess x(g)          0.916331
+xyzguess z(g)          0.315631
+xyzguess m(g)          0.345810
+xyzguess f(g)        0.00226964
+% -----------------------------
+xyzguess f(ep)        0.0161780
+xyzguess Q(ep)        0.0157817  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.383582
+xyzguess y(mu)         0.944400
+xyzguess f(mu)      0.000163917
+xyzguess n(mu)         0.224522
+xyzguess c(mu)       0.00707578
+% -----------------------------
+xyzguess x(pa)         0.383582
+xyzguess y(pa)         0.999066
+xyzguess f(pa)       2.02817e-5
+xyzguess n(pa)         0.866271
+xyzguess c(pa)        0.0626673
+% -----------------------------
+xyzguess x(bi)         0.554415
+xyzguess m(bi)       0.00736815
+xyzguess y(bi)        0.0835650
+xyzguess f(bi)       0.00260075
+xyzguess t(bi)        0.0533235
+xyzguess Q(bi)         0.182079
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.001372           0           3    0.997338    0.972468    0.112047    1.121900           0           0           0    0.798909    0.002662
-rbi      ep    0.011603    0.500000    3.000000    1.484525           2           0    0.030950           0           0           0           0    0.015475
-rbi      mu    0.064704           1    3.067266    1.428820    0.007619    0.044826    0.030269    0.389984    0.106207           0           0    0.000105
-rbi      pa    0.141253           1    2.941335    1.528543    0.060215    0.000928    0.000652    0.034579    0.435313           0           0    0.000015
-rbi      bi    0.129049    0.936916    2.912784    0.585929           0    1.263552    1.570283    0.500000           0    0.063084    0.018440    0.001287
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.202276           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.443953           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005791           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  6.7480   498.401    0.9079    0.3253    0.2557  0.002716   0.01541   0.01497    0.4034    0.9224 0.0002169    0.2109  0.007680    0.4034    0.9984  3.070e-5    0.8713   0.05983    0.5535  0.005957   0.08465  0.002569   0.06433    0.1707
+   5.220    467.02    0.9152    0.3169    0.3349  0.002323   0.01606   0.01566    0.3863    0.9419 0.0001701    0.2228  0.007157    0.3863    0.9990  2.144e-5    0.8668   0.06236    0.5544  0.007225   0.08381  0.002598   0.05469    0.1806
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.001519   0.01162   0.06480    0.1412    0.1289              0.2022    0.4440  0.005735  -661.45777
-  zeroed  0.002731   0.02091    0.1165    0.2540    0.2318              0.3637             0.01031
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+      0.0007003   0.01130   0.06458    0.1411    0.1297              0.2026    0.4438  0.006176  -661.06515  -577.41536    0.1130    2.1005    1.9937
 
-% --------------------------------------------------------
-% at P = 6.7, T = 498, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 6.7 498
-% --------------------------------------------------------
-xyzguess x(g)          0.907871
-xyzguess z(g)          0.325256
-xyzguess m(g)          0.255749
-xyzguess f(g)        0.00271588
-xyzguess f(ep)        0.0154114
-xyzguess Q(ep)        0.0149742  range  0.000 0.500
-xyzguess x(mu)         0.403434
-xyzguess y(mu)         0.922413
-xyzguess f(mu)      0.000216928
-xyzguess n(mu)         0.210889
-xyzguess c(mu)       0.00767956
-xyzguess x(pa)         0.403434
-xyzguess y(pa)         0.998354
-xyzguess f(pa)       3.06953e-5
-xyzguess n(pa)         0.871343
-xyzguess c(pa)        0.0598324
-xyzguess x(bi)         0.553536
-xyzguess m(bi)       0.00595678
-xyzguess y(bi)        0.0846463
-xyzguess f(bi)       0.00256904
-xyzguess t(bi)        0.0643322
-xyzguess Q(bi)         0.170665
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 5.2, T = 467, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 5.220 467.02
+% ----------------------------------------------------------
+xyzguess x(g)          0.915239
+xyzguess z(g)          0.316853
+xyzguess m(g)          0.334919
+xyzguess f(g)        0.00232271
+% -----------------------------
+xyzguess f(ep)        0.0160582
+xyzguess Q(ep)        0.0156568  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.386290
+xyzguess y(mu)         0.941857
+xyzguess f(mu)      0.000170088
+xyzguess n(mu)         0.222779
+xyzguess c(mu)       0.00715725
+% -----------------------------
+xyzguess x(pa)         0.386290
+xyzguess y(pa)         0.998992
+xyzguess f(pa)       2.14368e-5
+xyzguess n(pa)         0.866779
+xyzguess c(pa)        0.0623554
+% -----------------------------
+xyzguess x(bi)         0.554371
+xyzguess m(bi)       0.00722519
+xyzguess y(bi)        0.0838144
+xyzguess f(bi)       0.00259779
+xyzguess t(bi)        0.0546937
+xyzguess Q(bi)         0.180569
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.001519           0           3    0.997284    0.975767    0.115804    1.146615           0           0           0    0.767246    0.002716
-rbi      ep    0.011625    0.500000           3    1.484589    2.000000           0    0.030823           0           0           0           0    0.015411
-rbi      mu    0.064802    1.000000    3.069907    1.426145    0.007680    0.046285    0.031518    0.390716    0.105445           0           0    0.000108
-rbi      pa    0.141227    1.000000    2.941813    1.528255    0.059832    0.000982    0.000695    0.034412    0.435672           0           0    0.000015
-rbi      bi    0.128907    0.935668    2.912785    0.585931           0    1.263753    1.569398    0.500000           0    0.064332    0.017870    0.001285
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.202207           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.443980           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005735           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  6.9460   502.305    0.9069    0.3264    0.2451  0.002771   0.01535   0.01491    0.4054    0.9197 0.0002236    0.2094  0.007737    0.4054    0.9983  3.206e-5    0.8721   0.05942    0.5533  0.005760   0.08461  0.002564   0.06557    0.1695
+   5.440    471.65    0.9142    0.3181    0.3239  0.002377   0.01594   0.01554    0.3889    0.9393 0.0001764    0.2210  0.007238    0.3889    0.9989  2.264e-5    0.8673   0.06204    0.5543  0.007072   0.08403  0.002595   0.05607    0.1791
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.001682   0.01164   0.06493    0.1412    0.1287              0.2021    0.4440  0.005680  -661.49775
-  zeroed  0.003025   0.02093    0.1168    0.2539    0.2316              0.3636             0.01022
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+      0.0007814   0.01137   0.06454    0.1412    0.1296              0.2026    0.4438  0.006112  -661.12773  -576.74175    0.1133    2.0954    1.9986
 
-% --------------------------------------------------------
-% at P = 6.9, T = 502, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 6.9 502
-% --------------------------------------------------------
-xyzguess x(g)          0.906948
-xyzguess z(g)          0.326367
-xyzguess m(g)          0.245133
-xyzguess f(g)        0.00277115
-xyzguess f(ep)        0.0153549
-xyzguess Q(ep)        0.0149127  range  0.000 0.500
-xyzguess x(mu)         0.405411
-xyzguess y(mu)         0.919652
-xyzguess f(mu)      0.000223567
-xyzguess n(mu)         0.209364
-xyzguess c(mu)       0.00773712
-xyzguess x(pa)         0.405411
-xyzguess y(pa)         0.998255
-xyzguess f(pa)       3.20567e-5
-xyzguess n(pa)         0.872108
-xyzguess c(pa)        0.0594237
-xyzguess x(bi)         0.553329
-xyzguess m(bi)       0.00576012
-xyzguess y(bi)        0.0846126
-xyzguess f(bi)       0.00256438
-xyzguess t(bi)        0.0655750
-xyzguess Q(bi)         0.169465
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 5.4, T = 472, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 5.440 471.65
+% ----------------------------------------------------------
+xyzguess x(g)          0.914153
+xyzguess z(g)          0.318067
+xyzguess m(g)          0.323888
+xyzguess f(g)        0.00237651
+% -----------------------------
+xyzguess f(ep)        0.0159446
+xyzguess Q(ep)        0.0155383  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.388941
+xyzguess y(mu)         0.939250
+xyzguess f(mu)      0.000176396
+xyzguess n(mu)         0.221044
+xyzguess c(mu)       0.00723771
+% -----------------------------
+xyzguess x(pa)         0.388941
+xyzguess y(pa)         0.998914
+xyzguess f(pa)       2.26356e-5
+xyzguess n(pa)         0.867319
+xyzguess c(pa)        0.0620361
+% -----------------------------
+xyzguess x(bi)         0.554311
+xyzguess m(bi)       0.00707183
+xyzguess y(bi)        0.0840349
+xyzguess f(bi)       0.00259451
+xyzguess t(bi)        0.0560715
+xyzguess Q(bi)         0.179080
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.001682           0           3    0.997229    0.979102    0.119618    1.171423           0           0           0    0.735399    0.002771
-rbi      ep    0.011639    0.500000           3    1.484645           2           0    0.030710           0           0           0           0    0.015355
-rbi      mu    0.064925           1    3.072611    1.423409    0.007737    0.047774    0.032797    0.391449    0.104682           0           0    0.000112
-rbi      pa    0.141186           1    2.942321    1.527951    0.059424    0.001038    0.000740    0.034234    0.436054           0           0    0.000016
-rbi      bi    0.128748    0.934425    2.912823    0.585895           0    1.264065    1.568467    0.500000           0    0.065575    0.017280    0.001282
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.202133           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444008           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005680           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  7.1440   506.160    0.9060    0.3275    0.2345  0.002828   0.01531   0.01486    0.4073    0.9168 0.0002304    0.2078  0.007791    0.4073    0.9982  3.346e-5    0.8729   0.05899    0.5531  0.005557   0.08454  0.002560   0.06681    0.1683
+   5.660    476.25    0.9131    0.3193    0.3127  0.002431   0.01584   0.01543    0.3915    0.9366 0.0001828    0.2193  0.007317    0.3915    0.9988  2.388e-5    0.8679   0.06171    0.5542  0.006908   0.08423  0.002591   0.05746    0.1776
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.001864   0.01164   0.06508    0.1411    0.1286              0.2021    0.4440  0.005625  -661.53376
-  zeroed  0.003353   0.02094    0.1171    0.2539    0.2313              0.3634             0.01012
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+      0.0008726   0.01142   0.06453    0.1412    0.1295              0.2025    0.4438  0.006048  -661.18887  -576.06966    0.1136    2.0905    2.0033
 
-% --------------------------------------------------------
-% at P = 7.1, T = 506, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 7.1 506
-% --------------------------------------------------------
-xyzguess x(g)          0.906032
-xyzguess z(g)          0.327496
-xyzguess m(g)          0.234469
-xyzguess f(g)        0.00282783
-xyzguess f(ep)        0.0153060
-xyzguess Q(ep)        0.0148587  range  0.000 0.500
-xyzguess x(mu)         0.407322
-xyzguess y(mu)         0.916829
-xyzguess f(mu)      0.000230359
-xyzguess n(mu)         0.207836
-xyzguess c(mu)       0.00779071
-xyzguess x(pa)         0.407322
-xyzguess y(pa)         0.998152
-xyzguess f(pa)       3.34552e-5
-xyzguess n(pa)         0.872927
-xyzguess c(pa)        0.0589851
-xyzguess x(bi)         0.553088
-xyzguess m(bi)       0.00555705
-xyzguess y(bi)        0.0845377
-xyzguess f(bi)       0.00255953
-xyzguess t(bi)        0.0668093
-xyzguess Q(bi)         0.168289
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 5.7, T = 476, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 5.660 476.25
+% ----------------------------------------------------------
+xyzguess x(g)          0.913076
+xyzguess z(g)          0.319275
+xyzguess m(g)          0.312721
+xyzguess f(g)        0.00243110
+% -----------------------------
+xyzguess f(ep)        0.0158376
+xyzguess Q(ep)        0.0154262  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.391535
+xyzguess y(mu)         0.936580
+xyzguess f(mu)      0.000182842
+xyzguess n(mu)         0.219318
+xyzguess c(mu)       0.00731698
+% -----------------------------
+xyzguess x(pa)         0.391535
+xyzguess y(pa)         0.998831
+xyzguess f(pa)       2.38789e-5
+xyzguess n(pa)         0.867893
+xyzguess c(pa)        0.0617070
+% -----------------------------
+xyzguess x(bi)         0.554236
+xyzguess m(bi)       0.00690824
+xyzguess y(bi)        0.0842250
+xyzguess f(bi)       0.00259092
+xyzguess t(bi)        0.0574557
+xyzguess Q(bi)         0.177611
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.001864           0           3    0.997172    0.982487    0.123483    1.196277           0           0           0    0.703408    0.002828
-rbi      ep    0.011643    0.500000    3.000000    1.484694           2           0    0.030612           0           0           0           0    0.015306
-rbi      mu    0.065077           1    3.075380    1.420609    0.007791    0.049294    0.034108    0.392187    0.103918           0           0    0.000115
-rbi      pa    0.141131           1    2.942863    1.527628    0.058985    0.001095    0.000786    0.034044    0.436463           0           0    0.000017
-rbi      bi    0.128569    0.933191    2.912903    0.585817           0    1.264502    1.567479    0.500000           0    0.066809    0.016671    0.001280
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.202053           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444036           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005625           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  7.3420   509.961    0.9051    0.3286    0.2238  0.002886   0.01527   0.01481    0.4092    0.9139 0.0002373    0.2063  0.007840    0.4092    0.9980  3.489e-5    0.8738   0.05851    0.5528  0.005348   0.08442  0.002555   0.06803    0.1671
+   5.880    480.81    0.9120    0.3205    0.3014  0.002487   0.01574   0.01532    0.3941    0.9338 0.0001894    0.2176  0.007395    0.3941    0.9987  2.517e-5    0.8685   0.06137    0.5541  0.006735   0.08438  0.002587   0.05884    0.1762
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.002067   0.01164   0.06526    0.1411    0.1284              0.2020    0.4441  0.005573  -661.56513
-  zeroed  0.003718   0.02093    0.1174    0.2537    0.2309              0.3633             0.01002
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+      0.0009750   0.01148   0.06454    0.1413    0.1294              0.2025    0.4439  0.005984  -661.24826  -575.39936    0.1139    2.0857    2.0078
 
-% --------------------------------------------------------
-% at P = 7.3, T = 510, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 7.3 510
-% --------------------------------------------------------
-xyzguess x(g)          0.905125
-xyzguess z(g)          0.328646
-xyzguess m(g)          0.223774
-xyzguess f(g)        0.00288611
-xyzguess f(ep)        0.0152654
-xyzguess Q(ep)        0.0148129  range  0.000 0.500
-xyzguess x(mu)         0.409159
-xyzguess y(mu)         0.913940
-xyzguess f(mu)      0.000237316
-xyzguess n(mu)         0.206301
-xyzguess c(mu)       0.00783955
-xyzguess x(pa)         0.409159
-xyzguess y(pa)         0.998045
-xyzguess f(pa)       3.48907e-5
-xyzguess n(pa)         0.873805
-xyzguess c(pa)        0.0585121
-xyzguess x(bi)         0.552810
-xyzguess m(bi)       0.00534805
-xyzguess y(bi)        0.0844177
-xyzguess f(bi)       0.00255451
-xyzguess t(bi)        0.0680323
-xyzguess Q(bi)         0.167139
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 5.9, T = 481, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 5.880 480.81
+% ----------------------------------------------------------
+xyzguess x(g)          0.912007
+xyzguess z(g)          0.320480
+xyzguess m(g)          0.301424
+xyzguess f(g)        0.00248656
+% -----------------------------
+xyzguess f(ep)        0.0157371
+xyzguess Q(ep)        0.0153206  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.394070
+xyzguess y(mu)         0.933846
+xyzguess f(mu)      0.000189432
+xyzguess n(mu)         0.217600
+xyzguess c(mu)       0.00739477
+% -----------------------------
+xyzguess x(pa)         0.394070
+xyzguess y(pa)         0.998744
+xyzguess f(pa)       2.51671e-5
+xyzguess n(pa)         0.868504
+xyzguess c(pa)        0.0613655
+% -----------------------------
+xyzguess x(bi)         0.554142
+xyzguess m(bi)       0.00673462
+xyzguess y(bi)        0.0843830
+xyzguess f(bi)       0.00258704
+xyzguess t(bi)        0.0588446
+xyzguess Q(bi)         0.176163
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.002067           0           3    0.997114    0.985938    0.127392    1.221121           0           0           0    0.671321    0.002886
-rbi      ep    0.011637    0.500000           3    1.484735    2.000000           0    0.030531           0           0           0           0    0.015265
-rbi      mu    0.065259           1    3.078221    1.417741    0.007840    0.050848    0.035450    0.392930    0.103150           0           0    0.000119
-rbi      pa    0.141061           1    2.943443    1.527283    0.058512    0.001155    0.000835    0.033841    0.436903           0           0    0.000017
-rbi      bi    0.128370    0.931968    2.913028    0.585695           0    1.265079    1.566426    0.500000           0    0.068032    0.016044    0.001277
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201967           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444066           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005573           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  7.5400   513.702    0.9042    0.3298    0.2131  0.002946   0.01523   0.01478    0.4109    0.9110 0.0002445    0.2048  0.007883    0.4109    0.9979  3.636e-5    0.8748   0.05800    0.5525  0.005134   0.08425  0.002549   0.06924    0.1660
+   6.100    485.34    0.9109    0.3217    0.2900  0.002543   0.01564   0.01522    0.3965    0.9310 0.0001962    0.2159  0.007471    0.3965    0.9987  2.650e-5    0.8692   0.06101    0.5540  0.006551   0.08451  0.002583   0.06024    0.1747
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.002294   0.01162   0.06547    0.1410    0.1281              0.2019    0.4441  0.005521  -661.59111
-  zeroed  0.004126   0.02090    0.1178    0.2536    0.2305              0.3631            0.009932
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001090   0.01153   0.06457    0.1413    0.1293              0.2024    0.4439  0.005920  -661.30555  -574.73090    0.1141    2.0811    2.0123
 
-% --------------------------------------------------------
-% at P = 7.5, T = 514, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 7.5 514
-% --------------------------------------------------------
-xyzguess x(g)          0.904227
-xyzguess z(g)          0.329824
-xyzguess m(g)          0.213065
-xyzguess f(g)        0.00294622
-xyzguess f(ep)        0.0152340
-xyzguess Q(ep)        0.0147761  range  0.000 0.500
-xyzguess x(mu)         0.410919
-xyzguess y(mu)         0.910981
-xyzguess f(mu)      0.000244451
-xyzguess n(mu)         0.204753
-xyzguess c(mu)       0.00788276
-xyzguess x(pa)         0.410919
-xyzguess y(pa)         0.997934
-xyzguess f(pa)       3.63627e-5
-xyzguess n(pa)         0.874750
-xyzguess c(pa)        0.0579996
-xyzguess x(bi)         0.552488
-xyzguess m(bi)       0.00513366
-xyzguess y(bi)        0.0842483
-xyzguess f(bi)       0.00254933
-xyzguess t(bi)        0.0692404
-xyzguess Q(bi)         0.166017
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 6.1, T = 485, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 6.100 485.34
+% ----------------------------------------------------------
+xyzguess x(g)          0.910946
+xyzguess z(g)          0.321684
+xyzguess m(g)          0.290004
+xyzguess f(g)        0.00254298
+% -----------------------------
+xyzguess f(ep)        0.0156436
+xyzguess Q(ep)        0.0152219  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.396542
+xyzguess y(mu)         0.931048
+xyzguess f(mu)      0.000196169
+xyzguess n(mu)         0.215890
+xyzguess c(mu)       0.00747076
+% -----------------------------
+xyzguess x(pa)         0.396542
+xyzguess y(pa)         0.998652
+xyzguess f(pa)       2.65007e-5
+xyzguess n(pa)         0.869154
+xyzguess c(pa)        0.0610085
+% -----------------------------
+xyzguess x(bi)         0.554028
+xyzguess m(bi)       0.00655119
+xyzguess y(bi)        0.0845067
+xyzguess f(bi)       0.00258287
+xyzguess t(bi)        0.0602364
+xyzguess Q(bi)         0.174735
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.002294           0    3.000000    0.997054    0.989473    0.131336    1.245889           0           0           0    0.639194    0.002946
-rbi      ep    0.011619    0.500000           3    1.484766           2           0    0.030468           0           0           0           0    0.015234
-rbi      mu    0.065474    1.000000    3.081137    1.414800    0.007883    0.052440    0.036824    0.393682    0.102377           0           0    0.000122
-rbi      pa    0.140974           1    2.944066    1.526916    0.058000    0.001217    0.000885    0.033625    0.437375           0           0    0.000018
-rbi      bi    0.128147    0.930760    2.913202    0.585523           0    1.265814    1.565296    0.500000           0    0.069240    0.015401    0.001275
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201875           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444097           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005521           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  7.7380   517.376    0.9033    0.3310    0.2024  0.003008   0.01521   0.01475    0.4126    0.9079 0.0002518    0.2032  0.007919    0.4126    0.9978  3.787e-5    0.8758   0.05744    0.5521  0.004915   0.08402  0.002544   0.07043    0.1649
+   6.320    489.82    0.9099    0.3229    0.2785  0.002600   0.01556   0.01513    0.3989    0.9282 0.0002031    0.2142  0.007545    0.3989    0.9986  2.788e-5    0.8698   0.06063    0.5539  0.006358   0.08459  0.002578   0.06163    0.1733
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.002547   0.01159   0.06573    0.1409    0.1279              0.2018    0.4441  0.005471  -661.61083
-  zeroed  0.004582   0.02084    0.1182    0.2534    0.2301              0.3630            0.009843
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001219   0.01157   0.06462    0.1413    0.1292              0.2024    0.4439  0.005856  -661.36032  -574.06542    0.1144    2.0766    2.0166
 
-% --------------------------------------------------------
-% at P = 7.7, T = 517, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 7.7 517
-% --------------------------------------------------------
-xyzguess x(g)          0.903339
-xyzguess z(g)          0.331038
-xyzguess m(g)          0.202364
-xyzguess f(g)        0.00300844
-xyzguess f(ep)        0.0152128
-xyzguess Q(ep)        0.0147493  range  0.000 0.500
-xyzguess x(mu)         0.412593
-xyzguess y(mu)         0.907946
-xyzguess f(mu)      0.000251782
-xyzguess n(mu)         0.203189
-xyzguess c(mu)       0.00791933
-xyzguess x(pa)         0.412593
-xyzguess y(pa)         0.997820
-xyzguess f(pa)       3.78708e-5
-xyzguess n(pa)         0.875770
-xyzguess c(pa)        0.0574418
-xyzguess x(bi)         0.552118
-xyzguess m(bi)       0.00491451
-xyzguess y(bi)        0.0840243
-xyzguess f(bi)       0.00254400
-xyzguess t(bi)        0.0704298
-xyzguess Q(bi)         0.164926
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 6.3, T = 490, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 6.320 489.82
+% ----------------------------------------------------------
+xyzguess x(g)          0.909894
+xyzguess z(g)          0.322889
+xyzguess m(g)          0.278471
+xyzguess f(g)        0.00260046
+% -----------------------------
+xyzguess f(ep)        0.0155572
+xyzguess Q(ep)        0.0151303  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.398950
+xyzguess y(mu)         0.928183
+xyzguess f(mu)      0.000203059
+xyzguess n(mu)         0.214188
+xyzguess c(mu)       0.00754452
+% -----------------------------
+xyzguess x(pa)         0.398950
+xyzguess y(pa)         0.998556
+xyzguess f(pa)       2.78800e-5
+xyzguess n(pa)         0.869849
+xyzguess c(pa)        0.0606326
+% -----------------------------
+xyzguess x(bi)         0.553889
+xyzguess m(bi)       0.00635822
+xyzguess y(bi)        0.0845936
+xyzguess f(bi)       0.00257843
+xyzguess t(bi)        0.0616292
+xyzguess Q(bi)         0.173330
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.002547           0           3    0.996992    0.993114    0.135306    1.270506           0           0           0    0.607091    0.003008
-rbi      ep    0.011586    0.500000    3.000000    1.484787           2           0    0.030426           0           0           0           0    0.015213
-rbi      mu    0.065726    1.000000    3.084135    1.411779    0.007919    0.054073    0.038233    0.394446    0.101594           0           0    0.000126
-rbi      pa    0.140868    1.000000    2.944738    1.526522    0.057442    0.001280    0.000937    0.033394    0.437885           0           0    0.000019
-rbi      bi    0.127897    0.929570    2.913432    0.585296           0    1.266727    1.564075    0.500000           0    0.070430    0.014744    0.001272
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201775           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444129           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005471           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  7.9360   520.974    0.9025    0.3323    0.1917  0.003073   0.01520   0.01473    0.4142    0.9048 0.0002593    0.2016  0.007948    0.4142    0.9977  3.941e-5    0.8769   0.05683    0.5517  0.004691   0.08374  0.002539   0.07160    0.1639
+   6.540    494.25    0.9088    0.3241    0.2668  0.002659   0.01548   0.01505    0.4013    0.9253 0.0002101    0.2125  0.007616    0.4013    0.9985  2.931e-5    0.8706   0.06023    0.5537  0.006156   0.08464  0.002574   0.06302    0.1719
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.002831   0.01154   0.06602    0.1407    0.1276              0.2017    0.4442  0.005424  -661.62327
-  zeroed  0.005094   0.02076    0.1188    0.2532    0.2296              0.3628            0.009758
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001365   0.01160   0.06470    0.1413    0.1291              0.2023    0.4440  0.005794  -661.41210  -573.40251    0.1147    2.0723    2.0209
 
-% --------------------------------------------------------
-% at P = 7.9, T = 521, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 7.9 521
-% --------------------------------------------------------
-xyzguess x(g)          0.902461
-xyzguess z(g)          0.332295
-xyzguess m(g)          0.191697
-xyzguess f(g)        0.00307310
-xyzguess f(ep)        0.0152028
-xyzguess Q(ep)        0.0147336  range  0.000 0.500
-xyzguess x(mu)         0.414173
-xyzguess y(mu)         0.904828
-xyzguess f(mu)      0.000259327
-xyzguess n(mu)         0.201600
-xyzguess c(mu)       0.00794807
-xyzguess x(pa)         0.414173
-xyzguess y(pa)         0.997703
-xyzguess f(pa)       3.94144e-5
-xyzguess n(pa)         0.876874
-xyzguess c(pa)        0.0568325
-xyzguess x(bi)         0.551691
-xyzguess m(bi)       0.00469133
-xyzguess y(bi)        0.0837401
-xyzguess f(bi)       0.00253855
-xyzguess t(bi)        0.0715959
-xyzguess Q(bi)         0.163872
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 6.5, T = 494, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 6.540 494.25
+% ----------------------------------------------------------
+xyzguess x(g)          0.908850
+xyzguess z(g)          0.324101
+xyzguess m(g)          0.266834
+xyzguess f(g)        0.00265915
+% -----------------------------
+xyzguess f(ep)        0.0154784
+xyzguess Q(ep)        0.0150463  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.401289
+xyzguess y(mu)         0.925250
+xyzguess f(mu)      0.000210108
+xyzguess n(mu)         0.212491
+xyzguess c(mu)       0.00761553
+% -----------------------------
+xyzguess x(pa)         0.401289
+xyzguess y(pa)         0.998454
+xyzguess f(pa)       2.93053e-5
+xyzguess n(pa)         0.870592
+xyzguess c(pa)        0.0602341
+% -----------------------------
+xyzguess x(bi)         0.553722
+xyzguess m(bi)       0.00615605
+xyzguess y(bi)        0.0846410
+xyzguess f(bi)       0.00257372
+xyzguess t(bi)        0.0630205
+xyzguess Q(bi)         0.171948
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.002831           0    3.000000    0.996927    0.996886    0.139289    1.294881           0           0           0    0.575090    0.003073
-rbi      ep    0.011537    0.500000           3    1.484797           2           0    0.030406           0           0           0           0    0.015203
-rbi      mu    0.066019    1.000000    3.087224    1.408672    0.007948    0.055754    0.039677    0.395226    0.100800           0           0    0.000130
-rbi      pa    0.140742           1    2.945465    1.526099    0.056832    0.001346    0.000991    0.033147    0.438437           0           0    0.000020
-rbi      bi    0.127616    0.928404    2.913721    0.585009           0    1.267842    1.562748    0.500000           0    0.071596    0.014074    0.001269
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201667           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444163           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005424           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  8.1340   524.489    0.9016    0.3336    0.1811  0.003141   0.01521   0.01473    0.4157    0.9016 0.0002671    0.2000  0.007968    0.4157    0.9976  4.099e-5    0.8781   0.05616    0.5512  0.004465   0.08339  0.002533   0.07273    0.1629
+   6.760    498.64    0.9078    0.3253    0.2551  0.002719   0.01541   0.01497    0.4036    0.9222 0.0002173    0.2108  0.007683    0.4036    0.9983  3.078e-5    0.8714   0.05981    0.5535  0.005945   0.08465  0.002569   0.06441    0.1706
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.003150   0.01147   0.06636    0.1406    0.1273              0.2015    0.4442  0.005379  -661.62729
-  zeroed  0.005667   0.02064    0.1194    0.2530    0.2290              0.3626            0.009677
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001528   0.01163   0.06481    0.1412    0.1289              0.2022    0.4440  0.005731  -661.46029  -572.74210    0.1150    2.0680    2.0250
 
-% --------------------------------------------------------
-% at P = 8.1, T = 524, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 8.1 524
-% --------------------------------------------------------
-xyzguess x(g)          0.901594
-xyzguess z(g)          0.333606
-xyzguess m(g)          0.181093
-xyzguess f(g)        0.00314061
-xyzguess f(ep)        0.0152057
-xyzguess Q(ep)        0.0147304  range  0.000 0.500
-xyzguess x(mu)         0.415651
-xyzguess y(mu)         0.901620
-xyzguess f(mu)      0.000267113
-xyzguess n(mu)         0.199979
-xyzguess c(mu)       0.00796767
-xyzguess x(pa)         0.415651
-xyzguess y(pa)         0.997582
-xyzguess f(pa)       4.09931e-5
-xyzguess n(pa)         0.878070
-xyzguess c(pa)        0.0561648
-xyzguess x(bi)         0.551200
-xyzguess m(bi)       0.00446500
-xyzguess y(bi)        0.0833893
-xyzguess f(bi)       0.00253301
-xyzguess t(bi)        0.0727336
-xyzguess Q(bi)         0.162856
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 6.8, T = 499, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 6.760 498.64
+% ----------------------------------------------------------
+xyzguess x(g)          0.907815
+xyzguess z(g)          0.325323
+xyzguess m(g)          0.255107
+xyzguess f(g)        0.00271919
+% -----------------------------
+xyzguess f(ep)        0.0154078
+xyzguess Q(ep)        0.0149702  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.403556
+xyzguess y(mu)         0.922248
+xyzguess f(mu)      0.000217326
+xyzguess n(mu)         0.210797
+xyzguess c(mu)       0.00768315
+% -----------------------------
+xyzguess x(pa)         0.403556
+xyzguess y(pa)         0.998348
+xyzguess f(pa)       3.07767e-5
+xyzguess n(pa)         0.871388
+xyzguess c(pa)        0.0598084
+% -----------------------------
+xyzguess x(bi)         0.553524
+xyzguess m(bi)       0.00594505
+xyzguess y(bi)        0.0846454
+xyzguess f(bi)       0.00256876
+xyzguess t(bi)        0.0644077
+xyzguess Q(bi)         0.170591
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.003150           0           3    0.996859    1.000818    0.143270    1.318914           0           0           0    0.543279    0.003141
-rbi      ep    0.011469    0.500000           3    1.484794           2           0    0.030411           0           0           0           0    0.015206
-rbi      mu    0.066358    1.000000    3.090412    1.405470    0.007968    0.057488    0.041159    0.396027    0.099990           0           0    0.000134
-rbi      pa    0.140595    1.000000    2.946253    1.525644    0.056165    0.001413    0.001046    0.032882    0.439035           0           0    0.000020
-rbi      bi    0.127302    0.927266    2.914078    0.584656           0    1.269185    1.561298    0.500000           0    0.072734    0.013395    0.001267
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201549           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444199           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005379           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  8.3320   527.907    0.9007    0.3350    0.1706  0.003211   0.01522   0.01474    0.4170    0.8983 0.0002752    0.1983  0.007977    0.4170    0.9975  4.261e-5    0.8794   0.05543    0.5506  0.004236   0.08296  0.002527   0.07384    0.1619
+   6.980    502.97    0.9068    0.3266    0.2433  0.002781   0.01535   0.01490    0.4057    0.9192 0.0002247    0.2091  0.007747    0.4057    0.9982  3.229e-5    0.8722   0.05935    0.5533  0.005726   0.08460  0.002564   0.06579    0.1693
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.003507   0.01138   0.06675    0.1404    0.1269              0.2014    0.4442  0.005336  -661.62159
-  zeroed  0.006311   0.02048    0.1201    0.2527    0.2284              0.3624            0.009602
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001712   0.01164   0.06495    0.1412    0.1287              0.2021    0.4440  0.005670  -661.50423  -572.08545    0.1152    2.0639    2.0290
 
-% --------------------------------------------------------
-% at P = 8.3, T = 528, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 8.3 528
-% --------------------------------------------------------
-xyzguess x(g)          0.900739
-xyzguess z(g)          0.334981
-xyzguess m(g)          0.170587
-xyzguess f(g)        0.00321144
-xyzguess f(ep)        0.0152231
-xyzguess Q(ep)        0.0147414  range  0.000 0.500
-xyzguess x(mu)         0.417016
-xyzguess y(mu)         0.898312
-xyzguess f(mu)      0.000275169
-xyzguess n(mu)         0.198318
-xyzguess c(mu)       0.00797665
-xyzguess x(pa)         0.417016
-xyzguess y(pa)         0.997459
-xyzguess f(pa)       4.26063e-5
-xyzguess n(pa)         0.879372
-xyzguess c(pa)        0.0554315
-xyzguess x(bi)         0.550635
-xyzguess m(bi)       0.00423648
-xyzguess y(bi)        0.0829646
-xyzguess f(bi)       0.00252741
-xyzguess t(bi)        0.0738371
-xyzguess Q(bi)         0.161886
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 7.0, T = 503, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 6.980 502.97
+% ----------------------------------------------------------
+xyzguess x(g)          0.906790
+xyzguess z(g)          0.326560
+xyzguess m(g)          0.243305
+xyzguess f(g)        0.00278078
+% -----------------------------
+xyzguess f(ep)        0.0153459
+xyzguess Q(ep)        0.0149028  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.405744
+xyzguess y(mu)         0.919172
+xyzguess f(mu)      0.000224722
+xyzguess n(mu)         0.209102
+xyzguess c(mu)       0.00774663
+% -----------------------------
+xyzguess x(pa)         0.405744
+xyzguess y(pa)         0.998237
+xyzguess f(pa)       3.22942e-5
+xyzguess n(pa)         0.872245
+xyzguess c(pa)        0.0593506
+% -----------------------------
+xyzguess x(bi)         0.553290
+xyzguess m(bi)       0.00572569
+xyzguess y(bi)        0.0846027
+xyzguess f(bi)       0.00256356
+xyzguess t(bi)        0.0657876
+xyzguess Q(bi)         0.169261
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.003507           0    3.000000    0.996789    1.004943    0.147234    1.342485           0           0           0    0.511760    0.003211
-rbi      ep    0.011379    0.500000           3    1.484777    2.000000           0    0.030446           0           0           0           0    0.015223
-rbi      mu    0.066747           1    3.093711    1.402163    0.007977    0.059282    0.042681    0.396853    0.099159           0           0    0.000138
-rbi      pa    0.140425           1    2.947109    1.525154    0.055432    0.001481    0.001102    0.032598    0.439686           0           0    0.000021
-rbi      bi    0.126948    0.926163    2.914508    0.584228           0    1.270786    1.559703    0.500000           0    0.073837    0.012709    0.001264
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201421           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444236           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005336           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  8.5300   531.219    0.8999    0.3364    0.1602  0.003286   0.01526   0.01477    0.4183    0.8949 0.0002835    0.1966  0.007973    0.4183    0.9973  4.425e-5    0.8808   0.05462    0.5500  0.004007   0.08246  0.002522   0.07490    0.1610
+   7.200    507.24    0.9058    0.3278    0.2314  0.002844   0.01529   0.01484    0.4078    0.9160 0.0002323    0.2074  0.007805    0.4078    0.9981  3.386e-5    0.8732   0.05886    0.5530  0.005499   0.08451  0.002558   0.06716    0.1680
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.003910   0.01126   0.06719    0.1402    0.1266              0.2013    0.4443  0.005298  -661.60471
-  zeroed  0.007035   0.02027    0.1209    0.2523    0.2277              0.3622            0.009533
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.001919   0.01164   0.06513    0.1411    0.1285              0.2020    0.4440  0.005610  -661.54313  -571.43232    0.1155    2.0599    2.0330
 
-% --------------------------------------------------------
-% at P = 8.5, T = 531, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 8.5 531
-% --------------------------------------------------------
-xyzguess x(g)          0.899897
-xyzguess z(g)          0.336434
-xyzguess m(g)          0.160216
-xyzguess f(g)        0.00328619
-xyzguess f(ep)        0.0152569
-xyzguess Q(ep)        0.0147685  range  0.000 0.500
-xyzguess x(mu)         0.418256
-xyzguess y(mu)         0.894893
-xyzguess f(mu)      0.000283534
-xyzguess n(mu)         0.196606
-xyzguess c(mu)       0.00797341
-xyzguess x(pa)         0.418256
-xyzguess y(pa)         0.997334
-xyzguess f(pa)       4.42539e-5
-xyzguess n(pa)         0.880789
-xyzguess c(pa)        0.0546249
-xyzguess x(bi)         0.549988
-xyzguess m(bi)       0.00400692
-xyzguess y(bi)        0.0824581
-xyzguess f(bi)       0.00252181
-xyzguess t(bi)        0.0749000
-xyzguess Q(bi)         0.160966
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 7.2, T = 507, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 7.200 507.24
+% ----------------------------------------------------------
+xyzguess x(g)          0.905775
+xyzguess z(g)          0.327819
+xyzguess m(g)          0.231447
+xyzguess f(g)        0.00284414
+% -----------------------------
+xyzguess f(ep)        0.0152936
+xyzguess Q(ep)        0.0148449  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.407849
+xyzguess y(mu)         0.916019
+xyzguess f(mu)      0.000232310
+xyzguess n(mu)         0.207403
+xyzguess c(mu)       0.00780504
+% -----------------------------
+xyzguess x(pa)         0.407849
+xyzguess y(pa)         0.998122
+xyzguess f(pa)       3.38575e-5
+xyzguess n(pa)         0.873169
+xyzguess c(pa)        0.0588550
+% -----------------------------
+xyzguess x(bi)         0.553013
+xyzguess m(bi)       0.00549852
+xyzguess y(bi)        0.0845085
+xyzguess f(bi)       0.00255813
+xyzguess t(bi)        0.0671565
+xyzguess Q(bi)         0.167961
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.003910           0           3    0.996714    1.009302    0.151161    1.365462           0           0           0    0.480647    0.003286
-rbi      ep    0.011264    0.500000    3.000000    1.484743    2.000000           0    0.030514           0           0           0           0    0.015257
-rbi      mu    0.067191    1.000000    3.097134    1.398738    0.007973    0.061145    0.044245    0.397710    0.098303           0           0    0.000142
-rbi      pa    0.140229           1    2.948042    1.524624    0.054625    0.001551    0.001159    0.032293    0.440395           0           0    0.000022
-rbi      bi    0.126551    0.925100    2.915020    0.583719           0    1.272680    1.557942    0.500000           0    0.074900    0.012021    0.001261
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201281           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444276           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005298           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  8.7280   534.411    0.8991    0.3380    0.1500  0.003366   0.01531   0.01481    0.4194    0.8913 0.0002923    0.1948  0.007956    0.4194    0.9972  4.594e-5    0.8823   0.05374    0.5492  0.003778   0.08186  0.002516   0.07591    0.1601
+   7.420    511.44    0.9048    0.3291    0.2196  0.002910   0.01525   0.01480    0.4099    0.9128 0.0002401    0.2057  0.007857    0.4099    0.9980  3.547e-5    0.8742   0.05832    0.5527  0.005264   0.08436  0.002552   0.06851    0.1667
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.004363   0.01112   0.06770    0.1400    0.1261              0.2011    0.4443  0.005263  -661.57503
-  zeroed  0.007851   0.02001    0.1218    0.2520    0.2269              0.3619            0.009471
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.002153   0.01163   0.06534    0.1410    0.1283              0.2019    0.4441  0.005552  -661.57606  -570.78294    0.1157    2.0559    2.0370
 
-% --------------------------------------------------------
-% at P = 8.7, T = 534, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 8.7 534
-% --------------------------------------------------------
-xyzguess x(g)          0.899069
-xyzguess z(g)          0.337979
-xyzguess m(g)          0.150023
-xyzguess f(g)        0.00336553
-xyzguess f(ep)        0.0153096
-xyzguess Q(ep)        0.0148140  range  0.000 0.500
-xyzguess x(mu)         0.419358
-xyzguess y(mu)         0.891349
-xyzguess f(mu)      0.000292251
-xyzguess n(mu)         0.194832
-xyzguess c(mu)       0.00795622
-xyzguess x(pa)         0.419358
-xyzguess y(pa)         0.997206
-xyzguess f(pa)       4.59358e-5
-xyzguess n(pa)         0.882335
-xyzguess c(pa)        0.0537372
-xyzguess x(bi)         0.549245
-xyzguess m(bi)       0.00377759
-xyzguess y(bi)        0.0818615
-xyzguess f(bi)       0.00251627
-xyzguess t(bi)        0.0759150
-xyzguess Q(bi)         0.160101
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 7.4, T = 511, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 7.420 511.44
+% ----------------------------------------------------------
+xyzguess x(g)          0.904770
+xyzguess z(g)          0.329106
+xyzguess m(g)          0.219555
+xyzguess f(g)        0.00290955
+% -----------------------------
+xyzguess f(ep)        0.0152519
+xyzguess Q(ep)        0.0147973  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.409862
+xyzguess y(mu)         0.912783
+xyzguess f(mu)      0.000240105
+xyzguess n(mu)         0.205693
+xyzguess c(mu)       0.00785730
+% -----------------------------
+xyzguess x(pa)         0.409862
+xyzguess y(pa)         0.998002
+xyzguess f(pa)       3.54662e-5
+xyzguess n(pa)         0.874169
+xyzguess c(pa)        0.0583152
+% -----------------------------
+xyzguess x(bi)         0.552689
+xyzguess m(bi)       0.00526421
+xyzguess y(bi)        0.0843571
+xyzguess f(bi)       0.00255249
+xyzguess t(bi)        0.0685102
+xyzguess Q(bi)         0.166693
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.004363           0    3.000000    0.996634    1.013936    0.155030    1.387695           0           0           0    0.450070    0.003366
-rbi      ep    0.011120    0.500000    3.000000    1.484690           2           0    0.030619           0           0           0           0    0.015310
-rbi      mu    0.067697           1    3.100695    1.395181    0.007956    0.063087    0.045856    0.398606    0.097416           0           0    0.000146
-rbi      pa    0.140007           1    2.949057    1.524052    0.053737    0.001622    0.001218    0.031964    0.441167           0           0    0.000023
-rbi      bi    0.126105    0.924085    2.915622    0.583120           0    1.274904    1.555987    0.500000           0    0.075915    0.011333    0.001258
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.201127           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444318           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005263           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  8.9260   537.468    0.8983    0.3396    0.1401  0.003450   0.01538   0.01488    0.4203    0.8877 0.0003014    0.1930  0.007923    0.4203    0.9971  4.765e-5    0.8840   0.05276    0.5484  0.003550   0.08117  0.002511   0.07687    0.1593
+   7.640    515.57    0.9038    0.3304    0.2077  0.002977   0.01522   0.01476    0.4118    0.9095 0.0002481    0.2040  0.007902    0.4118    0.9979  3.712e-5    0.8753   0.05772    0.5523  0.005024   0.08414  0.002547   0.06984    0.1655
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.004872   0.01094   0.06827    0.1398    0.1256              0.2010    0.4444  0.005232  -661.53082
-  zeroed  0.008768   0.01969    0.1229    0.2515    0.2261              0.3617            0.009417
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.002418   0.01160   0.06560    0.1409    0.1280              0.2018    0.4441  0.005496  -661.60191  -570.14027    0.1160    2.0520    2.0408
 
-% --------------------------------------------------------
-% at P = 8.9, T = 537, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 8.9 537
-% --------------------------------------------------------
-xyzguess x(g)          0.898256
-xyzguess z(g)          0.339631
-xyzguess m(g)          0.140057
-xyzguess f(g)        0.00345032
-xyzguess f(ep)        0.0153840
-xyzguess Q(ep)        0.0148806  range  0.000 0.500
-xyzguess x(mu)         0.420308
-xyzguess y(mu)         0.887665
-xyzguess f(mu)      0.000301378
-xyzguess n(mu)         0.192985
-xyzguess c(mu)       0.00792333
-xyzguess x(pa)         0.420308
-xyzguess y(pa)         0.997077
-xyzguess f(pa)       4.76530e-5
-xyzguess n(pa)         0.884021
-xyzguess c(pa)        0.0527610
-xyzguess x(bi)         0.548395
-xyzguess m(bi)       0.00354987
-xyzguess y(bi)        0.0811660
-xyzguess f(bi)       0.00251089
-xyzguess t(bi)        0.0768744
-xyzguess Q(bi)         0.159300
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 7.6, T = 516, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 7.640 515.57
+% ----------------------------------------------------------
+xyzguess x(g)          0.903777
+xyzguess z(g)          0.330432
+xyzguess m(g)          0.207658
+xyzguess f(g)        0.00297736
+% -----------------------------
+xyzguess f(ep)        0.0152219
+xyzguess Q(ep)        0.0147613  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.411775
+xyzguess y(mu)         0.909458
+xyzguess f(mu)      0.000248128
+xyzguess n(mu)         0.203966
+xyzguess c(mu)       0.00790213
+% -----------------------------
+xyzguess x(pa)         0.411775
+xyzguess y(pa)         0.997877
+xyzguess f(pa)       3.71199e-5
+xyzguess n(pa)         0.875256
+xyzguess c(pa)        0.0577239
+% -----------------------------
+xyzguess x(bi)         0.552308
+xyzguess m(bi)       0.00502353
+xyzguess y(bi)        0.0841423
+xyzguess f(bi)       0.00254665
+xyzguess t(bi)        0.0698437
+xyzguess Q(bi)         0.165462
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.004872           0           3    0.996550    1.018894    0.158816    1.409020           0           0           0    0.420171    0.003450
-rbi      ep    0.010942    0.500000           3    1.484616           2           0    0.030768           0           0           0           0    0.015384
-rbi      mu    0.068271    1.000000    3.104412    1.391476    0.007923    0.065120    0.047517    0.399546    0.096493           0           0    0.000151
-rbi      pa    0.139756           1    2.950162    1.523434    0.052761    0.001694    0.001276    0.031609    0.442010           0           0    0.000024
-rbi      bi    0.125604    0.923126    2.916323    0.582421           0    1.277499    1.553811    0.500000           0    0.076874    0.010650    0.001255
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.200959           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444363           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005232           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  9.1240   540.376    0.8975    0.3414    0.1304  0.003542   0.01548   0.01497    0.4211    0.8838 0.0003110    0.1911  0.007873    0.4211    0.9969  4.941e-5    0.8859   0.05169    0.5474  0.003325   0.08036  0.002506   0.07777    0.1586
+   7.860    519.60    0.9028    0.3318    0.1958  0.003048   0.01521   0.01474    0.4136    0.9060 0.0002564    0.2022  0.007938    0.4136    0.9977  3.882e-5    0.8764   0.05707    0.5519  0.004777   0.08386  0.002541   0.07115    0.1643
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.005445   0.01072   0.06892    0.1395    0.1250              0.2008    0.4444  0.005207  -661.47025
-  zeroed  0.009801   0.01930    0.1240    0.2510    0.2251              0.3614            0.009371
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.002718   0.01156   0.06590    0.1408    0.1277              0.2017    0.4442  0.005442  -661.61942  -569.50287    0.1162    2.0482    2.0446
 
-% --------------------------------------------------------
-% at P = 9.1, T = 540, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 9.1 540
-% --------------------------------------------------------
-xyzguess x(g)          0.897460
-xyzguess z(g)          0.341410
-xyzguess m(g)          0.130367
-xyzguess f(g)        0.00354152
-xyzguess f(ep)        0.0154833
-xyzguess Q(ep)        0.0149715  range  0.000 0.500
-xyzguess x(mu)         0.421091
-xyzguess y(mu)         0.883824
-xyzguess f(mu)      0.000310980
-xyzguess n(mu)         0.191051
-xyzguess c(mu)       0.00787299
-xyzguess x(pa)         0.421091
-xyzguess y(pa)         0.996947
-xyzguess f(pa)       4.94076e-5
-xyzguess n(pa)         0.885858
-xyzguess c(pa)        0.0516897
-xyzguess x(bi)         0.547425
-xyzguess m(bi)       0.00332528
-xyzguess y(bi)        0.0803630
-xyzguess f(bi)       0.00250579
-xyzguess t(bi)        0.0777700
-xyzguess Q(bi)         0.158569
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 7.9, T = 520, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 7.860 519.60
+% ----------------------------------------------------------
+xyzguess x(g)          0.902796
+xyzguess z(g)          0.331807
+xyzguess m(g)          0.195785
+xyzguess f(g)        0.00304797
+% -----------------------------
+xyzguess f(ep)        0.0152052
+xyzguess Q(ep)        0.0147382  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.413578
+xyzguess y(mu)         0.906035
+xyzguess f(mu)      0.000256404
+xyzguess n(mu)         0.202213
+xyzguess c(mu)       0.00793804
+% -----------------------------
+xyzguess x(pa)         0.413578
+xyzguess y(pa)         0.997748
+xyzguess f(pa)       3.88177e-5
+xyzguess n(pa)         0.876440
+xyzguess c(pa)        0.0570729
+% -----------------------------
+xyzguess x(bi)         0.551862
+xyzguess m(bi)       0.00477742
+xyzguess y(bi)        0.0838567
+xyzguess f(bi)       0.00254065
+xyzguess t(bi)        0.0711514
+xyzguess Q(bi)         0.164272
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.005445           0    3.000000    0.996458    1.024230    0.162492    1.429261           0           0           0    0.391100    0.003542
-rbi      ep    0.010725    0.500000           3    1.484517           2           0    0.030967           0           0           0           0    0.015483
-rbi      mu    0.068920           1    3.108303    1.387605    0.007873    0.067255    0.049232    0.400538    0.095526           0           0    0.000155
-rbi      pa    0.139475           1    2.951363    1.522767    0.051690    0.001767    0.001335    0.031226    0.442929           0           0    0.000025
-rbi      bi    0.125042    0.922230    2.917131    0.581616           0    1.280509    1.551382    0.500000           0    0.077770    0.009976    0.001253
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.200775           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444410           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005207           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  9.3220   543.120    0.8967    0.3433    0.1210  0.003640   0.01561   0.01509    0.4217    0.8798 0.0003211    0.1890  0.007804    0.4217    0.9968  5.120e-5    0.8879   0.05052    0.5463  0.003105   0.07944  0.002501   0.07859    0.1579
+   8.080    523.54    0.9018    0.3332    0.1840  0.003122   0.01520   0.01473    0.4153    0.9025 0.0002650    0.2004  0.007963    0.4153    0.9976  4.056e-5    0.8777   0.05635    0.5513  0.004527   0.08349  0.002535   0.07243    0.1631
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.006089   0.01046   0.06965    0.1392    0.1244              0.2006    0.4445  0.005187  -661.39145
-  zeroed   0.01096   0.01883    0.1254    0.2505    0.2239              0.3610            0.009337
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.003059   0.01149   0.06626    0.1406    0.1274              0.2016    0.4442  0.005391  -661.62710  -568.87145    0.1164    2.0444    2.0484
 
-% --------------------------------------------------------
-% at P = 9.3, T = 543, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 9.3 543
-% --------------------------------------------------------
-xyzguess x(g)          0.896681
-xyzguess z(g)          0.343333
-xyzguess m(g)          0.121004
-xyzguess f(g)        0.00364033
-xyzguess f(ep)        0.0156112
-xyzguess Q(ep)        0.0150902  range  0.000 0.500
-xyzguess x(mu)         0.421692
-xyzguess y(mu)         0.879808
-xyzguess f(mu)      0.000321140
-xyzguess n(mu)         0.189018
-xyzguess c(mu)       0.00780363
-xyzguess x(pa)         0.421692
-xyzguess y(pa)         0.996816
-xyzguess f(pa)       5.12033e-5
-xyzguess n(pa)         0.887857
-xyzguess c(pa)        0.0505183
-xyzguess x(bi)         0.546320
-xyzguess m(bi)       0.00310542
-xyzguess y(bi)        0.0794442
-xyzguess f(bi)       0.00250114
-xyzguess t(bi)        0.0785934
-xyzguess Q(bi)         0.157914
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 8.1, T = 524, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 8.080 523.54
+% ----------------------------------------------------------
+xyzguess x(g)          0.901829
+xyzguess z(g)          0.333243
+xyzguess m(g)          0.183977
+xyzguess f(g)        0.00312189
+% -----------------------------
+xyzguess f(ep)        0.0152036
+xyzguess Q(ep)        0.0147300  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.415259
+xyzguess y(mu)         0.902505
+xyzguess f(mu)      0.000264964
+xyzguess n(mu)         0.200425
+xyzguess c(mu)       0.00796331
+% -----------------------------
+xyzguess x(pa)         0.415259
+xyzguess y(pa)         0.997616
+xyzguess f(pa)       4.05591e-5
+xyzguess n(pa)         0.877734
+xyzguess c(pa)        0.0563531
+% -----------------------------
+xyzguess x(bi)         0.551340
+xyzguess m(bi)       0.00452698
+xyzguess y(bi)        0.0834920
+xyzguess f(bi)       0.00253452
+xyzguess t(bi)        0.0724265
+xyzguess Q(bi)         0.163129
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.006089           0    3.000000    0.996360    1.029999    0.166033    1.448236           0           0           0    0.363013    0.003640
-rbi      ep    0.010463    0.500000    3.000000    1.484389    2.000000           0    0.031222           0           0           0           0    0.015611
-rbi      mu    0.069649           1    3.112388    1.383549    0.007804    0.069508    0.051005    0.401589    0.094509           0           0    0.000161
-rbi      pa    0.139164           1    2.952665    1.522050    0.050518    0.001841    0.001394    0.030812    0.443929           0           0    0.000026
-rbi      bi    0.124413    0.921407    2.918055    0.580695           0    1.283980    1.548666    0.500000           0    0.078593    0.009316    0.001251
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.200574           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444461           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005187           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  9.5200   545.684    0.8959    0.3454    0.1120  0.003748   0.01577   0.01524    0.4221    0.8756 0.0003320    0.1869  0.007714    0.4221    0.9967  5.305e-5    0.8900   0.04924    0.5451  0.002892   0.07840  0.002497   0.07934    0.1573
+   8.300    527.36    0.9009    0.3348    0.1723  0.003200   0.01522   0.01474    0.4168    0.8989 0.0002738    0.1986  0.007976    0.4168    0.9975  4.234e-5    0.8792   0.05555    0.5507  0.004274   0.08304  0.002528   0.07366    0.1620
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.006811   0.01015   0.07047    0.1388    0.1237              0.2004    0.4445  0.005173  -661.29265
-  zeroed   0.01226   0.01827    0.1269    0.2499    0.2227              0.3607            0.009313
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.003447   0.01140   0.06668    0.1405    0.1270              0.2014    0.4442  0.005343  -661.62323  -568.24787    0.1166    2.0406    2.0522
 
-% --------------------------------------------------------
-% at P = 9.5, T = 546, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 9.5 546
-% --------------------------------------------------------
-xyzguess x(g)          0.895920
-xyzguess z(g)          0.345419
-xyzguess m(g)          0.112022
-xyzguess f(g)        0.00374811
-xyzguess f(ep)        0.0157720
-xyzguess Q(ep)        0.0152409  range  0.000 0.500
-xyzguess x(mu)         0.422096
-xyzguess y(mu)         0.875597
-xyzguess f(mu)      0.000331954
-xyzguess n(mu)         0.186874
-xyzguess c(mu)       0.00771394
-xyzguess x(pa)         0.422096
-xyzguess y(pa)         0.996686
-xyzguess f(pa)       5.30463e-5
-xyzguess n(pa)         0.890024
-xyzguess c(pa)        0.0492440
-xyzguess x(bi)         0.545066
-xyzguess m(bi)       0.00289188
-xyzguess y(bi)        0.0784029
-xyzguess f(bi)       0.00249715
-xyzguess t(bi)        0.0793367
-xyzguess Q(bi)         0.157343
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 8.3, T = 527, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 8.300 527.36
+% ----------------------------------------------------------
+xyzguess x(g)          0.900876
+xyzguess z(g)          0.334754
+xyzguess m(g)          0.172277
+xyzguess f(g)        0.00319975
+% -----------------------------
+xyzguess f(ep)        0.0152192
+xyzguess Q(ep)        0.0147386  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.416804
+xyzguess y(mu)         0.898854
+xyzguess f(mu)      0.000273847
+xyzguess n(mu)         0.198590
+xyzguess c(mu)       0.00797598
+% -----------------------------
+xyzguess x(pa)         0.416804
+xyzguess y(pa)         0.997479
+xyzguess f(pa)       4.23433e-5
+xyzguess n(pa)         0.879154
+xyzguess c(pa)        0.0555548
+% -----------------------------
+xyzguess x(bi)         0.550732
+xyzguess m(bi)       0.00427352
+xyzguess y(bi)        0.0830385
+xyzguess f(bi)       0.00252831
+xyzguess t(bi)        0.0736614
+xyzguess Q(bi)         0.162040
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.006811           0           3    0.996252    1.036256    0.169408    1.465767           0           0           0    0.336065    0.003748
-rbi      ep    0.010151    0.500000    3.000000    1.484228           2           0    0.031544           0           0           0           0    0.015772
-rbi      mu    0.070465           1    3.116689    1.379288    0.007714    0.071893    0.052842    0.402706    0.093437           0           0    0.000166
-rbi      pa    0.138822           1    2.954070    1.521281    0.049244    0.001915    0.001452    0.030366    0.445012           0           0    0.000027
-rbi      bi    0.123710    0.920663    2.919100    0.579652           0    1.287957    1.545628    0.500000           0    0.079337    0.008676    0.001249
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.200353           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444515           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005173           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  9.7180   548.057    0.8952    0.3477    0.1035  0.003866   0.01597   0.01543    0.4223    0.8712 0.0003435    0.1846  0.007603    0.4223    0.9966  5.495e-5    0.8924   0.04787    0.5437  0.002686   0.07723  0.002494   0.07999    0.1569
+   8.520    531.05    0.8999    0.3364    0.1607  0.003282   0.01525   0.01477    0.4182    0.8951 0.0002831    0.1967  0.007974    0.4182    0.9973  4.417e-5    0.8807   0.05467    0.5500  0.004019   0.08249  0.002522   0.07485    0.1610
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.007618  0.009783   0.07137    0.1384    0.1229              0.2001    0.4446  0.005166  -661.17224
-  zeroed   0.01371   0.01761    0.1285    0.2493    0.2213              0.3603            0.009301
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.003888   0.01127   0.06717    0.1402    0.1266              0.2013    0.4443  0.005300  -661.60585  -567.63198    0.1169    2.0369    2.0560
 
-% --------------------------------------------------------
-% at P = 9.7, T = 548, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 9.7 548
-% --------------------------------------------------------
-xyzguess x(g)          0.895178
-xyzguess z(g)          0.347686
-xyzguess m(g)          0.103467
-xyzguess f(g)        0.00386647
-xyzguess f(ep)        0.0159705
-xyzguess Q(ep)        0.0154283  range  0.000 0.500
-xyzguess x(mu)         0.422288
-xyzguess y(mu)         0.871171
-xyzguess f(mu)      0.000343540
-xyzguess n(mu)         0.184609
-xyzguess c(mu)       0.00760311
-xyzguess x(pa)         0.422288
-xyzguess y(pa)         0.996556
-xyzguess f(pa)       5.49459e-5
-xyzguess n(pa)         0.892361
-xyzguess c(pa)        0.0478670
-xyzguess x(bi)         0.543651
-xyzguess m(bi)       0.00268621
-xyzguess y(bi)        0.0772343
-xyzguess f(bi)       0.00249411
-xyzguess t(bi)        0.0799923
-xyzguess Q(bi)         0.156860
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 8.5, T = 531, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 8.520 531.05
+% ----------------------------------------------------------
+xyzguess x(g)          0.899939
+xyzguess z(g)          0.336358
+xyzguess m(g)          0.160736
+xyzguess f(g)        0.00328231
+% -----------------------------
+xyzguess f(ep)        0.0152548
+xyzguess Q(ep)        0.0147667  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.418197
+xyzguess y(mu)         0.895068
+xyzguess f(mu)      0.000283103
+xyzguess n(mu)         0.196694
+xyzguess c(mu)       0.00797389
+% -----------------------------
+xyzguess x(pa)         0.418197
+xyzguess y(pa)         0.997340
+xyzguess f(pa)       4.41698e-5
+xyzguess n(pa)         0.880715
+xyzguess c(pa)        0.0546675
+% -----------------------------
+xyzguess x(bi)         0.550023
+xyzguess m(bi)       0.00401852
+xyzguess y(bi)        0.0824858
+xyzguess f(bi)       0.00252209
+xyzguess t(bi)        0.0748474
+xyzguess Q(bi)         0.161011
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.007618           0           3    0.996134    1.043057    0.172593    1.481682           0           0           0    0.310400    0.003866
-rbi      ep    0.009783    0.500000           3    1.484030           2           0    0.031941           0           0           0           0    0.015970
-rbi      mu    0.071373           1    3.121226    1.374801    0.007603    0.074426    0.054747    0.403894    0.092304           0           0    0.000172
-rbi      pa    0.138449           1    2.955577    1.520462    0.047867    0.001990    0.001509    0.029886    0.446181           0           0    0.000027
-rbi      bi    0.122928    0.920008    2.920272    0.578481           0    1.292482    1.542233    0.500000           0    0.079992    0.008059    0.001247
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.200111           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444573           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005166           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
-  9.9160   550.227    0.8945    0.3502   0.09538  0.003997   0.01621   0.01566    0.4223    0.8665 0.0003560    0.1822  0.007471    0.4223    0.9964  5.692e-5    0.8949   0.04639    0.5421  0.002490   0.07594  0.002492   0.08055    0.1565
+   8.740    534.60    0.8990    0.3381    0.1494  0.003371   0.01531   0.01482    0.4194    0.8911 0.0002928    0.1947  0.007955    0.4194    0.9972  4.604e-5    0.8824   0.05368    0.5492  0.003764   0.08182  0.002516   0.07597    0.1601
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.008516  0.009350   0.07238    0.1380    0.1221              0.1998    0.4446  0.005166  -661.02892
-  zeroed   0.01533   0.01684    0.1303    0.2486    0.2198              0.3598            0.009302
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.004392   0.01111   0.06773    0.1400    0.1261              0.2011    0.4443  0.005261  -661.57279  -567.02831    0.1170    2.0332    2.0597
 
-% --------------------------------------------------------
-% at P = 9.9, T = 550, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 9.9 550
-% --------------------------------------------------------
-xyzguess x(g)          0.894455
-xyzguess z(g)          0.350150
-xyzguess m(g)         0.0953804
-xyzguess f(g)        0.00399728
-xyzguess f(ep)        0.0162121
-xyzguess Q(ep)        0.0156575  range  0.000 0.500
-xyzguess x(mu)         0.422258
-xyzguess y(mu)         0.866509
-xyzguess f(mu)      0.000356036
-xyzguess n(mu)         0.182214
-xyzguess c(mu)       0.00747090
-xyzguess x(pa)         0.422258
-xyzguess y(pa)         0.996426
-xyzguess f(pa)       5.69160e-5
-xyzguess n(pa)         0.894866
-xyzguess c(pa)        0.0463914
-xyzguess x(bi)         0.542060
-xyzguess m(bi)       0.00248978
-xyzguess y(bi)        0.0759362
-xyzguess f(bi)       0.00249239
-xyzguess t(bi)        0.0805540
-xyzguess Q(bi)         0.156470
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 8.7, T = 535, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 8.740 534.60
+% ----------------------------------------------------------
+xyzguess x(g)          0.899019
+xyzguess z(g)          0.338076
+xyzguess m(g)          0.149413
+xyzguess f(g)        0.00337051
+% -----------------------------
+xyzguess f(ep)        0.0153135
+xyzguess Q(ep)        0.0148174  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.419421
+xyzguess y(mu)         0.891130
+xyzguess f(mu)      0.000292792
+xyzguess n(mu)         0.194723
+xyzguess c(mu)       0.00795470
+% -----------------------------
+xyzguess x(pa)         0.419421
+xyzguess y(pa)         0.997198
+xyzguess f(pa)       4.60388e-5
+xyzguess n(pa)         0.882433
+xyzguess c(pa)        0.0536806
+% -----------------------------
+xyzguess x(bi)         0.549197
+xyzguess m(bi)       0.00376372
+xyzguess y(bi)        0.0818223
+xyzguess f(bi)       0.00251594
+xyzguess t(bi)        0.0759748
+xyzguess Q(bi)         0.160051
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.008516           0    3.000000    0.996003    1.050451    0.175565    1.495837           0           0           0    0.286141    0.003997
-rbi      ep    0.009350    0.500000    3.000000    1.483788           2           0    0.032424           0           0           0           0    0.016212
-rbi      mu    0.072376    1.000000    3.126020    1.370067    0.007471    0.077123    0.056724    0.405157    0.091107           0           0    0.000178
-rbi      pa    0.138048           1    2.957183    1.519593    0.046391    0.002065    0.001566    0.029371    0.447433           0           0    0.000028
-rbi      bi    0.122061    0.919446    2.921571    0.577182           0    1.297596    1.538444    0.500000           0    0.080554    0.007469    0.001246
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.199847           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444634           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005166           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 10.1140   552.188    0.8937    0.3528   0.08779  0.004143   0.01650   0.01593    0.4220    0.8616 0.0003696    0.1797  0.007318    0.4220    0.9963  5.898e-5    0.8975   0.04483    0.5403  0.002304   0.07451  0.002492   0.08102    0.1562
+   8.960    537.98    0.8981    0.3399    0.1384  0.003465   0.01540   0.01489    0.4205    0.8870 0.0003030    0.1927  0.007916    0.4205    0.9971  4.795e-5    0.8843   0.05258    0.5482  0.003511   0.08104  0.002510   0.07703    0.1592
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-          0.009511  0.008848   0.07348    0.1376    0.1211              0.1996    0.4447  0.005174  -660.86184
-  zeroed   0.01713   0.01593    0.1323    0.2478    0.2181              0.3594            0.009317
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.004966   0.01091   0.06838    0.1397    0.1255              0.2009    0.4444  0.005227  -661.52164  -566.43374    0.1172    2.0294    2.0635
 
-% --------------------------------------------------------
-% at P = 10.1, T = 552, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 10.1 552
-% --------------------------------------------------------
-xyzguess x(g)          0.893748
-xyzguess z(g)          0.352827
-xyzguess m(g)         0.0877947
-xyzguess f(g)        0.00414270
-xyzguess f(ep)        0.0165030
-xyzguess Q(ep)        0.0159344  range  0.000 0.500
-xyzguess x(mu)         0.421995
-xyzguess y(mu)         0.861594
-xyzguess f(mu)      0.000369608
-xyzguess n(mu)         0.179686
-xyzguess c(mu)       0.00731780
-xyzguess x(pa)         0.421995
-xyzguess y(pa)         0.996297
-xyzguess f(pa)       5.89751e-5
-xyzguess n(pa)         0.897532
-xyzguess c(pa)        0.0448250
-xyzguess x(bi)         0.540281
-xyzguess m(bi)       0.00230376
-xyzguess y(bi)        0.0745100
-xyzguess f(bi)       0.00249244
-xyzguess t(bi)        0.0810175
-xyzguess Q(bi)         0.156176
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 9.0, T = 538, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 8.960 537.98
+% ----------------------------------------------------------
+xyzguess x(g)          0.898118
+xyzguess z(g)          0.339927
+xyzguess m(g)          0.138372
+xyzguess f(g)        0.00346549
+% -----------------------------
+xyzguess f(ep)        0.0153992
+xyzguess Q(ep)        0.0148944  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.420455
+xyzguess y(mu)         0.887017
+xyzguess f(mu)      0.000302991
+xyzguess n(mu)         0.192660
+xyzguess c(mu)       0.00791597
+% -----------------------------
+xyzguess x(pa)         0.420455
+xyzguess y(pa)         0.997055
+xyzguess f(pa)       4.79516e-5
+xyzguess n(pa)         0.884325
+xyzguess c(pa)        0.0525839
+% -----------------------------
+xyzguess x(bi)         0.548238
+xyzguess m(bi)       0.00351104
+xyzguess y(bi)        0.0810360
+xyzguess f(bi)       0.00250999
+xyzguess t(bi)        0.0770329
+xyzguess Q(bi)         0.159170
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.009511           0           3    0.995857    1.058480    0.178305    1.508116           0           0           0    0.263384    0.004143
-rbi      ep    0.008848    0.500000    3.000000    1.483497           2           0    0.033006           0           0           0           0    0.016503
-rbi      mu    0.073477           1    3.131088    1.365068    0.007318    0.079999    0.058776    0.406498    0.089843           0           0    0.000185
-rbi      pa    0.137622           1    2.958878    1.518680    0.044825    0.002140    0.001621    0.028822    0.448766           0           0    0.000029
-rbi      bi    0.121107    0.918982    2.922998    0.575756           0    1.303334    1.534227    0.500000           0    0.081018    0.006911    0.001246
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.199562           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444700           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005174           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 10.3120   553.937    0.8931    0.3557   0.08073  0.004305   0.01685   0.01627    0.4215    0.8564 0.0003845    0.1770  0.007145    0.4215    0.9962  6.115e-5    0.9003   0.04318    0.5383  0.002129   0.07296  0.002495   0.08138    0.1560
+   9.180    541.17    0.8972    0.3419    0.1277  0.003569   0.01552   0.01500    0.4213    0.8827 0.0003138    0.1905  0.007855    0.4213    0.9969  4.991e-5    0.8864   0.05137    0.5471  0.003263   0.08012  0.002504   0.07801    0.1584
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01061  0.008269   0.07468    0.1372    0.1201              0.1993    0.4448  0.005189  -660.67064
-  zeroed   0.01911   0.01489    0.1345    0.2471    0.2162              0.3589            0.009345
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.005620   0.01066   0.06912    0.1394    0.1249              0.2007    0.4444  0.005200  -661.44989  -565.85384    0.1174    2.0257    2.0673
 
-% --------------------------------------------------------
-% at P = 10.3, T = 554, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 10.3 554
-% --------------------------------------------------------
-xyzguess x(g)          0.893057
-xyzguess z(g)          0.355725
-xyzguess m(g)         0.0807293
-xyzguess f(g)        0.00430528
-xyzguess f(ep)        0.0168500
-xyzguess Q(ep)        0.0162658  range  0.000 0.500
-xyzguess x(mu)         0.421494
-xyzguess y(mu)         0.856410
-xyzguess f(mu)      0.000384453
-xyzguess n(mu)         0.177025
-xyzguess c(mu)       0.00714507
-xyzguess x(pa)         0.421494
-xyzguess y(pa)         0.996169
-xyzguess f(pa)       6.11487e-5
-xyzguess n(pa)         0.900342
-xyzguess c(pa)        0.0431800
-xyzguess x(bi)         0.538306
-xyzguess m(bi)       0.00212899
-xyzguess y(bi)        0.0729610
-xyzguess f(bi)       0.00249485
-xyzguess t(bi)        0.0813806
-xyzguess Q(bi)         0.155977
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 9.2, T = 541, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 9.180 541.17
+% ----------------------------------------------------------
+xyzguess x(g)          0.897238
+xyzguess z(g)          0.341938
+xyzguess m(g)          0.127683
+xyzguess f(g)        0.00356864
+% -----------------------------
+xyzguess f(ep)        0.0155164
+xyzguess Q(ep)        0.0150020  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.421280
+xyzguess y(mu)         0.882707
+xyzguess f(mu)      0.000313793
+xyzguess n(mu)         0.190487
+xyzguess c(mu)       0.00785537
+% -----------------------------
+xyzguess x(pa)         0.421280
+xyzguess y(pa)         0.996910
+xyzguess f(pa)       4.99111e-5
+xyzguess n(pa)         0.886407
+xyzguess c(pa)        0.0513687
+% -----------------------------
+xyzguess x(bi)         0.547127
+xyzguess m(bi)       0.00326255
+xyzguess y(bi)        0.0801152
+xyzguess f(bi)       0.00250443
+xyzguess t(bi)        0.0780105
+xyzguess Q(bi)         0.158376
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.010609           0           3    0.995695    1.067174    0.180802    1.518447           0           0           0    0.242188    0.004305
-rbi      ep    0.008269    0.500000           3    1.483150           2           0    0.033700           0           0           0           0    0.016850
-rbi      mu    0.074677           1    3.136445    1.359791    0.007145    0.083068    0.060907    0.407915    0.088512           0           0    0.000192
-rbi      pa    0.137173           1    2.960651    1.517729    0.043180    0.002216    0.001676    0.028239    0.450171           0           0    0.000031
-rbi      bi    0.120061    0.918619    2.924544    0.574208           0    1.309722    1.529550    0.500000           0    0.081381    0.006387    0.001247
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.199253           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444770           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005189           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 10.5100   555.478    0.8924    0.3588   0.07419  0.004488   0.01726   0.01666    0.4208    0.8509 0.0004008    0.1742  0.006955    0.4208    0.9960  6.347e-5    0.9033   0.04147    0.5361  0.001966   0.07130  0.002500   0.08164    0.1559
+   9.400    544.15    0.8964    0.3441    0.1174  0.003682   0.01567   0.01515    0.4219    0.8782 0.0003253    0.1882  0.007771    0.4219    0.9968  5.192e-5    0.8887   0.05003    0.5458  0.003020   0.07905  0.002499   0.07890    0.1577
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01181  0.007606   0.07598    0.1367    0.1189              0.1989    0.4448  0.005211  -660.45555
-  zeroed   0.02128   0.01370    0.1369    0.2463    0.2142              0.3583            0.009387
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.006364   0.01035   0.06996    0.1390    0.1241              0.2005    0.4445  0.005181  -661.35501  -565.28679    0.1175    2.0219    2.0712
 
-% --------------------------------------------------------
-% at P = 10.5, T = 555, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 10.5 555
-% --------------------------------------------------------
-xyzguess x(g)          0.892378
-xyzguess z(g)          0.358850
-xyzguess m(g)         0.0741909
-xyzguess f(g)        0.00448798
-xyzguess f(ep)        0.0172612
-xyzguess Q(ep)        0.0166593  range  0.000 0.500
-xyzguess x(mu)         0.420750
-xyzguess y(mu)         0.850945
-xyzguess f(mu)      0.000400809
-xyzguess n(mu)         0.174235
-xyzguess c(mu)       0.00695471
-xyzguess x(pa)         0.420750
-xyzguess y(pa)         0.996041
-xyzguess f(pa)       6.34698e-5
-xyzguess n(pa)         0.903278
-xyzguess c(pa)        0.0414714
-xyzguess x(bi)         0.536125
-xyzguess m(bi)       0.00196594
-xyzguess y(bi)        0.0712979
-xyzguess f(bi)       0.00250034
-xyzguess t(bi)        0.0816434
-xyzguess Q(bi)         0.155872
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 9.4, T = 544, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 9.400 544.15
+% ----------------------------------------------------------
+xyzguess x(g)          0.896379
+xyzguess z(g)          0.344134
+xyzguess m(g)          0.117418
+xyzguess f(g)        0.00368163
+% -----------------------------
+xyzguess f(ep)        0.0156703
+xyzguess Q(ep)        0.0151455  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.421875
+xyzguess y(mu)         0.878174
+xyzguess f(mu)      0.000325316
+xyzguess n(mu)         0.188188
+xyzguess c(mu)       0.00777078
+% -----------------------------
+xyzguess x(pa)         0.421875
+xyzguess y(pa)         0.996765
+xyzguess f(pa)       5.19233e-5
+xyzguess n(pa)         0.888690
+xyzguess c(pa)        0.0500286
+% -----------------------------
+xyzguess x(bi)         0.545845
+xyzguess m(bi)       0.00302046
+xyzguess y(bi)        0.0790490
+xyzguess f(bi)       0.00249948
+xyzguess t(bi)        0.0788962
+xyzguess Q(bi)         0.157679
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.011813           0           3    0.995512    1.076549    0.183053    1.526801           0           0           0    0.222573    0.004488
-rbi      ep    0.007606    0.500000    3.000000    1.482739           2           0    0.034522           0           0           0           0    0.017261
-rbi      mu    0.075976    1.000000    3.142101    1.354222    0.006955    0.086340    0.063116    0.409405    0.087118           0           0    0.000200
-rbi      pa    0.136708           1    2.962487    1.516745    0.041471    0.002293    0.001729    0.027625    0.451639           0           0    0.000032
-rbi      bi    0.118923    0.918357    2.926202    0.572548           0    1.316783    1.524378    0.500000           0    0.081643    0.005898    0.001250
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.198920           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444843           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005211           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 10.7080   556.815    0.8917    0.3622   0.06817  0.004694   0.01775   0.01712    0.4198    0.8452 0.0004190    0.1713  0.006749    0.4198    0.9959  6.598e-5    0.9063   0.03972    0.5337  0.001815   0.06953  0.002510   0.08181    0.1559
+   9.620    546.91    0.8955    0.3465    0.1076  0.003806   0.01587   0.01533    0.4222    0.8734 0.0003377    0.1857  0.007661    0.4222    0.9966  5.400e-5    0.8912   0.04856    0.5444  0.002787   0.07783  0.002495   0.07968    0.1571
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01313  0.006853   0.07737    0.1362    0.1177              0.1986    0.4449  0.005241  -660.21732
-  zeroed   0.02365   0.01235    0.1394    0.2454    0.2120              0.3577            0.009441
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.007207  0.009973   0.07091    0.1386    0.1233              0.2002    0.4445  0.005169  -661.23462  -564.73532    0.1177    2.0181    2.0751
 
-% --------------------------------------------------------
-% at P = 10.7, T = 557, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 10.7 557
-% --------------------------------------------------------
-xyzguess x(g)          0.891705
-xyzguess z(g)          0.362203
-xyzguess m(g)         0.0681732
-xyzguess f(g)        0.00469434
-xyzguess f(ep)        0.0177459
-xyzguess Q(ep)        0.0171239  range  0.000 0.500
-xyzguess x(mu)         0.419764
-xyzguess y(mu)         0.845189
-xyzguess f(mu)      0.000418962
-xyzguess n(mu)         0.171327
-xyzguess c(mu)       0.00674933
-xyzguess x(pa)         0.419764
-xyzguess y(pa)         0.995913
-xyzguess f(pa)       6.59802e-5
-xyzguess n(pa)         0.906315
-xyzguess c(pa)        0.0397172
-xyzguess x(bi)         0.533730
-xyzguess m(bi)       0.00181478
-xyzguess y(bi)        0.0695331
-xyzguess f(bi)       0.00250981
-xyzguess t(bi)        0.0818085
-xyzguess Q(bi)         0.155856
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 9.6, T = 547, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 9.620 546.91
+% ----------------------------------------------------------
+xyzguess x(g)          0.895543
+xyzguess z(g)          0.346540
+xyzguess m(g)          0.107645
+xyzguess f(g)        0.00380645
+% -----------------------------
+xyzguess f(ep)        0.0158672
+xyzguess Q(ep)        0.0153306  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.422220
+xyzguess y(mu)         0.873390
+xyzguess f(mu)      0.000337701
+xyzguess n(mu)         0.185746
+xyzguess c(mu)       0.00766064
+% -----------------------------
+xyzguess x(pa)         0.422220
+xyzguess y(pa)         0.996620
+xyzguess f(pa)       5.39979e-5
+xyzguess n(pa)         0.891183
+xyzguess c(pa)        0.0485612
+% -----------------------------
+xyzguess x(bi)         0.544373
+xyzguess m(bi)       0.00278693
+xyzguess y(bi)        0.0778288
+xyzguess f(bi)       0.00249548
+xyzguess t(bi)        0.0796792
+xyzguess Q(bi)         0.157088
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.013127           0           3    0.995306    1.086608    0.185062    1.533199           0           0           0    0.204520    0.004694
-rbi      ep    0.006853    0.500000           3    1.482254           2           0    0.035492           0           0           0           0    0.017746
-rbi      mu    0.077372           1    3.148062    1.348354    0.006749    0.089827    0.065403    0.410962    0.085664           0           0    0.000209
-rbi      pa    0.136230    1.000000    2.964370    1.515739    0.039717    0.002371    0.001782    0.026984    0.453157           0           0    0.000033
-rbi      bi    0.117691    0.918192    2.927957    0.570788           0    1.324535    1.518679    0.500000           0    0.081808    0.005444    0.001255
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.198565           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.444921           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005241           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 10.9060   557.961    0.8910    0.3658   0.06266  0.004929   0.01832   0.01767    0.4185    0.8391 0.0004393    0.1683  0.006532    0.4185    0.9958  6.873e-5    0.9094   0.03794    0.5311  0.001675   0.06768  0.002524   0.08188    0.1559
+   9.840    549.42    0.8947    0.3492   0.09843  0.003945   0.01611   0.01556    0.4223    0.8683 0.0003511    0.1831  0.007524    0.4223    0.9965  5.615e-5    0.8939   0.04697    0.5427  0.002564   0.07645  0.002493   0.08035    0.1566
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01455  0.006004   0.07886    0.1357    0.1164              0.1982    0.4450  0.005277  -659.95723
-  zeroed   0.02623   0.01082    0.1421    0.2446    0.2097              0.3571            0.009509
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.008160  0.009524   0.07198    0.1382    0.1224              0.2000    0.4446  0.005165  -661.08670  -564.20022    0.1178    2.0142    2.0791
 
-% --------------------------------------------------------
-% at P = 10.9, T = 558, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 10.9 558
-% --------------------------------------------------------
-xyzguess x(g)          0.891033
-xyzguess z(g)          0.365779
-xyzguess m(g)         0.0626590
-xyzguess f(g)        0.00492866
-xyzguess f(ep)        0.0183155
-xyzguess Q(ep)        0.0176704  range  0.000 0.500
-xyzguess x(mu)         0.418537
-xyzguess y(mu)         0.839139
-xyzguess f(mu)      0.000439268
-xyzguess n(mu)         0.168315
-xyzguess c(mu)       0.00653197
-xyzguess x(pa)         0.418537
-xyzguess y(pa)         0.995784
-xyzguess f(pa)       6.87329e-5
-xyzguess n(pa)         0.909425
-xyzguess c(pa)        0.0379362
-xyzguess x(bi)         0.531114
-xyzguess m(bi)       0.00167531
-xyzguess y(bi)        0.0676817
-xyzguess f(bi)       0.00252436
-xyzguess t(bi)        0.0818805
-xyzguess Q(bi)         0.155924
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 9.8, T = 549, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 9.840 549.42
+% ----------------------------------------------------------
+xyzguess x(g)          0.894730
+xyzguess z(g)          0.349180
+xyzguess m(g)         0.0984266
+xyzguess f(g)        0.00394546
+% -----------------------------
+xyzguess f(ep)        0.0161139
+xyzguess Q(ep)        0.0155642  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.422296
+xyzguess y(mu)         0.868328
+xyzguess f(mu)      0.000351122
+xyzguess n(mu)         0.183149
+xyzguess c(mu)       0.00752416
+% -----------------------------
+xyzguess x(pa)         0.422296
+xyzguess y(pa)         0.996476
+xyzguess f(pa)       5.61504e-5
+xyzguess n(pa)         0.893885
+xyzguess c(pa)        0.0469690
+% -----------------------------
+xyzguess x(bi)         0.542692
+xyzguess m(bi)       0.00256401
+xyzguess y(bi)        0.0764497
+xyzguess f(bi)       0.00249287
+xyzguess t(bi)        0.0803498
+xyzguess Q(bi)         0.156609
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.014555           0    3.000000    0.995071    1.097337    0.186843    1.537700           0           0           0    0.187977    0.004929
-rbi      ep    0.006004    0.500000           3    1.481685           2           0    0.036631           0           0           0           0    0.018315
-rbi      mu    0.078864    1.000000    3.154329    1.342186    0.006532    0.093535    0.067765    0.412577    0.084157           0           0    0.000220
-rbi      pa    0.135744    1.000000    2.966280    1.514717    0.037936    0.002452    0.001833    0.026319    0.454713           0           0    0.000034
-rbi      bi    0.116366    0.918119    2.929794    0.568944           0    1.332991    1.512420    0.500000           0    0.081881    0.005026    0.001262
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.198187           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445004           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005277           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 11.1040   558.929    0.8904    0.3696   0.05762  0.005196   0.01898   0.01831    0.4171    0.8328 0.0004622    0.1652  0.006306    0.4171    0.9957  7.179e-5    0.9126   0.03615    0.5283  0.001547   0.06576  0.002545   0.08187    0.1561
+  10.060    551.67    0.8939    0.3521   0.08981  0.004101   0.01642   0.01585    0.4221    0.8630 0.0003658    0.1804  0.007362    0.4221    0.9963  5.840e-5    0.8968   0.04526    0.5408  0.002353   0.07491  0.002492   0.08090    0.1562
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01610  0.005052   0.08045    0.1353    0.1149              0.1978    0.4451  0.005320  -659.67696
-  zeroed   0.02901  0.009105    0.1450    0.2437    0.2071              0.3564            0.009588
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+       0.009230  0.008992   0.07317    0.1377    0.1214              0.1996    0.4447  0.005171  -660.90980  -563.68258    0.1179    2.0103    2.0831
 
-% --------------------------------------------------------
-% at P = 11.1, T = 559, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 11.1 559
-% --------------------------------------------------------
-xyzguess x(g)          0.890355
-xyzguess z(g)          0.369570
-xyzguess m(g)         0.0576223
-xyzguess f(g)        0.00519625
-xyzguess f(ep)        0.0189839
-xyzguess Q(ep)        0.0183124  range  0.000 0.500
-xyzguess x(mu)         0.417071
-xyzguess y(mu)         0.832796
-xyzguess f(mu)      0.000462166
-xyzguess n(mu)         0.165215
-xyzguess c(mu)       0.00630590
-xyzguess x(pa)         0.417071
-xyzguess y(pa)         0.995652
-xyzguess f(pa)       7.17947e-5
-xyzguess n(pa)         0.912582
-xyzguess c(pa)        0.0361476
-xyzguess x(bi)         0.528267
-xyzguess m(bi)       0.00154711
-xyzguess y(bi)        0.0657605
-xyzguess f(bi)       0.00254534
-xyzguess t(bi)        0.0818662
-xyzguess Q(bi)         0.156069
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 10.1, T = 552, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 10.060 551.67
+% ----------------------------------------------------------
+xyzguess x(g)          0.893939
+xyzguess z(g)          0.352075
+xyzguess m(g)         0.0898126
+xyzguess f(g)        0.00410146
+% -----------------------------
+xyzguess f(ep)        0.0164184
+xyzguess Q(ep)        0.0158538  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.422090
+xyzguess y(mu)         0.862961
+xyzguess f(mu)      0.000365789
+xyzguess n(mu)         0.180389
+xyzguess c(mu)       0.00736156
+% -----------------------------
+xyzguess x(pa)         0.422090
+xyzguess y(pa)         0.996332
+xyzguess f(pa)       5.84033e-5
+xyzguess n(pa)         0.896790
+xyzguess c(pa)        0.0452606
+% -----------------------------
+xyzguess x(bi)         0.540786
+xyzguess m(bi)       0.00235341
+xyzguess y(bi)        0.0749115
+xyzguess f(bi)       0.00249222
+xyzguess t(bi)        0.0809010
+xyzguess Q(bi)         0.156247
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.016099           0           3    0.994804    1.108710    0.188417    1.540398           0           0           0    0.172867    0.005196
-rbi      ep    0.005052    0.500000           3    1.481016           2           0    0.037968           0           0           0           0    0.018984
-rbi      mu    0.080448           1    3.160899    1.335717    0.006306    0.097468    0.070198    0.414239    0.082608           0           0    0.000231
-rbi      pa    0.135255           1    2.968200    1.513690    0.036148    0.002534    0.001885    0.025635    0.456291           0           0    0.000036
-rbi      bi    0.114947    0.918134    2.931694    0.567033           0    1.342168    1.505564    0.500000           0    0.081866    0.004641    0.001273
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.197787           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445091           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005320           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+1
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 11.3020   559.738    0.8897    0.3736   0.05303  0.005504   0.01977   0.01907    0.4154    0.8262 0.0004882    0.1620  0.006074    0.4154    0.9955  7.525e-5    0.9158   0.03437    0.5252  0.001430   0.06379  0.002574   0.08177    0.1563
+  10.500    555.40    0.8924    0.3587   0.07451  0.004478   0.01724   0.01664    0.4208    0.8512 0.0003999    0.1744  0.006965    0.4208    0.9960  6.335e-5    0.9031   0.04156    0.5362  0.001974   0.07138  0.002500   0.08163    0.1559
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01776  0.003992   0.08212    0.1348    0.1134              0.1974    0.4452  0.005370  -659.37852
-  zeroed   0.03202  0.007195    0.1480    0.2429    0.2045              0.3557            0.009678
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.01175  0.007641   0.07591    0.1367    0.1190              0.1989    0.4448  0.005210  -660.46697  -562.69974    0.1180    2.0023    2.0915
 
-% --------------------------------------------------------
-% at P = 11.3, T = 560, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 11.3 560
-% --------------------------------------------------------
-xyzguess x(g)          0.889660
-xyzguess z(g)          0.373563
-xyzguess m(g)         0.0530313
-xyzguess f(g)        0.00550376
-xyzguess f(ep)        0.0197689
-xyzguess Q(ep)        0.0190668  range  0.000 0.500
-xyzguess x(mu)         0.415367
-xyzguess y(mu)         0.826162
-xyzguess f(mu)      0.000488218
-xyzguess n(mu)         0.162048
-xyzguess c(mu)       0.00607445
-xyzguess x(pa)         0.415367
-xyzguess y(pa)         0.995518
-xyzguess f(pa)       7.52497e-5
-xyzguess n(pa)         0.915756
-xyzguess c(pa)        0.0343692
-xyzguess x(bi)         0.525182
-xyzguess m(bi)       0.00142954
-xyzguess y(bi)        0.0637874
-xyzguess f(bi)       0.00257444
-xyzguess t(bi)        0.0817737
-xyzguess Q(bi)         0.156283
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 10.5, T = 555, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 10.500 555.40
+% ----------------------------------------------------------
+xyzguess x(g)          0.892412
+xyzguess z(g)          0.358686
+xyzguess m(g)         0.0745085
+xyzguess f(g)        0.00447822
+% -----------------------------
+xyzguess f(ep)        0.0172388
+xyzguess Q(ep)        0.0166378  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.420794
+xyzguess y(mu)         0.851228
+xyzguess f(mu)      0.000399942
+xyzguess n(mu)         0.174379
+xyzguess c(mu)       0.00696471
+% -----------------------------
+xyzguess x(pa)         0.420794
+xyzguess y(pa)         0.996048
+xyzguess f(pa)       6.33484e-5
+xyzguess n(pa)         0.903127
+xyzguess c(pa)        0.0415590
+% -----------------------------
+xyzguess x(bi)         0.536240
+xyzguess m(bi)       0.00197389
+xyzguess y(bi)        0.0713844
+xyzguess f(bi)       0.00249998
+xyzguess t(bi)        0.0816325
+xyzguess Q(bi)         0.155875
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.017764           0           3    0.994496    1.120688    0.189810    1.541416           0           0           0    0.159094    0.005504
-rbi      ep    0.003992    0.500000    3.000000    1.480231           2           0    0.039538           0           0           0           0    0.019769
-rbi      mu    0.082124           1    3.167763    1.328955    0.006074    0.101631    0.072695    0.415939    0.081024           0           0    0.000244
-rbi      pa    0.134768           1    2.970113    1.512665    0.034369    0.002620    0.001937    0.024938    0.457878           0           0    0.000038
-rbi      bi    0.113436    0.918226    2.933638    0.565075           0    1.352080    1.498070    0.500000           0    0.081774    0.004289    0.001287
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.197364           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445183           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005370           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 11.5000   560.405    0.8889    0.3777   0.04885  0.005860   0.02069   0.01996    0.4134    0.8192 0.0005181    0.1588  0.005841    0.4134    0.9954  7.921e-5    0.9189   0.03262    0.5218  0.001322   0.06178  0.002614   0.08161    0.1566
+  10.720    556.89    0.8917    0.3624   0.06782  0.004708   0.01778   0.01715    0.4197    0.8448 0.0004201    0.1711  0.006736    0.4197    0.9959  6.614e-5    0.9065   0.03961    0.5336  0.001806   0.06942  0.002511   0.08182    0.1559
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.01955  0.002816   0.08389    0.1343    0.1118              0.1969    0.4453  0.005424  -659.06416
-  zeroed   0.03525  0.005076    0.1512    0.2421    0.2016              0.3550            0.009779
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.01321  0.006804   0.07746    0.1362    0.1176              0.1985    0.4449  0.005243  -660.20216  -562.23305    0.1180    1.9982    2.0957
 
-% --------------------------------------------------------
-% at P = 11.5, T = 560, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 11.5 560
-% --------------------------------------------------------
-xyzguess x(g)          0.888937
-xyzguess z(g)          0.377739
-xyzguess m(g)         0.0488511
-xyzguess f(g)        0.00585975
-xyzguess f(ep)        0.0206931
-xyzguess Q(ep)        0.0199554  range  0.000 0.500
-xyzguess x(mu)         0.413428
-xyzguess y(mu)         0.819247
-xyzguess f(mu)      0.000518143
-xyzguess n(mu)         0.158835
-xyzguess c(mu)       0.00584080
-xyzguess x(pa)         0.413428
-xyzguess y(pa)         0.995380
-xyzguess f(pa)       7.92052e-5
-xyzguess n(pa)         0.918921
-xyzguess c(pa)        0.0326176
-xyzguess x(bi)         0.521847
-xyzguess m(bi)       0.00132188
-xyzguess y(bi)        0.0617805
-xyzguess f(bi)       0.00261381
-xyzguess t(bi)        0.0816124
-xyzguess Q(bi)         0.156555
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 10.7, T = 557, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 10.720 556.89
+% ----------------------------------------------------------
+xyzguess x(g)          0.891664
+xyzguess z(g)          0.362413
+xyzguess m(g)         0.0678249
+xyzguess f(g)        0.00470770
+% -----------------------------
+xyzguess f(ep)        0.0177779
+xyzguess Q(ep)        0.0171545  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.419697
+xyzguess y(mu)         0.844831
+xyzguess f(mu)      0.000420128
+xyzguess n(mu)         0.171148
+xyzguess c(mu)       0.00673646
+% -----------------------------
+xyzguess x(pa)         0.419697
+xyzguess y(pa)         0.995905
+xyzguess f(pa)       6.61395e-5
+xyzguess n(pa)         0.906501
+xyzguess c(pa)        0.0396098
+% -----------------------------
+xyzguess x(bi)         0.533578
+xyzguess m(bi)       0.00180600
+xyzguess y(bi)        0.0694232
+xyzguess f(bi)       0.00251054
+xyzguess t(bi)        0.0818154
+xyzguess Q(bi)         0.155858
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.019553           0           3    0.994140    1.133218    0.191054    1.540894           0           0           0    0.146553    0.005860
-rbi      ep    0.002816    0.500000           3    1.479307    2.000000           0    0.041386           0           0           0           0    0.020693
-rbi      mu    0.083890    1.000000    3.174912    1.321909    0.005841    0.106025    0.075246    0.417662    0.079418           0           0    0.000259
-rbi      pa    0.134286           1    2.972003    1.511649    0.032618    0.002710    0.001989    0.024231    0.459460           0           0    0.000040
-rbi      bi    0.111831    0.918388    2.935606    0.563087           0    1.362751    1.489891    0.500000           0    0.081612    0.003966    0.001307
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.196920           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445280           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005424           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 11.6980   560.952    0.8882    0.3821   0.04505  0.006275   0.02179   0.02101    0.4113    0.8121 0.0005529    0.1556  0.005608    0.4113    0.9952  8.380e-5    0.9221   0.03091    0.5182  0.001223   0.05976  0.002666   0.08139    0.1569
+  10.940    558.14    0.8909    0.3664   0.06176  0.004972   0.01842   0.01777    0.4183    0.8381 0.0004430    0.1678  0.006494    0.4183    0.9958  6.923e-5    0.9100   0.03763    0.5306  0.001653   0.06736  0.002527   0.08188    0.1559
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.02147  0.001518   0.08575    0.1338    0.1101              0.1965    0.4454  0.005484  -658.73632
-  zeroed   0.03871  0.002736    0.1546    0.2413    0.1986              0.3542            0.009888
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.01481  0.005848   0.07913    0.1357    0.1161              0.1981    0.4450  0.005284  -659.91048  -561.78399    0.1180    1.9941    2.1000
 
-% --------------------------------------------------------
-% at P = 11.7, T = 561, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 11.7 561
-% --------------------------------------------------------
-xyzguess x(g)          0.888174
-xyzguess z(g)          0.382078
-xyzguess m(g)         0.0450465
-xyzguess f(g)        0.00627527
-xyzguess f(ep)        0.0217862
-xyzguess Q(ep)        0.0210067  range  0.000 0.500
-xyzguess x(mu)         0.411254
-xyzguess y(mu)         0.812064
-xyzguess f(mu)      0.000552881
-xyzguess n(mu)         0.155600
-xyzguess c(mu)       0.00560788
-xyzguess x(pa)         0.411254
-xyzguess y(pa)         0.995236
-xyzguess f(pa)       8.37996e-5
-xyzguess n(pa)         0.922053
-xyzguess c(pa)        0.0309069
-xyzguess x(bi)         0.518248
-xyzguess m(bi)       0.00122337
-xyzguess y(bi)        0.0597577
-xyzguess f(bi)       0.00266613
-xyzguess t(bi)        0.0813925
-xyzguess Q(bi)         0.156878
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 10.9, T = 558, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 10.940 558.14
+% ----------------------------------------------------------
+xyzguess x(g)          0.890918
+xyzguess z(g)          0.366415
+xyzguess m(g)         0.0617610
+xyzguess f(g)        0.00497208
+% -----------------------------
+xyzguess f(ep)        0.0184228
+xyzguess Q(ep)        0.0177734  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.418302
+xyzguess y(mu)         0.838071
+xyzguess f(mu)      0.000443002
+xyzguess n(mu)         0.167788
+xyzguess c(mu)       0.00649367
+% -----------------------------
+xyzguess x(pa)         0.418302
+xyzguess y(pa)         0.995761
+xyzguess f(pa)       6.92346e-5
+xyzguess n(pa)         0.909965
+xyzguess c(pa)        0.0376291
+% -----------------------------
+xyzguess x(bi)         0.530641
+xyzguess m(bi)       0.00165251
+xyzguess y(bi)        0.0673563
+xyzguess f(bi)       0.00252746
+xyzguess t(bi)        0.0818840
+xyzguess Q(bi)         0.155944
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.021470           0           3    0.993725    1.146235    0.192187    1.538989           0           0           0    0.135140    0.006275
-rbi      ep    0.001518    0.500000           3    1.478214           2           0    0.043572           0           0           0           0    0.021786
-rbi      mu    0.085747           1    3.182329    1.314591    0.005608    0.110647    0.077842    0.419396    0.077800           0           0    0.000276
-rbi      pa    0.133811           1    2.973857    1.510648    0.030907    0.002805    0.002043    0.023520    0.461027           0           0    0.000042
-rbi      bi    0.110133    0.918607    2.937576    0.561091           0    1.374205    1.480975    0.500000           0    0.081393    0.003670    0.001333
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.196455           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445382           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005484           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
---------------------------------------------------------------------
+------------------------------------------------------------
  P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
- 11.8960   561.400    0.8874    0.3866   0.04158  0.006765   0.02309   0.02226    0.4088    0.8046 0.0005937    0.1524  0.005378    0.4088    0.9951  8.921e-5    0.9251   0.02925    0.5144  0.001133   0.05774  0.002735   0.08113    0.1572
+  11.160    559.17    0.8902    0.3707   0.05628  0.005279   0.01919   0.01851    0.4166    0.8309 0.0004692    0.1643  0.006241    0.4166    0.9956  7.273e-5    0.9135   0.03564    0.5274  0.001513   0.06521  0.002553   0.08185    0.1561
 
- mode            g        ep        mu        pa        bi        ab         q       H2O       sph           G
-           0.02352  9.082e-5   0.08769    0.1333    0.1083              0.1960    0.4455  0.005548  -658.39757
-  zeroed   0.04242 0.0001638    0.1581    0.2405    0.1954              0.3534             0.01001
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.01656  0.004764   0.08091    0.1351    0.1145              0.1977    0.4451  0.005334  -659.59430  -561.34721    0.1180    1.9900    2.1044
 
-% --------------------------------------------------------
-% at P = 11.9, T = 561, for: g ep mu pa bi ab q sph  with ab = 0
-% --------------------------------------------------------
-ptguess 11.9 561
-% --------------------------------------------------------
-xyzguess x(g)          0.887357
-xyzguess z(g)          0.386553
-xyzguess m(g)         0.0415838
-xyzguess f(g)        0.00676488
-xyzguess f(ep)        0.0230868
-xyzguess Q(ep)        0.0222577  range  0.000 0.500
-xyzguess x(mu)         0.408845
-xyzguess y(mu)         0.804627
-xyzguess f(mu)      0.000593672
-xyzguess n(mu)         0.152365
-xyzguess c(mu)       0.00537834
-xyzguess x(pa)         0.408845
-xyzguess y(pa)         0.995086
-xyzguess f(pa)       8.92138e-5
-xyzguess n(pa)         0.925131
-xyzguess c(pa)        0.0292489
-xyzguess x(bi)         0.514371
-xyzguess m(bi)       0.00113324
-xyzguess y(bi)        0.0577361
-xyzguess f(bi)       0.00273491
-xyzguess t(bi)        0.0811253
-xyzguess Q(bi)         0.157240
-% --------------------------------------------------------
+% ----------------------------------------------------------
+% at P = 11.2, T = 559, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 11.160 559.17
+% ----------------------------------------------------------
+xyzguess x(g)          0.890160
+xyzguess z(g)          0.370680
+xyzguess m(g)         0.0562801
+xyzguess f(g)        0.00527884
+% -----------------------------
+xyzguess f(ep)        0.0191932
+xyzguess Q(ep)        0.0185135  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.416613
+xyzguess y(mu)         0.830949
+xyzguess f(mu)      0.000469187
+xyzguess n(mu)         0.164325
+xyzguess c(mu)       0.00624085
+% -----------------------------
+xyzguess x(pa)         0.416613
+xyzguess y(pa)         0.995615
+xyzguess f(pa)       7.27278e-5
+xyzguess n(pa)         0.913479
+xyzguess c(pa)        0.0356428
+% -----------------------------
+xyzguess x(bi)         0.527419
+xyzguess m(bi)       0.00151281
+xyzguess y(bi)        0.0652069
+xyzguess f(bi)       0.00255266
+xyzguess t(bi)        0.0818476
+xyzguess Q(bi)         0.156123
+% ----------------------------------------------------------
 
-% ========================================================
-rbi                             H2O        SiO2       Al2O3         CaO         MgO         FeO         K2O        Na2O        TiO2         MnO           O
-rbi       g    0.023521           0           3    0.993235    1.159659    0.193250    1.535870           0           0           0    0.124751    0.006765
-rbi      ep    0.000091    0.500000    3.000000    1.476913           2           0    0.046174           0           0           0           0    0.023087
-rbi      mu    0.087693    1.000000    3.189995    1.307019    0.005378    0.115496    0.080471    0.421128    0.076183           0           0    0.000297
-rbi      pa    0.133345           1    2.975665    1.509666    0.029249    0.002905    0.002098    0.022810    0.462565           0           0    0.000045
-rbi      bi    0.108342    0.918875    2.939529    0.559104           0    1.386474    1.471265    0.500000           0    0.081125    0.003400    0.001367
-rbi      ab           0           0           3    0.500000           0           0           0           0    0.500000           0           0           0
-rbi       q    0.195969           0           1           0           0           0           0           0           0           0           0           0
-rbi     H2O    0.445490           1           0           0           0           0           0           0           0           0           0           0
-rbi     sph    0.005548           0           1           0           1           0           0           0           0           1           0           0
-% ========================================================
-88888881188811111118881
-more phase diagram calculations ? no
-===============================================
-all done - hit return to exit ? yes
+------------------------------------------------------------
+ P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
+  11.380    560.02    0.8894    0.3752   0.05134  0.005638   0.02011   0.01940    0.4146    0.8235 0.0004995    0.1608  0.005983    0.4146    0.9955  7.674e-5    0.9170   0.03368    0.5239  0.001386   0.06300  0.002589   0.08172    0.1564
+
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.01845  0.003543   0.08281    0.1346    0.1128              0.1972    0.4452  0.005391  -659.25645  -560.92426    0.1180    1.9858    2.1088
+
+% ----------------------------------------------------------
+% at P = 11.4, T = 560, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 11.380 560.02
+% ----------------------------------------------------------
+xyzguess x(g)          0.889379
+xyzguess z(g)          0.375187
+xyzguess m(g)         0.0513374
+xyzguess f(g)        0.00563766
+% -----------------------------
+xyzguess f(ep)        0.0201149
+xyzguess Q(ep)        0.0193994  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.414631
+xyzguess y(mu)         0.823471
+xyzguess f(mu)      0.000499498
+xyzguess n(mu)         0.160787
+xyzguess c(mu)       0.00598250
+% -----------------------------
+xyzguess x(pa)         0.414631
+xyzguess y(pa)         0.995464
+xyzguess f(pa)       7.67413e-5
+xyzguess n(pa)         0.917005
+xyzguess c(pa)        0.0336752
+% -----------------------------
+xyzguess x(bi)         0.523899
+xyzguess m(bi)       0.00138599
+xyzguess y(bi)        0.0629998
+xyzguess f(bi)       0.00258859
+xyzguess t(bi)        0.0817178
+xyzguess Q(bi)         0.156383
+% ----------------------------------------------------------
+
+------------------------------------------------------------
+ P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
+  11.600    560.70    0.8886    0.3799   0.04688  0.006061   0.02122   0.02046    0.4124    0.8157 0.0005350    0.1572  0.005723    0.4124    0.9953  8.144e-5    0.9205   0.03175    0.5201  0.001271   0.06076  0.002638   0.08151    0.1567
+
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.02050  0.002176   0.08482    0.1340    0.1110              0.1967    0.4453  0.005454  -658.90012  -560.51225    0.1180    1.9816    2.1133
+
+% ----------------------------------------------------------
+% at P = 11.6, T = 561, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 11.600 560.70
+% ----------------------------------------------------------
+xyzguess x(g)          0.888558
+xyzguess z(g)          0.379912
+xyzguess m(g)         0.0468848
+xyzguess f(g)        0.00606134
+% -----------------------------
+xyzguess f(ep)        0.0212219
+xyzguess Q(ep)        0.0204639  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.412359
+xyzguess y(mu)         0.815652
+xyzguess f(mu)      0.000535016
+xyzguess n(mu)         0.157203
+xyzguess c(mu)       0.00572290
+% -----------------------------
+xyzguess x(pa)         0.412359
+xyzguess y(pa)         0.995308
+xyzguess f(pa)       8.14356e-5
+xyzguess n(pa)         0.920508
+xyzguess c(pa)        0.0317477
+% -----------------------------
+xyzguess x(bi)         0.520063
+xyzguess m(bi)       0.00127103
+xyzguess y(bi)        0.0607597
+xyzguess f(bi)       0.00263842
+xyzguess t(bi)        0.0815080
+xyzguess Q(bi)         0.156712
+% ----------------------------------------------------------
+
+------------------------------------------------------------
+ P(kbar)     T(¡C)      x(g)      z(g)      m(g)      f(g)     f(ep)     Q(ep)     x(mu)     y(mu)     f(mu)     n(mu)     c(mu)     x(pa)     y(pa)     f(pa)     n(pa)     c(pa)     x(bi)     m(bi)     y(bi)     f(bi)     t(bi)     Q(bi)
+  11.820    561.24    0.8877    0.3848   0.04287  0.006567   0.02256   0.02175    0.4098    0.8075 0.0005772    0.1536  0.005466    0.4098    0.9951  8.702e-5    0.9240   0.02988    0.5159  0.001167   0.05851  0.002706   0.08123    0.1571
+
+ mode         g        ep        mu        pa        bi        ab         q       H2O       sph           G           H         S         V       rho
+        0.02272 0.0006541   0.08694    0.1335    0.1090              0.1962    0.4454  0.005523  -658.52872  -560.10882    0.1180    1.9774    2.1178
+
+% ----------------------------------------------------------
+% at P = 11.8, T = 561, for: g ep mu pa bi ab q H2O sph  with ab = 0
+% ----------------------------------------------------------
+ptguess 11.820 561.24
+% ----------------------------------------------------------
+xyzguess x(g)          0.887678
+xyzguess z(g)          0.384821
+xyzguess m(g)         0.0428746
+xyzguess f(g)        0.00656708
+% -----------------------------
+xyzguess f(ep)        0.0225601
+xyzguess Q(ep)        0.0217510  range  0.000 0.500
+% -----------------------------
+xyzguess x(mu)         0.409797
+xyzguess y(mu)         0.807510
+xyzguess f(mu)      0.000577204
+xyzguess n(mu)         0.153605
+xyzguess c(mu)       0.00546590
+% -----------------------------
+xyzguess x(pa)         0.409797
+xyzguess y(pa)         0.995144
+xyzguess f(pa)       8.70249e-5
+xyzguess n(pa)         0.923957
+xyzguess c(pa)        0.0298784
+% -----------------------------
+xyzguess x(bi)         0.515893
+xyzguess m(bi)       0.00116689
+xyzguess y(bi)        0.0585108
+xyzguess f(bi)       0.00270630
+xyzguess t(bi)        0.0812327
+xyzguess Q(bi)         0.157097
+% ----------------------------------------------------------
+
+8888888888111111888
+============================================================

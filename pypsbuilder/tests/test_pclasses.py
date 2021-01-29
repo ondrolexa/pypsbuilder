@@ -124,9 +124,9 @@ def test_parse_uni1(mock_tc):
 
     assert status == 'ok', 'Wrong status'
     assert res.variance == 4, 'Wrong variance'
-    assert res[15].p == 9.52, 'Wrong pressure'
-    assert res[15].T == 526.322, 'Wrong temperature'
-    assert len(res) == 29, 'Wrong results length'
+    assert res[15].p == 8.3, 'Wrong pressure'
+    assert res[15].T == 516.896, 'Wrong temperature'
+    assert len(res) == 33, 'Wrong results length'
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
@@ -156,8 +156,8 @@ def test_parse_uni2(mock_tc):
 
     assert status == 'ok', 'Wrong status'
     assert res.variance == 5, 'Wrong variance'
-    assert res[25].p == 12.0314, 'Wrong pressure'
-    assert res[25].T == 550.0, 'Wrong temperature'
+    assert res[25].p == 12.0698, 'Wrong pressure'
+    assert res[25].T == 546.413, 'Wrong temperature'
     assert len(res) == 51, 'Wrong results length'
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
@@ -188,9 +188,9 @@ def test_parse_uni3(mock_tc):
 
     assert status == 'ok', 'Wrong status'
     assert res.variance == 4, 'Wrong variance'
-    assert res[14].p == 9.322, 'Wrong pressure'
-    assert res[14].T == 543.12, 'Wrong temperature'
-    assert len(res) == 28, 'Wrong results length'
+    assert res[14].p == 8.08, 'Wrong pressure'
+    assert res[14].T == 523.539, 'Wrong temperature'
+    assert len(res) == 31, 'Wrong results length'
     assert type(res[0].data) == dict, 'Wrong data type data'
     assert type(res[0].ptguess) == list, 'Wrong data type of ptguess'
 
@@ -230,19 +230,19 @@ def test_remaining_uni():
 
 def test_trim_uni():
     uni = pytest.ps.unilines[1]
-    assert uni.used == slice(0, 29), 'Wrong used slice before trimming uni 1'
+    assert uni.used == slice(0, 33), 'Wrong used slice before trimming uni 1'
     pytest.ps.trim_uni(1)
-    assert uni.used == slice(3, 29), 'Wrong used slice after trimming uni 1'
+    assert uni.used == slice(10, 33), 'Wrong used slice after trimming uni 1'
     #
     uni = pytest.ps.unilines[2]
     assert uni.used == slice(0, 51), 'Wrong used slice before trimming uni 2'
     pytest.ps.trim_uni(2)
-    assert uni.used == slice(22, 27), 'Wrong used slice after trimming uni 2'
+    assert uni.used == slice(20, 31), 'Wrong used slice after trimming uni 2'
     #
     uni = pytest.ps.unilines[3]
-    assert uni.used == slice(0, 28), 'Wrong used slice before trimming uni 3'
+    assert uni.used == slice(0, 31), 'Wrong used slice before trimming uni 3'
     pytest.ps.trim_uni(3)
-    assert uni.used == slice(3, 28), 'Wrong used slice after trimming uni 3'
+    assert uni.used == slice(10, 31), 'Wrong used slice after trimming uni 3'
 
 def test_create_shapes():
     shapes, shape_edges, log = pytest.ps.create_shapes()
