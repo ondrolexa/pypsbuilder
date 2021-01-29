@@ -2387,7 +2387,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     # views
                     used_phases = set()
                     for id, inv in data['section'].invpoints.items():
-                        if data.get('version') < '2.2.1':
+                        if data.get('version', '1.0.0') < '2.2.1':
                             if inv.manual:
                                 inv.results = None
                             else:
@@ -2398,7 +2398,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
-                        if data.get('version') < '2.2.1':
+                        if data.get('version', '1.0.0') < '2.2.1':
                             if uni.manual:
                                 uni.results = None
                             else:
@@ -2408,7 +2408,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
-                    if hasattr(data['section'], 'dogmins'):
+                    if hasattr(data['section'], 'dogmins') and data.get('version', '1.0.0') >= '2.3.0':
                         for id, dgm in data['section'].dogmins.items():
                             self.dogmodel.appendRow(id, dgm)
                         self.dogview.resizeColumnsToContents()
@@ -3031,7 +3031,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     # views
                     used_phases = set()
                     for id, inv in data['section'].invpoints.items():
-                        if data.get('version') < '2.2.1':
+                        if data.get('version', '1.0.0') < '2.2.1':
                             if inv.manual:
                                 inv.results = None
                             else:
@@ -3042,7 +3042,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
                     for id, uni in data['section'].unilines.items():
-                        if data.get('version') < '2.2.1':
+                        if data.get('version', '1.0.0') < '2.2.1':
                             if uni.manual:
                                 uni.results = None
                             else:
@@ -3052,10 +3052,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
-                    #if hasattr(data['section'], 'dogmins'):
-                    #    for id, dgm in data['section'].dogmins.items():
-                    #        self.dogmodel.appendRow(id, dgm)
-                    #    self.dogview.resizeColumnsToContents()
+                    if hasattr(data['section'], 'dogmins') and data.get('version', '1.0.0') >= '2.3.0':
+                        for id, dgm in data['section'].dogmins.items():
+                            self.dogmodel.appendRow(id, dgm)
+                        self.dogview.resizeColumnsToContents()
                     self.ready = True
                     self.project = projfile
                     self.changed = False
@@ -3298,7 +3298,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             #self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-            tcout = self.tc.dogmin(phases, event.ydata, tm, variance, doglevel=doglevel, onebulk=event.ydata)
+            tcout = self.tc.dogmin(phases, event.ydata, tm, variance, doglevel=doglevel, onebulk=event.xdata)
             self.read_scriptfile()
             QtWidgets.QApplication.restoreOverrideCursor()
             self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
