@@ -84,7 +84,7 @@ class PS:
         # common
         self.tolerance = tolerance
         self.tc = None
-        self.bulk = None
+        bulk = None
         # read
         for ix, projfile in enumerate(projfiles):
             self.projfiles[ix] = projfile
@@ -121,10 +121,15 @@ class PS:
                 # calculate variance
                 variance = {}
                 ok = True
+                calcs = ['calcP {} {}'.format(*self.tc.prange),
+                         'calcT {} {}'.format(*self.tc.trange),
+                         'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
+                         'acceptvar no']
+                old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
                 for key in self._shapes[ix]:
+                    ans = '{}\nkill\n\n'.format(' '.join(key))
+                    tcout = self.tc.runtc(ans)
                     try:
-                        ans = '{}\nkill\n\n'.format(' '.join(key))
-                        tcout = self.tc.runtc(ans)
                         for ln in tcout.splitlines():
                             if 'variance of required equilibrium' in ln:
                                 break
@@ -133,17 +138,18 @@ class PS:
                         variance[key] = 0
                         ok = False
                 self._variance[ix] = variance
+                self.tc.update_scriptfile(calcs=old_calcs)
                 if not ok:
-                    print('Variance calculation failed.')
+                    print('Variance calculation failed for some fields.')
             # bulk
-            if self.bulk is None:
+            if bulk is None:
                 if 'bulk' in data:
-                    self.bulk = data['bulk']
+                    bulk = data['bulk']
                 else:
-                    self.bulk = self.tc.bulk
+                    bulk = self.tc.bulk
             else:
                 if 'bulk' in data:
-                    assert self.bulk == data['bulk'], 'Bulks in merged projects must be same'
+                    assert bulk == data['bulk'], 'Bulks in merged projects must be same'
             # already gridded?
             if 'grid' in data:
                 self.grids[ix] = data['grid']
@@ -683,21 +689,21 @@ class PS:
                     ax.set_xlabel(self.name)
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
-                    ox = self.sections[0].get_bulk_composition()
+                    ox, val = self.tc.bulk
                     table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
+                            ' & '.join(val) + \
                             r'''\end{tabular}'''
                     plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
                 else:
-                    ox = self.sections[0].get_bulk_composition()
+                    ox, val1, val2 = self.tc.bulk
                     table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
+                            ' & '.join(val1) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v[1]) for v in ox.values()]) + \
+                            ' & '.join(val2) + \
                             r'''\end{tabular}'''
                     plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
             else:
@@ -743,10 +749,10 @@ class PS:
                 if shape.type == 'MultiPolygon':
                     for part in shape:
                         xy = part.representative_point().coords[0]
-                        ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                        ax.annotate(text=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
                 else:
                     xy = shape.representative_point().coords[0]
-                    ax.annotate(s=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                    ax.annotate(text=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
 
     def show_data(self, key, phase, expr=None, which=7):
         """Convinient function to show values of expression
@@ -818,7 +824,6 @@ class PS:
                 ax.set_title('{}({})'.format(phase, expr))
                 fig.tight_layout()
                 plt.show()
-                return im
         else:
             print('Not yet gridded...')
 
@@ -837,7 +842,7 @@ class PS:
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             ax.set_title('Gridding status - {}'.format(self.name))
-            cbar = fig.colorbar(im[0], cmap=cmap, norm=norm, boundaries=bounds, ticks=[0, 1])
+            cbar = fig.colorbar(im[0], boundaries=bounds, ticks=[0, 1])
             cbar.ax.set_yticklabels(['Failed', 'OK'])
             fig.tight_layout()
             plt.show()
@@ -876,49 +881,6 @@ class PS:
             cbar = fig.colorbar(im)
             cbar.set_label(lbl)
             ax.set_title(tit.format(self.name))
-            fig.tight_layout()
-            plt.show()
-        else:
-            print('Not yet gridded...')
-
-    def show_bulk_deviations(self, label=False):
-        """Shows mean chi-squares deviations of recalculated bulk from assemblage
-
-        Args:
-            label (bool): Whether to label divariant fields. Default False.
-        """
-        if self.gridded:
-            fig, ax = plt.subplots()
-            chi_devs = {}
-            mn, mx = sys.float_info.max, -sys.float_info.max
-            for ix, grid in self.grids.items():
-                oxides = self.sections[ix].get_bulk_composition()
-                elem = np.array([sum([int(count or '1') for element, count in re.findall('([A-Z][a-z]?)([0-9]*)', ox)]) for ox in oxides])
-                chi = np.empty(grid.xg.shape)
-                chi[:] = np.nan
-                for key in tqdm(grid.masks, desc='Recalculating bulk... {}/{}'.format(ix + 1, len(self.sections)), total=len(grid.masks)):
-                    for r, c in zip(*np.nonzero(grid.masks[key])):
-                        dt = grid.gridcalcs[r, c]
-                        if dt is not None:
-                            BM = np.array([[dt['data'][phase][ox] for ox in oxides] for phase in key])
-                            atoms = np.array([sum(rbi * elem) for rbi in BM])
-                            mode = np.array([dt['data'][phase]['mode'] for phase in key])
-                            rbi_sum = np.array([rbi * c for rbi, c in zip(BM, mode / atoms)]).sum(axis=0)
-                            bulk_r = 100 * rbi_sum / sum(rbi_sum)
-                            bulk_n = np.array([v for v in oxides.values()])
-                            chi[r, c] = np.mean((bulk_r - bulk_n)**2 / bulk_n)
-                chi_devs[ix] = chi
-                mn = min(np.nanmin(chi), mn)
-                mx = max(np.nanmax(chi), mx)
-            for grid, chi in zip(self.grids.values(), chi_devs.values()):
-                im = ax.imshow(chi, extent=grid.extent, aspect='auto',
-                               origin='lower', vmin=mn, vmax=mx)
-            self.add_overlay(ax, label=label)
-            ax.set_xlim(self.xrange)
-            ax.set_ylim(self.yrange)
-            cbar = fig.colorbar(im)
-            cbar.set_label(r'$\chi^2$')
-            ax.set_title('Chi-square bulk deviations - {}'.format(self.name))
             fig.tight_layout()
             plt.show()
         else:
@@ -1179,21 +1141,21 @@ class PS:
                     ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
-                    ox = self.sections[0].get_bulk_composition()
+                    ox, val = self.tc.bulk
                     table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v) for v in ox.values()]) + \
+                            ' & '.join(val) + \
                             r'''\end{tabular}'''
                     plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
                 else:
-                    ox = self.sections[0].get_bulk_composition()
+                    ox, val1, val2 = self.tc.bulk
                     table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
                             ' & '.join(ox) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v[0]) for v in ox.values()]) + \
+                            ' & '.join(val1) + \
                             r''' \\\hline ''' + \
-                            ' & '.join(['{:.3g}'.format(v[1]) for v in ox.values()]) + \
+                            ' & '.join(val2) + \
                             r'''\end{tabular}'''
                     plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
             else:
@@ -1677,9 +1639,6 @@ class TXPS(PS):
             with tqdm(desc='Gridding {}/{}'.format(ix + 1, len(self.sections)), total=np.prod(grid.xg.shape)) as pbar:
                 pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
                 for r in range(len(grid.yspace)):
-                    # change bulk
-                    bulk = self.tc.interpolate_bulk(grid.yspace[r])
-                    self.tc.update_scriptfile(bulk=bulk)
                     for c in range(len(grid.xspace)):
                         x, y = grid.xg[r, c], grid.yg[r, c]
                         k = self.identify(x, y)
@@ -1696,7 +1655,7 @@ class TXPS(PS):
                                 last_inv = id_close
                             grid.status[r, c] = 0
                             start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                             delta = time.time() - start_time
                             status, res, output = self.tc.parse_logfile()
                             if res is not None:
@@ -1717,7 +1676,7 @@ class TXPS(PS):
                                                 vix_close = vix
                                 self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -1733,8 +1692,6 @@ class TXPS(PS):
             print('Grid search done. {} empty points left.'.format(len(np.flatnonzero(grid.status == 0))))
             gpleft += len(np.flatnonzero(grid.status == 0))
             self.grids[ix] = grid
-        # restore bulk
-        self.tc.update_scriptfile(bulk=self.bulk)
         if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
@@ -1764,11 +1721,9 @@ class TXPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                # change bulk
-                                bulk = self.tc.interpolate_bulk(grid.yspace[rn])
                                 self.tc.update_scriptfile(bulk=bulk, guesses=grid.gridcalcs[rn, cn]['ptguess'])
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x)
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -1782,8 +1737,6 @@ class TXPS(PS):
                         log.append('No solution find for {}, {}'.format(x, y))
                 log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
                 print('\n'.join(log))
-            # restore bulk
-            self.tc.update_scriptfile(bulk=self.bulk)
         else:
             print('Not yet gridded...')
 
@@ -1826,9 +1779,6 @@ class PXPS(PS):
             with tqdm(desc='Gridding', total=np.prod(grid.xg.shape)) as pbar:
                 tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
                 for c in range(len(grid.xspace)):
-                    # change bulk
-                    bulk = self.tc.interpolate_bulk(grid.xspace[c])
-                    self.tc.update_scriptfile(bulk=bulk)
                     for r in range(len(grid.yspace)):
                         x, y = grid.xg[r, c], grid.yg[r, c]
                         k = self.identify(x, y)
@@ -1845,7 +1795,7 @@ class PXPS(PS):
                                 last_inv = id_close
                             grid.status[r, c] = 0
                             start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                             delta = time.time() - start_time
                             status, res, output = self.tc.parse_logfile()
                             if res is not None:
@@ -1866,7 +1816,7 @@ class PXPS(PS):
                                                 vix_close = vix
                                 self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -1882,8 +1832,6 @@ class PXPS(PS):
             print('Grid search done. {} empty points left.'.format(len(np.flatnonzero(grid.status == 0))))
             gpleft += len(np.flatnonzero(grid.status == 0))
             self.grids[ix] = grid
-        # restore bulk
-        self.tc.update_scriptfile(bulk=self.bulk)
         if gpleft > 0:
             self.fix_solutions()
         self.create_masks()
@@ -1913,11 +1861,8 @@ class PXPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                # change bulk
-                                bulk = self.tc.interpolate_bulk(grid.xspace[cn])
-                                self.tc.update_scriptfile(bulk=bulk, guesses=grid.gridcalcs[rn, cn]['ptguess'])
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm)
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -1931,8 +1876,6 @@ class PXPS(PS):
                         log.append('No solution find for {}, {}'.format(x, y))
                 log.append('Fix done. {} empty grid points left.'.format(len(np.flatnonzero(grid.status == 0))))
                 print('\n'.join(log))
-            # restore bulk
-            self.tc.update_scriptfile(bulk=self.bulk)
         else:
             print('Not yet gridded...')
 

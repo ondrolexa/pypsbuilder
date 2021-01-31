@@ -218,7 +218,7 @@ class TCAPI(object):
             self.tcout = output.split('-- run bombed in whichphases')[0].strip()
             ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
             # union ax phases and samecoding and diff omit
-            self.phases = sorted(ax_phases.union(*self.samecoding) - self.omit)
+            self.phases = ax_phases.union(*self.samecoding) - self.omit
             # OK
             self.status = 'Initial check done.'
             self.OK = True
@@ -782,7 +782,7 @@ class TCAPI(object):
         tcout = self.runtc()
         return tcout, calcs
 
-    def calc_assemblage(self, phases, p, t):
+    def calc_assemblage(self, phases, p, t, onebulk=None):
         """Method to run THERMOCALC to calculate compositions of stable assemblage.
 
         Args:
@@ -797,6 +797,8 @@ class TCAPI(object):
         calcs = ['calcP {}'.format(p),
                  'calcT {}'.format(t),
                  'with  {}'.format(' '.join(phases - self.excess))]
+        if onebulk is not None:
+            calcs.append('onebulk {}'.format(onebulk))
         self.update_scriptfile(calcs=calcs)
         tcout = self.runtc('\nkill\n\n')
         return tcout, calcs
@@ -1650,19 +1652,6 @@ class PTsection(SectionBase):
         self.y_var_res = 0.001
         super(PTsection, self).__init__(**kwargs)
 
-    def get_bulk_composition(self):
-        bc = None
-        for inv in self.invpoints.values():
-            if not inv.manual:
-                if 'composition (from setbulk script)\n' in inv.output:
-                    cout = inv.output.split('composition (from setbulk script)\n')[1].split('\n')
-                    bc = {k: float(v) for k, v in zip(cout[0].split(), cout[1].split())}
-                if 'composition (from script)\n' in inv.output:
-                    cout = inv.output.split('composition (from script)\n')[1].split('\n')
-                    bc = {k: float(v) for k, v in zip(cout[0].split(), cout[1].split())}
-                break
-        return bc
-
 
 class TXsection(SectionBase):
     """T-X pseudosection class
@@ -1679,17 +1668,6 @@ class TXsection(SectionBase):
         self.y_var_res = 0.001
         super(TXsection, self).__init__(**kwargs)
 
-    def get_bulk_composition(self):
-        bc = None
-        for inv in self.invpoints.values():
-            if not inv.manual:
-                if 'composition (from script)\n' in inv.output:
-                    tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
-                    nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = {r[0]: (float(r[1]), float(r[-1])) for r in nested}
-                break
-        return bc
-
 
 class PXsection(SectionBase):
     """P-X pseudosection class
@@ -1705,14 +1683,3 @@ class PXsection(SectionBase):
         self.y_var_label = 'Pressure [kbar]'
         self.y_var_res = 0.001
         super(PXsection, self).__init__(**kwargs)
-
-    def get_bulk_composition(self):
-        bc = None
-        for inv in self.invpoints.values():
-            if not inv.manual:
-                if 'composition (from script)\n' in inv.output:
-                    tb = inv.output.split('composition (from script)\n')[1].split('<==================================================>')[0]
-                    nested = [r.split() for r in tb.split('\n')[2:-1]]
-                    bc = {r[0]: (float(r[1]), float(r[-1])) for r in nested}
-                break
-        return bc

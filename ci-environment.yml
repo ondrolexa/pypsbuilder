@@ -3,7 +3,7 @@ name: base
 dependencies:
 - pyqt=5
 - numpy
-- matplotlib
+- matplotlib>=3.3
 - scipy
 - networkx
 - shapely

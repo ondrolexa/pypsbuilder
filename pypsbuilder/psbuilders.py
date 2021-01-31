@@ -339,12 +339,11 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.phasemodel.clear()
         self.outmodel.clear()
         self.logDogmin.clear()
-        for p in self.tc.phases:
-            if p not in self.ps.excess:
-                item = QtGui.QStandardItem(p)
-                item.setCheckable(True)
-                item.setSizeHint(QtCore.QSize(40, 20))
-                self.phasemodel.appendRow(item)
+        for p in sorted(self.tc.phases - self.ps.excess):
+            item = QtGui.QStandardItem(p)
+            item.setCheckable(True)
+            item.setSizeHint(QtCore.QSize(40, 20))
+            self.phasemodel.appendRow(item)
         # connect signal
         self.phasemodel.itemChanged.connect(self.phase_changed)
         self.textOutput.clear()
