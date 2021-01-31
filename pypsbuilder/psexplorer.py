@@ -1721,7 +1721,7 @@ class TXPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(bulk=bulk, guesses=grid.gridcalcs[rn, cn]['ptguess'])
+                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn]['ptguess'])
                                 start_time = time.time()
                                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                                 delta = time.time() - start_time
