@@ -187,7 +187,7 @@ class TCAPI(object):
             if 'inexcess' in scripts:
                 self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
             else:
-                self.excess = set()
+                raise ScriptfileError('In case of no excess phases, use setexcess no')
             # omit
             if 'omit' in scripts:
                 self.omit = set(scripts['omit'][0].split())
@@ -217,6 +217,10 @@ class TCAPI(object):
                 raise TCError(output)
             self.tcout = output.split('-- run bombed in whichphases')[0].strip()
             ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
+            # which
+            if 'with' in scripts:
+                if scripts['with'][0].split()[0] == 'someof':
+                    raise ScriptfileError('Pypsbuilder does not support with sameof <phase list>. Use omit {}'.format(' '.join(ax_phases.union(*self.samecoding) - set(scripts['with'][0].split()[1:]))))
             # union ax phases and samecoding and diff omit
             self.phases = ax_phases.union(*self.samecoding) - self.omit
             # OK
@@ -1056,9 +1060,6 @@ class TCResultSet:
 
     def insert(self, ix, result):
         self.results.insert(ix, result)
-        self.x = np.insert(self.x, ix, result.T)
-        self.y = np.insert(self.y, ix, result.p)
-        self.steps = np.insert(self.steps, ix, result.step)
 
 
 class Dogmin:
