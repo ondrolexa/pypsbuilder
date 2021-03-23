@@ -2,12 +2,8 @@ setpagewidth 700
 dontwrap no
 dataset   62
 
-all-in-one no 
-
 calcmode 1    
 scriptfile   avgpelite
  
-strictsyntax yes
-moreprec yes
 monitorheap no
 *

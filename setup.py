@@ -8,8 +8,8 @@ CURRENT_PATH = path.abspath(path.dirname(__file__))
 with open(path.join(CURRENT_PATH, 'README.md')) as readme_file:
     readme = readme_file.read()
 
-with open(path.join(CURRENT_PATH, 'HISTORY.md')) as history_file:
-    history = history_file.read()
+with open(path.join(CURRENT_PATH, 'CHANGELOG.md')) as changelog_file:
+    changelog = changelog_file.read()
 
 requirements = [
     'numpy',
@@ -25,7 +25,7 @@ setup(
     name='pypsbuilder',
     version='2.2.2',
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
-    long_description=readme + '\n\n' + history,
+    long_description=readme + '\n\n' + changelog,
     long_description_content_type="text/markdown",
     author="Ondrej Lexa",
     author_email='lexa.ondrej@gmail.com',

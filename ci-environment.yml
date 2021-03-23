@@ -1,8 +1,6 @@
-# run: conda env create --file environment.yml
-name: pyps
+name: base
 
 dependencies:
-- python=3.8
 - pyqt=5
 - numpy
 - matplotlib>=3.3
@@ -11,4 +9,6 @@ dependencies:
 - shapely
 - descartes
 - tqdm
-- jupyterlab
+- flake8
+- pytest
+- pytest-cov

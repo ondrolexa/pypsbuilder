@@ -1,3 +1,5 @@
+#!/bin/bash
+
 pyuic5 ptbuilder.ui > ../ui_ptbuilder.py
 pyuic5 txbuilder.ui > ../ui_txbuilder.py
 pyuic5 pxbuilder.ui > ../ui_pxbuilder.py
