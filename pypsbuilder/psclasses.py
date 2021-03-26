@@ -1067,18 +1067,11 @@ class Dogmin:
         assert 'output' in kwargs, 'Dogmin output must be provided'
         assert 'resic' in kwargs, 'ic file content must be provided'
         self.id = kwargs.get('id', 0)
-        self._output = kwargs.get('output')
+        self.output = kwargs.get('output').split('##########################################################\n')[-1]
         self.resic = kwargs.get('resic')
+        self.phases = set(self.output.split('assemblage')[1].split('\n')[0].split())
         self.x = kwargs.get('x', None)
         self.y = kwargs.get('y', None)
-
-    @property
-    def output(self):
-        return self._output.split('##########################################################\n')[-1]
-
-    @property
-    def phases(self):
-        return set(self.output.split('assemblage')[1].split('\n')[0].split())
 
     @property
     def out(self):
@@ -1493,17 +1486,18 @@ class SectionBase:
 
     def trim_uni(self, id):
         uni = self.unilines[id]
-        if uni.begin > 0:
-            p1 = Point(self.invpoints[uni.begin].x,
-                       self.ratio * self.invpoints[uni.begin].y)
-        else:
-            p1 = Point(uni._x[0], self.ratio * uni._y[0])
-        if uni.end > 0:
-            p2 = Point(self.invpoints[uni.end].x,
-                       self.ratio * self.invpoints[uni.end].y)
-        else:
-            p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
         if not uni.manual:
+            if uni.begin > 0:
+                p1 = Point(self.invpoints[uni.begin].x,
+                           self.ratio * self.invpoints[uni.begin].y)
+            else:
+                p1 = Point(uni._x[0], self.ratio * uni._y[0])
+            if uni.end > 0:
+                p2 = Point(self.invpoints[uni.end].x,
+                           self.ratio * self.invpoints[uni.end].y)
+            else:
+                p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
+            #
             xy = np.array([uni._x, self.ratio * uni._y]).T
             line = LineString(xy)
             # vertex distances

@@ -1734,9 +1734,14 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
                     if hasattr(data['section'], 'dogmins'):
-                        for id, dgm in data['section'].dogmins.items():
-                            self.dogmodel.appendRow(id, dgm)
-                        self.dogview.resizeColumnsToContents()
+                        if data.get('version', '1.0.0') >= '2.2.1':
+                            for id, dgm in data['section'].dogmins.items():
+                                if data.get('version', '1.0.0') >= '2.3.0':
+                                    self.dogmodel.appendRow(id, dgm)
+                                else:
+                                    ndgm = Dogmin(id=dgm.id, output=dgm._output, resic=dgm.resic, x=dgm.x, y=dgm.y)
+                                    self.dogmodel.appendRow(id, ndgm)
+                            self.dogview.resizeColumnsToContents()
                     self.ready = True
                     self.project = projfile
                     self.changed = False
