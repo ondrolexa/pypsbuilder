@@ -1,12 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased] 2021-XX-YY
+## [2.3.0dev] 2021-XX-YY
 ### Fixed
 - latest THERMOCALC 3.50 compatibility
+- isopleths figure and savefig options added
+
+### Added
+- isopleths quadratic surface fit option added 
 
 ## [2.2.2] - 2021-01-25
 ### Fixed
@@ -148,6 +149,6 @@ Ctrl-H Zoom home
 ### Added
 - Initial release of new generation of PSBuilder
 
-[Unreleased]: https://github.com/ondrolexa/pypsbuilder/compare/v2.2.2...HEAD
+[2.3.0dev]: https://github.com/ondrolexa/pypsbuilder/compare/v2.2.2...HEAD
 [2.2.2]: https://github.com/ondrolexa/pypsbuilder/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/ondrolexa/pypsbuilder/compare/v2.1.5...v2.2.1
