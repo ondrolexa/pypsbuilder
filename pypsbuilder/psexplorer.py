@@ -30,7 +30,6 @@ except ImportError:
 import gzip
 import ast
 import time
-import re
 from pathlib import Path
 from collections import OrderedDict
 import warnings
@@ -121,7 +120,6 @@ class PS:
             else:
                 # calculate variance
                 variance = {}
-                ok = True
                 calcs = ['calcP {} {}'.format(*self.tc.prange),
                          'calcT {} {}'.format(*self.tc.trange),
                          'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
@@ -1063,10 +1061,10 @@ class PS:
                         if method == 'quadratic':
                             tgg = tg.flatten()
                             pgg = pg.flatten()
-                            A = np.c_[np.ones_like(x), x, y, x*y, x**2, y**2]
-                            C,_,_,_ = lstsq(A, data)
+                            A = np.c_[np.ones_like(x), x, y, x * y, x ** 2, y ** 2]
+                            C, _, _, _ = lstsq(A, data)
                             # evaluate it on a grid
-                            zg = np.dot(np.c_[np.ones_like(tgg), tgg, pgg, tgg*pgg, tgg**2, pgg**2], C).reshape(tg.shape)
+                            zg = np.dot(np.c_[np.ones_like(tgg), tgg, pgg, tgg * pgg, tgg ** 2, pgg ** 2], C).reshape(tg.shape)
                         else:
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("error")
