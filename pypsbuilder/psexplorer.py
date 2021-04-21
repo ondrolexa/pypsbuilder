@@ -81,6 +81,7 @@ class PS:
         self._shapes = {}
         self.unilists = {}
         self._variance = {}
+        self.show_errors = kwargs.get('show_errors', False)
         # common
         self.tolerance = tolerance
         self.tc = None
@@ -136,11 +137,11 @@ class PS:
                         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
                     except Exception:
                         variance[key] = 0
-                        ok = False
+                        print('Variance calculation failed for {} field.'.format(key))
+                        if self.show_errors:
+                            print(tcout)
                 self._variance[ix] = variance
                 self.tc.update_scriptfile(calcs=old_calcs)
-                if not ok:
-                    print('Variance calculation failed for some fields.')
             # bulk
             if bulk is None:
                 if 'bulk' in data:
@@ -1072,7 +1073,8 @@ class PS:
                                 rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
                                 zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
-                        print(e)
+                        if self.show_errors:
+                            print(e)
                         try:
                             # preprocess with griddata cubic
                             zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
@@ -1138,8 +1140,10 @@ class PS:
                                     np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
             try:
                 fig.colorbar(cont)
-            except Exception:
+            except Exception as e:
                 print('There is trouble to draw colorbar. Sorry.')
+                if self.show_errors:
+                    print(e)
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
                 high = [high]
