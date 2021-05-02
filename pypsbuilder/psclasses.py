@@ -182,13 +182,16 @@ class TCAPI(object):
             if len(scripts['bulk']) == 3:
                 self.bulk.append(scripts['bulk'][2].split()[:len(self.bulk[0])])  # remove possible number of steps
             # inexcess
+            errinfo = 'Wrong inexcess in scriptfile.'
             if 'setexcess' in scripts:
                 raise ScriptfileError('setexcess script depreceated, use inexcess instead.')
             if 'inexcess' in scripts:
-                self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
-            else:
-                raise ScriptfileError('In case of no excess phases, use setexcess no')
+                if scripts['inexcess']:
+                    self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
+                else:
+                    raise ScriptfileError('In case of no excess phases, use inexcess no')
             # omit
+            errinfo = 'Wrong omit in scriptfile.'
             if 'omit' in scripts:
                 self.omit = set(scripts['omit'][0].split())
             else:
