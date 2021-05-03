@@ -1,8 +1,8 @@
 # pypsbuilder
 
-![master ci](https://github.com/ondrolexa/pypsbuilder/actions/workflows/master.yml/badge.svg)
+![master](https://github.com/ondrolexa/pypsbuilder/actions/workflows/master.yml/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=latest)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
-[![MIT License](https://img.shields.io/apm/l/atomic-design-ui.svg?)](https://github.com/tterb/atomic-design-ui/blob/master/LICENSEs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ondrolexa/pypsbuilder/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)
 
 Not that simplistic THERMOCALC front-end for constructing and visualizations of P-T, T-X and P-X pseudosections
