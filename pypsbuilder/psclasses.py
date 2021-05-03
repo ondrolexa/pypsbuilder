@@ -219,7 +219,7 @@ class TCAPI(object):
             if '-- run bombed in whichphases' not in output:
                 raise TCError(output)
             self.tcout = output.split('-- run bombed in whichphases')[0].strip()
-            ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
+            ax_phases = set(self.tcout.split('reading ax:')[1].split(2 * os.linesep)[0].split())
             # which
             if 'with' in scripts:
                 if scripts['with'][0].split()[0] == 'someof':
@@ -349,7 +349,7 @@ class TCAPI(object):
             Parse output after univariant line calculation in P-T pseudosection::
 
                 >>> tc = TCAPI('pat/to/dir')
-                >>> status, variance, pts, res, output = tc.parse_logfile()
+                >>> status, result, output = tc.parse_logfile()
         """
         if self.tcnewversion:
             return self.parse_logfile_new(**kwargs)
