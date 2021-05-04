@@ -1,7 +1,7 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.3.0] 2021-XX-YY
+## [2.3.0] 2021-05-04
 ### Fixed
 - latest THERMOCALC 3.50 compatibility
 
