@@ -1,13 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.3.0dev] 2021-XX-YY
+## [2.3.0] 2021-XX-YY
 ### Fixed
 - latest THERMOCALC 3.50 compatibility
-- isopleths figure and savefig options added
 
 ### Added
-- isopleths quadratic surface fit option added 
+- isopleths quadratic surface fit method added 
+- isopleths figure and savefig options added
 
 ## [2.2.2] - 2021-01-25
 ### Fixed
