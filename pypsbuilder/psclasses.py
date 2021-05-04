@@ -182,13 +182,16 @@ class TCAPI(object):
             if len(scripts['bulk']) == 3:
                 self.bulk.append(scripts['bulk'][2].split()[:len(self.bulk[0])])  # remove possible number of steps
             # inexcess
+            errinfo = 'Wrong inexcess in scriptfile.'
             if 'setexcess' in scripts:
                 raise ScriptfileError('setexcess script depreceated, use inexcess instead.')
             if 'inexcess' in scripts:
-                self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
-            else:
-                raise ScriptfileError('In case of no excess phases, use setexcess no')
+                if scripts['inexcess']:
+                    self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
+                else:
+                    raise ScriptfileError('In case of no excess phases, use inexcess no')
             # omit
+            errinfo = 'Wrong omit in scriptfile.'
             if 'omit' in scripts:
                 self.omit = set(scripts['omit'][0].split())
             else:
@@ -216,7 +219,7 @@ class TCAPI(object):
             if '-- run bombed in whichphases' not in output:
                 raise TCError(output)
             self.tcout = output.split('-- run bombed in whichphases')[0].strip()
-            ax_phases = set(self.tcout.split('reading ax:')[1].split('\n\n')[0].split())
+            ax_phases = set(self.tcout.split('reading ax:')[1].split(2 * os.linesep)[0].split())
             # which
             if 'with' in scripts:
                 if scripts['with'][0].split()[0] == 'someof':
@@ -346,7 +349,7 @@ class TCAPI(object):
             Parse output after univariant line calculation in P-T pseudosection::
 
                 >>> tc = TCAPI('pat/to/dir')
-                >>> status, variance, pts, res, output = tc.parse_logfile()
+                >>> status, result, output = tc.parse_logfile()
         """
         if self.tcnewversion:
             return self.parse_logfile_new(**kwargs)
@@ -1067,18 +1070,11 @@ class Dogmin:
         assert 'output' in kwargs, 'Dogmin output must be provided'
         assert 'resic' in kwargs, 'ic file content must be provided'
         self.id = kwargs.get('id', 0)
-        self._output = kwargs.get('output')
+        self.output = kwargs.get('output').split('##########################################################\n')[-1]
         self.resic = kwargs.get('resic')
+        self.phases = set(self.output.split('assemblage')[1].split('\n')[0].split())
         self.x = kwargs.get('x', None)
         self.y = kwargs.get('y', None)
-
-    @property
-    def output(self):
-        return self._output.split('##########################################################\n')[-1]
-
-    @property
-    def phases(self):
-        return set(self.output.split('assemblage')[1].split('\n')[0].split())
 
     @property
     def out(self):
@@ -1493,17 +1489,18 @@ class SectionBase:
 
     def trim_uni(self, id):
         uni = self.unilines[id]
-        if uni.begin > 0:
-            p1 = Point(self.invpoints[uni.begin].x,
-                       self.ratio * self.invpoints[uni.begin].y)
-        else:
-            p1 = Point(uni._x[0], self.ratio * uni._y[0])
-        if uni.end > 0:
-            p2 = Point(self.invpoints[uni.end].x,
-                       self.ratio * self.invpoints[uni.end].y)
-        else:
-            p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
         if not uni.manual:
+            if uni.begin > 0:
+                p1 = Point(self.invpoints[uni.begin].x,
+                           self.ratio * self.invpoints[uni.begin].y)
+            else:
+                p1 = Point(uni._x[0], self.ratio * uni._y[0])
+            if uni.end > 0:
+                p2 = Point(self.invpoints[uni.end].x,
+                           self.ratio * self.invpoints[uni.end].y)
+            else:
+                p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
+            #
             xy = np.array([uni._x, self.ratio * uni._y]).T
             line = LineString(xy)
             # vertex distances

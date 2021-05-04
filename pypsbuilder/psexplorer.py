@@ -30,7 +30,6 @@ except ImportError:
 import gzip
 import ast
 import time
-import re
 from pathlib import Path
 from collections import OrderedDict
 import warnings
@@ -47,7 +46,7 @@ from shapely.geometry import MultiPoint, Point
 from shapely.ops import linemerge
 from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
-from scipy.linalg import LinAlgWarning
+from scipy.linalg import LinAlgWarning, lstsq
 from scipy.interpolate import griddata  # interp2d
 from tqdm import tqdm, trange
 
@@ -81,6 +80,7 @@ class PS:
         self._shapes = {}
         self.unilists = {}
         self._variance = {}
+        self.show_errors = kwargs.get('show_errors', False)
         # common
         self.tolerance = tolerance
         self.tc = None
@@ -120,7 +120,6 @@ class PS:
             else:
                 # calculate variance
                 variance = {}
-                ok = True
                 calcs = ['calcP {} {}'.format(*self.tc.prange),
                          'calcT {} {}'.format(*self.tc.trange),
                          'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
@@ -136,11 +135,11 @@ class PS:
                         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
                     except Exception:
                         variance[key] = 0
-                        ok = False
+                        print('Variance calculation failed for {} field.'.format(key))
+                        if self.show_errors:
+                            print(tcout)
                 self._variance[ix] = variance
                 self.tc.update_scriptfile(calcs=old_calcs)
-                if not ok:
-                    print('Variance calculation failed for some fields.')
             # bulk
             if bulk is None:
                 if 'bulk' in data:
@@ -608,6 +607,9 @@ class PS:
                 Default False.
             show_vertices (bool): Whether to show vertices of drawn areas.
                 Default False.
+            fig_kw: dict passed to subplots method.
+            filename: If not None, figure is saved to file
+            save_kw: dict passed to savefig method.
         """
         out = kwargs.get('out', None)
         cmap = kwargs.get('cmap', 'Purples')
@@ -957,6 +959,9 @@ class PS:
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points. Default 7 (all data)
+            method: Interpolation method. Default is 'rbf', other option is
+                'quadratic', which uses least-square fit to quadratic surface.
+            rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
             smooth (int): Values greater than zero increase the smoothness
                 of the approximation. 0 is for interpolation (default).
             refine (int): Degree of grid refinement. Default 1
@@ -980,6 +985,9 @@ class PS:
                 Default False.
             dt (bool): Whether the gradient should be calculated along
                 temperature or pressure. Default True.
+            fig_kw: dict passed to subplots method.
+            filename: If not None, figure is saved to file
+            save_kw: dict passed to savefig method.
         """
         if self.check_phase_expr(phase, expr):
             # parse kwargs
@@ -996,10 +1004,14 @@ class PS:
             dx = kwargs.get('dx', True)
             only = kwargs.get('only', None)
             refine = kwargs.get('refine', 1)
+            method = kwargs.get('method', 'rbf')
             rbf_func = kwargs.get('rbf_func', 'thin_plate')
             colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
             labelkeys = kwargs.get('labelkeys', [])
+            fig_kw = kwargs.get('fig_kw', {})
+            filename = kwargs.get('filename', None)
+            save_kw = kwargs.get('save_kw', {})
 
             if not self.gridded:
                 print('Collecting only from uni lines and inv points. Not yet gridded...')
@@ -1032,7 +1044,7 @@ class PS:
                 ml = ticker.MaxNLocator(nbins=N)
                 cntv = ml.tick_values(vmin=mn, vmax=mx)
             # Thin-plate contouring of areas
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(**fig_kw)
             for key in recs:
                 phase_parts = phase.split(')')[0].split('(')
                 if phase_parts[0] in key:
@@ -1046,12 +1058,21 @@ class PS:
                     pts = recs[key]['pts']
                     data = recs[key]['data']
                     try:
-                        # Firstly try Rbf Use scaling
-                        with warnings.catch_warnings():
-                            warnings.filterwarnings("error")
-                            rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
-                            zg = rbf(tg, self.ratio * pg)
-                    except Exception:
+                        if method == 'quadratic':
+                            tgg = tg.flatten()
+                            pgg = pg.flatten()
+                            A = np.c_[np.ones_like(x), x, y, x * y, x ** 2, y ** 2]
+                            C, _, _, _ = lstsq(A, data)
+                            # evaluate it on a grid
+                            zg = np.dot(np.c_[np.ones_like(tgg), tgg, pgg, tgg * pgg, tgg ** 2, pgg ** 2], C).reshape(tg.shape)
+                        else:
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings("error")
+                                rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
+                                zg = rbf(tg, self.ratio * pg)
+                    except Exception as e:
+                        if self.show_errors:
+                            print(e)
                         try:
                             # preprocess with griddata cubic
                             zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
@@ -1117,8 +1138,10 @@ class PS:
                                     np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
             try:
                 fig.colorbar(cont)
-            except Exception:
+            except Exception as e:
                 print('There is trouble to draw colorbar. Sorry.')
+                if self.show_errors:
+                    print(e)
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
                 high = [high]
@@ -1169,7 +1192,10 @@ class PS:
             ax.format_coord = self.format_coord
             # connect button press
             # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
-            plt.show()
+            if filename is not None:
+                plt.savefig(filename, **save_kw)
+            else:
+                plt.show()
 
     def gendrawpd(self, export_areas=True):
         """Method to write drawpd file
