@@ -36,7 +36,7 @@ You can install latest development version from develop branch:
 
     pip install https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
 
-### Upgrade existing instalation
+### Upgrade existing installation
 
 To upgrade an already installed **pypsbuilder** to the latest master version:
 
