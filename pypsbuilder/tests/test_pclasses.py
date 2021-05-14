@@ -1,12 +1,13 @@
 import pytest
-from pypsbuilder import TCAPI, InvPoint, UniLine, PTsection
+from pypsbuilder import InvPoint, UniLine, PTsection
+from pypsbuilder.tcapi import TC35API
 
 pytest.ps = PTsection(trange=(400., 700.), prange=(7., 16.))
 
 
 @pytest.fixture
 def mock_tc():
-    return TCAPI('./examples/outputs')
+    return TC35API('./examples/outputs', None, None)
 
 
 def test_parse_ini1(mock_tc):
@@ -20,7 +21,7 @@ def test_parse_ini1(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     inv = InvPoint(phases={'bi', 'mu', 'chl', 'H2O', 'ep', 'q', 'g', 'sph', 'pa'},
                    out={'ep', 'chl'},
@@ -51,7 +52,7 @@ def test_parse_ini2(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     inv = InvPoint(phases={'ep', 'pa', 'sph', 'q', 'H2O', 'mu', 'chl', 'g', 'ab', 'bi'},
                    out={'ab', 'chl'},
@@ -82,7 +83,7 @@ def test_parse_ini3(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     inv = InvPoint(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep', 'ab'},
                    out={'ab', 'ep'},
@@ -113,7 +114,7 @@ def test_parse_uni1(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     uni = UniLine(phases={'bi', 'mu', 'chl', 'H2O', 'ep', 'q', 'g', 'sph', 'pa'},
                   out={'chl'},
@@ -146,7 +147,7 @@ def test_parse_uni2(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep'},
                   out={'ep'},
@@ -179,7 +180,7 @@ def test_parse_uni3(mock_tc):
     with icfile.open('r', encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile_new(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
 
     uni = UniLine(phases={'pa', 'H2O', 'sph', 'g', 'mu', 'bi', 'q', 'ep', 'ab'},
                   out={'ab'},
