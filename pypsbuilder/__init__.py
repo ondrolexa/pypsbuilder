@@ -2,13 +2,13 @@
 
 from pypsbuilder.psexplorer import PTPS, TXPS, PXPS
 from pypsbuilder.psclasses import (
-    TCAPI,
     InvPoint,
     UniLine,
     PTsection,
     TXsection,
     PXsection,
 )
+from pypsbuilder.tcapi import get_tcapi
 
 __all__ = (
     "InvPoint",
@@ -19,7 +19,7 @@ __all__ = (
     "PTPS",
     "TXPS",
     "PXPS",
-    "TCAPI",
+    "get_tcapi",
 )
 
 __version__ = "2.3.0"
