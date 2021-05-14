@@ -50,7 +50,7 @@ from scipy.linalg import LinAlgWarning, lstsq
 from scipy.interpolate import griddata  # interp2d
 from tqdm import tqdm, trange
 
-from .psclasses import TCAPI
+from .tcapi import get_tcapi
 from .psclasses import PTsection, TXsection, PXsection  # InvPoint, UniLine
 from .psclasses import polymorphs
 
@@ -99,11 +99,11 @@ class PS:
             # check workdit compatibility
             if self.tc is None:
                 if origwd:
-                    tc = TCAPI(Path(data['workdir']))
-                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc.status)
+                    tc, ok = get_tcapi(Path(data['workdir']))
+                    assert ok, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc)
                 else:
-                    tc = TCAPI(projfile.parent)
-                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(projfile.parent, tc.status)
+                    tc, ok = get_tcapi(projfile.parent)
+                    assert ok, 'Error during initialization of THERMOCALC in {}\n{}'.format(projfile.parent, tc)
                 self.tc = tc
             else:
                 if origwd:

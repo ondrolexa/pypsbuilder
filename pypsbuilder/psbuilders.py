@@ -43,9 +43,9 @@ from .ui_pxbuilder import Ui_PXBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-from .psclasses import (TCAPI, InvPoint, UniLine, Dogmin, polymorphs,
-                        PTsection, TXsection, PXsection,
-                        TCResult, TCResultSet)
+from .psclasses import (InvPoint, UniLine, polymorphs,
+                        PTsection, TXsection, PXsection)
+from .tcapi import get_tcapi, Dogmin, TCResult, TCResultSet
 from . import __version__
 
 # Make sure that we are using QT5
@@ -281,8 +281,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if item.checkState() == QtCore.Qt.Checked:
                     out.append(item.text())
             # reread script file
-            tc = TCAPI(self.tc.workdir)
-            if tc.OK:
+            tc, ok = get_tcapi(self.tc.workdir)
+            if ok:
                 self.tc = tc
                 # select phases
                 for i in range(self.phasemodel.rowCount()):
@@ -305,7 +305,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.changed = True
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Initialization error', tc.status, qb.Abort)
+                qb.critical(self, 'Initialization error', tc, qb.Abort)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
 
@@ -1648,8 +1648,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                               os.path.expanduser('~'),
                                               qd.ShowDirsOnly)
         if workdir:
-            tc = TCAPI(workdir)
-            if tc.OK:
+            tc, ok = get_tcapi(workdir)
+            if ok:
                 self.tc = tc
                 self.ps = PTsection(trange=self.tc.trange,
                                     prange=self.tc.prange,
@@ -1663,7 +1663,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage('Project initialized successfully.')
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Initialization error', tc.status, qb.Abort)
+                qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project
@@ -1706,8 +1706,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                tc = TCAPI(workdir)
-                if tc.OK:
+                tc, ok = get_tcapi(workdir)
+                if ok:
                     self.tc = tc
                     self.ps = PTsection(trange=data['section'].xrange,
                                         prange=data['section'].yrange,
@@ -1739,7 +1739,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                 if data.get('version', '1.0.0') >= '2.3.0':
                                     self.dogmodel.appendRow(id, dgm)
                                 else:
-                                    ndgm = Dogmin(id=dgm.id, output=dgm._output, resic=dgm.resic, x=dgm.x, y=dgm.y)
+                                    output = dgm._output.split('##########################################################\n')[-1]
+                                    ndgm = Dogmin(id=dgm.id, output=output, resic=dgm.resic, x=dgm.x, y=dgm.y)
                                     self.dogmodel.appendRow(id, ndgm)
                             self.dogview.resizeColumnsToContents()
                     self.ready = True
@@ -1780,7 +1781,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                             qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
+                    qb.critical(self, 'Error during openning', tc, qb.Abort)
             # VERY OLD FORMAT
             elif data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
@@ -1805,8 +1806,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                tc = TCAPI(workdir)
-                if tc.OK:
+                tc, ok = get_tcapi(workdir)
+                if ok:
                     self.tc = tc
                     self.ps = PTsection(trange=data['trange'],
                                         prange=data['prange'],
@@ -1879,7 +1880,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     self.statusBar().showMessage('Project loaded.')
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
+                    qb.critical(self, 'Error during openning', tc, qb.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
@@ -2290,8 +2291,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                               os.path.expanduser('~'),
                                               qd.ShowDirsOnly)
         if workdir:
-            tc = TCAPI(workdir)
-            if tc.OK:
+            tc, ok = get_tcapi(workdir)
+            if ok:
                 self.tc = tc
                 self.ps = TXsection(trange=self.tc.trange,
                                     excess=self.tc.excess)
@@ -2304,7 +2305,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage('Project initialized successfully.')
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Initialization error', tc.status, qb.Abort)
+                qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project
@@ -2346,8 +2347,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                tc = TCAPI(workdir)
-                if tc.OK:
+                tc, ok = get_tcapi(workdir)
+                if ok:
                     self.tc = tc
                     self.ps = TXsection(trange=data['section'].xrange,
                                         excess=data['section'].excess)
@@ -2429,7 +2430,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
+                    qb.critical(self, 'Error during openning', tc, qb.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
@@ -2932,8 +2933,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                               os.path.expanduser('~'),
                                               qd.ShowDirsOnly)
         if workdir:
-            tc = TCAPI(workdir)
-            if tc.OK:
+            tc, ok = get_tcapi(workdir)
+            if ok:
                 self.tc = tc
                 self.ps = PXsection(prange=self.tc.prange,
                                     excess=self.tc.excess)
@@ -2946,7 +2947,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage('Project initialized successfully.')
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Initialization error', tc.status, qb.Abort)
+                qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project
@@ -2988,8 +2989,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         workdir = active
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-                tc = TCAPI(workdir)
-                if tc.OK:
+                tc, ok = get_tcapi(workdir)
+                if ok:
                     self.tc = tc
                     self.ps = PXsection(prange=data['section'].yrange,
                                         excess=data['section'].excess)
@@ -3071,7 +3072,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                             qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, 'Error during openning', tc.status, qb.Abort)
+                    qb.critical(self, 'Error during openning', tc, qb.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
