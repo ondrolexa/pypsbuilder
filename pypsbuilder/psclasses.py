@@ -10,8 +10,11 @@ Todo:
 # author: Ondrej Lexa
 # website: petrol.natur.cuni.cz/~ondro
 
-
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+import gzip
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString, Point

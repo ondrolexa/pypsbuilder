@@ -12,11 +12,6 @@ Todo:
 
 import sys
 import os
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-import gzip
 import subprocess
 # import itertools
 # import re
@@ -127,9 +122,7 @@ class TCAPI(object):
         ScriptfileError: Error or problem in scriptfile.
         TCError: THERMOCALC bombed.
 
-    """ 
-    
-
+    """
 
     def __str__(self):
         return str(self.workdir)
@@ -144,6 +137,7 @@ class TCAPI(object):
         else:
             return '\n'.join(['Uninitialized working directory {}'.format(self.workdir),
                               'Status: {}'.format(self.status)])
+
     @property
     def scriptfile(self):
         """pathlib.Path: Path to scriptfile."""
@@ -280,7 +274,6 @@ class TCAPI(object):
 
 
 class TC35API(TCAPI):
-    
     def __init__(self, workdir, tcexe, drexe, encoding='mac-roman'):
         self.workdir = Path(workdir).resolve()
         self.tcexe = tcexe
@@ -378,10 +371,10 @@ class TC35API(TCAPI):
             # autoexit
             if 'autoexit' not in scripts:
                 raise ScriptfileError('No autoexit script, autoexit must be provided.')
-            # which
+            # whith
             if 'with' in scripts:
                 if scripts['with'][0].split()[0] == 'someof':
-                    raise ScriptfileError('Pypsbuilder does not support with sameof <phase list>. Use omit {}'.format(' '.join(ax_phases.union(*self.samecoding) - set(scripts['with'][0].split()[1:]))))
+                    raise ScriptfileError('Pypsbuilder does not support with sameof <phase list>. Use omit with and omit.')
             # samecoding
             if 'samecoding' in scripts:
                 self.samecoding = [set(sc.split()) for sc in scripts['samecoding']]
@@ -823,7 +816,6 @@ class TC35API(TCAPI):
 
 
 class TC34API(TCAPI):
-
     def __init__(self, workdir, tcexe, drexe, encoding='mac-roman'):
         self.workdir = Path(workdir).resolve()
         self.tcexe = tcexe
@@ -898,7 +890,7 @@ class TC34API(TCAPI):
                             raise ScriptfileError('Setbulk must not be set to ask.')
                         if 'yes' in bulk:
                             bulk.remove('yes')
-                        if not 'no' in bulk:
+                        if 'no' not in bulk:
                             if len(self.bulk) == 1:
                                 if len(self.bulk[0]) < len(bulk):
                                     self.ptx_steps = int(bulk[-1])
@@ -1086,7 +1078,7 @@ class TC34API(TCAPI):
         """
         guesses = kwargs.get('guesses', None)
         get_old_guesses = kwargs.get('get_old_guesses', False)
-        dogmin = kwargs.get('dogmin', None) # None or 'no' or 'yes 1'
+        dogmin = kwargs.get('dogmin', None)  # None or 'no' or 'yes 1'
         which = kwargs.get('which', None)
         bulk = kwargs.get('bulk', None)
         xvals = kwargs.get('xvals', (0, 1))
@@ -1142,7 +1134,7 @@ class TC34API(TCAPI):
         if len(self.bulk) == 2:
             new_bulk = []
             try:
-               _ = (e for e in x)
+                _ = (e for e in x)
             except TypeError:
                 b1 = np.array([float(v) for v in self.bulk[0]])
                 b2 = np.array([float(v) for v in self.bulk[1]])
@@ -1309,8 +1301,8 @@ class TC34API(TCAPI):
             str: THERMOCALC standard output
         """
         self.update_scriptfile(dogmin='yes {}'.format(doglevel), which=phases,
-                                       T='{:.3f}'.format(t),
-                                       p='{:.3f}'.format(p))
+                               T='{:.3f}'.format(t),
+                               p='{:.3f}'.format(p))
         tmpl = '{}\n\nn\n\n'
         ans = tmpl.format(variance)
         tcout = self.runtc(ans)
@@ -1515,7 +1507,7 @@ class Dogmin:
         if 'assemblage' in output:
             self.output = output
             self.resic = kwargs.get('resic')
-            self.phases = set(self.output.split('assemblage')[1].split('\n')[0].split()) # TC 35
+            self.phases = set(self.output.split('assemblage')[1].split('\n')[0].split())  # TC 35
         else:
             self.resic = ''
             asm = output.split('Gibbs energy minimisation info\n')[-1]
@@ -1567,4 +1559,3 @@ class Dogmin:
         gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
         gixe = xyz[-1] + 2
         return block[gixs:gixe]
-
