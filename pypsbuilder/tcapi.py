@@ -401,14 +401,14 @@ class TC35API(TCAPI):
             self.OK = False
 
     def parse_logfile(self, **kwargs):
-        """Parser for THERMOCALC output.
+        """Parser for THERMOCALC 3.50beta output.
 
         It parses the outputs of THERMOCALC after calculation.
 
         Args:
-            tx (bool): True for T-X and P-X calculations. Default False.
             output (str): When not None, used as content of logfile. Default None.
             resic (str): When not None, used as content of icfile. Default None.
+            get_phases (bool): When true returns also tuple (phases, out, calcs). Default False
 
         Returns:
             status (str): Result of parsing. 'ok', 'nir' (nothing in range) or 'bombed'.
@@ -423,6 +423,7 @@ class TC35API(TCAPI):
         """
         output = kwargs.get('output', None)
         resic = kwargs.get('resic', None)
+        get_phases = kwargs.get('get_phases', False)
         try:
             if output is None:
                 with self.logfile.open('r', encoding=self.TCenc) as f:
@@ -469,9 +470,27 @@ class TC35API(TCAPI):
                         status = 'nir'
                 else:
                     status = 'nir'
-            return status, results, output
+            if get_phases:
+                phases, out = None, None
+                with self.scriptfile.open('r', encoding=self.TCenc) as f:
+                    scf = f.read()
+                _, rem = scf.split('%{PSBCALC-BEGIN}')
+                calc, _ = rem.split('%{PSBCALC-END}')
+                calcs = calc.splitlines()
+                for ln in calcs:
+                    script = ln.split('%')[0].strip()
+                    if script.startswith('with'):
+                        phases = set(script.split('with', 1)[1].split()).union(self.excess)
+                    if script.startswith('zeromodeisopleth'):
+                        out = set(script.split('zeromodeisopleth', 1)[1].split())
+                return status, results, output, (phases, out, calcs)
+            else:
+                return status, results, output
         except Exception:
-            return 'bombed', None, None
+            if get_phases:
+                return 'bombed', None, None, (None, None, [])
+            else:
+                return 'bombed', None, None
 
     def parse_logfile_backup(self, **kwargs):
         output = kwargs.get('output', None)
@@ -617,7 +636,7 @@ class TC35API(TCAPI):
         calcs = ['calcP {:g} {:g} {:g}'.format(*prange, step),
                  'calcT {:g} {:g}'.format(*trange),
                  'calctatp yes',
-                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'with {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
         self.update_scriptfile(calcs=calcs)
         tcout = self.runtc()
@@ -644,7 +663,7 @@ class TC35API(TCAPI):
         calcs = ['calcP {:g} {:g}'.format(*prange),
                  'calcT {:g} {:g} {:g}'.format(*trange, step),
                  'calctatp no',
-                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'with {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
         self.update_scriptfile(calcs=calcs)
         tcout = self.runtc()
@@ -667,7 +686,7 @@ class TC35API(TCAPI):
         trange = kwargs.get('trange', self.trange)
         calcs = ['calcP {:g} {:g}'.format(*prange),
                  'calcT {:g} {:g}'.format(*trange),
-                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'with {}'.format(' '.join(phases - self.excess)),
                  'zeromodeisopleth {}'.format(' '.join(out))]
         self.update_scriptfile(calcs=calcs)
         tcout = self.runtc()
@@ -697,14 +716,14 @@ class TC35API(TCAPI):
             calcs = ['calcP {:g} {:g}'.format(*prange),
                      'calcT {:g} {:g}'.format(*trange),
                      'calctatp yes',
-                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'with {}'.format(' '.join(phases - self.excess)),
                      'zeromodeisopleth {}'.format(' '.join(out)),
                      'bulksubrange {:g} {:g}'.format(*xvals)]
         else:
             calcs = ['calcP {:g} {:g} {:g}'.format(*prange, step),
                      'calcT {:g} {:g}'.format(*trange),
                      'calctatp yes',
-                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'with {}'.format(' '.join(phases - self.excess)),
                      'zeromodeisopleth {}'.format(' '.join(out)),
                      'bulksubrange {:g} {:g}'.format(*xvals)]
         self.update_scriptfile(calcs=calcs, xsteps=steps)
@@ -735,14 +754,14 @@ class TC35API(TCAPI):
             calcs = ['calcP {:g} {:g}'.format(*prange),
                      'calcT {:g} {:g}'.format(*trange),
                      'calctatp no',
-                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'with {}'.format(' '.join(phases - self.excess)),
                      'zeromodeisopleth {}'.format(' '.join(out)),
                      'bulksubrange {:g} {:g}'.format(*xvals)]
         else:
             calcs = ['calcP {:g} {:g}'.format(*prange),
                      'calcT {:g} {:g} {:g}'.format(*trange, step),
                      'calctatp no',
-                     'with  {}'.format(' '.join(phases - self.excess)),
+                     'with {}'.format(' '.join(phases - self.excess)),
                      'zeromodeisopleth {}'.format(' '.join(out)),
                      'bulksubrange {:g} {:g}'.format(*xvals)]
         self.update_scriptfile(calcs=calcs, xsteps=steps)
@@ -763,7 +782,7 @@ class TC35API(TCAPI):
         """
         calcs = ['calcP {}'.format(p),
                  'calcT {}'.format(t),
-                 'with  {}'.format(' '.join(phases - self.excess))]
+                 'with {}'.format(' '.join(phases - self.excess))]
         if onebulk is not None:
             calcs.append('onebulk {}'.format(onebulk))
         self.update_scriptfile(calcs=calcs)
@@ -782,7 +801,7 @@ class TC35API(TCAPI):
         calcs = ['calcP {}'.format(p),
                  'calcT {}'.format(t),
                  'dogmin yes {}'.format(doglevel),
-                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'with {}'.format(' '.join(phases - self.excess)),
                  'maxvar {}'.format(variance)]
         if onebulk is not None:
             calcs.append('onebulk {}'.format(onebulk))
@@ -803,7 +822,7 @@ class TC35API(TCAPI):
         variance = None
         calcs = ['calcP {} {}'.format(*self.prange),
                  'calcT {} {}'.format(*self.trange),
-                 'with  {}'.format(' '.join(phases - self.excess)),
+                 'with {}'.format(' '.join(phases - self.excess)),
                  'acceptvar no']
         old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
         tcout = self.runtc('kill\n\n')
@@ -999,61 +1018,92 @@ class TC34API(TCAPI):
             self.OK = False
 
     def parse_logfile(self, **kwargs):
-        # res is list of dicts with data and ptguess keys
-        # data is dict with keys of phases and each contain dict of values
-        # res[0]['data']['g']['mode']
-        # res[0]['data']['g']['z']
-        # res[0]['data']['g']['MnO']
+        """Parser for THERMOCALC 3.4x output.
+
+        It parses the outputs of THERMOCALC after calculation.
+
+        Args:
+            output (str): When not None, used as content of logfile. Default None.
+            resic (str): When not None, used as content of icfile. Default None.
+            get_phases (bool): When true returns also tuple (phases, out, calcs). Default False
+
+        Returns:
+            status (str): Result of parsing. 'ok', 'nir' (nothing in range) or 'bombed'.
+            results (TCResultSet): Results of TC calculation.
+            output (str): Full nonparsed THERMOCALC output.
+
+        Example:
+            Parse output after univariant line calculation in P-T pseudosection::
+
+                >>> tc = TCAPI('pat/to/dir')
+                >>> status, result, output = tc.parse_logfile()
+        """
         output = kwargs.get('output', None)
-        if output is None:
-            with self.logfile.open('r', encoding=self.TCenc) as f:
-                output = f.read()
-        lines = [''.join([c for c in ln if ord(c) < 128]) for ln in output.splitlines() if ln != '']
-        pts = []
-        res = []
-        variance = -1
-        if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
-            status = 'bombed'
-        else:
-            for ln in lines:
-                if 'variance of required equilibrium' in ln:
-                    variance = int(ln[ln.index('(') + 1:ln.index('?')])
-                    break
-            bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
-            bstarts.append(len(lines))
-            for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                block = lines[bs:be]
-                pts.append([float(n) for n in block[1].split()[:2]])
-                xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
-                gixe = xyz[-1] + 2
-                ptguess = block[gixs:gixe]
-                data = {}
-                rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
-                phases = block[rbix - 1].split()[1:]
-                for phase, val in zip(phases, block[rbix].split()[2:]):
-                    data[phase] = dict(mode=float(val))
-                for ix in xyz:
-                    lbl = block[ix].split()[1]
-                    phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
-                    if phase not in data:
-                        raise Exception('Check model {} in your ax file. Commonly liq coded as L for starting guesses.'.format(phase))
-                    data[phase][comp] = float(block[ix].split()[2])
-                rbiox = block[rbix + 1].split()[2:]
-                for delta in range(len(phases)):
-                    rbi = {c: float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
-                    rbi['H2O'] = float(block[rbix + 2 + delta].split()[1])
-                    # data[phases[delta]]['rbi'] = comp
-                    data[phases[delta]].update(rbi)
-                res.append(dict(data=data, ptguess=ptguess))
-            if res:
-                status = 'ok'
-                pp, TT = np.array(pts).T
-                results = TCResultSet([TCResult(T, p, variance=variance, c=0.0, data=r['data'], ptguess=r['ptguess']) for (r, p, T) in zip(res, pp, TT)])
+        get_phases = kwargs.get('get_phases', False)
+        try:
+            if output is None:
+                with self.logfile.open('r', encoding=self.TCenc) as f:
+                    output = f.read()
+            lines = [''.join([c for c in ln if ord(c) < 128]) for ln in output.splitlines() if ln != '']
+            pts = []
+            res = []
+            variance = -1
+            if [ix for ix, ln in enumerate(lines) if 'BOMBED' in ln]:
+                status = 'bombed'
             else:
-                status = 'nir'
-                results = None
-        return status, results, output
+                for ln in lines:
+                    if 'variance of required equilibrium' in ln:
+                        variance = int(ln[ln.index('(') + 1:ln.index('?')])
+                        break
+                bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(' P(kbar)')]
+                bstarts.append(len(lines))
+                for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                    block = lines[bs:be]
+                    pts.append([float(n) for n in block[1].split()[:2]])
+                    xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
+                    gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 3
+                    gixe = xyz[-1] + 2
+                    ptguess = block[gixs:gixe]
+                    data = {}
+                    rbix = [ix for ix, ln in enumerate(block) if ln.startswith('rbi yes')][0]
+                    phases = block[rbix - 1].split()[1:]
+                    for phase, val in zip(phases, block[rbix].split()[2:]):
+                        data[phase] = dict(mode=float(val))
+                    for ix in xyz:
+                        lbl = block[ix].split()[1]
+                        phase, comp = lbl[lbl.find('(') + 1:lbl.find(')')], lbl[:lbl.find('(')]
+                        if phase not in data:
+                            raise Exception('Check model {} in your ax file. Commonly liq coded as L for starting guesses.'.format(phase))
+                        data[phase][comp] = float(block[ix].split()[2])
+                    rbiox = block[rbix + 1].split()[2:]
+                    for delta in range(len(phases)):
+                        rbi = {c: float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
+                        rbi['H2O'] = float(block[rbix + 2 + delta].split()[1])
+                        # data[phases[delta]]['rbi'] = comp
+                        data[phases[delta]].update(rbi)
+                    res.append(dict(data=data, ptguess=ptguess))
+                if res:
+                    status = 'ok'
+                    pp, TT = np.array(pts).T
+                    results = TCResultSet([TCResult(T, p, variance=variance, c=0.0, data=r['data'], ptguess=r['ptguess']) for (r, p, T) in zip(res, pp, TT)])
+                else:
+                    status = 'nir'
+                    results = None
+            if get_phases:
+                phases, out = None, None
+                for ln in output.splitlines():
+                    if ln.startswith('which phases'):
+                        phases = set(ln.split(':', 1)[1].split())
+                    if ln.startswith('which to set'):
+                        out = set(ln.split(':', 1)[1].split())
+                return status, results, output, (phases, out, [])
+            else:
+                return status, results, output
+        except Exception:
+            if get_phases:
+                return 'bombed', None, None, (None, None, '')
+            else:
+                return 'bombed', None, None
 
     def update_scriptfile(self, **kwargs):
         """Method to update scriptfile.

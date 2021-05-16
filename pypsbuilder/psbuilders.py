@@ -231,6 +231,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionFixphase.triggered.connect(self.fix_phasenames)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
         self.actionShow_topology.triggered.connect(self.show_topology)
+        self.actionParse_working_directory.triggered.connect(lambda: self.do_calc(True, run_tc=False))
         self.pushApplySettings.clicked.connect(lambda: self.apply_setting(5))
         self.pushResetSettings.clicked.connect(self.reset_limits)
         self.pushFromAxes.clicked.connect(lambda: self.apply_setting(2))
@@ -2031,11 +2032,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage('Dogmin failed.')
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}):
+    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
         if self.ready:
-            if phases == {} and out == {}:
-                phases, out = self.get_phases_out()
-            self.statusBar().showMessage('Running THERMOCALC...')
+            if run_tc:
+                if phases == {} and out == {}:
+                    phases, out = self.get_phases_out()
+                self.statusBar().showMessage('Running THERMOCALC...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
@@ -2047,16 +2049,20 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
             steps = self.spinSteps.value()
-
-            if len(out) == 1:
+            if not run_tc:
+                status, res, output, (phases, out, ans) = self.tc.parse_logfile(get_phases=True)
                 uni_tmp = UniLine(phases=phases, out=out)
                 isnew, id_uni = self.ps.getiduni(uni_tmp)
-                if calcT:
-                    tcout, ans = self.tc.calc_t(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
-                else:
-                    tcout, ans = self.tc.calc_p(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+            if len(out) == 1:
+                if run_tc:
+                    uni_tmp = UniLine(phases=phases, out=out)
+                    isnew, id_uni = self.ps.getiduni(uni_tmp)
+                    if calcT:
+                        tcout, ans = self.tc.calc_t(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
+                    else:
+                        tcout, ans = self.tc.calc_p(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -2144,11 +2150,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
-                inv_tmp = InvPoint(phases=phases, out=out)
-                isnew, id_inv = self.ps.getidinv(inv_tmp)
-                tcout, ans = self.tc.calc_pt(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange)
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+                if run_tc:
+                    inv_tmp = InvPoint(phases=phases, out=out)
+                    isnew, id_inv = self.ps.getidinv(inv_tmp)
+                    tcout, ans = self.tc.calc_pt(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange)
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -2658,11 +2665,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}):
+    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
         if self.ready:
-            if phases == {} and out == {}:
-                phases, out = self.get_phases_out()
-            self.statusBar().showMessage('Running THERMOCALC...')
+            if run_tc:
+                if phases == {} and out == {}:
+                    phases, out = self.get_phases_out()
+                self.statusBar().showMessage('Running THERMOCALC...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
@@ -2677,13 +2685,17 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             # change bulk
             # bulk = self.tc.interpolate_bulk(crange)
             # self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
-
-            if len(out) == 1:
+            if not run_tc:
+                status, res, output, (phases, out, ans) = self.tc.parse_logfile(get_phases=True)
                 uni_tmp = UniLine(phases=phases, out=out)
                 isnew, id_uni = self.ps.getiduni(uni_tmp)
-                tcout, ans = self.tc.calc_tx(uni_tmp.phases, uni_tmp.out, prange=(pm, pm), trange=trange, xvals=crange, steps=self.spinSteps.value())
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+            if len(out) == 1:
+                if run_tc:
+                    uni_tmp = UniLine(phases=phases, out=out)
+                    isnew, id_uni = self.ps.getiduni(uni_tmp)
+                    tcout, ans = self.tc.calc_tx(uni_tmp.phases, uni_tmp.out, prange=(pm, pm), trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -2772,12 +2784,13 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
-                inv_tmp = InvPoint(phases=phases, out=out)
-                isnew, id_inv = self.ps.getidinv(inv_tmp)
-                prange = (max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]), min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]))
-                tcout, ans = self.tc.calc_tx(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+                if run_tc:
+                    inv_tmp = InvPoint(phases=phases, out=out)
+                    isnew, id_inv = self.ps.getidinv(inv_tmp)
+                    prange = (max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]), min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]))
+                    tcout, ans = self.tc.calc_tx(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -3301,11 +3314,12 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}):
+    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
         if self.ready:
-            if phases == {} and out == {}:
-                phases, out = self.get_phases_out()
-            self.statusBar().showMessage('Running THERMOCALC...')
+            if run_tc:
+                if phases == {} and out == {}:
+                    phases, out = self.get_phases_out()
+                self.statusBar().showMessage('Running THERMOCALC...')
             QtWidgets.QApplication.processEvents()
             QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
             ###########
@@ -3320,13 +3334,17 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             # change bulk
             # bulk = self.tc.interpolate_bulk(crange)
             # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
-
-            if len(out) == 1:
+            if not run_tc:
+                status, res, output, (phases, out, ans) = self.tc.parse_logfile(get_phases=True)
                 uni_tmp = UniLine(phases=phases, out=out)
                 isnew, id_uni = self.ps.getiduni(uni_tmp)
-                tcout, ans = self.tc.calc_px(uni_tmp.phases, uni_tmp.out, prange=prange, trange=(tm, tm), xvals=crange, steps=self.spinSteps.value())
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+            if len(out) == 1:
+                if run_tc:
+                    uni_tmp = UniLine(phases=phases, out=out)
+                    isnew, id_uni = self.ps.getiduni(uni_tmp)
+                    tcout, ans = self.tc.calc_px(uni_tmp.phases, uni_tmp.out, prange=prange, trange=(tm, tm), xvals=crange, steps=self.spinSteps.value())
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':
@@ -3415,12 +3433,13 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         else:
                             self.statusBar().showMessage('Univariant line already exists.')
             elif len(out) == 2:
-                inv_tmp = InvPoint(phases=phases, out=out)
-                isnew, id_inv = self.ps.getidinv(inv_tmp)
-                trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
-                tcout, ans = self.tc.calc_px(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
-                self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
-                status, res, output = self.tc.parse_logfile()
+                if run_tc:
+                    inv_tmp = InvPoint(phases=phases, out=out)
+                    isnew, id_inv = self.ps.getidinv(inv_tmp)
+                    trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
+                    tcout, ans = self.tc.calc_px(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
+                    status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
                     self.statusBar().showMessage('Bombed.')
                 elif status == 'nir':

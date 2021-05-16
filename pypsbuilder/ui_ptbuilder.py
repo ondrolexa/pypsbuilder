@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_PTBuilder(object):
     def setupUi(self, PTBuilder):
         PTBuilder.setObjectName("PTBuilder")
-        PTBuilder.resize(1106, 726)
+        PTBuilder.resize(1106, 727)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -591,6 +591,8 @@ class Ui_PTBuilder(object):
         self.actionCleanup.setObjectName("actionCleanup")
         self.actionFixphase = QtWidgets.QAction(PTBuilder)
         self.actionFixphase.setObjectName("actionFixphase")
+        self.actionParse_working_directory = QtWidgets.QAction(PTBuilder)
+        self.actionParse_working_directory.setObjectName("actionParse_working_directory")
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_old)
         self.menuImport.addAction(self.actionImport_drfile)
@@ -608,6 +610,8 @@ class Ui_PTBuilder(object):
         self.menuTools.addAction(self.actionFixphase)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionParse_working_directory)
         self.menuHelp.addAction(self.actionAbout)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuTools.menuAction())
@@ -729,4 +733,5 @@ class Ui_PTBuilder(object):
         self.actionImport_drfile.setText(_translate("PTBuilder", "Import from drfile..."))
         self.actionCleanup.setText(_translate("PTBuilder", "Cleanup storage"))
         self.actionFixphase.setText(_translate("PTBuilder", "Fix phasenames"))
+        self.actionParse_working_directory.setText(_translate("PTBuilder", "Parse working directory"))
 
