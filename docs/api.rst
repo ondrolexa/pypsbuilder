@@ -34,6 +34,23 @@ psexplorer module
     :members:
     :inherited-members:
 
+tcapi module
+------------
+
+.. currentmodule:: pypsbuilder.tcapi
+.. autosummary::
+     :toctree: api
+     :nosignatures:
+
+     get_tcapi
+     TCAPI
+
+.. autofunction:: pypsbuilder.tcapi.get_tcapi
+
+.. autoclass:: pypsbuilder.tcapi.TCAPI
+    :members:
+    :inherited-members:
+
 psclasses module
 ----------------
 
@@ -42,22 +59,32 @@ psclasses module
      :toctree: api
      :nosignatures:
 
-     TCAPI
      InvPoint
      UniLine
+     Dogmin
+     TCResult
+     TCResultSet
      PTsection
      TXsection
      PXsection
-
-.. autoclass:: pypsbuilder.psclasses.TCAPI
-    :members:
-    :inherited-members:
 
 .. autoclass:: pypsbuilder.psclasses.InvPoint
     :members:
     :inherited-members:
 
 .. autoclass:: pypsbuilder.psclasses.UniLine
+    :members:
+    :inherited-members:
+
+.. autoclass:: pypsbuilder.psclasses.Dogmin
+    :members:
+    :inherited-members:
+
+.. autoclass:: pypsbuilder.psclasses.TCResult
+    :members:
+    :inherited-members:
+
+.. autoclass:: pypsbuilder.psclasses.TCResultSet
     :members:
     :inherited-members:
 

@@ -44,8 +44,9 @@ from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 from .psclasses import (InvPoint, UniLine, polymorphs,
-                        PTsection, TXsection, PXsection)
-from .tcapi import get_tcapi, Dogmin, TCResult, TCResultSet
+                        PTsection, TXsection, PXsection,
+                        Dogmin, TCResult, TCResultSet)
+from .tcapi import get_tcapi
 from . import __version__
 
 # Make sure that we are using QT5
