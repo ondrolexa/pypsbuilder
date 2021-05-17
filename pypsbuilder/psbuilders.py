@@ -601,7 +601,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProject(self):
-        """Open working directory and initialize project
+        """Save active project to project file
         """
         if self.ready:
             if self.project is None:
@@ -617,7 +617,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProjectAs(self):
-        """Open working directory and initialize project
+        """Save active project to project file with new filename
         """
         if self.ready:
             filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', str(self.tc.workdir), self.builder_file_selector)[0]

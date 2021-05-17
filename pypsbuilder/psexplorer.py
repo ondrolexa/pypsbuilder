@@ -118,28 +118,32 @@ class PS:
             if 'variance' in data:
                 self._variance[ix] = data['variance']
             else:
-                # calculate variance
+                # # calculate variance
+                # variance = {}
+                # calcs = ['calcP {} {}'.format(*self.tc.prange),
+                #          'calcT {} {}'.format(*self.tc.trange),
+                #          'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
+                #          'acceptvar no']
+                # old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
+                # for key in self._shapes[ix]:
+                #     ans = '{}\nkill\n\n'.format(' '.join(key))
+                #     tcout = self.tc.runtc(ans)
+                #     try:
+                #         for ln in tcout.splitlines():
+                #             if 'variance of required equilibrium' in ln:
+                #                 break
+                #         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                #     except Exception:
+                #         variance[key] = 0
+                #         print('Variance calculation failed for {} field.'.format(key))
+                #         if self.show_errors:
+                #             print(tcout)
+                # self._variance[ix] = variance
+                # self.tc.update_scriptfile(calcs=old_calcs)
                 variance = {}
-                calcs = ['calcP {} {}'.format(*self.tc.prange),
-                         'calcT {} {}'.format(*self.tc.trange),
-                         'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
-                         'acceptvar no']
-                old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
                 for key in self._shapes[ix]:
-                    ans = '{}\nkill\n\n'.format(' '.join(key))
-                    tcout = self.tc.runtc(ans)
-                    try:
-                        for ln in tcout.splitlines():
-                            if 'variance of required equilibrium' in ln:
-                                break
-                        variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
-                    except Exception:
-                        variance[key] = 0
-                        print('Variance calculation failed for {} field.'.format(key))
-                        if self.show_errors:
-                            print(tcout)
+                    variance[key] = self.tc.calc_variance(key)
                 self._variance[ix] = variance
-                self.tc.update_scriptfile(calcs=old_calcs)
             # bulk
             if bulk is None:
                 if 'bulk' in data:
