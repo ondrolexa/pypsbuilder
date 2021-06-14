@@ -1310,7 +1310,16 @@ class PS:
                 print('Drawpd error!')
 
     def save_tab(self, comps, tabfile=None):
-        """Export gridded values to Perpex tab format
+        """Export gridded values to Perple_X tab format. Could be used in pywerami.
+
+        Args:
+            comps (list): List of (phase, expr) tuples.
+                          phase (str): Phase or end-member named
+                          expr (str): Expression to evaluate. It could use any
+                                      variable existing for given phase. Check
+                                      `all_data_keys` property for possible
+                                      variables.
+            tabfile (str): filename for tabfile. Default pseudosection name.tab
         """
         if not tabfile:
             tabfile = self.name + '.tab'
