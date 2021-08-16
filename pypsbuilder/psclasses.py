@@ -698,28 +698,29 @@ class SectionBase:
         uni.y = np.hstack((y1, yy, y2))
 
     def create_shapes(self, tolerance=None):
-        def splitme(seg):
+        def splitme(edges):
             '''Recursive boundary splitter'''
-            s_seg = []
-            for _, l in lns:
-                if seg.intersects(l):
-                    m = linemerge([seg, l])
-                    if m.type == 'MultiLineString':
-                        p = seg.intersection(l)
-                        p_ok = l.interpolate(l.project(p))  # fit intersection to line
-                        t_seg = LineString([Point(seg.coords[0]), p_ok])
-                        if t_seg.is_valid:
-                            s_seg.append(t_seg)
-                        t_seg = LineString([p_ok, Point(seg.coords[-1])])
-                        if t_seg.is_valid:
-                            s_seg.append(t_seg)
-                        break
-            if len(s_seg) == 2:
-                return splitme(s_seg[0]) + splitme(s_seg[1])
-            else:
-                return [seg]
+            for idx, edge in enumerate(edges):
+                for _, l in lns:
+                    if edge.intersects(l):
+                        m = linemerge([edge, l])
+                        if m.type == 'MultiLineString':
+                            p = edge.intersection(l)
+                            if p.type == 'MultiPoint':
+                                pts = [l.interpolate(l.project(pt)) for pt in p]
+                                pts = sorted(pts, key=lambda pt: edge.project(pt))
+                            else:
+                                pts = [l.interpolate(l.project(p))]
+                            edges.pop(idx)
+                            pts = [Point(edge.coords[0])] + pts + [Point(edge.coords[-1])]
+                            for start, stop in zip(pts[:-1], pts[1:]):
+                                p_seg = LineString([start, stop])
+                                if p_seg.is_valid:
+                                    edges.append(p_seg)
+                            return edges, True
+            return edges, False
         # define bounds and area
-        bnd, area = self.range_shapes
+        edges, area = self.range_shapes
         lns = []
         log = []
         # trim univariant lines
@@ -732,7 +733,9 @@ class SectionBase:
                     if ln_part.type == 'LineString' and not ln_part.is_empty:
                         lns.append((uni.id, ln_part))
         # split boundaries
-        edges = splitme(bnd[0]) + splitme(bnd[1]) + splitme(bnd[2]) + splitme(bnd[3])
+        do = True
+        while do:
+            edges, do = splitme(edges)
         # polygonize
         polys = list(polygonize(edges + [l for _, l in lns]))
         # create shapes
