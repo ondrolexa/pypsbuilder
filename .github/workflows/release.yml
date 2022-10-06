@@ -1,9 +1,8 @@
-name: Release-GH
+name: Upload Python Package
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [created]
 
 jobs:
   build-linux:
