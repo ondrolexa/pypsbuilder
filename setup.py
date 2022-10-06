@@ -13,7 +13,7 @@ with open(path.join(CURRENT_PATH, 'CHANGELOG.md')) as changelog_file:
 
 requirements = [
     'numpy',
-    'matplotlib',
+    'matplotlib>=3',
     'scipy',
     'networkx',
     'shapely',

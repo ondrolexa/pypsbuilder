@@ -22,6 +22,6 @@ __all__ = (
     "get_tcapi",
 )
 
-__version__ = "2.3.0"
+__version__ = "2.3.1"
 __author__ = "Ondrej Lexa"
 __email__ = "lexa.ondrej@gmail.com"
