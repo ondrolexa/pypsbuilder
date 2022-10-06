@@ -4054,8 +4054,8 @@ def ptbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = PTBuilder()
     desktop = QtWidgets.QDesktopWidget().availableGeometry()
-    width = (desktop.width() - window.width()) / 2
-    height = (desktop.height() - window.height()) / 2
+    width = (desktop.width() - window.width()) // 2
+    height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
@@ -4065,8 +4065,8 @@ def txbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = TXBuilder()
     desktop = QtWidgets.QDesktopWidget().availableGeometry()
-    width = (desktop.width() - window.width()) / 2
-    height = (desktop.height() - window.height()) / 2
+    width = (desktop.width() - window.width()) // 2
+    height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
@@ -4076,8 +4076,8 @@ def pxbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = PXBuilder()
     desktop = QtWidgets.QDesktopWidget().availableGeometry()
-    width = (desktop.width() - window.width()) / 2
-    height = (desktop.height() - window.height()) / 2
+    width = (desktop.width() - window.width()) // 2
+    height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
