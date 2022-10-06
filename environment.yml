@@ -9,6 +9,5 @@ dependencies:
 - scipy
 - networkx
 - shapely
-- descartes
 - tqdm
 - jupyterlab

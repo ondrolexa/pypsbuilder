@@ -27,7 +27,6 @@ from matplotlib.backends.backend_qt5agg import (
 # from matplotlib.widgets import Cursor
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
-from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, Polygon
 from scipy.interpolate import interp1d
 
@@ -45,7 +44,8 @@ from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
 from .psclasses import (InvPoint, UniLine, polymorphs,
                         PTsection, TXsection, PXsection,
-                        Dogmin, TCResult, TCResultSet)
+                        Dogmin, TCResult, TCResultSet,
+                        PolygonPatch)
 from .tcapi import get_tcapi
 from . import __version__
 

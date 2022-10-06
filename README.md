@@ -16,7 +16,7 @@ Easiest way to install **pypsbuilder** is to use conda package management system
 
 or manually:
 
-    conda create -n pyps python=3.8 pyqt=5 numpy matplotlib scipy networkx notebook shapely descartes tqdm
+    conda create -n pyps python=3.8 pyqt=5 numpy matplotlib scipy networkx notebook shapely tqdm
 
 Then activate the new environment:
 

@@ -45,7 +45,7 @@ napoleon_google_docstring = True
 napoleon_numpy_docstring = False
 
 autodoc_mock_imports = ['numpy', 'matplotlib', 'scipy', 'shapely',
-                        'descartes', 'networkx', 'tqdm', 'mpl_toolkits']
+                        'networkx', 'tqdm', 'mpl_toolkits']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

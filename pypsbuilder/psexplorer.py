@@ -44,7 +44,6 @@ from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point
 from shapely.ops import linemerge
-from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning, lstsq
 from scipy.interpolate import griddata  # interp2d
@@ -52,7 +51,7 @@ from tqdm import tqdm, trange
 
 from .tcapi import get_tcapi
 from .psclasses import PTsection, TXsection, PXsection  # InvPoint, UniLine
-from .psclasses import polymorphs
+from .psclasses import polymorphs, PolygonPatch
 
 
 class PS:
@@ -327,7 +326,7 @@ class PS:
                 points = MultiPoint(list(zip(grid.xg.flatten(), grid.yg.flatten())))
                 shapes = self._shapes[ix]
                 for key in shapes:
-                    grid.masks[key] = np.array(list(map(shapes[key].contains, points))).reshape(grid.xg.shape)
+                    grid.masks[key] = np.array(list(map(shapes[key].contains, points.geoms))).reshape(grid.xg.shape)
         else:
             print('Not yet gridded...')
 
@@ -1522,6 +1521,8 @@ class PTPS(PS):
             assert tpath.ndim == 1, 'Temperatures and pressures should be 1D array like data.'
             gpath = np.arange(tpath.shape[0], dtype=float)
             gpath /= gpath[-1]
+            if gpath.size < 3:
+                kind = 'linear'
             splt = interp1d(gpath, tpath, kind=kind)
             splp = interp1d(gpath, ppath, kind=kind)
             err = 0
