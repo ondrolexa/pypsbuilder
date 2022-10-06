@@ -13,17 +13,16 @@ with open(path.join(CURRENT_PATH, 'CHANGELOG.md')) as changelog_file:
 
 requirements = [
     'numpy',
-    'matplotlib',
+    'matplotlib>=3',
     'scipy',
     'networkx',
     'shapely',
-    'descartes',
     'tqdm'
 ]
 
 setup(
     name='pypsbuilder',
-    version='2.3.0',
+    version='2.3.1',
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + '\n\n' + changelog,
     long_description_content_type="text/markdown",

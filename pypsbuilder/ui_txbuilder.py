@@ -587,6 +587,8 @@ class Ui_TXBuilder(object):
         self.actionCleanup.setObjectName("actionCleanup")
         self.actionFixphase = QtWidgets.QAction(TXBuilder)
         self.actionFixphase.setObjectName("actionFixphase")
+        self.actionParse_working_directory = QtWidgets.QAction(TXBuilder)
+        self.actionParse_working_directory.setObjectName("actionParse_working_directory")
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_PT)
         self.menuFile.addAction(self.actionNew)
@@ -603,6 +605,8 @@ class Ui_TXBuilder(object):
         self.menuTools.addAction(self.actionFixphase)
         self.menuTools.addAction(self.actionShow_areas)
         self.menuTools.addAction(self.actionShow_topology)
+        self.menuTools.addSeparator()
+        self.menuTools.addAction(self.actionParse_working_directory)
         self.menuHelp.addAction(self.actionAbout)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuTools.menuAction())
@@ -720,4 +724,5 @@ class Ui_TXBuilder(object):
         self.actionImport_from_PT.setText(_translate("TXBuilder", "Import from PT section"))
         self.actionCleanup.setText(_translate("TXBuilder", "Cleanup storage"))
         self.actionFixphase.setText(_translate("TXBuilder", "Fix phasenames"))
+        self.actionParse_working_directory.setText(_translate("TXBuilder", "Parse working directory"))
 

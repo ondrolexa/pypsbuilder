@@ -1,6 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.3.1] - 2022-10-06
+### Fixed
+ - Fixed support for both TC34x and TC350beta
+ - added tool to parse TC calculations (executed out of builder)
+ - fixed ShapelyDeprecationWarning
+ - fixed collect_ptpath() along 2-point path
+
 ## [2.3.0] 2021-05-04
 ### Fixed
 - latest THERMOCALC 3.50 compatibility

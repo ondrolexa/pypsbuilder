@@ -1065,6 +1065,8 @@
     <addaction name="actionFixphase"/>
     <addaction name="actionShow_areas"/>
     <addaction name="actionShow_topology"/>
+    <addaction name="separator"/>
+    <addaction name="actionParse_working_directory"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1161,6 +1163,11 @@
   <action name="actionFixphase">
    <property name="text">
     <string>Fix phasenames</string>
+   </property>
+  </action>
+  <action name="actionParse_working_directory">
+   <property name="text">
+    <string>Parse working directory</string>
    </property>
   </action>
  </widget>

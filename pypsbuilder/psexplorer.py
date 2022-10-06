@@ -44,15 +44,14 @@ from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point
 from shapely.ops import linemerge
-from descartes import PolygonPatch
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning, lstsq
 from scipy.interpolate import griddata  # interp2d
 from tqdm import tqdm, trange
 
-from .psclasses import TCAPI
+from .tcapi import get_tcapi
 from .psclasses import PTsection, TXsection, PXsection  # InvPoint, UniLine
-from .psclasses import polymorphs
+from .psclasses import polymorphs, PolygonPatch
 
 
 class PS:
@@ -99,11 +98,11 @@ class PS:
             # check workdit compatibility
             if self.tc is None:
                 if origwd:
-                    tc = TCAPI(Path(data['workdir']))
-                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc.status)
+                    tc, ok = get_tcapi(Path(data['workdir']))
+                    assert ok, 'Error during initialization of THERMOCALC in {}\n{}'.format(data['workdir'], tc)
                 else:
-                    tc = TCAPI(projfile.parent)
-                    assert tc.OK, 'Error during initialization of THERMOCALC in {}\n{}'.format(projfile.parent, tc.status)
+                    tc, ok = get_tcapi(projfile.parent)
+                    assert ok, 'Error during initialization of THERMOCALC in {}\n{}'.format(projfile.parent, tc)
                 self.tc = tc
             else:
                 if origwd:
@@ -118,28 +117,32 @@ class PS:
             if 'variance' in data:
                 self._variance[ix] = data['variance']
             else:
-                # calculate variance
+                # # calculate variance
+                # variance = {}
+                # calcs = ['calcP {} {}'.format(*self.tc.prange),
+                #          'calcT {} {}'.format(*self.tc.trange),
+                #          'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
+                #          'acceptvar no']
+                # old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
+                # for key in self._shapes[ix]:
+                #     ans = '{}\nkill\n\n'.format(' '.join(key))
+                #     tcout = self.tc.runtc(ans)
+                #     try:
+                #         for ln in tcout.splitlines():
+                #             if 'variance of required equilibrium' in ln:
+                #                 break
+                #         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
+                #     except Exception:
+                #         variance[key] = 0
+                #         print('Variance calculation failed for {} field.'.format(key))
+                #         if self.show_errors:
+                #             print(tcout)
+                # self._variance[ix] = variance
+                # self.tc.update_scriptfile(calcs=old_calcs)
                 variance = {}
-                calcs = ['calcP {} {}'.format(*self.tc.prange),
-                         'calcT {} {}'.format(*self.tc.trange),
-                         'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
-                         'acceptvar no']
-                old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
                 for key in self._shapes[ix]:
-                    ans = '{}\nkill\n\n'.format(' '.join(key))
-                    tcout = self.tc.runtc(ans)
-                    try:
-                        for ln in tcout.splitlines():
-                            if 'variance of required equilibrium' in ln:
-                                break
-                        variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
-                    except Exception:
-                        variance[key] = 0
-                        print('Variance calculation failed for {} field.'.format(key))
-                        if self.show_errors:
-                            print(tcout)
+                    variance[key] = self.tc.calc_variance(key)
                 self._variance[ix] = variance
-                self.tc.update_scriptfile(calcs=old_calcs)
             # bulk
             if bulk is None:
                 if 'bulk' in data:
@@ -323,7 +326,7 @@ class PS:
                 points = MultiPoint(list(zip(grid.xg.flatten(), grid.yg.flatten())))
                 shapes = self._shapes[ix]
                 for key in shapes:
-                    grid.masks[key] = np.array(list(map(shapes[key].contains, points))).reshape(grid.xg.shape)
+                    grid.masks[key] = np.array(list(map(shapes[key].contains, points.geoms))).reshape(grid.xg.shape)
         else:
             print('Not yet gridded...')
 
@@ -1306,7 +1309,16 @@ class PS:
                 print('Drawpd error!')
 
     def save_tab(self, comps, tabfile=None):
-        """Export gridded values to Perpex tab format
+        """Export gridded values to Perple_X tab format. Could be used in pywerami.
+
+        Args:
+            comps (list): List of (phase, expr) tuples.
+                          phase (str): Phase or end-member named
+                          expr (str): Expression to evaluate. It could use any
+                                      variable existing for given phase. Check
+                                      `all_data_keys` property for possible
+                                      variables.
+            tabfile (str): filename for tabfile. Default pseudosection name.tab
         """
         if not tabfile:
             tabfile = self.name + '.tab'
@@ -1509,6 +1521,8 @@ class PTPS(PS):
             assert tpath.ndim == 1, 'Temperatures and pressures should be 1D array like data.'
             gpath = np.arange(tpath.shape[0], dtype=float)
             gpath /= gpath[-1]
+            if gpath.size < 3:
+                kind = 'linear'
             splt = interp1d(gpath, tpath, kind=kind)
             splp = interp1d(gpath, ppath, kind=kind)
             err = 0

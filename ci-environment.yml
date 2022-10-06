@@ -7,7 +7,6 @@ dependencies:
 - scipy
 - networkx
 - shapely
-- descartes
 - tqdm
 - flake8
 - pytest
