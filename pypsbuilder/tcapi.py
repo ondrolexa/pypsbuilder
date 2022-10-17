@@ -295,6 +295,8 @@ class TC35API(TCAPI):
                         self.name = kw[1]
                         if not self.scriptfile.exists():
                             raise InitError('tc-prefs: scriptfile tc-' + self.name + '.txt does not exists in your working directory.')
+                        if len(self.name) > 15:
+                            raise InitError('tc-prefs: scriptfile name is longer than 15 characters. It cause troubles for THERMOCALC. Please rename scriptfile to shorter name.')
                     if kw[0] == 'calcmode':
                         if kw[1] != '1':
                             raise InitError('tc-prefs: calcmode must be 1.')
