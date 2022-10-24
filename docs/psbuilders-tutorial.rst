@@ -40,7 +40,7 @@ these tags::
 Scriptfile modifications for TC3.5
 ----------------------------------
 
-For latest THERMOCALC the tags are slightly different. You should enclosed calculation part as""
+For latest THERMOCALC the tags are slightly different. You should enclosed calculation part as::
 
 		%{PSBCALC-BEGIN}
 		calcP 4 12
@@ -59,7 +59,7 @@ these tags::
 		%{PSBBULK-END}
 
 If you are not sure, which scripts should be set on and off, you can check
-example scriptfile in ``examples/avgpelite`` directory.
+example scriptfiles in ``examples/avgpelite`` or ``examples/avgpelite_34`` directory.
 
 New P-T pseudosection project
 -----------------------------
