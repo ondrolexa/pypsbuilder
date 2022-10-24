@@ -1,0 +1,2559 @@
+% ---------------------------------------------------------------------
+% ds6-savvy axfile 
+%
+% These are the models used in White et al. 2014. The effect of Mn on mineral 
+% stability in metapelites revisited: new a-x relations for manganese-bearing minerals.
+%
+% they are based on the earlier white et al pelites paper JMG 32, 261-286
+% ---------------------------------------------------------------------
+
+% =================================================
+% -------------------------------------------------
+% g: CFMASO (with gr + kho allowing boiling down)
+% garnet
+% 
+% coded by axe attack on 24 March 2011
+% 
+%         X                         Y             
+%         Mg    Fe    Mn    Ca      Al    Fe3     
+% py      3     0     0     0       2     0       
+% alm     0     3     0     0       2     0       
+% spss    0     0     3     0       2     0       
+% gr      0     0     0     3       2     0       
+% kho     3     0     0     0       0     2       
+%
+%         xFeX
+% x -> -----------
+%      xFeX + xMgX
+%
+% z -> xCaX
+%
+% m -> xMnX
+%
+% f -> xFe3Y
+% -------------------------------------------------
+ 
+g  5  1
+ 
+  x(g)             0.9
+  z(g)             0.1
+  m(g)            0.06
+  f(g)            0.01
+% -------------------------------------------------
+ 
+p(py)      3 1    1  4  -1  f  -1  m  -1  x  -1  z
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  z
+ 
+p(alm)     3 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  z
+ 
+p(spss)    1 1    0  1  1  m
+ 
+p(gr)      1 1    0  1  1  z
+ 
+p(kho)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+W(py,alm)                2.5         0         0
+W(py,spss)                 2         0         0
+W(py,gr)                  31         0         0
+W(py,kho)                5.4         0         0
+W(alm,spss)                2         0         0
+W(alm,gr)                  5         0         0
+W(alm,kho)                22.6         0         0 
+W(spss,gr)                 0         0         0
+W(spss,kho)               29.4         0         0  
+W(gr,kho)                -15.3         0         0  
+ 
+a(py)                 1         0         0
+a(alm)                1         0         0
+a(spss)               1         0         0
+a(gr)               2.7         0         0
+a(kho)                1         0         0
+% -------------------------------------------------
+6
+ 
+xMgX       3 1    1  3  -1  m  -1  x  -1  z
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  z
+ 
+xFeX       3 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  z
+ 
+xMnX       1 1    0  1  1  m
+ 
+xCaX       1 1    0  1  1  z
+ 
+xAlY       1 1    1  1  -1  f
+ 
+xFe3Y      1 1    0  1  1  f
+% -------------------------------------------------
+ 
+py      1    2  xMgX 3  xAlY 2  
+  check 0  0  0  0  
+ 
+alm     1    2  xFeX 3  xAlY 2  
+  check 1  0  0  0  
+ 
+spss    1    2  xMnX 3  xAlY 2  
+  check 0  0  1  0  
+ 
+gr      1    2  xCaX 3  xAlY 2  
+  check 0  1  0  0  
+ 
+kho     1    2  xMgX 3  xFe3Y 2  
+  check 0  0  0  1  
+  make 3  py 1  gr -1  andr 1
+  DQF  27   0   0   
+  
+% =================================================
+
+% =======================================================
+% ternary plag:   Cbar1 ASF
+
+pl 3  1
+     
+ ca(pl)        0.5562
+ k(pl)       0.003681
+    
+% --------------------------------------------------
+
+   p(abh)    1 1    1 2 -1 k -1 ca
+   p(an)    1 1    0 1  1 ca
+   p(san)   1 1    0 1  1 k
+   
+% --------------------------------------------------
+
+   asf
+     W(abh,an)   3.1   0     0
+     W(abh,san)  25.1 -0.0108  0.338
+     W(an,san)   40   0     0
+     
+    abh   0.643  0  0
+    an   1.0    0  0
+    san  1.0    0  0
+    
+% --------------------------------------------------
+
+   3
+   x(K)     1 1    0 1  1 k
+   x(Na)    1 1    1 2 -1 k -1 ca
+   x(Ca)    1 1    0 1  1 ca
+% --------------------------------------------------
+
+   abh      1 1     x(Na) 1
+   an       1 1     x(Ca) 1
+     make 1 an 1
+     DQF   7.03  -0.00466   0
+   san      1 1     x(K) 1
+
+% =======================================================
+
+
+% =================================================
+liq 8  1
+
+   q(L)          0.1814
+   fsp(L)        0.3490
+   na(L)         0.5840
+   an(L)        0.01104
+   ol(L)        0.01373
+   x(L)          0.7333
+   h2o(L)        0.4276
+
+% --------------------------------------------------
+  
+   
+   p(qL)    1 1      0  1  1  q
+   
+   p(abL)   1 2      0  1  1  fsp    0  1  1  na
+   
+   p(kspL)  1 2      0  1  1  fsp    1  1 -1  na
+   
+   p(anL)   1 1      0  1  1  an
+   
+   p(silL)  1 1      1  5 -1 q -1 fsp -1 an -1 ol -1 h2o
+   
+   p(foL)   1 2      0  1  1  ol   1  1 -1  x
+   
+   p(faL)   1 2      0  1  1  ol   0  1  1  x
+      
+   p(h2oL)  1 1      0  1  1  h2o  
+
+% --------------------------------------------------
+   sf
+
+   W(qL,abL)        12  0  -0.4   
+   W(qL,kspL)       -2  0  -0.5
+   W(qL,anL)         5  0     0    
+   W(qL,silL)       12  0     0    
+   W(qL,foL)        12  0  -0.4 
+   W(qL,faL)        14  0     0 
+   W(qL,h2oL)       17  0  -0.5 
+     
+   W(abL,kspL)      -6  0   3.0
+   W(abL,anL)        0  0     0      
+   W(abL,silL)      12  0     0      
+   W(abL,foL)       10  0     0      
+   W(abL,faL)        2  0     0
+   W(abL,h2oL)    -1.5  0  -0.3
+   
+   W(kspL,anL)       0  0  -1.0    
+   W(kspL,silL)     12  0     0    
+   W(kspL,foL)      12  0     0
+   W(kspL,faL)      12  0     0
+   W(kspL,h2oL)    9.5  0  -0.3
+     
+   W(anL,silL)       0  0     0       
+   W(anL,foL)        0  0     0 
+   W(anL,faL)        0  0     0 
+   W(anL,h2oL)     7.5  0   -0.5 
+
+   W(silL,foL)      12  0     0      
+   W(silL,faL)      12  0     0      
+   W(silL,h2oL)     11  0     0   
+    
+   W(foL,faL)       18  0     0
+   W(foL,h2oL)      11  0  -0.5
+
+   W(faL,h2oL)      12  0     0
+   
+% --------------------------------------------------
+   10 
+   
+   fac   1 1      1  1 -1  h2o
+   
+   pq    1 1      0  1  1  q
+   
+   xab   1 2      0  1  1  fsp    0  1  1  na
+   
+   xksp  1 2      0  1  1  fsp    1  1 -1  na
+   
+   pan   1 1      0  1  1  an
+   
+   psil   1 1     1  5 -1 q -1 fsp -1 an -1 ol -1 h2o
+   
+   pol    1 1      0  1  1  ol
+   
+   xFe    1 1      0  1  1  x
+   
+   xMg    1 1      1  1 -1  x
+
+   ph2o  1 1       0  1  1  h2o  
+
+% --------------------------------------------------
+% ideal mixing activities
+   
+ qL     1  2      fac 1 pq 1    
+      make  1  qL 4
+      
+ abL    1  2      fac 1 xab 1
+ 
+ kspL   1  2      fac 1 xksp 1
+
+ anL    1  2      fac 1 pan 1
+ 
+ silL   1  2      fac 1  psil 1
+    make   1  silL  8/5 
+    DQF  -23 0 0    
+
+ foL    1  3      fac 1  pol 1  xMg  5
+    make  1  foL 2
+    DQF  -10 0 0    
+ 
+ faL    1  3      fac 1  pol 1  xFe  5
+    make  1  faL 2
+    DQF  -9 0 -1.3   
+
+ h2oL   1  1      ph2o 2
+
+% =======================================================
+% ==================    epidote    ========================
+ep 3  1
+  f(ep)        0.1
+  Q(ep)        0.2   range 0 0.5
+
+p(cz)    1  1    1  2 -1  f  -1  Q
+p(ep)    1  1    0  1  2  Q
+p(fep)   1  1    0  2  1  f  -1  Q
+
+sf
+  W(cz,ep)         1  0  0
+  W(cz,fep)        3  0  0
+  W(ep,fep)        1  0  0
+
+  4  
+
+  xFeM1   1  1    0  2  1  f  -1  Q
+  xAlM1   1  1    1  2 -1  f   1  Q
+  xFeM3   1  1    0  2  1  f   1  Q
+  xAlM3   1  1    1  2 -1  f  -1  Q
+
+ cz      1  2      xAlM1  1  xAlM3   1
+ ep      1  2      xAlM1  1  xFeM3   1
+ fep     1  2      xFeM1  1  xFeM3   1
+
+% =====================================================================
+
+% =======================================================
+% ternary ksp:    Cbar1 ASF
+
+ksp   3  1
+
+   na(ksp) 0.1
+   ca(ksp) 0.004
+% --------------------------------------------------
+   p(san)   1 1    1 2 -1 na -1 ca
+   p(abh)   1 1    0 1  1 na
+   p(an)    1 1    0 1  1 ca
+% --------------------------------------------------
+   asf
+   
+     W(san,abh)  25.1 -0.0108  0.338
+     W(san,an)   40    0     0
+     W(abh,an)    3.1   0     0
+     
+      san  1.0    0  0
+      abh   0.643  0  0
+      an   1.0    0  0
+      
+% --------------------------------------------------
+   3
+   
+   x(K)     1 1    1 2 -1 na -1 ca
+   x(Na)    1 1    0 1  1 na
+   x(Ca)    1 1    0 1  1 ca
+   
+% --------------------------------------------------
+
+   san      1 1     x(K) 1
+   abh      1 1     x(Na) 1
+   an       1 1     x(Ca) 1
+     make 1 an 1
+     DQF   7.03  -0.00466   0
+      
+
+
+
+
+% ================================================= 
+% new white mica coding (for mu, pa) from smye et al (2010)
+% -------------------------------------------------
+% margarite: CNKFMASHO
+% 
+%       A             M2A           M2B       T1        
+%       K   Na  Ca    Mg  Fe  Al    Al  Fe3   Si  Al    
+% mu    1   0   0     0   0   1     1   0     1   1     
+% cel   1   0   0     1   0   0     1   0     2   0     
+% fcel  1   0   0     0   1   0     1   0     2   0     
+% pa    0   1   0     0   0   1     1   0     1   1     
+% ma    0   0   1     0   0   1     1   0     0   2     
+% fmu   1   0   0     0   0   1     0   1     1   1     
+%
+%          xFeM2A
+% x -> ---------------
+%      xFeM2A + xMgM2A
+%
+% y -> xAlM2A
+%
+% f -> xFe3M2B
+%
+% n -> xNaA
+%
+% c -> xCaA
+% -------------------------------------------------
+ 
+ma  6  1
+ 
+  x(ma)   0.6  %0.6
+  y(ma)   0.96
+  f(ma)   0.001
+  n(ma)   0.05
+  c(ma)   0.94
+% -------------------------------------------------
+ 
+p(mu)      1 1    0  4  -1  c  -1  f  -1  n   1  y
+p(cel)     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+p(fcel)    2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+p(pa)      1 1    0  1  1  n
+p(ma)      1 1    0  1  1  c
+p(fmu)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+	W(mu,cel)        0.00 0.0000  0.200
+	W(mu,fcel)       0.00 0.0000  0.200
+	W(mu,pa)        10.12 0.0034  0.353
+	W(mu,ma)        34  0  0                 
+	W(mu,fmu)        0  0  0
+	W(cel,fcel)      0  0  0
+	W(cel,pa)       45  0  0.25
+	W(cel,ma)       50  0  0    
+	W(cel,fmu)       0  0  0
+	W(fcel,pa)      45  0  0.25
+	W(fcel,ma)      50  0  0      
+	W(fcel,fmu)      0  0  0
+	W(pa,ma)        18  0  0    
+	W(pa,fmu)       30  0  0 
+	W(ma,fmu)       35  0  0
+	
+	mu            0.63 0.0 0.0
+	cel           0.63 0.0 0.0
+	fcel          0.63 0.0 0.0
+	pa            0.37 0.0 0.0
+	ma            0.63 0.0 0.0
+	fmu           0.63 0.0 0.0
+% -------------------------------------------------
+10
+xKA        1 1    1  2  -1  c  -1  n
+xNaA       1 1    0  1  1  n
+xCaA       1 1    0  1  1  c
+xMgM2A     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+xFeM2A     2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+xAlM2A     1 1    0  1  1  y
+xAlM2B     1 1    1  1  -1  f
+xFe3M2B    1 1    0  1  1  f
+xSiT1      1 1    1  2  -1/2  c  -1/2  y
+xAlT1      1 1    0  2  1/2  c  1/2  y
+% -------------------------------------------------
+ 
+mu      4    5  xKA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  0  0
+    make 1 mu 1
+  DQF   1.0  0  0  
+  
+cel     1    4  xKA 1  xMgM2A 1  xAlM2B 1  xSiT1 2  
+  check 0  0  0  0  0 
+      make 1 cel 1
+  DQF   5  0  0   
+  
+fcel    1    4  xKA 1  xFeM2A 1  xAlM2B 1  xSiT1 2  
+  check 1  0  0  0  0 
+      make 1 fcel 1
+  DQF   5  0  0  
+   
+pa      4    5  xNaA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  1  0 
+      make 1 pa 1
+  DQF   4  0  0   
+  
+ma      1    4  xCaA 1  xAlM2A 1  xAlM2B 1  xAlT1 2  
+  check 0  1  0  0  1  
+  
+  
+fmu     4    5  xKA 1  xAlM2A 1  xFe3M2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  1  0  0  
+  make  3   mu 1  gr -1/2  andr 1/2
+  DQF   25  0  0   
+
+
+% =================================================
+
+
+% =================================================
+% -------------------------------------------------
+% bi: KFMASHO
+% biotite 
+% 
+% coded by axe attack on 05 March 2011
+% 
+%         M3                                    M12                 T             V             
+%         Mg    Mn    Fe    Fe3   Ti    Al      Mg    Mn    Fe      Si    Al      OH    O       
+% phl     1     0     0     0     0     0       2     0     0       1     1       2     0       
+% ann     0     0     1     0     0     0       0     0     2       1     1       2     0       
+% obi     0     0     1     0     0     0       2     0     0       1     1       2     0       
+% east    0     0     0     0     0     1       2     0     0       0     2       2     0       
+% tbi     0     0     0     0     1     0       2     0     0       1     1       0     2       
+% fbi     0     0     0     1     0     0       2     0     0       0     2       2     0       
+% mnbi    0     1     0     0     0     0       0     2     0       1     1       2     0       
+%
+%               2 xFeM12 + xFeM3
+% x -> -----------------------------------
+%      2 xFeM12 + xFeM3 + 2 xMgM12 + xMgM3
+%
+% m -> xMnM12
+%
+% m -> xMnM3
+%
+% y -> xAlM3
+%
+% f -> xFe3M3
+%
+% t -> xTiM3
+%
+% Q -> 3 (x - xFeM12)
+% -------------------------------------------------
+
+bi  7  1
+ 
+  x(bi)            0.35 
+  m(bi)            0.03
+  y(bi)            0.25
+  f(bi)            0.04
+  t(bi)            0.17
+  Q(bi)            0.25
+% -------------------------------------------------
+ 
+p(phl)     5 1    1  6  -1  f  -1  m  -1  t  -1  x  -1  y  -2/3  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  3  m    0  1  1  x
+             2    0  1  1  t    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+p(ann)     1 1    0  2  -1/3  Q   1  x
+ 
+p(obi)     5 1    0  1   1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -3  m    0  1  1  x
+             2    0  1  -1  t    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(east)    1 1    0  1  1  y
+ 
+p(tbi)     1 1    0  1  1  t
+ 
+p(fbi)     1 1    0  1  1  f
+ 
+p(mnbi)      1 1    0  1  1  m
+
+% -------------------------------------------------
+
+sf
+W(phl,ann)                12         0         0
+W(phl,obi)                 4         0         0
+W(phl,east)               10         0         0
+W(phl,tbi)                30         0         0
+W(phl,fbi)                 8         0         0
+W(phl,mnbi)                9         0         0
+W(ann,obi)                 8         0         0
+W(ann,east)               15         0         0
+W(ann,tbi)                32         0         0
+W(ann,fbi)              13.6         0         0
+W(ann,mnbi)              6.3         0         0
+W(obi,east)                7         0         0
+W(obi,tbi)                24         0         0
+W(obi,fbi)               5.6         0         0
+W(obi,mnbi)              8.1         0         0
+W(east,tbi)               40         0         0
+W(east,fbi)                1         0         0
+W(east,mnbi)              13         0         0
+W(tbi,fbi)                40         0         0
+W(tbi,mnbi)               30         0         0
+W(fbi,mnbi)             11.6         0         0
+ 
+% -------------------------------------------------
+13
+ 
+xMgM3      5 1    1  6  -1  f  -1  m  -1  t  -1  x  -1  y  -2/3  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  3  m    0  1  1  x
+             2    0  1  1  t    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+xMnM3      1 1    0  1  1  m
+ 
+xFeM3      5 1    0  2   1  x  2/3  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -3  m    0  1  1  x
+             2    0  1  -1  t    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xFe3M3     1 1    0  1  1  f
+ 
+xTiM3      1 1    0  1  1  t
+ 
+xAlM3      1 1    0  1  1  y
+ 
+xMgM12     1 1    1  3  1/3  Q  -1  m  -1  x
+ 
+xMnM12     1 1    0  1  1  m
+ 
+xFeM12     1 1    0  2  -1/3  Q   1  x
+ 
+xSiT       1 1    1/2  2  -1/2  f  -1/2  y
+ 
+xAlT       1 1    1/2  2  1/2  f  1/2  y
+ 
+xOHV       1 1    1  1  -1  t
+ 
+xOV        1 1    0  1  1  t
+% -------------------------------------------------
+ 
+phl     4    5  xMgM3 1  xMgM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 0  0  0  0  0  0  
+ 
+ann     4    5  xFeM3 1  xFeM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 1  0  0  0  0  0 
+  make 1 ann 1
+  DQF -3  0  0  
+ 
+obi     4    5  xFeM3 1  xMgM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 1/3  0  0  0  0  1  
+  make  2      ann  1/3  phl  2/3
+  DQF  -3  0  0     
+ 
+east    1    4  xAlM3 1  xMgM12 2  xAlT 2  xOHV 2  
+  check 0  0  1  0  0  0  
+ 
+tbi     4    5  xTiM3 1  xMgM12 2  xSiT 1  xAlT 1  xOV 2  
+  check 0  0  0  0  1  0  
+  make 3 phl 1 br -1 ru 1
+  DQF   55  0  0     
+        
+fbi     1    4  xFe3M3 1  xMgM12 2  xAlT 2  xOHV 2  
+  check 0  0  0  1  0  0  
+  make 3 east 1  gr -1/2 andr 1/2         
+  DQF   -3  0  0       
+               
+mnbi      4    5  xMnM3 1  xMnM12 2  xSiT 1  xAlT 1  xOHV 2  
+  check 0  1  0  0  0  0  
+  make 1 mnbi 1
+  DQF   -7.89  0  0
+  
+% =================================================
+
+
+% =================================================
+% -------------------------------------------------
+% opx: CFMASO
+% 
+% coded by axe attack on 07 March 2011 (W from 15-4-11)
+% 
+%         M1                              M2                        T             
+%         Mg    Fe    Mn    Fe3   Al      Mg    Fe    Mn    Ca      Si    Al      
+% en      1     0     0     0     0       1     0     0     0       2     0       
+% fs      0     1     0     0     0       0     1     0     0       2     0       
+% fm      1     0     0     0     0       0     1     0     0       2     0       
+% mgts    0     0     0     0     1       1     0     0     0       1     1       
+% fopx    0     0     0     1     0       1     0     0     0       1     1       
+% mnopx   0     0     1     0     0       0     0     1     0       2     0       
+% odi     1     0     0     0     0       0     0     0     1       2     0       
+%
+%              xFeM1 + xFeM2
+% x -> -----------------------------
+%      xFeM1 + xFeM2 + xMgM1 + xMgM2
+%
+% m -> xMnM1
+%
+% y -> xAlM1
+%
+% f -> xFe3M1
+%
+% c -> xCaM2
+%
+%                  xFeM2
+% Q -> 2 (-x + -------------)
+%              xFeM2 + xMgM2
+% -------------------------------------------------
+ 
+opx  7  1
+ 
+  x(opx)           0.3
+  m(opx)           0.02
+  y(opx)           0.1
+  f(opx)           0.03
+  c(opx)           0.05
+  Q(opx)           0.4
+% -------------------------------------------------
+ 
+p(en)      5 1    1  6  -1/2  Q  -1  c  -1  f  -1  m  -1  x  -1  y
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  1  c    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fs)      6 1    0  2  -1/2  Q   1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+p(fm)      6 1    0  1   1  Q
+             2    0  1  -1  c    0  1  1  Q
+             2    0  1  -1  m    0  1  1  Q
+             2    0  1  -1  c    0  1  1  x
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+p(mgts)    1 1    0  1  1  y
+ 
+p(fopx)    1 1    0  1  1  f
+ 
+p(mnopx)   1 1    0  1  1  m
+ 
+p(odi)     1 1    0  1  1  c
+% -------------------------------------------------
+asf
+W(en,fs)                   7         0         0
+W(en,fm)                   4         0         0
+W(en,mgts)                13         0     -0.15
+W(en,fopx)                11         0     -0.15
+W(en,mnopx)                5         0         0
+W(en,odi)               32.2         0      0.12
+W(fs,fm)                   4         0         0
+W(fs,mgts)                13         0     -0.15  
+W(fs,fopx)              11.6         0     -0.15
+W(fs,mnopx)              4.2         0         0
+W(fs,odi)              25.54         0     0.084  
+W(fm,mgts)                17         0     -0.15 
+W(fm,fopx)                15         0     -0.15
+W(fm,mnopx)              5.1         0         0
+W(fm,odi)              22.54         0     0.084
+W(mgts,fopx)               1         0         0
+W(mgts,mnopx)             12         0     -0.15
+W(mgts,odi)             75.4         0     -0.94
+W(fopx,mnopx)           10.6         0     -0.15
+W(fopx,odi)             73.4         0     -0.94
+W(mnopx,odi)           24.54         0     0.084
+
+a(en)                 1         0         0
+a(fs)                 1         0         0
+a(fm)                 1         0         0
+a(mgts)               1         0         0
+a(fopx)               1         0         0
+a(mnopx)              1         0         0
+a(odi)              1.2         0         0
+
+% -------------------------------------------------
+11
+ 
+xMgM1      6 1    1  5  1/2  Q  -1  f  -1  m  -1  x  -1  y
+             2    0  1  -1/2  c    0  1  1  Q
+             2    0  1  -1/2  m    0  1  1  Q
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM1      6 1    0  2  -1/2  Q   1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1  x    0  1  1  y
+ 
+xMnM1      1 1    0  1  1  m
+ 
+xFe3M1     1 1    0  1  1  f
+ 
+xAlM1      1 1    0  1  1  y
+ 
+xMgM2      5 1    1  4  -1/2  Q  -1  c  -1  m  -1  x
+             2    0  1  1/2  c    0  1  1  Q
+             2    0  1  1/2  m    0  1  1  Q
+             2    0  1  1  c    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xFeM2      5 1    0  2  1/2  Q   1  x
+             2    0  1  -1/2  c    0  1  1  Q
+             2    0  1  -1/2  m    0  1  1  Q
+             2    0  1  -1  c    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMnM2      1 1    0  1  1  m
+ 
+xCaM2      1 1    0  1  1  c
+ 
+xSiT       1 1    1  2  -1/2  f  -1/2  y
+ 
+xAlT       1 1    0  2  1/2  f  1/2  y
+% -------------------------------------------------
+ 
+en      1    3  xMgM1 1  xMgM2 1  xSiT 1/2  
+  check 0  0  0  0  0  0  
+ 
+fs      1    3  xFeM1 1  xFeM2 1  xSiT 1/2  
+  check 1  0  0  0  0  0  
+ 
+fm      1    3  xMgM1 1  xFeM2 1  xSiT 1/2  
+  check 1/2  0  0  0  0  1  
+  make  2       en  1/2   fs  1/2
+  DQF    -6.6  0  0     
+ 
+mgts    1.41421 4  xAlM1 1  xMgM2 1  xSiT 1/4  xAlT 1/4  
+  check 0  0  1  0  0  0  
+ 
+fopx    1.41421 4  xFe3M1 1  xMgM2 1  xSiT 1/4  xAlT 1/4  
+  check 0  0  0  1  0  0  
+  make 3  mgts 1   gr -1/2  andr 1/2 
+  DQF   2  0  0      
+ 
+mnopx   1    3  xMnM1 1  xMnM2 1  xSiT 1/2  
+  check 0  1  0  0  0  0  
+  make 1 pxmn 2
+  DQF  6.68  0  0                             
+ 
+odi     1    3  xMgM1 1  xCaM2 1  xSiT 1/2  % ortho-diopside
+  check 0  0  0  0  1  0  
+  make 1 di 1
+  DQF -0.1  0.000211  0.005                
+% =================================================
+
+
+
+
+
+
+
+
+% =================================================
+% -------------------------------------------------
+% cd: MnFMAS
+% cordierite
+% 
+% coded by axe attack on 11 October 2011
+% 
+%         X                   H             
+%         Fe    Mg    Mn      H2O   v       
+% crd     0     2     0       0     1       
+% fcrd    2     0     0       0     1       
+% hcrd    0     2     0       1     0       
+% mncrd   0     0     2       0     1       
+%
+%         xFeX
+% x -> -----------
+%      xFeX + xMgX
+%
+% m -> xMnX
+%
+% h -> xH2OH
+% -------------------------------------------------
+ 
+cd  4  1
+ 
+  x(cd)            0.3
+  m(cd)            0.02
+  h(cd)            0.7
+% -------------------------------------------------
+ 
+p(crd)      2 1    1  3  -1  h  -1  m  -1  x
+              2    0  1  1  m    0  1  1  x
+ 
+p(fcrd)     2 1    0  1   1  x
+              2    0  1  -1  m    0  1  1  x
+ 
+p(hcrd)     1 1    0  1  1  h
+ 
+p(mncrd)    1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(crd,fcrd)                 8         0         0
+W(crd,hcrd)                 0         0         0
+W(crd,mncrd)                6         0         0
+W(fcrd,hcrd)                9         0         0
+W(fcrd,mncrd)               4         0         0
+W(hcrd,mncrd)               6         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+ 
+xH2OH      1 1    0  1  1  h
+ 
+xvH        1 1    1  1  -1  h
+% -------------------------------------------------
+ 
+crd     1    2  xMgX 2  xvH 1  
+  check 0  0  0  
+ 
+fcrd    1    2  xFeX 2  xvH 1  
+  check 1  0  0  
+ 
+hcrd    1    2  xMgX 2  xH2OH 1  
+  check 0  0  1  
+ 
+mncrd   1    2  xMnX 2  xvH 1  
+  check 0  1  0 
+  make 1 mncrd 1
+  DQF   -4.21  0  0
+   
+% =================================================
+
+% ================================================= 
+% new white mica coding (for mu, pa) from smye et al (2010)
+% -------------------------------------------------
+% muscovite: CNKFMASHO
+% 
+%       A             M2A           M2B       T1        
+%       K   Na  Ca    Mg  Fe  Al    Al  Fe3   Si  Al    
+% mu    1   0   0     0   0   1     1   0     1   1     
+% cel   1   0   0     1   0   0     1   0     2   0     
+% fcel  1   0   0     0   1   0     1   0     2   0     
+% pa    0   1   0     0   0   1     1   0     1   1     
+% ma    0   0   1     0   0   1     1   0     0   2     
+% fmu   1   0   0     0   0   1     0   1     1   1     
+%
+%          xFeM2A
+% x -> ---------------
+%      xFeM2A + xMgM2A
+%
+% y -> xAlM2A
+%
+% f -> xFe3M2B
+%
+% n -> xNaA
+%
+% c -> xCaA
+% -------------------------------------------------
+ 
+mu  6  1
+ 
+  x(mu)   0.25
+  y(mu)   0.60
+  f(mu)   0.17
+  n(mu)   0.02
+  c(mu)   0.004
+% -------------------------------------------------
+ 
+p(mu)      1 1    0  4  -1  c  -1  f  -1  n   1  y
+p(cel)     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+p(fcel)    2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+p(pa)      1 1    0  1  1  n
+p(ma)      1 1    0  1  1  c
+p(fmu)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+	W(mu,cel)        0.00 0.0000  0.200
+	W(mu,fcel)       0.00 0.0000  0.200
+	W(mu,pa)        10.12 0.0034  0.353
+	W(mu,ma)        35  0  0
+	W(mu,fmu)        0  0  0
+	W(cel,fcel)      0  0  0
+	W(cel,pa)       45  0  0.25
+	W(cel,ma)       50  0  0              
+	W(cel,fmu)       0  0  0
+	W(fcel,pa)      45  0  0.25
+	W(fcel,ma)      50  0  0               
+	W(fcel,fmu)      0  0  0
+	W(pa,ma)        15  0  0
+	W(pa,fmu)       30  0  0 
+	W(ma,fmu)       35  0  0
+	
+	mu            0.63 0.0 0.0
+	cel           0.63 0.0 0.0
+	fcel          0.63 0.0 0.0
+	pa            0.37 0.0 0.0
+	ma            0.63 0.0 0.0
+	fmu           0.63 0.0 0.0
+% -------------------------------------------------
+10
+xKA        1 1    1  2  -1  c  -1  n
+xNaA       1 1    0  1  1  n
+xCaA       1 1    0  1  1  c
+xMgM2A     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+xFeM2A     2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+xAlM2A     1 1    0  1  1  y
+xAlM2B     1 1    1  1  -1  f
+xFe3M2B    1 1    0  1  1  f
+xSiT1      1 1    1  2  -1/2  c  -1/2  y
+xAlT1      1 1    0  2  1/2  c  1/2  y
+% -------------------------------------------------
+ 
+mu      4    5  xKA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  0  0  
+  
+cel     1    4  xKA 1  xMgM2A 1  xAlM2B 1  xSiT1 2  
+  check 0  0  0  0  0  
+  
+fcel    1    4  xKA 1  xFeM2A 1  xAlM2B 1  xSiT1 2  
+  check 1  0  0  0  0 
+   
+pa      4    5  xNaA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  1  0  
+  
+ma      1    4  xCaA 1  xAlM2A 1  xAlM2B 1  xAlT1 2  
+  check 0  1  0  0  1  
+  make 1 ma 1
+  DQF   6.5 0  0      
+  
+fmu     4    5  xKA 1  xAlM2A 1  xFe3M2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  1  0  0  
+  make  3   mu 1  gr -1/2  andr 1/2
+  DQF   25  0  0    
+
+
+% =================================================
+
+
+
+
+
+% -------------------------------------------------
+% st: FMASH
+% 
+% coded by axe attack on 13 July 2011
+% 
+%         X                   Y                         
+%         Mg    Fe    Mn      Al    Fe3   Ti    v       
+% mst     4     0     0       2     0     0     0       
+% fst     0     4     0       2     0     0     0       
+% mnst    0     0     4       2     0     0     0       
+% msto    4     0     0       0     2     0     0       
+% mstt    4     0     0       0     0     3/2   1/2     
+%
+%         xFeX
+% x -> -----------
+%      xFeX + xMgX
+%
+% m -> xMnX
+%
+% f -> xFe3Y
+%
+% t -> xTiY
+% -------------------------------------------------
+ 
+st  5  1
+ 
+  x(st)            0.88
+  m(st)            0.02
+  f(st)            0.05
+  t(st)            0.04
+% -------------------------------------------------
+ 
+p(mst)     2 1    1  4  -1  f  -1  m  -1  x  -4/3  t
+             2    0  1  1  m    0  1  1  x
+ 
+p(fst)     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnst)    1 1    0  1  1  m
+ 
+p(msto)    1 1    0  1  1  f
+ 
+p(mstt)    1 1    0  1  4/3  t
+% -------------------------------------------------
+sf
+W(mst,fst)                16         0         0
+W(mst,mnst)               12         0         0
+W(mst,msto)                2         0         0
+W(mst,mstt)               20         0         0
+W(fst,mnst)                8         0         0
+W(fst,msto)               18         0         0
+W(fst,mstt)               36         0         0
+W(mnst,msto)              14         0         0
+W(mnst,mstt)              32         0         0
+W(msto,mstt)              30         0         0
+ 
+% -------------------------------------------------
+7
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+ 
+xAlY       1 1    1  2  -1  f  -4/3  t
+ 
+xFe3Y      1 1    0  1  1  f
+ 
+xTiY       1 1    0  1  1  t
+ 
+xvY        1 1    0  1  1/3  t
+% -------------------------------------------------
+ 
+mst     1    2  xMgX 4  xAlY 2  
+  check 0  0  0  0  
+  make  1  mst 1
+  DQF   -8  0  0    
+ 
+fst     1    2  xFeX 4  xAlY 2  
+  check 1  0  0  0  
+ 
+mnst    1    2  xMnX 4  xAlY 2  
+  check 0  1  0  0 
+  make 1 mnst 1
+  DQF  -0.19  0  0 
+ 
+msto    1    2  xMgX 4  xFe3Y 2  
+  check 0  0  1  0  
+  make 3  mst 1 gr -1 andr 1
+  DQF   9  0  0   
+ 
+mstt   3.0792  3  xMgX 4  xTiY 3/2  xvY 1/2  
+  check 0  0  0  3/4  
+  make 3  mst 1 cor -1 ru 3/2
+  DQF   13  0  0
+% =================================================
+
+% =================================================
+% -------------------------------------------------
+% chl: FMASHO
+% full un-equi
+% 
+% coded by axe attack on 08 March 2011
+% 
+%         M1                        M23                 M4                        T2            
+%         Mg    Mn    Fe    Al      Mg    Mn    Fe      Mg    Fe    Fe3   Al      Si    Al      
+% clin    1     0     0     0       4     0     0       0     0     0     1       1     1       
+% afchl   1     0     0     0       4     0     0       1     0     0     0       2     0       
+% ames    0     0     0     1       4     0     0       0     0     0     1       0     2       
+% daph    0     0     1     0       0     0     4       0     0     0     1       1     1       
+% ochl1   1     0     0     0       0     0     4       0     1     0     0       2     0       
+% ochl4   0     0     1     0       4     0     0       1     0     0     0       2     0       
+% f3clin  1     0     0     0       4     0     0       0     0     1     0       1     1       
+% mnchl   0     1     0     0       0     4     0       0     0     0     1       1     1       
+%
+%                   xFeM1 + 4 xFeM23 + xFeM4
+% x -> ---------------------------------------------------
+%      xFeM1 + 4 xFeM23 + xFeM4 + xMgM1 + 4 xMgM23 + xMgM4
+%
+%      xAlM1 + xAlM4
+% y -> -------------
+%            2
+%
+% f -> xFe3M4
+%
+% m -> xMnM23
+%
+%        -xAlM1 + xAlM4
+% QAl -> --------------
+%              2
+%
+%               xFeM1
+% Q1 -> x - -------------
+%           xFeM1 + xMgM1
+%
+%               xFeM4
+% Q4 -> x - -------------
+%           xFeM4 + xMgM4
+% -------------------------------------------------
+ 
+chl  8  1
+ 
+  x(chl)             0.3
+  y(chl)            0.55
+  f(chl)            0.150349
+  m(chl)            0.00421140
+  QAl(chl)          0.42  range -1.000 1.000
+  Q1(chl)          -0.18  range -1.000 1.000
+  Q4(chl)          -0.26  range -1.000 1.000
+% -------------------------------------------------
+ 
+p(clin)    11 1    0  4  -1/4  Q1  -1  m  2  QAl  -5/4  Q4
+             2    0  1  1/4  m    0  1  1  Q1
+             2    0  1  5/4  f    0  1  1  Q4
+             2    0  1  -1/4  Q1    0  1  1  QAl
+             2    0  1  5/4  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  1  m    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1/4  Q1    0  1  1  y
+             2    0  1  5/4  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+p(afchl)   10 1    1  6  -1  f  -1  QAl  -1  y  -2  x  5/4  Q1  9/4  Q4
+             2    0  1  -5/4  m    0  1  1  Q1
+             2    0  1  -9/4  f    0  1  1  Q4
+             2    0  1  5/4  Q1    0  1  1  QAl
+             2    0  1  -9/4  Q4    0  1  1  QAl
+             2    0  1  2  f    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -5/4  Q1    0  1  1  y
+             2    0  1  -9/4  Q4    0  1  1  y
+             2    0  1  3  x    0  1  1  y
+ 
+p(ames)    1 1    0  2  -1  QAl   1  y
+ 
+p(daph)    11 1    0  2  1/4  Q1  5/4  Q4
+             2    0  1  -1/4  m    0  1  1  Q1
+             2    0  1  -5/4  f    0  1  1  Q4
+             2    0  1  1/4  Q1    0  1  1  QAl
+             2    0  1  -5/4  Q4    0  1  1  QAl
+             2    0  1  1  f    0  1  1  x
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -1/4  Q1    0  1  1  y
+             2    0  1  -5/4  Q4    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+p(ochl1)   7 1    0  2  -1  Q4   1  x
+             2    0  1  1  f    0  1  1  Q4
+             2    0  1  1  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+p(ochl4)   9 1    0  3   1  x  -5/4  Q1  -5/4  Q4
+             2    0  1  5/4  m    0  1  1  Q1
+             2    0  1  5/4  f    0  1  1  Q4
+             2    0  1  -5/4  Q1    0  1  1  QAl
+             2    0  1  5/4  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  5/4  Q1    0  1  1  y
+             2    0  1  5/4  Q4    0  1  1  y
+             2    0  1  -2  x    0  1  1  y
+ 
+p(f3clin)   1 1    0  1  1  f
+ 
+p(mnchl)   1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(clin,afchl)             17         0         0
+W(clin,ames)              17         0         0
+W(clin,daph)              20         0         0
+W(clin,ochl1)             30         0         0
+W(clin,ochl4)             21         0         0
+W(clin,f3clin)             2         0         0
+W(clin,mnchl)              6         0         0
+W(afchl,ames)             16         0         0
+W(afchl,daph)             37         0         0
+W(afchl,ochl1)            20         0         0
+W(afchl,ochl4)             4         0         0
+W(afchl,f3clin)           15         0         0
+W(afchl,mnchl)            23         0         0
+W(ames,daph)              30         0         0
+W(ames,ochl1)             29         0         0
+W(ames,ochl4)             13         0         0
+W(ames,f3clin)            19         0         0
+W(ames,mnchl)             17         0         0
+W(daph,ochl1)             18         0         0
+W(daph,ochl4)             33         0         0
+W(daph,f3clin)            22         0         0
+W(daph,mnchl)              4         0         0
+W(ochl1,ochl4)            24         0         0
+W(ochl1,f3clin)         28.6         0         0
+W(ochl1,mnchl)            19         0         0
+W(ochl4,f3clin)           19         0         0
+W(ochl4,mnchl)            22         0         0
+W(f3clin,mnchl)            8         0         0 
+% -------------------------------------------------
+13
+ 
+xMgM1      7 1    1  5  -1  m   1  Q1   1  QAl  -1  x  -1  y
+             2    0  1  -1  m    0  1  1  Q1
+             2    0  1  1  Q1    0  1  1  QAl
+             2    0  1  1  m    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  -1  Q1    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+xMnM1      1 1    0  1  1  m
+ 
+xFeM1      7 1    0  2  -1  Q1   1  x
+             2    0  1  1  m    0  1  1  Q1
+             2    0  1  -1  Q1    0  1  1  QAl
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  1  Q1    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+xAlM1      1 1    0  2  -1  QAl   1  y
+ 
+xMgM23     8 1    1  4  -1/4  Q1  -1/4  Q4  -1  m  -1  x
+             2    0  1  1/4  m    0  1  1  Q1
+             2    0  1  1/4  f    0  1  1  Q4
+             2    0  1  -1/4  Q1    0  1  1  QAl
+             2    0  1  1/4  Q4    0  1  1  QAl
+             2    0  1  1  m    0  1  1  x
+             2    0  1  1/4  Q1    0  1  1  y
+             2    0  1  1/4  Q4    0  1  1  y
+ 
+xMnM23     1 1    0  1  1  m
+ 
+xFeM23     8 1    0  3  1/4  Q1  1/4  Q4   1  x
+             2    0  1  -1/4  m    0  1  1  Q1
+             2    0  1  -1/4  f    0  1  1  Q4
+             2    0  1  1/4  Q1    0  1  1  QAl
+             2    0  1  -1/4  Q4    0  1  1  QAl
+             2    0  1  -1  m    0  1  1  x
+             2    0  1  -1/4  Q1    0  1  1  y
+             2    0  1  -1/4  Q4    0  1  1  y
+ 
+xMgM4      7 1    1  5  -1  f   1  Q4  -1  QAl  -1  x  -1  y
+             2    0  1  -1  f    0  1  1  Q4
+             2    0  1  -1  Q4    0  1  1  QAl
+             2    0  1  1  f    0  1  1  x
+             2    0  1  1  QAl    0  1  1  x
+             2    0  1  -1  Q4    0  1  1  y
+             2    0  1  1  x    0  1  1  y
+ 
+xFeM4      7 1    0  2  -1  Q4   1  x
+             2    0  1  1  f    0  1  1  Q4
+             2    0  1  1  Q4    0  1  1  QAl
+             2    0  1  -1  f    0  1  1  x
+             2    0  1  -1  QAl    0  1  1  x
+             2    0  1  1  Q4    0  1  1  y
+             2    0  1  -1  x    0  1  1  y
+ 
+xFe3M4     1 1    0  1  1  f
+ 
+xAlM4      1 1    0  2   1  QAl   1  y
+ 
+xSiT2      1 1    1  2  -1/2  f  -1  y
+ 
+xAlT2      1 1    0  2  1/2  f   1  y
+% -------------------------------------------------
+ 
+clin    4    5  xMgM1 1  xMgM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 0  1/2  0  0  1/2  0  0  
+ 
+afchl   1    4  xMgM1 1  xMgM23 4  xMgM4 1  xSiT2 2  
+  check 0  0  0  0  0  0  0  
+ 
+ames    1    4  xAlM1 1  xMgM23 4  xAlM4 1  xAlT2 2  
+  check 0  1  0  0  0  0  0  
+ 
+daph    4    5  xFeM1 1  xFeM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 1  1/2  0  0  1/2  0  0  
+ 
+ochl1   1    4  xMgM1 1  xFeM23 4  xFeM4 1  xSiT2 2  
+  check 5/6  0  0  0  0  5/6  -1/6  
+  make  3    afchl    1 clin   -1 daph    1
+  DQF     3    0    0
+ 
+ochl4   1    4  xFeM1 1  xMgM23 4  xMgM4 1  xSiT2 2  
+  check 1/6  0  0  0  0  -5/6  1/6  
+  make  3    afchl    1 clin -1/5 daph  1/5
+  DQF     2.4    0    0
+ 
+f3clin  4    5  xMgM1 1  xMgM23 4  xFe3M4 1  xSiT2 1  xAlT2 1  
+  check 0  0  1  0  0  0  0  
+  make  3  clin  1  gr  -1/2  andr  1/2    
+  DQF   2  0  0     % -1(10-12-11); -6; if previous number OK with bi (-6) (6-12-11); WAS 0
+ 
+mnchl   4    5  xMnM1 1  xMnM23 4  xAlM4 1  xSiT2 1  xAlT2 1  
+  check 0  1/2  0  1  1/2  0  0  
+  make 1 mnchl 1
+  DQF -5.67  0  0     
+% =================================================
+
+% =================================================
+% -------------------------------------------------
+% ctd: FMASHO
+% tjbh model, but single formula unit; Mg-ctdo; rp DQF(ctdo) and W
+% 
+% coded by axe attack on 09 July 2011 
+% 
+%         M1A           M1B                 
+%         Al    Fe3     Fe    Mg    Mn      
+% mctd    1/2   0       0     1     0       
+% fctd    1/2   0       1     0     0       
+% mnctd   1/2   0       0     0     1       
+% ctdo    0     1/2     0     1     0       
+%
+%          xFeM1B
+% x -> ---------------
+%      xFeM1B + xMgM1B
+%
+% m -> xMnM1B
+%
+% f -> xFe3M1A
+% -------------------------------------------------
+ 
+ctd  4  1
+ 
+  x(ctd)         0.88
+  m(ctd)         0.01
+  f(ctd)         0.02
+% -------------------------------------------------
+ 
+p(mctd)    2 1    1  3  -1  f  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fctd)    2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnctd)   1 1    0  1  1  m
+ 
+p(ctdo)    1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(mctd,fctd)               4         0         0
+W(mctd,mnctd)              3         0         0
+W(mctd,ctdo)               1         0         0
+W(fctd,mnctd)              3         0         0
+W(fctd,ctdo)               5         0         0
+W(mnctd,ctdo)              4         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xAlM1A     1 1    1  1  -1  f
+ 
+xFe3M1A    1 1    0  1  1  f
+ 
+xFeM1B     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgM1B     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnM1B     1 1    0  1  1  m
+% -------------------------------------------------
+ 
+mctd    1    2  xAlM1A 1/2  xMgM1B 1  
+  check 0  0  0  
+ 
+fctd    1    2  xAlM1A 1/2  xFeM1B 1  
+  check 1  0  0  
+ 
+mnctd   1    2  xAlM1A 1/2  xMnM1B 1  
+  check 0  1  0 
+  make 1 mnctd 1
+  DQF 0.66  0  0
+ 
+ctdo    1    2  xFe3M1A 1/2  xMgM1B 1  
+  check 0  0  1  
+  make  3  mctd 1   andr  1/4   gr -1/4
+  DQF   13.5  0  0    
+% ================================================= 
+  
+
+
+% =================================================
+% simple spinel
+
+sp0 2    1
+      x(sp0) 0.89
+ 
+ % --------------------------------------------------
+  p(sp)    1 1      1  1 -1  x
+  p(herc)   1 1      0  1  1  x
+% --------------------------------------------------  
+
+ideal    
+   
+% --------------------------------------------------
+2  
+	 x(Mg)   1 1      1  1 -1  x
+   x(Fe)   1 1      0  1  1  x   
+% --------------------------------------------------   
+   sp      1  1    x(Mg)  1
+   herc    1  1    x(Fe)  1 
+% =================================================
+
+
+
+
+
+
+
+
+
+% herc-mt-sp coding in Fe2-Mg-Al-Fe3-Ti
+
+sp 4  1
+
+ x(sp)    0.9    % Fe2/(Mg + Fe2)
+ y(sp)    0.95   % Al/(Al + Fe3 + 2Ti)
+ z(sp)    0.01   % 2Ti/(Al + Fe3 + 2Ti)
+
+% --------------------------------------------------
+  
+
+  p(herc)  2 1    0  1   1  y
+             2   -1  1   1  x    1  1   1  z
+
+  p(sp)    1 2    1  1  -1  x    1  1   1  z
+
+  p(mt)    1 1    1  2  -1  y -1  z
+
+  p(usp)   1 1    0  1   1  z
+
+% --------------------------------------------------
+
+  sf
+
+  W(herc,sp)       0  0  0
+  W(herc,mt)    18.5  0  0
+  W(herc,usp)     27  0  0
+  W(sp,mt)        40  0  0
+  W(sp,usp)       30  0  0    % * free
+  W(mt,usp)        0  0  0
+
+% --------------------------------------------------
+
+  5     % site fractions
+
+  x(Al)       1 1    0  1  1  y
+
+  x(Fe3)      1 1    1  2 -1  y -1  z
+
+  x(Ti)       1 1    0  1  1  z
+
+  x(Mg)       1 1    1  1 -1  x
+
+  x(Fe2)      1 1    0  1  1  x
+
+
+% --------------------------------------------------
+
+   herc    1  2    x(Al)  1    x(Fe2)  1
+
+   sp      1  2    x(Al)  1    x(Mg)   1
+
+   mt      1  2    x(Fe3) 1    x(Fe2)  1
+
+   usp     1  2    x(Ti)  1    x(Fe2)  1
+
+% =====================================================================
+% herc-mt-sp coding in Fe2-Mg-Al-Fe3-Ti
+% NOT including ulvospinel, because of dodgy model...
+
+sp1 3  1
+
+ x(sp1)    0.9    % Fe2/(Mg + Fe2)
+ y(sp1)    0.95   % Al/(Al + Fe3)
+
+% --------------------------------------------------
+  
+
+  p(herc)  1 1   -1  2   1  y  1  x
+
+  p(sp)    1 1    1  1  -1  x 
+
+  p(mt)    1 1    1  1  -1  y
+
+% --------------------------------------------------
+
+  sf
+
+  W(herc,sp)     0  0  0
+  W(herc,mt)  18.5  0  0
+  W(sp,mt)      40  0  0
+
+% --------------------------------------------------
+
+  4     % site fractions
+
+  x(Al)       1 1    0  1  1  y
+
+  x(Fe3)      1 1    1  1 -1  y
+
+  x(Mg)       1 1    1  1 -1  x
+
+  x(Fe2)      1 1    0  1  1  x
+
+
+% --------------------------------------------------
+
+   herc    1  2    x(Al)  1    x(Fe2)  1
+
+   sp      1  2    x(Al)  1    x(Mg)   1
+
+   mt      1  2    x(Fe3) 1    x(Fe2)  1
+
+% =====================================================================
+
+% =====================================================================
+
+mt 4  1
+
+ x(mt)    0.98   % Fe2/(Mg + Fe2)
+ y(mt)    0.09   % Al/(Al + Fe3 + 2Ti)
+ z(mt)    0.14   % 2Ti/(Al + Fe3 + 2Ti)
+
+% --------------------------------------------------
+  
+
+  p(herc)  2 1    0  1   1  y
+           2   -1  1   1  x    1  1   1  z
+
+  p(sp)  1 2    1  1  -1  x    1  1   1  z
+
+  p(mt)  1 1    1  2  -1  y -1  z
+
+  p(usp) 1 1    0  1   1  z
+
+% --------------------------------------------------
+
+  sf
+
+  W(herc,sp)     0  0  0
+  W(herc,mt)  18.5  0  0
+  W(herc,usp)   27  0  0
+  W(sp,mt)      40  0  0
+  W(sp,usp)     30  0  0    % * free
+  W(mt,usp)      0  0  0
+
+% --------------------------------------------------
+
+  5     % site fractions
+
+  x(Al)       1 1    0  1  1  y
+
+  x(Fe3)      1 1    1  2 -1  y -1  z
+
+  x(Ti)       1 1    0  1  1  z
+
+  x(Mg)       1 1    1  1 -1  x
+
+  x(Fe2)      1 1    0  1  1  x
+
+
+% --------------------------------------------------
+
+   herc    1  2    x(Al)  1    x(Fe2)  1
+
+   sp      1  2    x(Al)  1    x(Mg)   1
+
+   mt      1  2    x(Fe3) 1    x(Fe2)  1
+
+   usp     1  2    x(Ti)  1    x(Fe2)  1
+
+     
+% =================================================
+% -------------------------------------------------
+% ilmenite
+% Mn and Mg just on A
+% 
+% coded by axe attack on 08 March 2011
+% 
+%         A                               B                   
+%         Fe    Ti    Mg    Mn    Fe3     Fe    Ti    Fe3     
+% oilm    1     0     0     0     0       0     1     0       
+% dilm    1/2   1/2   0     0     0       1/2   1/2   0       
+% hem     0     0     0     0     1       0     0     1       
+% geik    0     0     1     0     0       0     1     0       
+% pnt     0     0     0     1     0       0     1     0       
+%
+% i -> 1 - xFe3A
+%
+% g -> xMgA
+%
+% m -> xMnA
+%
+% Q -> xFeA - xFeB
+% -------------------------------------------------
+ 
+ilm  5  1
+ 
+  i(ilm)           0.9
+  g(ilm)           0.02
+  m(ilm)           0.02
+  Q(ilm)           0.85  range -1 1
+% -------------------------------------------------
+ 
+p(oilm)    1 1    0  1  1  Q
+ 
+p(dilm)    1 1    0  4  -1  g   1  i  -1  m  -1  Q
+ 
+p(hem)     1 1    1  1  -1  i
+ 
+p(geik)    1 1    0  1  1  g
+ 
+p(pnt)     1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(oilm,dilm)            15.6         0         0
+W(oilm,hem)             26.6         0         0
+W(oilm,geik)               4         0         0
+W(oilm,pnt)                2         0         0
+W(dilm,hem)               11         0         0
+W(dilm,geik)               4         0         0
+W(dilm,pnt)                2         0         0
+W(hem,geik)               36         0         0
+W(hem,pnt)                25         0         0
+W(geik,pnt)                4         0         0
+ 
+% -------------------------------------------------
+8
+ 
+xFeA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  1/2  Q
+ 
+xTiA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xMgA       1 1    0  1  1  g
+ 
+xMnA       1 1    0  1  1  m
+ 
+xFe3A      1 1    1  1  -1  i
+ 
+xFeB       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xTiB       1 1    0  4  1/2  g  1/2  i  1/2  m  1/2  Q
+ 
+xFe3B      1 1    1  1  -1  i
+% -------------------------------------------------
+ 
+oilm    1    2  xFeA 1  xTiB 1  
+  check 1  0  0  1  
+    make  1  ilm  1
+    DQF    -13.6075 0.009426 0  % DQF - dH + R Log[4]; dH = 15.6
+ 
+dilm    4    4  xFeA 1/2  xTiA 1/2  xFeB 1/2  xTiB 1/2  
+  check 1  0  0  0  
+     make  1  ilm  1
+     DQF     1.9928 -0.0021 0    % DQF = G(equil,Landau) - G(equil,SF)
+ 
+hem     1    2  xFe3A 1  xFe3B 1  
+  check 0  0  0  0  
+  make 1 hem 1     % this had somehow got omitted
+ 
+geik    1    2  xMgA 1  xTiB 1  
+  check 1  1  0  0  
+ 
+pnt     1    2  xMnA 1  xTiB 1  
+  check 1  0  1  0  
+% =================================================
+
+% =================================================
+% -------------------------------------------------
+% hematite
+% Mn and Mg just on A
+% 
+% coded by axe attack on 08 March 2011
+% 
+%         A                               B                   
+%         Fe    Ti    Mg    Mn    Fe3     Fe    Ti    Fe3     
+% oilm    1     0     0     0     0       0     1     0       
+% dilm    1/2   1/2   0     0     0       1/2   1/2   0       
+% hem     0     0     0     0     1       0     0     1       
+% geik    0     0     1     0     0       0     1     0       
+% pnt     0     0     0     1     0       0     1     0       
+%
+% i -> 1 - xFe3A
+%
+% g -> xMgA
+%
+% m -> xMnA
+%
+% Q -> xFeA - xFeB
+% -------------------------------------------------
+ 
+hem  5  1
+ 
+  i(hem)           0.1
+  g(hem)           0.02
+  m(hem)           0.02
+  Q(hem)           0.01    range -0.3  0.3
+% -------------------------------------------------
+ 
+p(oilm)    1 1    0  1  1  Q
+ 
+p(dilm)    1 1    0  4  -1  g   1  i  -1  m  -1  Q
+ 
+p(hem)     1 1    1  1  -1  i
+ 
+p(geik)    1 1    0  1  1  g
+ 
+p(pnt)     1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(oilm,dilm)            15.6         0         0
+W(oilm,hem)             26.6         0         0
+W(oilm,geik)               4         0         0
+W(oilm,pnt)                2         0         0
+W(dilm,hem)               11         0         0
+W(dilm,geik)               4         0         0
+W(dilm,pnt)                2         0         0
+W(hem,geik)               36         0         0
+W(hem,pnt)                25         0         0
+W(geik,pnt)                4         0         0
+ 
+% -------------------------------------------------
+8
+ 
+xFeA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  1/2  Q
+ 
+xTiA       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xMgA       1 1    0  1  1  g
+ 
+xMnA       1 1    0  1  1  m
+ 
+xFe3A      1 1    1  1  -1  i
+ 
+xFeB       1 1    0  4  -1/2  g  1/2  i  -1/2  m  -1/2  Q
+ 
+xTiB       1 1    0  4  1/2  g  1/2  i  1/2  m  1/2  Q
+ 
+xFe3B      1 1    1  1  -1  i
+% -------------------------------------------------
+ 
+oilm    1    2  xFeA 1  xTiB 1  
+  check 1  0  0  1  
+    make  1  ilm  1
+    DQF    -13.6075 0.009426 0  % DQF - dH + R Log[4]; dH = 15.6
+ 
+dilm    4    4  xFeA 1/2  xTiA 1/2  xFeB 1/2  xTiB 1/2  
+  check 1  0  0  0  
+     make  1  ilm  1
+     DQF     1.9928 -0.0021 0    % DQF = G(equil,Landau) - G(equil,SF)
+ 
+hem     1    2  xFe3A 1  xFe3B 1  
+  check 0  0  0  0  
+  make 1 hem 1     % this had somehow got omitted
+ 
+geik    1    2  xMgA 1  xTiB 1  
+  check 1  1  0  0  
+ 
+pnt     1    2  xMnA 1  xTiB 1  
+  check 1  0  1  0  
+% =================================================
+% =============================================================
+% This is an alternative magnetite that should be used at greenschist up to amphibolite grade
+% ie if you are only looking at sub solidus equilibria use this model
+% =============================================================
+% Magnetite: FTO
+% White, RW, Powell, R, Holland, TJB & Worley, BA (2000) The effect of TiO2 and
+% Fe2O3 on metapelitic assemblages at greenschist and amphibolite facies conditions:
+% mineral equilibria calculations in the system K2O-FeO-MgO-Al2O3-SiO2-H2O-TiO2-Fe2O3.
+% Journal of Metamorphic Geology, 18, 497-511.
+%
+% no Al, but proper od
+
+mt1 3 1
+
+ x(mt0) 0.9704   % prop "mt"
+ Q(mt0) 0.7472   % x(Fe3,tet)
+
+% --------------------------------------------------
+% psub = {pi -> 3Q - 2x, pd -> 3x - 3Q, pu -> 1 - x};
+
+ p(imt)  1 1    0  2 -2  x  3  Q
+
+ p(dmt)  1 1    0  2  3  x -3  Q
+
+ p(usp)  1 1    1  1 -1  x
+
+% --------------------------------------------------
+
+sf
+
+ W(imt,dmt)    2.4  0  0
+ W(imt,usp)     1  0  0
+ W(dmt,usp)    -5  0  0
+% --------------------------------------------------
+ 5
+
+% sfsub = {xFe3oct -> x - Q/2, xFe2oct -> 1/2 + Q/2 - x/2,   xTioct -> 1/2 - 1/2 x,
+%          xFe3tet -> Q,       xFe2tet -> 1 - Q};
+
+ x(Ti,oct)   1 1   1/2   1 -1/2  x
+ x(Fe3,oct)  1 1    0    2   1   x -1/2 Q
+ x(Fe2,oct)  1 1   1/2   2 -1/2  x  1/2 Q
+ x(Fe3,tet)  1 1    0    1   1   Q
+ x(Fe2,tet)  1 1    1    1  -1   Q
+% --------------------------------------------------
+
+% magnetic landau NOT included
+
+imt      4  3    x(Fe3,oct)  1  x(Fe2,oct)  1  x(Fe3,tet)  1
+    make  1  mt  1
+    DQF      -1.8595  0.003166 0   % from dmt, - dHid - RT Log[16/27]
+    check 1 1                      %      dHid = 3.19
+
+dmt   27/4  4    x(Fe3,oct) 4/3 x(Fe2,oct) 2/3 x(Fe3,tet)  2/3 x(Fe2,tet) 1/3
+    make  1  mt  1
+    DQF   1.3305  -0.0011845  0    % taking off config dqf
+    check 1 2/3
+
+usp      4  3    x(Ti,oct)  1  x(Fe2,oct)  1  x(Fe2,tet)  1
+    check 0 0
+
+% =====================================================================
+
+ksp0 1 san
+
+%mojeproc%heme 1 hem
+
+mt0 1 mt
+ilm0 1 ilm
+
+ab     %0  1 ab
+
+%mojeproc%Ni NiO 0.55 % to emulate QFM 700\A1C or so; 0.65 for 900\A1C
+
+ru sill and ky q H2O sph cz %mojeproc% abh cz ta
+
+*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+% =================================================
+% -------------------------------------------------
+% ctd: FMASHO
+% original X-Y coding: superceded by smye et al
+% 
+% coded by axe attack on 04 March 2011
+% 
+%         X                   Y             
+%         Fe    Mg    Mn      Al    Fe3     
+% mctd    0     1     0       2     0       
+% fctd    1     0     0       2     0       
+% mnctd   0     0     1       2     0       
+% ctdo    0     1     0       0     2       
+%
+%         xFeX
+% x -> -----------
+%      xFeX + xMgX
+%
+% m -> xMnX
+%
+% f -> xFe3Y
+% -------------------------------------------------
+ 
+octd  4  1
+ 
+  x(octd)            0.1
+  m(octd)            0.02
+  f(octd)            0.04
+% -------------------------------------------------
+ 
+p(mctd)    2 1    1  3  -1  f  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fctd)    2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnctd)   1 1    0  1  1  m
+ 
+p(ctdo)    1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(mctd,fctd)               4         0         0   % using WFeMg=4
+W(mctd,mnctd)              3         0         0
+W(mctd,ctdo)               1         0         0
+W(fctd,mnctd)              2         0         0
+W(fctd,ctdo)               5         0         0
+W(mnctd,ctdo)              4         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+ 
+xAlY       1 1    1  1  -1  f
+ 
+xFe3Y      1 1    0  1  1  f
+% -------------------------------------------------
+ 
+mctd    1    2  xMgX 1  xAlY 2  
+  check 0  0  0  
+ 
+fctd    1    2  xFeX 1  xAlY 2  
+  check 1  0  0  
+ 
+mnctd   1    2  xMnX 1  xAlY 2  
+  check 0  1  0  
+ 
+ctdo    1    2  xMgX 1  xFe3Y 2  
+  check 0  0  1  
+  make  3  mctd 1 gr -1  andr 1       
+  DQF       53  0  0             % is 25 in smye et al, BUT in a double formula setup
+                                 % with a split M1 site, and with it being the Fe2+ end-member
+% =================================================
+
+
+% =================================================
+% FMASHO chloritoid. TJBH 2009
+% -------------------------------------------------
+% chloritoid: MnFMASHO (double formula unit)
+% 
+%         M1A         M1B       
+%         Al  Fe3     Mg  Fe  Mn   
+% mctd    1   0       2   0   0   
+% fctd    1   0       0   2   0     
+% ctdo    0   1       0   2   0     
+% mnctd   1   0       0   0   2     
+%
+% x  -> Fe/(Fe+Mg)
+% f  -> xFe3M1A
+% m -> xMnM1B
+
+% -------------------------------------------------
+ctdt  4
+      x(ctdt) 0.5572	
+      f(ctdt) 0.1502
+      m(ctdt) 0.001728
+     
+% -------------------------------------------------
+
+p(mctd)    1 2    1  1  -1  m    1  1  -1   x
+p(fctd)    2 2    1  1  -1  m    0  1   1   x
+             1    0  1  -1   f
+p(fctdo)   1 1    0  1   1   f
+p(mnctd)   1 1    0  1   1  m
+% -------------------------------------------------
+sf
+   w(mctd,fctd)   1 0 0
+   w(mctd,fctdo)  0 0 0
+   w(mctd,mnctd)  1 0 0
+   w(fctd,fctdo)  0 0 0
+   w(fctd,mnctd)  1 0 0
+   w(fctdo,mnctd) 0 0 0
+   
+% -------------------------------------------------
+5
+xAlM1A     1 1    1  1  -1  f
+xFe3M1A    1 1    0  1   1  f
+xMgM1B     1 2    1  1  -1  m  1  1  -1   x
+xFeM1B     1 2    1  1  -1  m  0  1   1   x
+xMnM1B     1 1    0  1   1  m
+% -------------------------------------------------
+
+mctd    1    2   xAlM1A 1  xMgM1B 2  
+  make  1  mctd 2
+  check 0  0  0
+  
+fctd    1    2   xAlM1A 1  xFeM1B 2  
+  make  1  fctd 2
+  check 1  0  0  
+  
+fctdo    1    2  xFe3M1A 1  xFeM1B 2  
+  make  3  fctd 2   hem  1/2   cor -1/2
+  DQF   25  0  0
+  check 1  1  0  
+
+mnctd    1   2   xAlM1A 1  xMnM1B 2
+  make  1  mnctd 2
+  check 0  0  1
+  
+% =================================================
+% -------------------------------------------------
+% ctd tim/normal: FMASHO
+% 
+% coded by axe attack on 09 July 2011
+% 
+%         M1A           M1B                 
+%         Al    Fe3     Fe    Mg    Mn      
+% ctd     1/2   0       0     1     0       
+% fctd    1/2   0       1     0     0       
+% mnctd   1/2   0       0     0     1       
+% fctdo   0     1/2     1     0     0       
+%
+%          xFeM1B
+% x -> ---------------
+%      xFeM1B + xMgM1B
+%
+% m -> xMnM1B
+%
+% f -> xFe3M1A
+% -------------------------------------------------
+ 
+ctdth  4
+ 
+  x(ctdth)         0.85
+  m(ctdth)         0.05
+  f(ctdth)         0.02
+% -------------------------------------------------
+ 
+p(mctd)     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fctd)    2 1    0  2  -1  f   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnctd)   1 1    0  1  1  m
+ 
+p(fctdo)   1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(mctd,fctd)             0.5         0         0 
+W(mctd,mnctd)              1         0         0
+W(mctd,fctdo)              0         0         0
+W(fctd,mnctd)              1         0         0
+W(fctd,fctdo)              0         0         0
+W(mnctd,fctdo)             0         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xAlM1A     1 1    1  1  -1  f
+ 
+xFe3M1A    1 1    0  1  1  f
+ 
+xFeM1B     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgM1B     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnM1B     1 1    0  1  1  m
+% -------------------------------------------------
+ 
+mctd     1    2  xAlM1A 1/2  xMgM1B 1  
+  check 0  0  0  
+ 
+fctd    1    2  xAlM1A 1/2  xFeM1B 1  
+  check 1  0  0  
+ 
+mnctd   1    2  xAlM1A 1/2  xMnM1B 1  
+  check 0  1  0  
+ 
+fctdo   1    2  xFe3M1A 1/2  xFeM1B 1  
+  check 1  0  1  
+  make  3  fctd 1   hem  1/4   cor -1/4
+  DQF   12.5  0  0   
+
+% =================================================
+
+% =================================================
+% -------------------------------------------------
+% ctd: FMASHO
+% 
+% 
+% coded by axe attack on 09 July 2011
+% 
+%         M1A           M1B                 
+%         Al    Fe3     Fe    Mg    Mn      
+% mctd    1/2   0       0     1     0       
+% fctd    1/2   0       1     0     0       
+% mnctd   1/2   0       0     0     1       
+% ctdo    0     1/2     0     1     0       
+%
+%          xFeM1B
+% x -> ---------------
+%      xFeM1B + xMgM1B
+%
+% m -> xMnM1B
+%
+% f -> xFe3M1A
+% -------------------------------------------------
+ 
+ctdth2  4
+ 
+  x(ctdth2)         0.88
+  m(ctdth2)         0.01
+  f(ctdth2)         0.02
+% -------------------------------------------------
+ 
+p(mctd)    2 1    1  3  -1  f  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fctd)    2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnctd)   1 1    0  1  1  m
+ 
+p(ctdo)    1 1    0  1  1  f
+% -------------------------------------------------
+sf
+W(mctd,fctd)             0.5         0         0
+W(mctd,mnctd)            0.5         0         0
+W(mctd,ctdo)               0         0         0
+W(fctd,mnctd)            0.5         0         0
+W(fctd,ctdo)               1         0         0
+W(mnctd,ctdo)            0.5         0         0
+ 
+% -------------------------------------------------
+5
+ 
+xAlM1A     1 1    1  1  -1  f
+ 
+xFe3M1A    1 1    0  1  1  f
+ 
+xFeM1B     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMgM1B     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xMnM1B     1 1    0  1  1  m
+% -------------------------------------------------
+ 
+mctd    1    2  xAlM1A 1/2  xMgM1B 1  
+  check 0  0  0  
+ 
+fctd    1    2  xAlM1A 1/2  xFeM1B 1  
+  check 1  0  0  
+ 
+mnctd   1    2  xAlM1A 1/2  xMnM1B 1  
+  check 0  1  0  
+ 
+ctdo    1    2  xFe3M1A 1/2  xMgM1B 1  
+  check 0  0  1  
+  make  3  mctd 1   hem  1/4   cor -1/4
+  DQF   12  0  0   % 
+
+% =================================================
+
+
+% =====================================================================
+% from White, R.W., Powell, R., Holland, T.J.B. & Worley, B.A., 2000.  % The effect of TiO2 and Fe2O3 on metapelitic assemblages at greenschist and
+% amphibolite facies conditions: mineral equilibria calculations in the
+% system K2O-FeO-MgO-Al2O3-SiO2-H2O-TiO2-Fe2O3. Journal of Metamorphic Geology, 18, 497-511.
+     
+oilm 3   1
+
+   x(oilm)         0.9520
+   Q(oilm)         0.8996  range -0.990 0.990    % x(Fe2,A) - x(Fe2,B)   
+
+% --------------------------------------------------
+
+
+% psub = {ph -> 1 - x, po -> Q, pd -> x - Q};
+
+ p(oilm)  1 1    0  1  1  Q
+
+ p(dilm)  1 1    0  2  1  x -1  Q
+
+ p(hem)  1 1    1  1 -1  x
+
+% --------------------------------------------------
+
+sf
+
+ W(oilm,dilm)   15.6  0  0
+ W(oilm,hem)    26.6  0  0
+ W(dilm,hem)      11  0  0   
+% --------------------------------------------------
+ 6    
+
+% sfsub = {xFe2A -> (x + Q)/2, xTiA -> (x - Q)/2, xFe3A -> 1 - x,
+%          xFe2B -> (x - Q)/2, xTiB -> (x + Q)/2, xFe3B -> 1 - x};
+
+ x(Fe2,A)  1 1    0  2  1/2  x  1/2  Q
+ x(Ti,A)   1 1    0  2  1/2  x -1/2  Q
+ x(Fe3,A)  1 1    1  1 -1  x
+ x(Fe2,B)  1 1    0  2  1/2  x -1/2  Q
+ x(Ti,B)   1 1    0  2  1/2  x  1/2  Q
+ x(Fe3,B)  1 1    1  1 -1  x  
+
+% --------------------------------------------------
+
+oilm      1  2    x(Fe2,A)  1  x(Ti,B)  1            
+    make  1  ilm  1
+    DQF    -13.6075 0.009426 0  % DQF(dilm) - dH + R T Log[4]; dH = 15.6
+    check 1 1
+  exclude
+  
+dilm      4  4    x(Fe2,A)  1/2   x(Ti,A)  1/2   x(Fe2,B)  1/2   x(Ti,B)  1/2         
+     make  1  ilm  1
+     DQF     1.9928 -0.0021 0    % DQF = G(equil,Landau) - G(equil,SF)
+     check 1 0
+  
+hem       1  2    x(Fe3,A)  1  x(Fe3,B)  1            
+     check 0 0
+     make 1 hem 1
+
+% =====================================================================
+% from White, R.W., Powell, R., Holland, T.J.B. & Worley, B.A., 2000.  % The effect of TiO2 and Fe2O3 on metapelitic assemblages at greenschist and
+% amphibolite facies conditions: mineral equilibria calculations in the
+% system K2O-FeO-MgO-Al2O3-SiO2-H2O-TiO2-Fe2O3. Journal of Metamorphic Geology, 18, 497-511.
+
+hem 3  1
+ 
+   x(hem) 0.08                     % prop "ilm"
+   Q(hem) 0.002 range -0.05 0.05  % x(Fe2,A) - x(Fe2,B)
+
+% --------------------------------------------------
+
+
+% psub = {ph -> 1 - x, po -> Q, pd -> x - Q};
+
+ p(oilm)  1 1    0  1  1  Q
+
+ p(dilm)  1 1    0  2  1  x -1  Q
+
+ p(hem)  1 1    1  1 -1  x
+
+% --------------------------------------------------
+
+sf
+
+ W(oilm,dilm)   15.6  0  0
+ W(oilm,hem)   26.6  0  0
+ W(dilm,hem)     11  0  0   
+% --------------------------------------------------
+ 6    
+
+% sfsub = {xFe2A -> (x + Q)/2, xTiA -> (x - Q)/2, xFe3A -> 1 - x,
+%          xFe2B -> (x - Q)/2, xTiB -> (x + Q)/2, xFe3B -> 1 - x};
+
+ x(Fe2,A)  1 1    0  2  1/2  x  1/2  Q
+ x(Ti,A)   1 1    0  2  1/2  x -1/2  Q
+ x(Fe3,A)  1 1    1  1 -1  x
+ x(Fe2,B)  1 1    0  2  1/2  x -1/2  Q
+ x(Ti,B)   1 1    0  2  1/2  x  1/2  Q
+ x(Fe3,B)  1 1    1  1 -1  x  
+
+% --------------------------------------------------
+
+oilm      1  2    x(Fe2,A)  1  x(Ti,B)  1            
+    make  1  ilm  1
+    DQF    -13.6075 0.009426 0  % DQF - dH + R Log[4]; dH = 15.6
+    check 1 1
+  exclude
+  
+dilm      4  4    x(Fe2,A)  1/2   x(Ti,A)  1/2   x(Fe2,B)  1/2   x(Ti,B)  1/2         
+     make  1  ilm  1
+     DQF     1.9928 -0.0021 0    % DQF = G(equil,Landau) - G(equil,SF)
+     check 1 0
+  
+hem       1  2    x(Fe3,A)  1  x(Fe3,B)  1            
+     check 0 0
+     make 1 hem 1
+     
+% =================================================
+% -------------------------------------------------
+% st: FMASH
+% 
+% coded by axe attack on 04 March 2011
+% 
+%         X                   
+%         Mg    Fe    Mn      
+% mst     4     0     0       
+% fst     0     4     0       
+% mnst    0     0     4       
+%
+%         xFeX
+% x -> -----------
+%      xFeX + xMgX
+%
+% m -> xMnX
+% -------------------------------------------------
+ 
+st  3  1
+ 
+  x(st)            0.85
+  m(st)            0.02
+% -------------------------------------------------
+ 
+p(mst)     2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+p(fst)     2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+p(mnst)    1 1    0  1  1  m
+% -------------------------------------------------
+sf
+W(mst,fst)                16         0         0      % TRYING WFeMg=4 - why not?
+W(mst,mnst)               12         0         0
+W(fst,mnst)                8         0         0
+ 
+% -------------------------------------------------
+3
+ 
+xMgX       2 1    1  2  -1  m  -1  x
+             2    0  1  1  m    0  1  1  x
+ 
+xFeX       2 1    0  1   1  x
+             2    0  1  -1  m    0  1  1  x
+ 
+xMnX       1 1    0  1  1  m
+% -------------------------------------------------
+ 
+mst     1    1  xMgX 4  
+  check 0  0  
+  make  1  mst 1
+  DQF   -6  0  0    % using Fe-Mg exchange
+ 
+fst     1    1  xFeX 4  
+  check 1  0  
+ 
+mnst    1    1  xMnX 4  
+  check 0  1  
+% =================================================
+
+
+% =================================================
+
+ocd 3  1
+
+  x(cd)         0.3151
+  h(cd)         0.7294
+      
+% --------------------------------------------------
+
+  p(crd)    1 1      1  2 -1  x -1  h
+
+  p(fcrd)   1 1      0  1  1  x
+
+  p(hcrd)   1 1      0  1  1  h
+  
+% --------------------------------------------------
+
+sf
+
+w(crd,fcrd)    8   0   0
+w(crd,hcrd)    0   0   0
+w(frcd,hcrd)   9   0   0  % was 11 - changed to 9 (29-9-11)
+
+% --------------------------------------------------
+
+4  x(Mg)    1 1      1  1 -1  x
+
+   x(Fe)    1 1      0  1  1  x
+  
+   h        1 1      0  1  1  h
+  
+   noth     1 1      1  1 -1  h
+
+% --------------------------------------------------
+
+      crd     1    2      x(Mg)  2    noth  1
+      
+      fcrd    1    2      x(Fe)  2    noth  1
+              
+      hcrd    1    2      x(Mg)  2       h  1 
+% ================================================= 
+
+% ================================================= 
+% new white mica coding (for mu, pa) from smye et al (2010)
+% -------------------------------------------------
+%paragonite: CNKFMASHO
+% 
+%       A             M2A           M2B       T1        
+%       K   Na  Ca    Mg  Fe  Al    Al  Fe3   Si  Al    
+% mu    1   0   0     0   0   1     1   0     1   1     
+% cel   1   0   0     1   0   0     1   0     2   0     
+% fcel  1   0   0     0   1   0     1   0     2   0     
+% pa    0   1   0     0   0   1     1   0     1   1     
+% ma    0   0   1     0   0   1     1   0     0   2     
+% fmu   1   0   0     0   0   1     0   1     1   1     
+%
+%          xFeM2A
+% x -> ---------------
+%      xFeM2A + xMgM2A
+%
+% y -> xAlM2A
+%
+% f -> xFe3M2B
+%
+% n -> xNaA
+%
+% c -> xCaA
+% -------------------------------------------------
+ 
+pa  6  1
+ 
+  x(pa)   0.25
+  y(pa)   0.60
+  f(pa)   0.17
+  n(pa)   0.95
+  c(pa)   0.02
+% -------------------------------------------------
+ 
+p(mu)      1 1    0  4  -1  c  -1  f  -1  n   1  y
+p(cel)     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+p(fcel)    2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+p(pa)      1 1    0  1  1  n
+p(ma)      1 1    0  1  1  c
+p(fmu)     1 1    0  1  1  f
+% -------------------------------------------------
+asf
+	W(mu,cel)        0.00 0.0000  0.200
+	W(mu,fcel)       0.00 0.0000  0.200
+	W(mu,pa)        10.12 0.0034  0.353
+	W(mu,ma)        35  0  0
+	W(mu,fmu)        0  0  0
+	W(cel,fcel)      0  0  0
+	W(cel,pa)       45  0  0.25
+	W(cel,ma)       49  0  0             % 40
+	W(cel,fmu)       0  0  0
+	W(fcel,pa)      45  0  0.25
+	W(fcel,ma)      49  0  0             % 40
+	W(fcel,fmu)      0  0  0
+	W(pa,ma)        15  0  0
+	W(pa,fmu)       30  0  0 
+	W(ma,fmu)       35  0  0
+	
+	mu            0.63 0.0 0.0
+	cel           0.63 0.0 0.0
+	fcel          0.63 0.0 0.0
+	pa            0.37 0.0 0.0
+	ma            0.63 0.0 0.0
+	fmu           0.63 0.0 0.0
+% -------------------------------------------------
+10
+xKA        1 1    1  2  -1  c  -1  n
+xNaA       1 1    0  1  1  n
+xCaA       1 1    0  1  1  c
+xMgM2A     2 1    1  2  -1  x  -1  y
+             2    0  1  1  x    0  1  1  y
+xFeM2A     2 1    0  1   1  x
+             2    0  1  -1  x    0  1  1  y
+xAlM2A     1 1    0  1  1  y
+xAlM2B     1 1    1  1  -1  f
+xFe3M2B    1 1    0  1  1  f
+xSiT1      1 1    1  2  -1/2  c  -1/2  y
+xAlT1      1 1    0  2  1/2  c  1/2  y
+% -------------------------------------------------
+ 
+mu      4    5  xKA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  0  0  
+  
+cel     1    4  xKA 1  xMgM2A 1  xAlM2B 1  xSiT1 2  
+  check 0  0  0  0  0  
+  
+fcel    1    4  xKA 1  xFeM2A 1  xAlM2B 1  xSiT1 2  
+  check 1  0  0  0  0 
+   
+pa      4    5  xNaA 1  xAlM2A 1  xAlM2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  0  1  0  
+  
+ma      1    4  xCaA 1  xAlM2A 1  xAlM2B 1  xAlT1 2  
+  check 0  1  0  0  1  
+  make 1 ma 1
+  DQF   6.5 0  0       % was 3.0 from RP should it be 1.7 from smye et al??
+  
+fmu     4    5  xKA 1  xAlM2A 1  xFe3M2B 1  xSiT1 1  xAlT1 1  
+  check 0  1  1  0  0  
+  make  3   mu 1  gr -1/2  andr 1/2
+  DQF   25  0  0    % old value; cor-hem DQF=30 (I had it as 26?)
+
+
+% =================================================
+
+
+

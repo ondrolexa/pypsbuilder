@@ -20,7 +20,11 @@ standard or samecoding guesses).::
 		%{PSBGUESS-BEGIN}
 		%{PSBGUESS-END}
 
-for dogmin replace existing ``dogmin`` script with::
+Scriptfile modifications for TC3.4
+----------------------------------
+
+For older version of THERMOCALC you need add two other commented blocks. For dogmin
+replace existing ``dogmin`` script with::
 
 		%{PSBDOGMIN-BEGIN}
 		dogmin no
@@ -31,6 +35,27 @@ these tags::
 
 		%{PSBBULK-BEGIN}
 		setbulk ....
+		%{PSBBULK-END}
+
+Scriptfile modifications for TC3.5
+----------------------------------
+
+For latest THERMOCALC the tags are slightly different. You should enclosed calculation part as""
+
+		%{PSBCALC-BEGIN}
+		calcP 4 12
+		calcT 600 1050 9
+		calctatp no
+		with  plc q aug hb sph g ep
+		zeromodeisopleth g
+		%{PSBCALC-END}
+
+and for bulk composition place before and after existing ``bulk`` scripts
+these tags::
+
+		%{PSBBULK-BEGIN}
+		bulk  H2O SiO2   Al2O3   CaO   MgO   FeO   K2O Na2O TiO2   O
+		bulk  4.781 50.052 9.106 12.391 11.192 8.943 0.139 2.078 0.705 0.612
 		%{PSBBULK-END}
 
 If you are not sure, which scripts should be set on and off, you can check

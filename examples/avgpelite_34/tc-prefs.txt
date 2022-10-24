@@ -1,0 +1,13 @@
+setpagewidth 700  % for Mac; 80 on a PC
+dontwrap no
+dataset   62
+
+all-in-one no 
+
+calcmode 1    
+scriptfile   avgpelite
+ 
+strictsyntax yes
+
+monitorheap no
+*

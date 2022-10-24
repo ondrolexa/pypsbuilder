@@ -1,0 +1,1138 @@
+% =======================
+% axfile to use
+% =======================
+
+axfile 6axmn
+
+% =======================
+% which phases
+% =======================
+
+setexcess  q  H2O
+
+which no
+
+omit  sp0 sp1 Ni NiO opx sp ta
+
+% =======================
+% which conditions
+% =======================
+
+setdefTwindow   440 710
+setdefPwindow   1.9  10.5
+
+%setPwindow   4 4
+
+seta no
+setmu no
+setiso no
+
+
+% =======================
+% which calcs
+% =======================
+
+usecalcq no
+
+calcg no
+
+%{PSBDOGMIN-BEGIN}
+dogmin no
+%{PSBDOGMIN-END}
+
+calctatp ask
+
+project no
+%pseudo no 
+
+calcah2o no
+calcsdnle no
+
+printbulkinfo yes
+
+
+pseudosection yes
+% ---------------------------------
+% high ox LT composition
+% ---------------------------------
+%            H2O    SiO2   Al2O3   CaO   MgO   FeO   K2O  Na2O   TiO2  MnO   O 
+%{PSBBULK-BEGIN}
+setbulk yes         71.13  11.61   1.39  4.65  5.78  2.68 1.99  0.67  0.10  0.01
+%{PSBBULK-END}
+% --------------------------------- 6.56
+project no
+% ------------------------------------------------
+% AFM - projected from q mu H2O
+% ------------------------------------------------
+%                        H2O  SiO2 Al2O3   MgO   FeO   K2O  TiO2  O
+% ------------------------------------------------
+setproject     a          0     0     1     0     0     0    0    0
+setproject     f          0     0     0     0     1     0    0    0
+setproject yes m          0     0     0     1     0     0    0    0
+% ------------------------------------------------
+
+
+setmodeiso yes
+zeromodeiso yes
+
+
+% =======================
+% output form/content
+% =======================
+
+infolevel 1
+c8 no
+
+incax yes
+incthermo no
+incnler no
+
+smath no
+tabsmath no
+xinsmath no
+drawpd yes
+cmath yes
+
+% =======================
+% starting guess-related
+% =======================
+
+printxyz yes
+
+samecoding mu pa 
+
+%{PSBGUESS-BEGIN}
+% --------------------------------------------------------
+% at P = 9.0, T = 467, for: g bi mu pa chl ru q sph  with bi = 0
+% --------------------------------------------------------
+ptguess 9.0 467
+% --------------------------------------------------------
+xyzguess x(g)          0.956687
+xyzguess z(g)          0.265998
+xyzguess m(g)          0.285030
+xyzguess f(g)        0.00230515
+xyzguess x(bi)         0.762434
+xyzguess m(bi)       0.00646441
+xyzguess y(bi)        0.0371298
+xyzguess f(bi)       0.00142978
+xyzguess t(bi)        0.0569027
+xyzguess Q(bi)         0.117215
+xyzguess x(mu)         0.563785
+xyzguess y(mu)         0.856748
+xyzguess f(mu)      0.000265620
+xyzguess n(mu)         0.142592
+xyzguess c(mu)       0.00131219
+xyzguess x(pa)         0.563785
+xyzguess y(pa)         0.998739
+xyzguess f(pa)       2.31700e-5
+xyzguess n(pa)         0.947998
+xyzguess c(pa)       0.00979346
+xyzguess x(chl)        0.650242
+xyzguess y(chl)        0.532544
+xyzguess f(chl)      0.00993502
+xyzguess m(chl)      0.00854024
+xyzguess QAl(chl)      0.457476  range -1.000 1.000
+xyzguess Q1(chl)       0.125495  range -1.000 1.000
+xyzguess Q4(chl)       0.142584  range -1.000 1.000
+% --------------------------------------------------------
+%{PSBGUESS-END}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% --------------------------------------------------------
+% at P = 5.2883, T = 626.8805, for: ab bi sill g pl st ilm mu with ab = 0
+% --------------------------------------------------------
+ptguess 5.2883 626.8805
+% --------------------------------------------------------
+xyzguess x(g)            0.8368
+xyzguess z(g)           0.01696
+xyzguess m(g)            0.1549
+xyzguess f(g)         0.0005574
+xyzguess ca(pl)         0.09901
+xyzguess k(pl)          0.02142
+xyzguess x(bi)           0.5668
+xyzguess m(bi)         0.004026
+xyzguess y(bi)           0.3013
+xyzguess f(bi)         0.005259
+xyzguess t(bi)            0.104
+xyzguess Q(bi)           0.1178
+xyzguess x(mu)           0.4706
+xyzguess y(mu)           0.9638
+xyzguess f(mu)        0.0002664
+xyzguess n(mu)           0.2212
+xyzguess c(mu)          0.00399
+xyzguess x(st)           0.7894
+xyzguess m(st)          0.02352
+xyzguess f(st)         0.002669
+xyzguess t(st)          0.05698
+xyzguess i(ilm)          0.9973
+xyzguess g(ilm)         0.02937
+xyzguess m(ilm)         0.03432
+xyzguess Q(ilm)          0.8938
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+
+
+
+
+% --------------------------------------------------------
+% at P = 4.9, T = 564, for: g bi mu ma st chl pl ilm mt1 q  with chl = 0, pl = 0
+% --------------------------------------------------------
+ptguess 4.9 564
+% --------------------------------------------------------
+xyzguess x(g)          0.873961
+xyzguess z(g)         0.0841907
+xyzguess m(g)          0.160978
+xyzguess f(g)         0.0257792
+xyzguess x(bi)         0.584769
+xyzguess m(bi)       0.00316566
+xyzguess y(bi)         0.214791
+xyzguess f(bi)         0.147748
+xyzguess t(bi)        0.0673985
+xyzguess Q(bi)         0.114599
+xyzguess x(mu)         0.461259
+xyzguess y(mu)         0.976713
+xyzguess f(mu)       0.00622059
+xyzguess n(mu)         0.301497
+xyzguess c(mu)        0.0173817
+xyzguess x(ma)         0.461259
+xyzguess y(ma)         0.983141
+xyzguess f(ma)       0.00704127
+xyzguess n(ma)         0.254906
+xyzguess c(ma)         0.714167
+xyzguess x(st)         0.827744
+xyzguess m(st)        0.0206936
+xyzguess f(st)        0.0873010
+xyzguess t(st)        0.0364739
+xyzguess x(chl)        0.481020
+xyzguess y(chl)        0.652468
+xyzguess f(chl)        0.200349
+xyzguess m(chl)      0.00421140
+xyzguess QAl(chl)      0.146939  range -1.000 1.000
+xyzguess Q1(chl)      0.0527155  range -1.000 1.000
+xyzguess Q4(chl)      0.0997850  range -1.000 1.000
+xyzguess ca(pl)        0.386443
+xyzguess k(pl)       0.00364744
+xyzguess i(ilm)        0.860845
+xyzguess g(ilm)       0.0173393
+xyzguess m(ilm)       0.0294083
+xyzguess Q(ilm)        0.767067  range -0.990 0.990
+xyzguess x(mt0)        0.743796
+xyzguess Q(mt0)        0.806104
+% --------------------------------------------------------
+
+
+
+
+
+xyzguess x(cd)         0.390336
+xyzguess m(cd)        0.0555000
+xyzguess h(cd)         0.440912
+
+xyzguess i(hem)        0.200072
+xyzguess g(hem)      0.00459917
+xyzguess m(hem)               0.02  % boiled down
+xyzguess Q(hem)     -0.00224120  range -0.050 0.050
+
+xyzguess x(st)         0.936288
+xyzguess m(st)                0.04  % boiled down
+xyzguess f(st)        0.0862254
+xyzguess t(st)        0.0376599
+
+xyzguess   q(L)          0.1814
+xyzguess   fsp(L)        0.3490
+xyzguess   na(L)           0.5
+xyzguess   an(L)           0.02
+xyzguess   ol(L)        0.01373
+xyzguess   x(L)          0.7333
+xyzguess   h2o(L)        0.4276
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+xyzguess i(hem)        0.200072
+xyzguess g(hem)      0.00459917
+xyzguess m(hem)               0.02  % boiled down
+xyzguess Q(hem)     -0.00224120  range -0.050 0.050
+
+
+
+xyzguess   q(L)          0.1814
+xyzguess   fsp(L)        0.3490
+xyzguess   na(L)           0.5
+xyzguess   an(L)           0.02
+xyzguess   ol(L)        0.01373
+xyzguess   x(L)          0.7333
+xyzguess   h2o(L)        0.4276
+
+
+
+
+
+
+
+
+
+
+
+
+
+% sundry starting guesses for KFMASH calcs
+% (over-ridden by any above)
+
+% -----------------------------
+xyzguess  x(mu)            0.25
+xyzguess  y(mu)            0.60
+xyzguess  f(mu)               0.02
+xyzguess  n(mu)               0
+xyzguess  c(mu)               0
+% -----------------------------
+xyzguess  x(ctd)           0.88
+xyzguess  m(ctd)              0.02
+xyzguess  f(ctd)           0.02
+% -----------------------------
+xyzguess  x(st)            0.85
+xyzguess  m(st)               0
+% -----------------------------
+xyzguess  x(g)              0.9
+xyzguess  z(g)                0
+xyzguess  m(g)                0
+xyzguess  f(g)                0
+% -----------------------------
+xyzguess  x(bi)            0.35 
+xyzguess  m(bi)               0
+xyzguess  y(bi)            0.25
+xyzguess  f(bi)               0
+xyzguess  t(bi)               0
+xyzguess  Q(bi)            0.25
+% -----------------------------
+xyzguess  x(chl)            0.3
+xyzguess  y(chl)           0.55
+xyzguess  f(chl)              0
+xyzguess  m(chl)              0
+xyzguess  QAl(chl)         0.42
+xyzguess  Q1(chl)         -0.18  range -1.000 1.000
+xyzguess  Q4(chl)         -0.26  range -1.000 1.000
+% -----------------------------
+xyzguess  x(opx)            0.7                       % \A5\A5\A5 for expanded opx
+xyzguess  m(opx)              0.04
+xyzguess  y(opx)            0.1
+xyzguess  f(opx)             0.03
+xyzguess  c(opx)              0.005
+xyzguess  Q(opx)            0.4
+% -----------------------------
+xyzguess   q(L)          0.1814
+xyzguess   fsp(L)        0.3490
+xyzguess   na(L)           0.5
+xyzguess   an(L)              0.02
+xyzguess   ol(L)        0.01373
+xyzguess   x(L)          0.7333
+xyzguess   h2o(L)        0.4276
+
+xyzguess   x(st1)            0.88
+xyzguess   m(st1)            0
+xyzguess   f(st1)            0
+xyzguess   t(st1)            0
+
+% sundry starting guesses for samecoding phases
+% (over-ridden by any above)
+% ----------------------
+xyzguess  x(mu)   0.25 
+xyzguess  y(mu)   0.60 
+xyzguess  f(mu)   0.17
+xyzguess  n(mu)   0.06
+xyzguess  c(mu)   0.01
+% ----------------------
+xyzguess  x(pa)   0.35
+xyzguess  y(pa)   0.99
+xyzguess  f(pa)   0.02
+xyzguess  n(pa)   0.98
+xyzguess  c(pa)   0.01
+% ----------------------
+
+
+
+*
+%My Guess
+
+
+
+% --------------------------------------------------------
+% at P = 4.4, T = 560, for: pl ma bi mu st chl ilm q  with pl = 0, chl = 0
+% --------------------------------------------------------
+ptguess 4.4 560
+% --------------------------------------------------------
+xyzguess ca(pl)        0.433946
+xyzguess k(pl)       0.00338306
+xyzguess x(ma)         0.437139
+xyzguess y(ma)         0.982495
+xyzguess f(ma)       0.00205778
+xyzguess n(ma)         0.233426
+xyzguess c(ma)         0.735236
+xyzguess x(bi)         0.558538
+xyzguess m(bi)       0.00289523
+xyzguess y(bi)         0.256070
+xyzguess f(bi)        0.0500039
+xyzguess t(bi)        0.0763394
+xyzguess Q(bi)         0.128598
+xyzguess x(mu)         0.437139
+xyzguess y(mu)         0.973128
+xyzguess f(mu)       0.00195230
+xyzguess n(mu)         0.246741
+xyzguess c(mu)        0.0145401
+xyzguess x(st)         0.813783
+xyzguess m(st)        0.0193827
+xyzguess f(st)        0.0255372
+xyzguess t(st)        0.0459632
+xyzguess x(chl)        0.449005
+xyzguess y(chl)        0.727646
+xyzguess f(chl)       0.0618353
+xyzguess m(chl)      0.00376989
+xyzguess QAl(chl)      0.210254  range -1.000 1.000
+xyzguess Q1(chl)      0.0458152  range -1.000 1.000
+xyzguess Q4(chl)      0.0874775  range -1.000 1.000
+xyzguess i(ilm)        0.973736
+xyzguess g(ilm)       0.0227427
+xyzguess m(ilm)       0.0290322
+xyzguess Q(ilm)        0.892071  range -0.990 0.990
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 6.7, T = 513, for: g bi mu pa chl ep ilm mt1 ab q  with pa = 0, ab = 0
+% --------------------------------------------------------
+ptguess 6.7 513
+% --------------------------------------------------------
+xyzguess x(g)          0.917793
+xyzguess z(g)          0.248116
+xyzguess m(g)          0.251644
+xyzguess f(g)         0.0900040
+xyzguess x(bi)         0.641082
+xyzguess m(bi)       0.00595826
+xyzguess y(bi)        0.0897099
+xyzguess f(bi)         0.122611
+xyzguess t(bi)        0.0618647
+xyzguess Q(bi)         0.131444
+xyzguess x(mu)         0.480250
+xyzguess y(mu)         0.941006
+xyzguess f(mu)        0.0100783
+xyzguess n(mu)         0.242371
+xyzguess c(mu)       0.00552654
+xyzguess x(pa)         0.480250
+xyzguess y(pa)         0.998711
+xyzguess f(pa)       0.00147618
+xyzguess n(pa)         0.890949
+xyzguess c(pa)        0.0322897
+xyzguess x(chl)        0.517785
+xyzguess y(chl)        0.427514
+xyzguess f(chl)        0.323599
+xyzguess m(chl)      0.00806331
+xyzguess QAl(chl)      0.248830  range -1.000 1.000
+xyzguess Q1(chl)       0.105133  range -1.000 1.000
+xyzguess Q4(chl)       0.111429  range -1.000 1.000
+xyzguess f(ep)         0.326057
+xyzguess Q(ep)         0.303592  range  0.000 0.500
+xyzguess i(ilm)        0.829760
+xyzguess g(ilm)       0.0108133
+xyzguess m(ilm)       0.0523311
+xyzguess Q(ilm)        0.724559  range -0.990 0.990
+xyzguess x(mt0)        0.793041
+xyzguess Q(mt0)        0.862424
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 9.8, T = 477, for: g ep bi mu pa chl ilm hem ab ru q  with g = 0, ab = 0
+% --------------------------------------------------------
+ptguess 9.8 477
+% --------------------------------------------------------
+xyzguess x(g)          0.941127
+xyzguess z(g)          0.345911
+xyzguess m(g)          0.269955
+xyzguess f(g)          0.196705
+xyzguess f(ep)         0.404773
+xyzguess Q(ep)         0.373486  range  0.000 0.500
+xyzguess x(bi)         0.692788
+xyzguess m(bi)       0.00751843
+xyzguess y(bi)        0.0295946
+xyzguess f(bi)        0.0735372
+xyzguess t(bi)        0.0566052
+xyzguess Q(bi)         0.136494
+xyzguess x(mu)         0.506337
+xyzguess y(mu)         0.810647
+xyzguess f(mu)        0.0190230
+xyzguess n(mu)         0.123443
+xyzguess c(mu)      0.000743370
+xyzguess x(pa)         0.506337
+xyzguess y(pa)         0.998253
+xyzguess f(pa)       0.00166172
+xyzguess n(pa)         0.958183
+xyzguess c(pa)       0.00510652
+xyzguess x(chl)        0.567102
+xyzguess y(chl)        0.294313
+xyzguess f(chl)        0.469069
+xyzguess m(chl)      0.00944420
+xyzguess QAl(chl)      0.236576  range -1.000 1.000
+xyzguess Q1(chl)       0.130744  range -1.000 1.000
+xyzguess Q4(chl)       0.130323  range -1.000 1.000
+xyzguess i(ilm)        0.792576
+xyzguess g(ilm)      0.00696206
+xyzguess m(ilm)       0.0612711
+xyzguess Q(ilm)        0.683677  range -0.990 0.990
+xyzguess i(hem)        0.361074
+xyzguess g(hem)      0.00218157
+xyzguess m(hem)       0.0356563
+xyzguess Q(hem)      -0.0118349  range -0.050 0.050
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 13.1, T = 501, for: g bi mu pa chl ep ilm hem q  with ep = 0
+% --------------------------------------------------------
+ptguess 13.1 501
+% --------------------------------------------------------
+xyzguess x(g)          0.937314
+xyzguess z(g)          0.373311
+xyzguess m(g)         0.0934167
+xyzguess f(g)          0.227767
+xyzguess x(bi)         0.680923
+xyzguess m(bi)       0.00240844
+xyzguess y(bi)        0.0235507
+xyzguess f(bi)        0.0548554
+xyzguess t(bi)        0.0607907
+xyzguess Q(bi)         0.129122
+xyzguess x(mu)         0.512767
+xyzguess y(mu)         0.717638
+xyzguess f(mu)        0.0231069
+xyzguess n(mu)        0.0971780
+xyzguess c(mu)      0.000729724
+xyzguess x(pa)         0.512767
+xyzguess y(pa)         0.996440
+xyzguess f(pa)       0.00232040
+xyzguess n(pa)         0.969996
+xyzguess c(pa)       0.00418953
+xyzguess x(chl)        0.566260
+xyzguess y(chl)        0.293191
+xyzguess f(chl)        0.458138
+xyzguess m(chl)      0.00262580
+xyzguess QAl(chl)      0.248597  range -1.000 1.000
+xyzguess Q1(chl)       0.127438  range -1.000 1.000
+xyzguess Q4(chl)       0.125340  range -1.000 1.000
+xyzguess f(ep)         0.397654
+xyzguess Q(ep)         0.365619  range  0.000 0.500
+xyzguess i(ilm)        0.780185
+xyzguess g(ilm)      0.00810510
+xyzguess m(ilm)       0.0172450
+xyzguess Q(ilm)        0.710084  range -0.990 0.990
+xyzguess i(hem)        0.368910
+xyzguess g(hem)      0.00291825
+xyzguess m(hem)       0.0110709
+xyzguess Q(hem)     -0.00579072  range -0.050 0.050
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 11.3, T = 526, for: g bi mu pa chl ep ilm hem mt1 q  with ep = 0, mt1 = 0
+% --------------------------------------------------------
+ptguess 11.3 526
+% --------------------------------------------------------
+xyzguess x(g)          0.921376
+xyzguess z(g)          0.301171
+xyzguess m(g)         0.0823797
+xyzguess f(g)          0.151772
+xyzguess x(bi)         0.646048
+xyzguess m(bi)       0.00199659
+xyzguess y(bi)        0.0476888
+xyzguess f(bi)        0.0829706
+xyzguess t(bi)        0.0650628
+xyzguess Q(bi)         0.129489
+xyzguess x(mu)         0.495204
+xyzguess y(mu)         0.828729
+xyzguess f(mu)        0.0176783
+xyzguess n(mu)         0.145850
+xyzguess c(mu)       0.00210459
+xyzguess x(pa)         0.495204
+xyzguess y(pa)         0.997307
+xyzguess f(pa)       0.00218137
+xyzguess n(pa)         0.945593
+xyzguess c(pa)        0.0122472
+xyzguess x(chl)        0.530778
+xyzguess y(chl)        0.349712
+xyzguess f(chl)        0.387157
+xyzguess m(chl)      0.00226703
+xyzguess QAl(chl)      0.263054  range -1.000 1.000
+xyzguess Q1(chl)       0.115977  range -1.000 1.000
+xyzguess Q4(chl)       0.111362  range -1.000 1.000
+xyzguess f(ep)         0.359551
+xyzguess Q(ep)         0.334140  range  0.000 0.500
+xyzguess i(ilm)        0.859426
+xyzguess g(ilm)       0.0100061
+xyzguess m(ilm)       0.0145246
+xyzguess Q(ilm)        0.678808  range -0.990 0.990
+xyzguess i(hem)        0.292864
+xyzguess g(hem)      0.00419893
+xyzguess m(hem)       0.0100517
+xyzguess Q(hem)     -0.00560205  range -0.050 0.050
+xyzguess x(mt0)        0.811932
+xyzguess Q(mt0)        0.857734
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 2.9, T = 541, for: g bi mu st chl pl ilm mt1 q  with g = 0, chl = 0
+% --------------------------------------------------------
+ptguess 2.9 541
+% --------------------------------------------------------
+xyzguess x(g)          0.874644
+xyzguess z(g)         0.0518944
+xyzguess m(g)          0.301087
+xyzguess f(g)         0.0169043
+xyzguess x(bi)         0.587557
+xyzguess m(bi)       0.00561235
+xyzguess y(bi)         0.245415
+xyzguess f(bi)         0.164323
+xyzguess t(bi)        0.0615165
+xyzguess Q(bi)         0.114831
+xyzguess x(mu)         0.452504
+xyzguess y(mu)         0.980976
+xyzguess f(mu)       0.00588560
+xyzguess n(mu)         0.245061
+xyzguess c(mu)       0.00984538
+xyzguess x(st)         0.839698
+xyzguess m(st)        0.0410810
+xyzguess f(st)        0.0825665
+xyzguess t(st)        0.0319981
+xyzguess x(chl)        0.478579
+xyzguess y(chl)        0.712521
+xyzguess f(chl)        0.192688
+xyzguess m(chl)      0.00796329
+xyzguess QAl(chl)     0.0945212  range -1.000 1.000
+xyzguess Q1(chl)      0.0396624  range -1.000 1.000
+xyzguess Q4(chl)       0.103636  range -1.000 1.000
+xyzguess ca(pl)        0.399001
+xyzguess k(pl)       0.00375846
+xyzguess i(ilm)        0.871289
+xyzguess g(ilm)       0.0155583
+xyzguess m(ilm)       0.0585635
+xyzguess Q(ilm)        0.755114  range -0.990 0.990
+xyzguess x(mt0)        0.747879
+xyzguess Q(mt0)        0.827775
+% --------------------------------------------------------
+
+
+% --------------------------------------------------------
+% at P = 13.2, T = 640, for: g bi mu pa liq ilm hem q  with liq = 0
+% --------------------------------------------------------
+ptguess 13.2 640
+% --------------------------------------------------------
+xyzguess x(g)          0.823902
+xyzguess z(g)         0.0753503
+xyzguess m(g)         0.0260877
+xyzguess f(g)         0.0564368
+xyzguess x(bi)         0.506179
+xyzguess m(bi)      0.000762850
+xyzguess y(bi)        0.0863863
+xyzguess f(bi)        0.0993434
+xyzguess t(bi)        0.0982893
+xyzguess Q(bi)         0.132037
+xyzguess x(mu)         0.434869
+xyzguess y(mu)         0.839327
+xyzguess f(mu)        0.0198136
+xyzguess n(mu)         0.200573
+xyzguess c(mu)       0.00258763
+xyzguess x(pa)         0.434869
+xyzguess y(pa)         0.993669
+xyzguess f(pa)       0.00409652
+xyzguess n(pa)         0.933280
+xyzguess c(pa)       0.00958530
+xyzguess q(L)         0.0381361
+xyzguess fsp(L)        0.191224
+xyzguess na(L)         0.919539
+xyzguess an(L)       0.00123751
+xyzguess ol(L)       0.00127439
+xyzguess x(L)          0.687398
+xyzguess h2o(L)        0.767794
+xyzguess i(ilm)        0.658821
+xyzguess g(ilm)       0.0210044
+xyzguess m(ilm)      0.00491270
+xyzguess Q(ilm)        0.485463  range -0.990 0.990
+xyzguess i(hem)        0.487048
+xyzguess g(hem)       0.0149241
+xyzguess m(hem)      0.00429905
+xyzguess Q(hem)      0.00100339  range -0.050 0.050
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 1.3, T = 506, for: g bi cd mu chl ilm hem ru and q H2O
+% --------------------------------------------------------
+ptguess 1.3 506
+% --------------------------------------------------------
+xyzguess x(g)          0.756845
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)          0.646476
+xyzguess f(g)         0.0104969
+xyzguess x(bi)         0.336513
+xyzguess m(bi)        0.0117265
+xyzguess y(bi)         0.253002
+xyzguess f(bi)         0.234523
+xyzguess t(bi)        0.0594684
+xyzguess Q(bi)         0.138555
+xyzguess x(cd)         0.157205
+xyzguess m(cd)        0.0661198
+xyzguess h(cd)         0.556457
+xyzguess x(mu)         0.262719
+xyzguess y(mu)         0.965844
+xyzguess f(mu)        0.0108723
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(chl)        0.237709
+xyzguess y(chl)        0.703182
+xyzguess f(chl)        0.246244
+xyzguess m(chl)       0.0165775
+xyzguess QAl(chl)     0.0503702  range -1.000 1.000
+xyzguess Q1(chl)    -0.00974415  range -1.000 1.000
+xyzguess Q4(chl)      0.0296984  range -1.000 1.000
+xyzguess i(ilm)        0.793252
+xyzguess g(ilm)       0.0189649
+xyzguess m(ilm)        0.186474
+xyzguess Q(ilm)        0.544752  range -0.990 0.990
+xyzguess i(hem)        0.448261
+xyzguess g(hem)      0.00842752
+xyzguess m(hem)        0.121865
+xyzguess Q(hem)       0.0180776  range -0.350 0.350
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 0.9, T = 493, for: g bi cd mu chl ilm ru and q H2O
+% --------------------------------------------------------
+ptguess 0.9 493
+% --------------------------------------------------------
+xyzguess x(g)          0.824697
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)          0.595111
+xyzguess f(g)        0.00557975
+xyzguess x(bi)         0.451105
+xyzguess m(bi)        0.0104507
+xyzguess y(bi)         0.276145
+xyzguess f(bi)         0.144539
+xyzguess t(bi)        0.0602583
+xyzguess Q(bi)         0.150145
+xyzguess x(cd)         0.221626
+xyzguess m(cd)        0.0647785
+xyzguess h(cd)         0.513236
+xyzguess x(mu)         0.332139
+xyzguess y(mu)         0.968005
+xyzguess f(mu)       0.00573532
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(chl)        0.329362
+xyzguess y(chl)        0.762207
+xyzguess f(chl)        0.145988
+xyzguess m(chl)       0.0152144
+xyzguess QAl(chl)     0.0916028  range -1.000 1.000
+xyzguess Q1(chl)     0.00218585  range -1.000 1.000
+xyzguess Q4(chl)      0.0574681  range -1.000 1.000
+xyzguess i(ilm)        0.929656
+xyzguess g(ilm)       0.0195261
+xyzguess m(ilm)        0.157385
+xyzguess Q(ilm)        0.721768  range -0.990 0.990
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 4.3, T = 564, for: g bi mu st chl ilm hem ru sill q H2O
+% --------------------------------------------------------
+ptguess 4.3 564
+% --------------------------------------------------------
+xyzguess x(g)          0.726817
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)          0.476142
+xyzguess f(g)         0.0142556
+xyzguess x(bi)         0.332742
+xyzguess m(bi)       0.00937829
+xyzguess y(bi)         0.251808
+xyzguess f(bi)         0.200649
+xyzguess t(bi)        0.0718794
+xyzguess Q(bi)         0.130654
+xyzguess x(mu)         0.279919
+xyzguess y(mu)         0.948263
+xyzguess f(mu)        0.0127337
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.638522
+xyzguess m(st)        0.0829984
+xyzguess f(st)         0.100235
+xyzguess t(st)        0.0404179
+xyzguess x(chl)        0.246164
+xyzguess y(chl)        0.670595
+xyzguess f(chl)        0.229911
+xyzguess m(chl)       0.0117572
+xyzguess QAl(chl)     0.0992137  range -1.000 1.000
+xyzguess Q1(chl)     0.00311432  range -1.000 1.000
+xyzguess Q4(chl)      0.0287628  range -1.000 1.000
+xyzguess i(ilm)        0.688819
+xyzguess g(ilm)       0.0249235
+xyzguess m(ilm)        0.121509
+xyzguess Q(ilm)        0.423244  range -0.990 0.990
+xyzguess i(hem)        0.488327
+xyzguess g(hem)       0.0148902
+xyzguess m(hem)       0.0941460
+xyzguess Q(hem)       0.0955852  range -0.25 0.25
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 7.0, T = 549, for: g bi mu st chl ctd ilm mt1 q H2O
+% --------------------------------------------------------
+ptguess 7.0 549
+% --------------------------------------------------------
+xyzguess x(g)          0.953369
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)         0.0450317
+xyzguess f(g)         0.0126031
+xyzguess x(bi)         0.850275
+xyzguess m(bi)      0.000891851
+xyzguess y(bi)         0.161849
+xyzguess f(bi)         0.110958
+xyzguess t(bi)        0.0615574
+xyzguess Q(bi)        0.0468128
+xyzguess x(mu)         0.716951
+xyzguess y(mu)         0.923697
+xyzguess f(mu)        0.0100377
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.945032
+xyzguess m(st)       0.00449467
+xyzguess f(st)        0.0833591
+xyzguess t(st)        0.0358768
+xyzguess x(chl)        0.797673
+xyzguess y(chl)        0.651349
+xyzguess f(chl)        0.194252
+xyzguess m(chl)      0.00119281
+xyzguess QAl(chl)      0.154193  range -1.000 1.000
+xyzguess Q1(chl)      0.0701099  range -1.000 1.000
+xyzguess Q4(chl)       0.148963  range -1.000 1.000
+xyzguess x(ctd)        0.940876
+xyzguess m(ctd)      0.00439400
+xyzguess f(ctd)      0.00554873
+xyzguess i(ilm)        0.890928
+xyzguess g(ilm)      0.00573745
+xyzguess m(ilm)      0.00627824
+xyzguess Q(ilm)        0.842855  range -0.990 0.990
+xyzguess x(mt0)        0.723767
+xyzguess Q(mt0)        0.808583
+% --------------------------------------------------------
+
+
+% --------------------------------------------------------
+% at P = 4.0, T = 558, for: bi mu st chl ilm hem mt1 ru and q H2O
+% --------------------------------------------------------
+ptguess 4.0 558
+% --------------------------------------------------------
+xyzguess x(bi)         0.404193
+xyzguess m(bi)       0.00117087
+xyzguess y(bi)         0.248640
+xyzguess f(bi)         0.203356
+xyzguess t(bi)        0.0698661
+xyzguess Q(bi)         0.125340
+xyzguess x(mu)         0.329523
+xyzguess y(mu)         0.950558
+xyzguess f(mu)        0.0126518
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.715057
+xyzguess m(st)        0.0100642
+xyzguess f(st)         0.101552
+xyzguess t(st)        0.0394255
+xyzguess x(chl)        0.306943
+xyzguess y(chl)        0.682484
+xyzguess f(chl)        0.233746
+xyzguess m(chl)      0.00152177
+xyzguess QAl(chl)     0.0834774  range -1.000 1.000
+xyzguess Q1(chl)     0.00864999  range -1.000 1.000
+xyzguess Q4(chl)      0.0463770  range -1.000 1.000
+xyzguess i(ilm)        0.833556
+xyzguess g(ilm)       0.0235229
+xyzguess m(ilm)       0.0148447
+xyzguess Q(ilm)        0.699727  range -0.990 0.990
+xyzguess i(hem)        0.324563
+xyzguess g(hem)       0.0116094
+xyzguess m(hem)       0.0110605
+xyzguess Q(hem)     0.156077  range -0.20 0.20
+xyzguess x(mt0)        0.796992
+xyzguess Q(mt0)        0.832077
+% --------------------------------------------------------
+
+
+
+% --------------------------------------------------------
+% at P = 0.7, T = 470, for: g bi mu st chl ctd ilm mt1 and q H2O
+% --------------------------------------------------------
+ptguess 0.7 470
+% --------------------------------------------------------
+xyzguess x(g)          0.989280
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)          0.370840
+xyzguess f(g)        0.00561858
+xyzguess x(bi)         0.963197
+xyzguess m(bi)       0.00541880
+xyzguess y(bi)         0.242385
+xyzguess f(bi)         0.138625
+xyzguess t(bi)        0.0444326
+xyzguess Q(bi)        0.0251484
+xyzguess x(mu)         0.891905
+xyzguess y(mu)         0.979943
+xyzguess f(mu)       0.00546396
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.988998
+xyzguess m(st)        0.0380207
+xyzguess f(st)        0.0613613
+xyzguess t(st)        0.0221900
+xyzguess x(chl)        0.946807
+xyzguess y(chl)        0.807980
+xyzguess f(chl)        0.153550
+xyzguess m(chl)      0.00946587
+xyzguess QAl(chl)     0.0382960  range -1.000 1.000
+xyzguess Q1(chl)      0.0339179  range -1.000 1.000
+xyzguess Q4(chl)      0.0837064  range -1.000 1.000
+xyzguess x(ctd)        0.988489
+xyzguess m(ctd)       0.0377229
+xyzguess f(ctd)      0.00287160
+xyzguess i(ilm)        0.929313
+xyzguess g(ilm)      0.00109365
+xyzguess m(ilm)       0.0551369
+xyzguess Q(ilm)        0.852173  range -0.990 0.990
+xyzguess x(mt0)        0.715952
+xyzguess Q(mt0)        0.872553
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 4.2, T = 560, for: bi mu st chl ilm hem mt1 ru q H2O
+% --------------------------------------------------------
+ptguess 4.2 560
+% --------------------------------------------------------
+xyzguess x(bi)         0.405653
+xyzguess m(bi)      0.000871781
+xyzguess y(bi)         0.245693
+xyzguess f(bi)         0.201403
+xyzguess t(bi)        0.0703842
+xyzguess Q(bi)         0.125383
+xyzguess x(mu)         0.331253
+xyzguess y(mu)         0.948924
+xyzguess f(mu)        0.0127917
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.714851
+xyzguess m(st)       0.00739857
+xyzguess f(st)         0.101968
+xyzguess t(st)        0.0398746
+xyzguess x(chl)        0.308582
+xyzguess y(chl)        0.677750
+xyzguess f(chl)        0.234418
+xyzguess m(chl)      0.00112672
+xyzguess QAl(chl)     0.0875410  range -1.000 1.000
+xyzguess Q1(chl)      0.0101513  range -1.000 1.000
+xyzguess Q4(chl)      0.0466686  range -1.000 1.000
+xyzguess i(ilm)        0.832660
+xyzguess g(ilm)       0.0236621
+xyzguess m(ilm)       0.0109197
+xyzguess Q(ilm)        0.622224  range -0.990 0.990
+xyzguess i(hem)        0.224546
+xyzguess g(hem)       0.0117704
+xyzguess m(hem)      0.00818556
+xyzguess Q(hem)     -0.00617629  range -0.050 0.050
+xyzguess x(mt0)        0.796334
+xyzguess Q(mt0)        0.830481
+% --------------------------------------------------------
+
+
+% --------------------------------------------------------
+% at P = 11.4, T = 658, for: g bi mu st ilm hem ru ky q H2O
+% --------------------------------------------------------
+ptguess 11.4 658
+% --------------------------------------------------------
+xyzguess x(g)          0.704401
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)         0.0934476
+xyzguess f(g)         0.0274105
+xyzguess x(bi)         0.350586
+xyzguess m(bi)       0.00232124
+xyzguess y(bi)         0.171555
+xyzguess f(bi)         0.134322
+xyzguess t(bi)         0.103338
+xyzguess Q(bi)         0.126149
+xyzguess x(mu)         0.321942
+xyzguess y(mu)         0.861971
+xyzguess f(mu)        0.0189827
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.586539
+xyzguess m(st)        0.0131289
+xyzguess f(st)         0.109710
+xyzguess t(st)        0.0610594
+xyzguess i(ilm)        0.630120
+xyzguess g(ilm)       0.0348343
+xyzguess m(ilm)       0.0204879
+xyzguess Q(ilm)        0.379134  range -0.990 0.990
+xyzguess i(hem)        0.517117
+xyzguess g(hem)       0.0274778
+xyzguess m(hem)       0.0185254
+xyzguess Q(hem)       0.0485638  range -0.050 0.050
+% --------------------------------------------------------
+
+
+% --------------------------------------------------------
+ptguess 8.6 674
+% --------------------------------------------------------
+xyzguess x(g)          0.795151
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)         0.0945612
+xyzguess f(g)         0.0254060
+xyzguess x(bi)         0.510974
+xyzguess m(bi)       0.00281419
+xyzguess y(bi)         0.220879
+xyzguess f(bi)         0.160045
+xyzguess t(bi)         0.100254
+xyzguess Q(bi)         0.107818
+xyzguess x(mu)         0.449403
+xyzguess y(mu)         0.903425
+xyzguess f(mu)        0.0187638
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.732290
+xyzguess m(st)        0.0151067
+xyzguess f(st)         0.110605
+xyzguess t(st)        0.0465549
+xyzguess i(ilm)        0.714835
+xyzguess g(ilm)       0.0216135
+xyzguess m(ilm)       0.0195130
+xyzguess Q(ilm)        0.555166  range -0.990 0.990
+xyzguess i(hem)        0.321710
+xyzguess g(hem)       0.0179142
+xyzguess m(hem)       0.0180344
+xyzguess Q(hem)       0.00494226  range -0.050 0.050
+xyzguess x(mt0)        0.763794
+xyzguess Q(mt0)        0.731312
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+ptguess 9.8 684
+% --------------------------------------------------------
+xyzguess x(g)          0.797224
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)         0.0160225
+xyzguess f(g)         0.0277522
+xyzguess x(bi)         0.517822
+xyzguess m(bi)      0.000483940
+xyzguess y(bi)         0.205234
+xyzguess f(bi)         0.150076
+xyzguess t(bi)         0.103458
+xyzguess Q(bi)         0.105593
+xyzguess x(mu)         0.458345
+xyzguess y(mu)         0.887688
+xyzguess f(mu)        0.0197120
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.732084
+xyzguess m(st)       0.00244625
+xyzguess f(st)         0.112327
+xyzguess t(st)        0.0488432
+xyzguess i(ilm)        0.813588
+xyzguess g(ilm)       0.0223652
+xyzguess m(ilm)      0.00320166
+xyzguess Q(ilm)        0.666711  range -0.990 0.990
+xyzguess i(hem)        0.218450
+xyzguess g(hem)       0.0186562
+xyzguess m(hem)      0.00298226
+xyzguess Q(hem)       0.0234067  range -0.050 0.050
+xyzguess x(mt0)        0.760108
+xyzguess Q(mt0)        0.721949
+% --------------------------------------------------------
+
+% --------------------------------------------------------
+% at P = 12.0, T = 662, for: g bi mu st ilm hem ru ky q H2O
+% --------------------------------------------------------
+ptguess 12.0 662
+% --------------------------------------------------------
+xyzguess x(g)          0.705294
+xyzguess z(g)                 0  % boiled down
+xyzguess m(g)         0.0563140
+xyzguess f(g)         0.0286334
+xyzguess x(bi)         0.352559
+xyzguess m(bi)       0.00140169
+xyzguess y(bi)         0.164027
+xyzguess f(bi)         0.129184
+xyzguess t(bi)         0.104699
+xyzguess Q(bi)         0.125934
+xyzguess x(mu)         0.324783
+xyzguess y(mu)         0.852203
+xyzguess f(mu)        0.0194306
+xyzguess n(mu)                0  % boiled down
+xyzguess c(mu)                0  % boiled down
+xyzguess x(st)         0.585741
+xyzguess m(st)       0.00770338
+xyzguess f(st)         0.110395
+xyzguess t(st)        0.0625708
+xyzguess i(ilm)        0.630905
+xyzguess g(ilm)       0.0354991
+xyzguess m(ilm)       0.0121330
+xyzguess Q(ilm)        0.388624  range -0.990 0.990
+xyzguess i(hem)        0.514581
+xyzguess g(hem)       0.0279507
+xyzguess m(hem)       0.0109904
+xyzguess Q(hem)       0.0371796  range -0.050 0.050
+% --------------------------------------------------------
+
+%former prvn\92 guess
+% --------------------------------------------------------
+% at P = 2.5, T = 642, for: g ksp pl bi cd ilm and q  with g = 0, cd = 0
+% --------------------------------------------------------
+ptguess 2.5 642
+% --------------------------------------------------------
+xyzguess x(g)          0.864475
+xyzguess z(g)         0.0232240
+xyzguess m(g)          0.331415
+xyzguess f(g)        0.00448678
+xyzguess na(ksp)       0.226125
+xyzguess ca(ksp)     0.00582807
+xyzguess ca(pl)        0.267099
+xyzguess k(pl)        0.0358923
+xyzguess x(bi)         0.651902
+xyzguess m(bi)        0.0112070
+xyzguess y(bi)         0.324378
+xyzguess f(bi)        0.0459489
+xyzguess t(bi)         0.116266
+xyzguess Q(bi)         0.102339
+xyzguess x(cd)         0.433562
+xyzguess m(cd)        0.0614933
+xyzguess h(cd)         0.574585
+xyzguess i(ilm)        0.976695
+xyzguess g(ilm)       0.0218593
+xyzguess m(ilm)       0.0898809
+xyzguess Q(ilm)        0.814665  range -0.990 0.990
+% --------------------------------------------------------
+
+
