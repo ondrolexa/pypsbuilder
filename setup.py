@@ -30,7 +30,7 @@ setup(
     author_email='lexa.ondrej@gmail.com',
     url='https://github.com/ondrolexa/pypsbuilder',
     license="MIT",
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     packages=find_packages(),
     package_data={'pypsbuilder.images': ['*.png']},
     entry_points="""
@@ -42,6 +42,7 @@ setup(
     psiso=pypsbuilder.psexplorer:ps_iso
     psgrid=pypsbuilder.psexplorer:ps_grid
     psdrawpd=pypsbuilder.psexplorer:ps_drawpd
+    tcinit=pypsbuilder.tcinit:tcprojinit
     """,
     install_requires=requirements,
     zip_safe=False,

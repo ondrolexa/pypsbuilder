@@ -7,15 +7,15 @@ The **pypsbuilder** provides three builders ``ptbuilder``, ``txbuilder`` and
 Before you can successfully run any builder, you have to prepare working
 directory, which contain `THERMOCALC` and `drawpd` executables, preferences
 file, thermodynamic dataset and a-x file. Builders will work only with certain
-setting, like ``calcmode`` must be 1, ``calctatp`` have to be ask etc.
+setting, like ``calcmode`` must be set to 1, no ask for scripts etc.
 Builders validate settings and gives warning if some action is needed.
 
 **The only special need is to place special tags for bulk composition, ptguesses
 and dogmin in your scriptfile, to manage starting guesses and dogmin runs**.
 
-Just insert following comment lines to your script file to line where normally
-starting guesses should be placed (definitely before last `*` and before
-standard or samecoding guesses).::
+You have to add following comment lines to your script file to line where
+normally starting guesses should be placed (definitely before last `*` and
+before standard or samecoding guesses).::
 
 		%{PSBGUESS-BEGIN}
 		%{PSBGUESS-END}
@@ -23,8 +23,8 @@ standard or samecoding guesses).::
 Scriptfile modifications for TC3.4
 ----------------------------------
 
-For older version of THERMOCALC you need add two other commented blocks. For dogmin
-replace existing ``dogmin`` script with::
+For older version of THERMOCALC you need add two other commented blocks. For
+dogmin replace existing ``dogmin`` script with::
 
 		%{PSBDOGMIN-BEGIN}
 		dogmin no
@@ -54,12 +54,20 @@ and for bulk composition place before and after existing ``bulk`` scripts
 these tags::
 
 		%{PSBBULK-BEGIN}
-		bulk  H2O SiO2   Al2O3   CaO   MgO   FeO   K2O Na2O TiO2   O
+		bulk  H2O   SiO2   Al2O3 CaO    MgO    FeOt  K2O   Na2O  TiO2  O
 		bulk  4.781 50.052 9.106 12.391 11.192 8.943 0.139 2.078 0.705 0.612
 		%{PSBBULK-END}
 
 If you are not sure, which scripts should be set on and off, you can check
 example scriptfiles in ``examples/avgpelite`` or ``examples/avgpelite_34`` directory.
+
+Using tcinit to setup working directory
+---------------------------------------
+
+For TC3.5 you can use ``tcinit`` script to initialize working directory.
+It will download the latest 3.5 version of THERMOCALC, appropriate dataset
+and a-x file according to user selection.
+
 
 New P-T pseudosection project
 -----------------------------

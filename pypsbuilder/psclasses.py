@@ -137,15 +137,17 @@ class InvPoint(PseudoBase):
             nopoly = self.out.difference(yespoly)
             aphases = self.phases.difference(yespoly)
             bphases = self.phases.difference(poly.difference(self.out))
-            return((aphases, nopoly),
-                   (bphases, nopoly),
-                   (self.phases, yespoly),
-                   (self.phases.difference(nopoly), yespoly))
+            return (
+                (aphases, nopoly),
+                (bphases, nopoly),
+                (self.phases, yespoly),
+                (self.phases.difference(nopoly), yespoly))
         else:
-            return((self.phases, aset),
-                   (self.phases, bset),
-                   (bphases, aset),
-                   (aphases, bset))
+            return (
+                (self.phases, aset),
+                (self.phases, bset),
+                (bphases, aset),
+                (aphases, bset))
 
 
 class UniLine(PseudoBase):
@@ -861,14 +863,17 @@ class Polygon(object):
             self.context = context
         else:
             self.context = getattr(context, '__geo_interface__', context)
+
     @property
     def geom_type(self):
         return (getattr(self.context, 'geom_type', None)
                 or self.context['type'])
+
     @property
     def exterior(self):
-        return (getattr(self.context, 'exterior', None) 
+        return (getattr(self.context, 'exterior', None)
                 or self.context['coordinates'][0])
+
     @property
     def interiors(self):
         value = getattr(self.context, 'interiors', None)
@@ -882,6 +887,7 @@ def PolygonPath(polygon):
     geometric object"""
     this = Polygon(polygon)
     assert this.geom_type == 'Polygon'
+
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
         # beginning of each subpath
@@ -890,17 +896,17 @@ def PolygonPath(polygon):
         vals[0] = Path.MOVETO
         return vals
     vertices = np.concatenate(
-                    [np.asarray(this.exterior.coords)[:, :2]] 
-                    + [np.asarray(r.coords)[:, :2] for r in this.interiors])
+        [np.asarray(this.exterior.coords)[:, :2]]
+        + [np.asarray(r.coords)[:, :2] for r in this.interiors])
     codes = np.concatenate(
-                [coding(this.exterior)] 
-                + [coding(r) for r in this.interiors])
+        [coding(this.exterior)]
+        + [coding(r) for r in this.interiors])
     return Path(vertices, codes)
 
 
 def PolygonPatch(polygon, **kwargs):
     """Constructs a matplotlib patch from a geometric object
-    
+
     The `polygon` may be a Shapely or GeoJSON-like object with or without holes.
     The `kwargs` are those supported by the matplotlib.patches.Polygon class
     constructor. Returns an instance of matplotlib.patches.PathPatch.

@@ -1,6 +1,10 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [master]
+### Added
+ - tcinit script added to initialize project directory
+
 ## [2.3.1] - 2022-10-06
 ### Fixed
  - Fixed support for both TC34x and TC350beta

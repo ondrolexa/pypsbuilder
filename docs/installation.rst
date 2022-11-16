@@ -5,14 +5,15 @@ In the moment you need to have Python and needed modules installed locally and
 **pypsbuilder** must be installed from source. Just follow these steps:
 
   1. Easiest way to install Python is to use `Anaconda <https://www.anaconda.com/distribution>`_/
-  `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_ distribution.
+  `Miniconda <https://docs.conda.io/en/latest/miniconda.html>`_/
+  `Miniforge <https://github.com/conda-forge/miniforge>`_ distribution.
   Download it and follow installation steps.
 
   2. Download latest version of `pypsbuilder <https://github.com/ondrolexa/pypsbuilder/archive/master.zip>`_
   and unzip to folder of your choice.
 
-  3. If you use Anaconda/Miniconda create an environment from an ``environment.yml``
-  file. Open the Anaconda Prompt, change directory where you unzip the source
+  3. Use conda to create an environment from an ``environment.yml``
+  file. Open the terminal, change directory where you unzip the source
   and execute following command::
 
       conda env create -f environment.yml
@@ -26,17 +27,17 @@ In the moment you need to have Python and needed modules installed locally and
 
   .. image:: images/install_locally.png
 
+Alternatively, you can use ``pip`` to install pypsbuilder::
+
+      pip install pypsbuilder
+
 Upgrade to latest version
 -------------------------
 
-You can anytime upgrade your existing pypsbuilder to the latest version directly
-from github using pip::
+You can anytime upgrade your existing pypsbuilder to the latest released version::
 
-		  pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+		  pip install --upgrade pypsbuilder
 
-Development version
--------------------
+or to latest master version at github::
 
-To install latest development version, use develop branch at github::
-
-      pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/develop.zip
+      pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip

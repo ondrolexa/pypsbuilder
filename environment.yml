@@ -2,7 +2,7 @@
 name: pyps
 
 dependencies:
-- python=3.8
+- python>=3.8
 - pyqt=5
 - numpy
 - matplotlib>=3.3
