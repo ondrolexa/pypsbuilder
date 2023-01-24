@@ -751,7 +751,7 @@ class PS:
                     tl += ['-{}'.format(pp) for pp in extra]
                 wp = len(tl) // 4 + int(len(tl) % 4 > 1)
                 txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
-                if shape.type == 'MultiPolygon':
+                if shape.geom_type == 'MultiPolygon':
                     for part in shape:
                         xy = part.representative_point().coords[0]
                         ax.annotate(text=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
@@ -1116,10 +1116,10 @@ class PS:
                     if not filled and key in labelkyes_ok:
                         positions = []
                         for col in cont.collections:
-                            for seg in col.get_segments():
-                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg)), dtype=bool)
+                            for seg in col.get_paths(): #get_segments():
+                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg.vertices).geoms), dtype=bool)
                                 if np.any(inside):
-                                    positions.append(seg[inside].mean(axis=0))
+                                    positions.append(seg.vertices[inside].mean(axis=0))
                         ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
             if only is None:
                 self.add_overlay(ax)
