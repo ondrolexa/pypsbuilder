@@ -567,7 +567,7 @@ class SectionBase:
                           (self.xrange[0], self.yrange[1])]),
                LineString([(self.xrange[0], self.yrange[1]),
                           (self.xrange[0], self.yrange[0])])]
-        return bnd, next(polygonize(bnd))
+        return bnd, polygonize(bnd)[0]
 
     def add_inv(self, id, inv):
         if inv.manual:
@@ -708,9 +708,9 @@ class SectionBase:
                 for _, l in lns:
                     if edge.intersects(l):
                         m = linemerge([edge, l])
-                        if m.type == 'MultiLineString':
+                        if m.geom_type == 'MultiLineString':
                             p = edge.intersection(l)
-                            if p.type == 'MultiPoint':
+                            if p.geom_type == 'MultiPoint':
                                 pts = [l.interpolate(l.project(pt)) for pt in p]
                                 pts = sorted(pts, key=lambda pt: edge.project(pt))
                             else:
@@ -730,11 +730,11 @@ class SectionBase:
         # trim univariant lines
         for uni in self.unilines.values():
             ln = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
-            if ln.type == 'LineString' and not ln.is_empty:
+            if ln.geom_type == 'LineString' and not ln.is_empty:
                 lns.append((uni.id, ln))
-            if ln.type == 'MultiLineString':
+            if ln.geom_type == 'MultiLineString':
                 for ln_part in ln:
-                    if ln_part.type == 'LineString' and not ln_part.is_empty:
+                    if ln_part.geom_type == 'LineString' and not ln_part.is_empty:
                         lns.append((uni.id, ln_part))
         # split boundaries
         do = True
