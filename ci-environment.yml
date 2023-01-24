@@ -6,7 +6,7 @@ dependencies:
 - matplotlib>=3.3
 - scipy
 - networkx
-- shapely>=2
+- shapely
 - tqdm
 - flake8
 - pytest

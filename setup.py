@@ -16,7 +16,7 @@ requirements = [
     'matplotlib>=3',
     'scipy',
     'networkx',
-    'shapely>=2',
+    'shapely',
     'tqdm'
 ]
 
