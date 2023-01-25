@@ -1,12 +1,13 @@
 name: base
-
+channels:
+  - conda-forge
 dependencies:
-- pyqt=5
-- numpy
-- matplotlib>=3.3
-- scipy
-- networkx
-- shapely
-- tqdm
-- flake8
-- pytest
+  - pyqt=5
+  - numpy
+  - matplotlib>=3.3
+  - scipy
+  - networkx
+  - shapely>=2
+  - tqdm
+  - flake8
+  - pytest
