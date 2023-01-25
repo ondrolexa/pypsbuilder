@@ -40,6 +40,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.table import table
 from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point
@@ -79,6 +80,7 @@ class PS:
         self._shapes = {}
         self.unilists = {}
         self._variance = {}
+        self.abbr = {}
         self.show_errors = kwargs.get('show_errors', False)
         # common
         self.tolerance = tolerance
@@ -618,6 +620,8 @@ class PS:
         cmap = kwargs.get('cmap', 'Purples')
         alpha = kwargs.get('alpha', 0.6)
         label = kwargs.get('label', False)
+        skiplabels = kwargs.get('skiplabels', 0)
+        labelfs = kwargs.get('labelfs', False)
         bulk = kwargs.get('bulk', False)
         high = kwargs.get('high', [])
         connect = kwargs.get('connect', False)
@@ -645,7 +649,7 @@ class PS:
                     x, y = zip(*patch.get_path().vertices)
                     ax.plot(x, y, 'k.', ms=3)
             ax.autoscale_view()
-            self.add_overlay(ax, label=label)
+            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             if out:
                 for o in out:
                     xy = []
@@ -695,22 +699,10 @@ class PS:
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
                     ox, val = self.tc.bulk
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
-                            ' & '.join(ox) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val) + \
-                            r'''\end{tabular}'''
-                    plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
+                    table(ax=ax, cellText=[val], colLabels=ox, loc='top')
                 else:
                     ox, val1, val2 = self.tc.bulk
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
-                            ' & '.join(ox) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val1) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val2) + \
-                            r'''\end{tabular}'''
-                    plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
+                    table(ax=ax, cellText=[val1, val2], colLabels=ox, loc='top')
             else:
                 if label:
                     ax.set_title(self.name + (len(self.tc.excess) * ' +{}').format(*self.tc.excess))
@@ -739,10 +731,11 @@ class PS:
                 break
         return '{}={:.{prec}f} {}={:.{prec}f} {}'.format(self.x_var, x, self.y_var, y, phases, prec=prec)
 
-    def add_overlay(self, ax, fc='none', ec='k', label=False):
+    def add_overlay(self, ax, fc='none', ec='k', label=False, skiplabels=0, fontsize=6):
+        area = (self.xrange[1] - self.xrange[0])*(self.yrange[1] - self.yrange[0])
         for k, shape in self.shapes.items():
             ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=0.5))
-            if label:
+            if label and (100 * shape.area / area > skiplabels):
                 # multiline for long labels
                 tl = sorted(list(k.difference(self.tc.excess)))
                 extra = self.tc.excess.difference(self.tc.excess.intersection(k))
@@ -750,14 +743,14 @@ class PS:
                 if extra:
                     tl += ['-{}'.format(pp) for pp in extra]
                 wp = len(tl) // 4 + int(len(tl) % 4 > 1)
-                txt = '\n'.join([' '.join(s) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
+                txt = '\n'.join([' '.join([self.abbr.get(sa, sa) for sa in s]) for s in [tl[i * len(tl) // wp: (i + 1) * len(tl) // wp] for i in range(wp)]])
                 if shape.geom_type == 'MultiPolygon':
                     for part in shape:
                         xy = part.representative_point().coords[0]
-                        ax.annotate(text=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                        ax.annotate(text=txt, xy=xy, weight='bold', fontsize=fontsize, ha='center', va='center')
                 else:
                     xy = shape.representative_point().coords[0]
-                    ax.annotate(text=txt, xy=xy, weight='bold', fontsize=6, ha='center', va='center')
+                    ax.annotate(text=txt, xy=xy, weight='bold', fontsize=fontsize, ha='center', va='center')
 
     def show_data(self, key, phase, expr=None, which=7):
         """Convinient function to show values of expression
@@ -787,7 +780,7 @@ class PS:
             plt.colorbar(pts)
             plt.show()
 
-    def show_grid(self, phase, expr=None, interpolation=None, label=False):
+    def show_grid(self, phase, expr=None, interpolation=None, label=False, skiplabels=0, labelfs=6):
         """Convinient function to show values of expression for given phase only
         from Grid Data.
 
@@ -822,7 +815,7 @@ class PS:
                 for ix, grid in self.grids.items():
                     im = ax.imshow(cgd[ix], extent=grid.extent, interpolation=interpolation,
                                    aspect='auto', origin='lower', vmin=mn, vmax=mx)
-                self.add_overlay(ax, label=label)
+                self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
                 ax.set_xlim(self.xrange)
                 ax.set_ylim(self.yrange)
                 fig.colorbar(im)
@@ -832,7 +825,7 @@ class PS:
         else:
             print('Not yet gridded...')
 
-    def show_status(self, label=False):
+    def show_status(self, label=False, skiplabels=0, labelfs=6):
         """Shows status of grid calculations"""
         if self.gridded:
             fig, ax = plt.subplots()
@@ -843,7 +836,7 @@ class PS:
             for ix, grid in self.grids.items():
                 im[ix] = ax.imshow(grid.status, extent=grid.extent,
                                    aspect='auto', origin='lower', cmap=cmap, norm=norm)
-            self.add_overlay(ax, label=label)
+            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             ax.set_title('Gridding status - {}'.format(self.name))
@@ -854,7 +847,7 @@ class PS:
         else:
             print('Not yet gridded...')
 
-    def show_delta(self, label=False, pointsec=False):
+    def show_delta(self, label=False, pointsec=False, skiplabels=0, labelfs=6):
         """Shows THERMOCALC execution time for all grid points.
 
         Args:
@@ -880,7 +873,7 @@ class PS:
             for ix, grid in self.grids.items():
                 im = ax.imshow(cval[ix], extent=grid.extent, aspect='auto',
                                origin='lower', vmin=mn, vmax=mx)
-            self.add_overlay(ax, label=label)
+            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             cbar = fig.colorbar(im)
@@ -905,7 +898,7 @@ class PS:
                 break
         return key
 
-    def gidentify(self, label=False):
+    def gidentify(self, label=False, skiplabels=0, labelfs=6):
         """Visual version of `identify` method. PT point is provided by mouse click.
 
         Args:
@@ -913,14 +906,14 @@ class PS:
         """
         fig, ax = plt.subplots()
         ax.autoscale_view()
-        self.add_overlay(ax, label=label)
+        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
         ax.set_xlim(self.xrange)
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
         x, y = plt.ginput(1)[0]
         return self.identify(x, y)
 
-    def ginput_path(self, label=False):
+    def ginput_path(self, label=False, skiplabels=0, labelfs=6):
         """Collect Path data by mouse digitizing.
 
         Args:
@@ -928,7 +921,7 @@ class PS:
         """
         fig, ax = plt.subplots()
         ax.autoscale_view()
-        self.add_overlay(ax, label=label)
+        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
         ax.set_xlim(self.xrange)
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
@@ -969,6 +962,8 @@ class PS:
                 of the approximation. 0 is for interpolation (default).
             refine (int): Degree of grid refinement. Default 1
             filled (bool): Whether to contours should be filled. Defaut True.
+            filled_over (bool): Whether to overlay contourline over filled
+                contours. Defaut False.
             out (str or list): Highligt zero-mode lines for given phases.
             high (frozenset or list): Highlight divariant fields identified
                 by key(s).
@@ -997,6 +992,7 @@ class PS:
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
             filled = kwargs.get('filled', True)
+            filled_over = kwargs.get('filled_over', False)
             out = kwargs.get('out', None)
             bulk = kwargs.get('bulk', False)
             high = kwargs.get('high', [])
@@ -1106,12 +1102,17 @@ class PS:
                         warnings.filterwarnings("ignore", category=UserWarning)
                         if filled:
                             cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                            if filled_over:
+                                contover = ax.contour(tg, pg, zg, cntv, colors='whitesmoke')
                         else:
                             cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
                     patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
                     ax.add_patch(patch)
                     for col in cont.collections:
                         col.set_clip_path(patch)
+                    if filled and filled_over:
+                        for col in contover.collections:
+                            col.set_clip_path(patch)
                     # label if needed
                     if not filled and key in labelkyes_ok:
                         positions = []
@@ -1168,22 +1169,10 @@ class PS:
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
                     ox, val = self.tc.bulk
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
-                            ' & '.join(ox) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val) + \
-                            r'''\end{tabular}'''
-                    plt.figtext(0.1, 0.98, table, size=8, va='top', usetex=True)
+                    table(ax=ax, cellText=[val], colLabels=ox, loc='top')
                 else:
                     ox, val1, val2 = self.tc.bulk
-                    table = r'''\begin{tabular}{ ''' + ' | '.join(len(ox) * ['c']) + '}' + \
-                            ' & '.join(ox) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val1) + \
-                            r''' \\\hline ''' + \
-                            ' & '.join(val2) + \
-                            r'''\end{tabular}'''
-                    plt.figtext(0.1, 1, table, size=8, va='top', usetex=True)
+                    table(ax=ax, cellText=[val1, val2], colLabels=ox, loc='top')
             else:
                 if only is None:
                     ax.set_xlim(self.xrange)
@@ -1556,7 +1545,7 @@ class PTPS(PS):
         else:
             print('Not yet gridded...')
 
-    def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True):
+    def show_path_data(self, ptpath, phase, expr=None, label=False, pathwidth=4, allpath=True, skiplabels=0, labelfs=6):
         """Show values of expression for given phase calculated along PTpath.
 
         It plots colored strip on PT space. Strips arenot drawn accross fields,
@@ -1589,7 +1578,7 @@ class PTPS(PS):
                 lc.set_array(exs)
                 lc.set_linewidth(pathwidth)
                 line = ax.add_collection(lc)
-                self.add_overlay(ax, label=label)
+                self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             cbar = fig.colorbar(line, ax=ax)
             cbar.set_label('{}[{}]'.format(phase, expr))
             ax.set_xlim(self.xrange)
