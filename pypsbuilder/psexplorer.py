@@ -621,7 +621,7 @@ class PS:
         alpha = kwargs.get('alpha', 0.6)
         label = kwargs.get('label', False)
         skiplabels = kwargs.get('skiplabels', 0)
-        labelfs = kwargs.get('labelfs', False)
+        labelfs = kwargs.get('labelfs', 6)
         bulk = kwargs.get('bulk', False)
         high = kwargs.get('high', [])
         connect = kwargs.get('connect', False)
