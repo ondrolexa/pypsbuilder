@@ -3,24 +3,30 @@ name: Python testing
 on: [push, pull_request]
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        python-version: ['3.8', '3.9', '3.10']
-    name: Python ${{ matrix.python-version }} ${{ matrix.os }}
+  tests:
+    runs-on: "ubuntu-latest"
+    name: Testing
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup conda
-        uses: s-weigand/setup-conda@v1
+        name: Checkout repository
+
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          update-conda: true
-          python-version: ${{ matrix.python-version }}
-          conda-channels: conda-forge
-      - name: Install dependencies
-        run: conda env update --file ci-environment.yml --name base
+          auto-update-conda: true
+          miniforge-variant: Mambaforge
+          channels: conda-forge
+          python-version: 3.9
+          activate-environment: pyps
+          auto-activate-base: false
+          environment-file: environment.yml
+          use-mamba: true
+
       - name: Lint with flake8
         run: flake8 . --exit-zero --max-complexity=20 --max-line-length=127 --ignore=E501,W503,C901
+
       - name: Test with pytest
         run: pytest -v
