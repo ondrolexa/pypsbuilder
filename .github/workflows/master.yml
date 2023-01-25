@@ -22,7 +22,7 @@ jobs:
           python-version: 3.9
           activate-environment: pyps
           auto-activate-base: false
-          environment-file: environment.yml
+          environment-file: ci-environment.yml
           use-mamba: true
 
       - name: Lint with flake8
