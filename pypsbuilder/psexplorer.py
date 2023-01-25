@@ -953,6 +953,8 @@ class PS:
             N (int): Max number of contours. Default 10.
             step (int): Step between contour levels. If defined, N is ignored.
                 Default None.
+            levels (list): User-defined contour levels. If defined, N and step
+                is ignored.
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points. Default 7 (all data)
@@ -1043,6 +1045,7 @@ class PS:
                 # cntv = np.linspace(mn - dm, mx + dm, N)
                 ml = ticker.MaxNLocator(nbins=N)
                 cntv = ml.tick_values(vmin=mn, vmax=mx)
+            cntv = kwargs.get('levels', cntv)
             # Thin-plate contouring of areas
             fig, ax = plt.subplots(**fig_kw)
             for key in recs:
