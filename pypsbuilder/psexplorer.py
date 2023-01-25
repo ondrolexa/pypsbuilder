@@ -715,6 +715,7 @@ class PS:
                 fig.canvas.mpl_connect('button_press_event', self.onclick)
             if filename is not None:
                 plt.savefig(filename, **save_kw)
+                plt.close(fig)
             else:
                 plt.show()
             # return ax
@@ -1186,6 +1187,7 @@ class PS:
             # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
             if filename is not None:
                 plt.savefig(filename, **save_kw)
+                plt.close(fig)
             else:
                 plt.show()
 
