@@ -1989,7 +1989,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.tc.update_scriptfile(guesses=old_guesses)
             QtWidgets.QApplication.restoreOverrideCursor()
             if cand:
-                txt = '         {}         {} E     Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
+                txt = '         {}         {}       Out   Inv\n'.format(self.ps.x_var, self.ps.y_var)
                 n_format = '{:10.4f}{:10.4f}{:>2}{:>8}{:>6}\n'
                 for cc in sorted(cand, key=lambda elem: elem[0]):
                     txt += n_format.format(*cc[1:])
