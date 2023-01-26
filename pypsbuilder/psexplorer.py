@@ -698,10 +698,16 @@ class PS:
                     ax.set_xlabel(self.name)
                 # bulk composition
                 if self.section_class.__name__ == 'PTsection':
-                    ox, val = self.tc.bulk
+                    if self.tc.usedbulk is not None:
+                        ox, val = self.tc.usedbulk
+                    else:
+                        ox, val = self.tc.bulk
                     table(ax=ax, cellText=[val], colLabels=ox, loc='top')
                 else:
-                    ox, val1, val2 = self.tc.bulk
+                    if self.tc.usedbulk is not None:
+                        ox, val1, val2 = self.tc.usedbulk
+                    else:
+                        ox, val1, val2 = self.tc.bulk
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc='top')
             else:
                 if label:
@@ -912,7 +918,72 @@ class PS:
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
         x, y = plt.ginput(1)[0]
+        plt.close(fig)
         return self.identify(x, y)
+
+    def glabel(self, label=False, skiplabels=0, labelfs=6):
+        """Return formatted string of assamblage at PT point provided by mouse click.
+
+        Args:
+            label (bool): Whether to label divariant fields. Default False.
+        """
+        fig, ax = plt.subplots()
+        ax.autoscale_view()
+        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+        ax.set_xlim(self.xrange)
+        ax.set_ylim(self.yrange)
+        ax.format_coord = self.format_coord
+        pts = plt.ginput(0)
+        plt.close(fig)
+        for ix, (x, y) in enumerate(pts):
+            print(f'{ix+1}: {" ".join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}')
+
+    def pointcalc(self, label=False, skiplabels=0, labelfs=6):
+        fig, ax = plt.subplots()
+        ax.autoscale_view()
+        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+        ax.set_xlim(self.xrange)
+        ax.set_ylim(self.yrange)
+        ax.format_coord = self.format_coord
+        x, y = plt.ginput(1)[0]
+        plt.close(fig)
+        k = self.identify(x, y)
+        if k is not None:
+            last_inv = 0
+            for ix, ps in self.sections.items():
+                # update guesses from closest inv point
+                dst = sys.float_info.max
+                for id_inv, inv in ps.invpoints.items():
+                    d2 = (inv._x - x)**2 + (inv._y - y)**2
+                    if d2 < dst:
+                        dst = d2
+                        id_close = id_inv
+                if id_close != last_inv and not ps.invpoints[id_close].manual:
+                    self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
+                    last_inv = id_close
+            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+            status, res, output = self.tc.parse_logfile()
+            if res is None:
+                for ix, ps in self.sections.items():
+                    # update guesses from closest uni line point
+                    dst = sys.float_info.max
+                    for id_uni in self.unilists[ix][k]:
+                        uni = ps.unilines[id_uni]
+                        if not uni.manual:
+                            for vix in list(range(len(uni._x))[uni.used]):
+                                d2 = (uni._x[vix] - x)**2 + (uni._y[vix] - y)**2
+                                if d2 < dst:
+                                    dst = d2
+                                    id_close = id_uni
+                                    vix_close = vix
+                    self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
+                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
+                status, res, output = self.tc.parse_logfile()
+            if res is None:
+                print('Calculation failed')
+            else:
+                print(output)
+                return res[0]
 
     def ginput_path(self, label=False, skiplabels=0, labelfs=6):
         """Collect Path data by mouse digitizing.
@@ -934,7 +1005,7 @@ class PS:
             if event.inaxes:
                 key = self.identify(event.xdata, event.ydata)
                 if key:
-                    print(' '.join(sorted(list(key))))
+                    print(' '.join(sorted([self.abbr.get(sa, sa) for sa in key])))
 
     def isopleths(self, phase, expr=None, **kwargs):
         """Method to draw compositional isopleths.

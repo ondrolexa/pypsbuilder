@@ -283,7 +283,7 @@ class TC35API(TCAPI):
         try:
             # TC version
             errinfo = 'THERMOCALC executable test.'
-            self.tcout = self.runtc()
+            self.tcout = self.runtc('\nkill\n\n')
             # tc-prefs file
             if not self.workdir.joinpath('tc-prefs.txt').exists():
                 raise InitError('No tc-prefs.txt file in working directory.')
@@ -305,6 +305,9 @@ class TC35API(TCAPI):
                             raise InitError('tc-prefs: dontwrap must be no.')
             # defaults
             self.ptx_steps = 20  # IS IT NEEDED ????
+            # Checks run output
+            if 'exit, and correct the scriptfile ?' in self.tcout:
+                raise ScriptfileError(self.tcout.split('exit, and correct the scriptfile ?')[0].split('\n')[-4])
             # Checks various settings
             errinfo = 'Scriptfile error!'
             with self.scriptfile.open('r', encoding=self.TCenc) as f:
@@ -356,6 +359,19 @@ class TC35API(TCAPI):
             self.bulk.append(scripts['bulk'][1].split())
             if len(scripts['bulk']) == 3:
                 self.bulk.append(scripts['bulk'][2].split()[:len(self.bulk[0])])  # remove possible number of steps
+            # try to get actual bulk from output
+            self.usedbulk = None
+            if 'specification of bulk composition' in self.tcout:
+                try:
+                    part = self.tcout.split('specification of bulk composition')[1].split('<==========================================================>')[0]
+                    lns = [ln for ln in part.split(os.linesep) if ln.startswith(' ')]
+                    self.usedbulk = []
+                    self.usedbulk.append(lns[0].split())
+                    self.usedbulk.append(lns[1].split())
+                    if len(lns) == 3:
+                        self.usedbulk.append(lns[2].split()[:len(self.usedbulk[0])])
+                except BaseException as e:
+                    self.usedbulk = None
             # inexcess
             errinfo = 'Wrong inexcess in scriptfile.'
             if 'setexcess' in scripts:
@@ -389,7 +405,7 @@ class TC35API(TCAPI):
                 raise ScriptfileError('Dogmin script should be removed from scriptfile.')
             # union ax phases and samecoding and diff omit
             if 'BOMBED' in self.tcout:
-                raise TCError(self.tcout.split('BOMBED')[1].split('\n')[0])
+                raise TCError(self.tcout.split('BOMBED')[1].split(os.linesep)[0])
             else:
                 ax_phases = set(self.tcout.split('reading ax:')[1].split(2 * os.linesep)[0].split())
                 self.phases = ax_phases.union(*self.samecoding) - self.omit
@@ -400,7 +416,8 @@ class TC35API(TCAPI):
             if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
                 self.status = '{}: {}'.format(type(e).__name__, str(e))
             else:
-                self.status = '{}: {} {}'.format(type(e).__name__, str(e), errinfo)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                self.status = '{}: {} {} on line {}'.format(type(e).__name__, str(e), exc_tb.tb_lineno)
             self.OK = False
 
     def parse_logfile(self, **kwargs):
