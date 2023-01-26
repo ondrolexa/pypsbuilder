@@ -417,7 +417,7 @@ class TC35API(TCAPI):
                 self.status = '{}: {}'.format(type(e).__name__, str(e))
             else:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
-                self.status = '{}: {} {} on line {}'.format(type(e).__name__, str(e), exc_tb.tb_lineno)
+                self.status = '{}: {} on line {}'.format(type(e).__name__, str(e), exc_tb.tb_lineno)
             self.OK = False
 
     def parse_logfile(self, **kwargs):
