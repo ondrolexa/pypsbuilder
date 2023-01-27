@@ -774,6 +774,8 @@ class SectionBase:
                             log.append('Area defined by unilines {} is self-intersecting with {}.'.format(' '.join([str(id) for id in unilist]), ' '.join([str(id) for id in unilists[frozenset(phases)]])))
                             unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
                     else:
+                        if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(set.union(*polymorphs)):
+                            phases = self.unilines[unilist[0]].phases.difference(self.unilines[unilist[0]].out)
                         shapes[frozenset(phases)] = poly
                         unilists[frozenset(phases)] = unilist
             else:
