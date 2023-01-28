@@ -36,7 +36,7 @@ import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from matplotlib.collections import LineCollection
 from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -346,7 +346,7 @@ class PS:
         self.masks = {}
         points = MultiPoint(list(zip(self.xg.flatten(), self.yg.flatten())))
         for key in self.shapes:
-            self.masks[key] = np.array(list(map(self.shapes[key].contains, points))).reshape(self.xg.shape)
+            self.masks[key] = np.array(list(map(self.shapes[key].contains, points.geoms))).reshape(self.xg.shape)
 
     def collect_all_data_keys(self):
         """Collect all phases and variables calculated on grid.
@@ -1024,6 +1024,8 @@ class PS:
             N (int): Max number of contours. Default 10.
             step (int): Step between contour levels. If defined, N is ignored.
                 Default None.
+            cdf (bool): When True contour levels are percentile based.
+                Default False.
             levels (list): User-defined contour levels. If defined, N and step
                 is ignored.
             which (int): Bitopt defining from where data are collected. 0 bit -
@@ -1049,10 +1051,6 @@ class PS:
                 should be labeled.
             nosplit (bool): Controls whether the contour underlying labels are
                 removed or not. Defaut True
-            colors (seq): The colors of the levels, i.e. the lines for contour and
-                the areas for contourf. The sequence is cycled for the levels
-                in ascending order. By default (value None), the colormap
-                specified by cmap will be used.
             gradient (bool): Whether the first derivate of values should be used.
                 Default False.
             dt (bool): Whether the gradient should be calculated along
@@ -1073,13 +1071,13 @@ class PS:
             nosplit = kwargs.get('nosplit', False)
             step = kwargs.get('step', None)
             N = kwargs.get('N', 10)
+            cdf = kwargs.get('cdf', False)
             gradient = kwargs.get('gradient', False)
             dx = kwargs.get('dx', True)
             only = kwargs.get('only', None)
             refine = kwargs.get('refine', 1)
             method = kwargs.get('method', 'rbf')
             rbf_func = kwargs.get('rbf_func', 'thin_plate')
-            colors = kwargs.get('colors', None)
             cmap = kwargs.get('cmap', 'viridis')
             labelkeys = kwargs.get('labelkeys', [])
             fig_kw = kwargs.get('fig_kw', {})
@@ -1112,10 +1110,14 @@ class PS:
                 cntv = np.arange(0, mx + step, step)
                 cntv = cntv[cntv >= mn - step]
             else:
-                # dm = (mx - mn) / 25
-                # cntv = np.linspace(mn - dm, mx + dm, N)
-                ml = ticker.MaxNLocator(nbins=N)
-                cntv = ml.tick_values(vmin=mn, vmax=mx)
+                if cdf:
+                    dd = []
+                    for key in recs:
+                        dd.extend(recs[key]['data'])
+                    cntv = np.percentile(dd, np.linspace(0, 100, N))
+                else:
+                    ml = ticker.MaxNLocator(nbins=N)
+                    cntv = ml.tick_values(vmin=mn, vmax=mx)
             cntv = kwargs.get('levels', cntv)
             # Thin-plate contouring of areas
             fig, ax = plt.subplots(**fig_kw)
@@ -1176,11 +1178,11 @@ class PS:
                     with warnings.catch_warnings():
                         warnings.filterwarnings("ignore", category=UserWarning)
                         if filled:
-                            cont = ax.contourf(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                            cont = ax.contourf(tg, pg, zg, cntv, cmap=cmap)
                             if filled_over:
                                 contover = ax.contour(tg, pg, zg, cntv, colors='whitesmoke')
                         else:
-                            cont = ax.contour(tg, pg, zg, cntv, colors=colors, cmap=cmap)
+                            cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
                     patch = PolygonPatch(self.shapes[key], fc='none', ec='none')
                     ax.add_patch(patch)
                     for col in cont.collections:
@@ -1376,6 +1378,8 @@ class PS:
     def save_tab(self, comps, tabfile=None):
         """Export gridded values to Perple_X tab format. Could be used in pywerami.
 
+        Note: Gridded values are interpolated from raw results
+
         Args:
             comps (list): List of (phase, expr) tuples.
                           phase (str): Phase or end-member named
@@ -1421,12 +1425,39 @@ class PS:
                     tg, pg = self.xg[slc], self.yg[slc]
                     x, y = np.array(recs[key]['pts']).T
                     # Use scaling
-                    rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='thin_plate', smooth=smooth)
+                    rbf = Rbf(x, self.ratio * y, recs[key]['data'], function='linear', smooth=smooth)
                     zg = rbf(tg, self.ratio * pg)
                     gd[self.masks[key]] = zg[self.masks[key][slc]]
                 return gd
         else:
             print('Not yet gridded...')
+
+    def get_grids(self, phase, expr=None):
+        """Convinient function to get dictionary of grids.
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+        """
+        if self.gridded:
+            if self.check_phase_expr(phase, expr):
+                cgd = {}
+                mn, mx = sys.float_info.max, -sys.float_info.max
+                for ix, grid in self.grids.items():
+                    gd = np.empty(grid.xg.shape)
+                    gd[:] = np.nan
+                    for key in grid.masks:
+                        results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                        if len(results) > 0:
+                            if phase in results[0].phases:
+                                rows, cols = np.nonzero(grid.masks[key])
+                                for r, c in zip(rows, cols):
+                                    if grid.status[r, c] == 1:
+                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c][phase])
+                    cgd[ix] = gd
+                return cgd
 
 
 class PTPS(PS):
@@ -1643,7 +1674,7 @@ class PTPS(PS):
             if allpath:
                 ax.plot(ptpath.t, ptpath.p, '--', color='grey', lw=1)
             # Create a continuous norm to map from data points to colors
-            norm = plt.Normalize(np.nanmin(ex), np.nanmax(ex))
+            norm = Normalize(np.nanmin(ex), np.nanmax(ex))
 
             for s in np.ma.clump_unmasked(np.ma.masked_invalid(ex)):
                 ts, ps, exs = ptpath.t[s], ptpath.p[s], ex[s]
