@@ -43,7 +43,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.table import table
 from matplotlib import ticker
 
-from shapely.geometry import MultiPoint, Point
+from shapely.geometry import MultiPoint, Point, LineString
 from shapely.ops import linemerge
 from scipy.interpolate import Rbf, interp1d
 from scipy.linalg import LinAlgWarning, lstsq
@@ -626,6 +626,7 @@ class PS:
         high = kwargs.get('high', [])
         connect = kwargs.get('connect', False)
         show_vertices = kwargs.get('show_vertices', False)
+        fig = kwargs.get('fig', None)
         fig_kw = kwargs.get('fig_kw', {})
         filename = kwargs.get('filename', None)
         save_kw = kwargs.get('save_kw', {})
@@ -641,7 +642,12 @@ class PS:
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
             norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
-            fig, ax = plt.subplots(**fig_kw)
+            if fig is None:
+                show = True
+                fig, ax = plt.subplots(**fig_kw)
+            else:
+                show = False
+                ax = fig.add_subplot()
             for k, shape in self.shapes.items():
                 patch = PolygonPatch(shape, fc=pscmap(norm(self.variance[k])), ec='none')
                 ax.add_patch(patch)
@@ -723,8 +729,8 @@ class PS:
                 plt.savefig(filename, **save_kw)
                 plt.close(fig)
             else:
-                plt.show()
-            # return ax
+                if show:
+                    plt.show()
         else:
             print('There is no single area defined in your pseudosection. Check topology.')
 
@@ -1080,6 +1086,7 @@ class PS:
             rbf_func = kwargs.get('rbf_func', 'thin_plate')
             cmap = kwargs.get('cmap', 'viridis')
             labelkeys = kwargs.get('labelkeys', [])
+            fig = kwargs.get('fig', None)
             fig_kw = kwargs.get('fig_kw', {})
             filename = kwargs.get('filename', None)
             save_kw = kwargs.get('save_kw', {})
@@ -1120,7 +1127,12 @@ class PS:
                     cntv = ml.tick_values(vmin=mn, vmax=mx)
             cntv = kwargs.get('levels', cntv)
             # Thin-plate contouring of areas
-            fig, ax = plt.subplots(**fig_kw)
+            if fig is None:
+                show = True
+                fig, ax = plt.subplots(**fig_kw)
+            else:
+                show = False
+                ax = fig.add_subplot()
             for key in recs:
                 phase_parts = phase.split(')')[0].split('(')
                 if phase_parts[0] in key:
@@ -1150,18 +1162,22 @@ class PS:
                         if self.show_errors:
                             print(e)
                         try:
-                            # preprocess with griddata cubic
-                            zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
-                            # locate valid data
-                            ri, ci = np.nonzero(np.isfinite(zg_tmp))
-                            x, y, z = np.array([[tg[r, c], pg[r, c], zg_tmp[r, c]] for r, c in zip(ri, ci)]).T
-                            # do Rbf extrapolation
-                            with warnings.catch_warnings():
-                                warnings.filterwarnings("ignore", category=LinAlgWarning)
-                                rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth)
-                                zg = rbf(tg, self.ratio * pg)
+                            if method == 'quadratic':
+                                print('Using nearest method in {}'.format(' '.join(sorted(list(key)))))
+                                zg = griddata(np.array(pts), data, (tg, pg), method='nearest', rescale=True)
+                            else:
+                                # preprocess with griddata
+                                zg_tmp = griddata(pts, data, (tg, pg), method='linear', rescale=True)
+                                # locate valid data
+                                ri, ci = np.nonzero(np.isfinite(zg_tmp))
+                                x, y, z = np.array([[tg[r, c], pg[r, c], zg_tmp[r, c]] for r, c in zip(ri, ci)]).T
+                                # do Rbf extrapolation
+                                with warnings.catch_warnings():
+                                    warnings.filterwarnings("ignore", category=LinAlgWarning)
+                                    rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth)
+                                    zg = rbf(tg, self.ratio * pg)
                         except Exception:
-                            print('Failed to nearest method in {}'.format(' '.join(sorted(list(key)))))
+                            print('Using nearest method in {}'.format(' '.join(sorted(list(key)))))
                             zg = griddata(np.array(pts), data, (tg, pg), method='nearest', rescale=True)
                     # experimental
                     if gradient:
@@ -1265,7 +1281,242 @@ class PS:
                 plt.savefig(filename, **save_kw)
                 plt.close(fig)
             else:
-                plt.show()
+                if show:
+                    plt.show()
+
+    def isopleths_vector(self, phase, expr=None, **kwargs):
+        """Method to draw compositional isopleths.
+
+        Isopleths are drawn as contours for values evaluated from provided
+        expression. Individual divariant fields are contoured separately, so
+        final plot allows sharp changes accross univariant lines. Within
+        divariant field the thin-plate radial basis function interpolation is
+        used. See scipy.interpolation.Rbf
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            N (int): Max number of contours. Default 10.
+            step (int): Step between contour levels. If defined, N is ignored.
+                Default None.
+            cdf (bool): When True contour levels are percentile based.
+                Default False.
+            levels (list): User-defined contour levels. If defined, N and step
+                is ignored.
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points. Default 7 (all data)
+            method: Interpolation method. Default is 'rbf', other option is
+                'quadratic', which uses least-square fit to quadratic surface.
+            rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
+            smooth (int): Values greater than zero increase the smoothness
+                of the approximation. 0 is for interpolation (default).
+            refine (int): Degree of grid refinement. Default 1
+            out (str or list): Highligt zero-mode lines for given phases.
+            overlay (bool): Whether to show assemblage fields. Default True
+            high (frozenset or list): Highlight divariant fields identified
+                by key(s).
+            cmap (str): matplotlib colormap used to divariant fields coloring.
+                Colors are based on variance. Default 'viridis'.
+            bulk (bool): Whether to show bulk composition on top of diagram.
+                Default False.
+            fig_kw: dict passed to subplots method.
+            filename: If not None, figure is saved to file
+            save_kw: dict passed to savefig method.
+        """
+        from skimage import measure
+        from matplotlib.cm import ScalarMappable
+
+        if self.check_phase_expr(phase, expr):
+            # parse kwargs
+            which = kwargs.get('which', 7)
+            smooth = kwargs.get('smooth', 0)
+            filled = kwargs.get('filled', True)
+            filled_over = kwargs.get('filled_over', False)
+            out = kwargs.get('out', None)
+            bulk = kwargs.get('bulk', False)
+            high = kwargs.get('high', [])
+            nosplit = kwargs.get('nosplit', False)
+            step = kwargs.get('step', None)
+            N = kwargs.get('N', 10)
+            cdf = kwargs.get('cdf', False)
+            overlay = kwargs.get('overlay', True)
+            only = kwargs.get('only', None)
+            refine = kwargs.get('refine', 1)
+            method = kwargs.get('method', 'rbf')
+            rbf_func = kwargs.get('rbf_func', 'thin_plate')
+            cmap = kwargs.get('cmap', 'viridis')
+            fig = kwargs.get('fig', None)
+            fig_kw = kwargs.get('fig_kw', {})
+            filename = kwargs.get('filename', None)
+            save_kw = kwargs.get('save_kw', {})
+
+            if not self.gridded:
+                print('Collecting only from uni lines and inv points. Not yet gridded...')
+            if isinstance(out, str):
+                out = [out]
+            if only is not None:
+                recs = OrderedDict()
+                d = self.collect_data(only, phase, expr, which=which)
+                z = d['data']
+                if z:
+                    recs[only] = d
+                    mn = min(z)
+                    mx = max(z)
+            else:
+                recs, mn, mx = self.merge_data(phase, expr, which=which)
+            mapper = ScalarMappable(norm=Normalize(vmin=mn, vmax=mx, clip=True), cmap=cmap)
+            if step:
+                cntv = np.arange(0, mx + step, step)
+                cntv = cntv[cntv >= mn - step]
+            else:
+                if cdf:
+                    dd = []
+                    for key in recs:
+                        dd.extend(recs[key]['data'])
+                    cntv = np.percentile(dd, np.linspace(0, 100, N))
+                else:
+                    ml = ticker.MaxNLocator(nbins=N)
+                    cntv = ml.tick_values(vmin=mn, vmax=mx)
+            cntv = kwargs.get('levels', cntv)
+            # Thin-plate contouring of areas
+            if fig is None:
+                show = True
+                fig, ax = plt.subplots(**fig_kw)
+            else:
+                show = False
+                ax = fig.add_subplot()
+            for key in recs:
+                phase_parts = phase.split(')')[0].split('(')
+                if phase_parts[0] in key:
+                    tmin, pmin, tmax, pmax = self.shapes[key].bounds
+                    # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
+                    # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]
+                    ttspace = np.arange(tmin - self.gridxstep, tmax + self.gridxstep, self.gridxstep / refine)
+                    ppspace = np.arange(pmin - self.gridystep, pmax + self.gridystep, self.gridystep / refine)
+                    tg, pg = np.meshgrid(ttspace, ppspace)
+                    x, y = np.array(recs[key]['pts']).T
+                    pts = recs[key]['pts']
+                    data = recs[key]['data']
+                    try:
+                        if method == 'quadratic':
+                            tgg = tg.flatten()
+                            pgg = pg.flatten()
+                            A = np.c_[np.ones_like(x), x, y, x * y, x ** 2, y ** 2]
+                            C, _, _, _ = lstsq(A, data)
+                            # evaluate it on a grid
+                            zg = np.dot(np.c_[np.ones_like(tgg), tgg, pgg, tgg * pgg, tgg ** 2, pgg ** 2], C).reshape(tg.shape)
+                        else:
+                            rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
+                            zg = rbf(tg, self.ratio * pg)
+                    except Exception as e:
+                        if self.show_errors:
+                            print(e)
+                        zg = griddata(np.array(pts), data, (tg, pg), method='cubic', rescale=True)
+                    # ------------
+                    scx = (tmax - tmin + 2*self.gridxstep) / zg.shape[1]
+                    scy = (pmax - pmin + 2*self.gridystep) / zg.shape[0]
+                    lns = []
+                    for v in np.linspace(mn, mx, 10):
+                        contours = measure.find_contours(zg, v)
+                        for contour in contours:
+                            cnt = np.array(
+                                (contour[:, 1] * scx + tmin - self.gridxstep,
+                                 contour[:, 0] * scy + pmin - self.gridystep)
+                                ).T
+                            lnc = LineString(cnt)
+                            if self.shapes[key].intersects(lnc):
+                                ln = self.shapes[key].intersection(lnc)
+                                if ln.geom_type == 'MultiLineString':
+                                    for lnp in ln.geoms:
+                                        lnp = lnp.simplify(tolerance=0.01)
+                                        x, y = np.array(lnp.coords).T
+                                        ax.plot(x, y, color=mapper.to_rgba(v))
+                                else:
+                                    ln = ln.simplify(tolerance=0.01)
+                                    x, y = np.array(ln.coords).T
+                                    ax.plot(x, y, color=mapper.to_rgba(v))
+                    # label if needed
+                    if not filled and key in labelkyes_ok:
+                        positions = []
+                        for col in cont.collections:
+                            for seg in col.get_paths(): #get_segments():
+                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg.vertices).geoms), dtype=bool)
+                                if np.any(inside):
+                                    positions.append(seg.vertices[inside].mean(axis=0))
+                        ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
+            if only is None:
+                if overlay:
+                    self.add_overlay(ax)
+                # zero mode lines
+                if out:
+                    for o in out:
+                        xy = []
+                        for ps in self.sections.values():
+                            for uni in ps.unilines.values():
+                                if o in uni.out:
+                                    xy.append((uni.x, uni.y))
+                                for poly in polymorphs:
+                                    if poly.issubset(uni.phases):
+                                        if o in poly:
+                                            if poly.difference({o}).issubset(uni.out):
+                                                xy.append((uni.x, uni.y))
+                        if xy:
+                            ax.plot(np.hstack([(*seg[0], np.nan) for seg in xy]),
+                                    np.hstack([(*seg[1], np.nan) for seg in xy]), lw=2)
+            try:
+                fig.colorbar(mapper)
+            except Exception as e:
+                print('There is trouble to draw colorbar. Sorry.')
+                if self.show_errors:
+                    print(e)
+            # Show highlight. Change to list if only single key
+            if not isinstance(high, list):
+                high = [high]
+            if only is None:
+                for k in high:
+                    if isinstance(k, str):
+                        k = frozenset(k.split())
+                    k = k.union(self.tc.excess)
+                    if k in self.shapes:
+                        ax.add_patch(PolygonPatch(self.shapes[k], fc='none', ec='red', lw=2))
+                    else:
+                        print('Field {} not found.'.format(' '.join(k)))
+            # bulk
+            if bulk:
+                if only is None:
+                    ax.set_xlim(self.xrange)
+                    ax.set_ylim(self.yrange)
+                    ax.set_xlabel('{}({})'.format(phase, expr))
+                else:
+                    ax.set_xlabel('{} - {}({})'.format(' '.join(only), phase, expr))
+                # bulk composition
+                if self.section_class.__name__ == 'PTsection':
+                    ox, val = self.tc.bulk
+                    table(ax=ax, cellText=[val], colLabels=ox, loc='top')
+                else:
+                    ox, val1, val2 = self.tc.bulk
+                    table(ax=ax, cellText=[val1, val2], colLabels=ox, loc='top')
+            else:
+                if only is None:
+                    ax.set_xlim(self.xrange)
+                    ax.set_ylim(self.yrange)
+                    ax.set_title('{}({})'.format(phase, expr))
+                else:
+                    ax.set_title('{} - {}({})'.format(' '.join(only), phase, expr))
+            # coords
+            ax.format_coord = self.format_coord
+            # connect button press
+            # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+            if filename is not None:
+                plt.savefig(filename, **save_kw)
+                plt.close(fig)
+            else:
+                if show:
+                    plt.show()
+
 
     def gendrawpd(self, export_areas=True):
         """Method to write drawpd file
