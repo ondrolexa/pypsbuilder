@@ -1461,7 +1461,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                         xl, yl = uni.get_label_point()
                         self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_unc_kw)
                     else:
-                        if not self.checkHidedone.isChecked():
+                        if not self.checkHidedoneUni.isChecked():
                             xl, yl = uni.get_label_point()
                             self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_kw)
             for inv in self.ps.invpoints.values():
@@ -1483,7 +1483,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if unconnected:
                         self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_unc_kw)
                     else:
-                        if not self.checkHidedone.isChecked():
+                        if not self.checkHidedoneInv.isChecked():
                             self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_kw)
                 else:
                     if unconnected:
@@ -1591,7 +1591,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
+            builder_settings.setValue("hide_done_inv", self.checkHidedoneInv.checkState())
+            builder_settings.setValue("hide_done_uni", self.checkHidedoneUni.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -1614,7 +1615,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -2240,7 +2242,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
+            builder_settings.setValue("hide_done_inv", self.checkHidedoneInv.checkState())
+            builder_settings.setValue("hide_done_uni", self.checkHidedoneUni.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -2263,7 +2266,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
@@ -2888,7 +2892,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             builder_settings.setValue("label_inv_text", self.checkLabelInvText.checkState())
             builder_settings.setValue("label_dog", self.checkLabelDog.checkState())
             builder_settings.setValue("label_dog_text", self.checkLabelDogText.checkState())
-            builder_settings.setValue("hide_done", self.checkHidedone.checkState())
+            builder_settings.setValue("hide_done_inv", self.checkHidedoneInv.checkState())
+            builder_settings.setValue("hide_done_uni", self.checkHidedoneUni.checkState())
             builder_settings.setValue("label_alpha", self.spinAlpha.value())
             builder_settings.setValue("label_fontsize", self.spinFontsize.value())
             builder_settings.setValue("autoconnectuni", self.checkAutoconnectUni.checkState())
@@ -2911,7 +2916,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedone.setCheckState(builder_settings.value("hide_done", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))

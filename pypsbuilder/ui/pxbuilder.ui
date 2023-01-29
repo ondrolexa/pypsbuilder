@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1106</width>
-    <height>726</height>
+    <height>727</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -410,6 +410,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
+                </property>
                 <property name="maximum">
                  <number>6</number>
                 </property>
@@ -433,6 +439,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
+                </property>
                 <property name="maximum">
                  <number>20</number>
                 </property>
@@ -455,6 +467,12 @@
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
                 </property>
                 <property name="maximum">
                  <number>2</number>
@@ -498,6 +516,20 @@
                 </property>
                </widget>
               </item>
+              <item row="5" column="0">
+               <widget class="QCheckBox" name="checkLabelDog">
+                <property name="text">
+                 <string>Label dogmins</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QCheckBox" name="checkLabelDogText">
+                <property name="text">
+                 <string>Show phases instead numbers</string>
+                </property>
+               </widget>
+              </item>
               <item row="6" column="0">
                <widget class="QLabel" name="label_2">
                 <property name="text">
@@ -512,6 +544,12 @@
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
                 </property>
                 <property name="maximum">
                  <number>100</number>
@@ -539,6 +577,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>22</height>
+                 </size>
+                </property>
                 <property name="minimum">
                  <number>5</number>
                 </property>
@@ -554,51 +598,44 @@
                </widget>
               </item>
               <item row="8" column="0">
-               <widget class="QCheckBox" name="checkHidedone">
-                <property name="text">
-                 <string>Hide labels of fully connected lines and points</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
                <widget class="QCheckBox" name="checkOverwrite">
                 <property name="text">
                  <string>Do not overwrite already calculated lines and points</string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="0">
-               <widget class="QCheckBox" name="checkUseInvGuess">
+              <item row="8" column="1">
+               <widget class="QCheckBox" name="checkHidedoneInv">
                 <property name="text">
-                 <string>Use ptguess from connected invariant point</string>
+                 <string>Hide labels of fully connected points</string>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
+              <item row="9" column="0">
                <widget class="QCheckBox" name="checkAutoconnectUni">
                 <property name="text">
                  <string>Automatically connect new univariant lines if possible</string>
                 </property>
                </widget>
               </item>
-              <item row="12" column="0">
+              <item row="9" column="1">
+               <widget class="QCheckBox" name="checkHidedoneUni">
+                <property name="text">
+                 <string>Hide labels of fully connected lines</string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="0">
                <widget class="QCheckBox" name="checkAutoconnectInv">
                 <property name="text">
                  <string>Automatically connect new invariant points if possible</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QCheckBox" name="checkLabelDog">
+              <item row="10" column="1">
+               <widget class="QCheckBox" name="checkUseInvGuess">
                 <property name="text">
-                 <string>Label dogmins</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QCheckBox" name="checkLabelDogText">
-                <property name="text">
-                 <string>Show phases instead numbers</string>
+                 <string>Use ptguess from connected invariant point</string>
                 </property>
                </widget>
               </item>
@@ -1021,7 +1058,7 @@
      <x>0</x>
      <y>0</y>
      <width>1106</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
