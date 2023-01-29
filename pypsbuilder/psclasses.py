@@ -745,6 +745,7 @@ class SectionBase:
         # create shapes
         shapes = {}
         unilists = {}
+        tosolve = []
         for ix, poly in enumerate(polys):
             unilist = []
             for uni_id, ln in lns:
@@ -774,12 +775,25 @@ class SectionBase:
                             log.append('Area defined by unilines {} is self-intersecting with {}.'.format(' '.join([str(id) for id in unilist]), ' '.join([str(id) for id in unilists[frozenset(phases)]])))
                             unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
                     else:
-                        if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(set.union(*polymorphs)):
-                            phases = self.unilines[unilist[0]].phases.difference(self.unilines[unilist[0]].out)
-                        shapes[frozenset(phases)] = poly
-                        unilists[frozenset(phases)] = unilist
+                        if len(unilist) == 1:
+                            tosolve.append((unilist, phases, poly))
+                        else:
+                            shapes[frozenset(phases)] = poly
+                            unilists[frozenset(phases)] = unilist
             else:
                 log.append('Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in unilist])))
+        for unilist, phases, poly in tosolve:
+            if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(set.union(*polymorphs)):
+                phases = self.unilines[unilist[0]].phases.difference(self.unilines[unilist[0]].out)
+                shapes[frozenset(phases)] = poly
+                unilists[frozenset(phases)] = unilist
+            elif frozenset(phases) in shapes:
+                phases = frozenset(phases.difference(self.unilines[unilist[0]].out))
+                shapes[frozenset(phases)] = poly
+                unilists[frozenset(phases)] = unilist
+            else:
+                shapes[frozenset(phases)] = poly
+                unilists[frozenset(phases)] = unilist
         return shapes, unilists, log
 
     def show(self):
