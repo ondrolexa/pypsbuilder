@@ -1041,7 +1041,11 @@ class PS:
                 'quadratic', which uses least-square fit to quadratic surface.
             rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
             smooth (int): Values greater than zero increase the smoothness
-                of the approximation. 0 is for interpolation (default).
+                of the approximation. 0 is for interpolation (default),
+                the function will always go through the nodal points.
+            epsilon (int): Adjustable constant for gaussian or multiquadrics
+                functions - defaults to approximate average distance between
+                nodes (which is a good start).
             refine (int): Degree of grid refinement. Default 1
             filled (bool): Whether to contours should be filled. Defaut True.
             filled_over (bool): Whether to overlay contourline over filled
@@ -1069,6 +1073,7 @@ class PS:
             # parse kwargs
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
+            epsilon = kwargs.get('epsilon', None)
             filled = kwargs.get('filled', True)
             filled_over = kwargs.get('filled_over', False)
             out = kwargs.get('out', None)
@@ -1156,7 +1161,7 @@ class PS:
                         else:
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("error")
-                                rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
+                                rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth, epsilon=epsilon)
                                 zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
                         if self.show_errors:
@@ -1174,7 +1179,7 @@ class PS:
                                 # do Rbf extrapolation
                                 with warnings.catch_warnings():
                                     warnings.filterwarnings("ignore", category=LinAlgWarning)
-                                    rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth)
+                                    rbf = Rbf(x, self.ratio * y, z, function=rbf_func, smooth=smooth, epsilon=epsilon)
                                     zg = rbf(tg, self.ratio * pg)
                         except Exception:
                             print('Using nearest method in {}'.format(' '.join(sorted(list(key)))))
@@ -1312,8 +1317,11 @@ class PS:
                 'quadratic', which uses least-square fit to quadratic surface.
             rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
             smooth (int): Values greater than zero increase the smoothness
-                of the approximation. 0 is for interpolation (default).
-            refine (int): Degree of grid refinement. Default 1
+                of the approximation. 0 is for interpolation (default),
+                the function will always go through the nodal points.
+            epsilon (int): Adjustable constant for gaussian or multiquadrics
+                functions - defaults to approximate average distance between
+                nodes (which is a good start).
             out (str or list): Highligt zero-mode lines for given phases.
             overlay (bool): Whether to show assemblage fields. Default True
             high (frozenset or list): Highlight divariant fields identified
@@ -1333,6 +1341,7 @@ class PS:
             # parse kwargs
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
+            epsilon = kwargs.get('epsilon', None)
             filled = kwargs.get('filled', True)
             filled_over = kwargs.get('filled_over', False)
             out = kwargs.get('out', None)
@@ -1409,7 +1418,7 @@ class PS:
                             # evaluate it on a grid
                             zg = np.dot(np.c_[np.ones_like(tgg), tgg, pgg, tgg * pgg, tgg ** 2, pgg ** 2], C).reshape(tg.shape)
                         else:
-                            rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth)
+                            rbf = Rbf(x, self.ratio * y, data, function=rbf_func, smooth=smooth, epsilon=epsilon)
                             zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
                         if self.show_errors:
@@ -1438,15 +1447,6 @@ class PS:
                                     ln = ln.simplify(tolerance=0.01)
                                     x, y = np.array(ln.coords).T
                                     ax.plot(x, y, color=mapper.to_rgba(v))
-                    # label if needed
-                    if not filled and key in labelkyes_ok:
-                        positions = []
-                        for col in cont.collections:
-                            for seg in col.get_paths(): #get_segments():
-                                inside = np.fromiter(map(self.shapes[key].contains, MultiPoint(seg.vertices).geoms), dtype=bool)
-                                if np.any(inside):
-                                    positions.append(seg.vertices[inside].mean(axis=0))
-                        ax.clabel(cont, fontsize=9, manual=positions, fmt='%g', inline_spacing=3, inline=not nosplit)
             if only is None:
                 if overlay:
                     self.add_overlay(ax)
