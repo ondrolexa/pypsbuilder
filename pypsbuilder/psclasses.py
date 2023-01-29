@@ -20,16 +20,15 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from shapely.geometry import LineString, Point
-from shapely.ops import polygonize, linemerge   # unary_union
+from shapely.ops import polygonize, linemerge  # unary_union
 
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
 """list: List of two-element sets containing polymorphs."""
 
 
 class PseudoBase:
-    """Base class with common methods for InvPoint and UniLine.
+    """Base class with common methods for InvPoint and UniLine."""
 
-    """
     def label(self, excess={}):
         """str: full label with space delimeted phases - zero mode phase."""
         phases_lbl = ' '.join(sorted(list(self.phases.difference(excess))))
@@ -85,6 +84,7 @@ class InvPoint(PseudoBase):
         manual (bool): True when inavariant point is user-defined and not
             calculated
     """
+
     def __init__(self, **kwargs):
         assert 'phases' in kwargs, 'Set of phases must be provided'
         assert 'out' in kwargs, 'Set of zero phase must be provided'
@@ -132,7 +132,7 @@ class InvPoint(PseudoBase):
             if poly.issubset(self.phases):
                 fix = True
                 break
-        if fix and (poly != self.out):   # on boundary
+        if fix and (poly != self.out):  # on boundary
             yespoly = poly.intersection(self.out)
             nopoly = self.out.difference(yespoly)
             aphases = self.phases.difference(yespoly)
@@ -141,13 +141,10 @@ class InvPoint(PseudoBase):
                 (aphases, nopoly),
                 (bphases, nopoly),
                 (self.phases, yespoly),
-                (self.phases.difference(nopoly), yespoly))
+                (self.phases.difference(nopoly), yespoly),
+            )
         else:
-            return (
-                (self.phases, aset),
-                (self.phases, bset),
-                (bphases, aset),
-                (aphases, bset))
+            return ((self.phases, aset), (self.phases, bset), (bphases, aset), (aphases, bset))
 
 
 class UniLine(PseudoBase):
@@ -172,6 +169,7 @@ class UniLine(PseudoBase):
         used (slice): slice indicating which point on calculated line are
             between begin and end
     """
+
     def __init__(self, **kwargs):
         assert 'phases' in kwargs, 'Set of phases must be provided'
         assert 'out' in kwargs, 'Set of zero phase must be provided'
@@ -251,6 +249,7 @@ class UniLine(PseudoBase):
         Returns:
             bool: True for yes, False for no. Note that metastability is not checked.
         """
+
         def checkme(uphases, uout, iphases, iout):
             a, b = iout
             aset, bset = set([a]), set([b])
@@ -263,6 +262,7 @@ class UniLine(PseudoBase):
             if aphases == uphases and bset == uout:
                 candidate = True
             return candidate
+
         # Check for polymorphs
         fixi, fixu = False, False
         for poly in polymorphs:
@@ -274,7 +274,9 @@ class UniLine(PseudoBase):
         # check invs
         candidate = checkme(self.phases, self.out, ip.phases, ip.out)
         if fixi and not candidate:
-            candidate = checkme(self.phases, self.out, ip.phases, ip.out.difference(poly).union(poly.difference(ip.out)))
+            candidate = checkme(
+                self.phases, self.out, ip.phases, ip.out.difference(poly).union(poly.difference(ip.out))
+            )
         if fixu and not candidate:
             candidate = checkme(self.phases, poly.difference(self.out), ip.phases, ip.out)
         return candidate
@@ -361,8 +363,7 @@ class Dogmin:
         return block[gixs:gixe]
 
 
-class TCResult():
-
+class TCResult:
     def __init__(self, T, p, variance=0, c=0, data={}, ptguess=['']):
         self.data = data
         self.ptguess = ptguess
@@ -387,7 +388,9 @@ class TCResult():
         # a-x variables
         for head, vals in zip(ax.split('\n')[::2], ax.split('\n')[1::2]):
             phase, *names = head.split()
-            data[phase].update({name.replace('({})'.format(phase), ''): float(val) for name, val in zip(names, vals.split())})
+            data[phase].update(
+                {name.replace('({})'.format(phase), ''): float(val) for name, val in zip(names, vals.split())}
+            )
         # site fractions
         for head, vals in zip(sf.split('\n')[1::2], sf.split('\n')[2::2]):  # skip site fractions row
             phase, *names = head.split()
@@ -411,13 +414,19 @@ class TCResult():
         head, vals = mode.split('\n')
         phases = head.split()[1:]
         # fixed width parsing !!!
-        valsf = [float(vals[6:][12 * i:12 * (i + 1)].strip()) if vals[6:][12 * i:12 * (i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
+        valsf = [
+            float(vals[6:][12 * i : 12 * (i + 1)].strip()) if vals[6:][12 * i : 12 * (i + 1)].strip() != '' else 0.0
+            for i in range(len(phases))
+        ]
         for phase, val in zip(phases, valsf):
             data[phase].update({'mode': float(val)})
         # factors
         head, vals = factor.split('\n')
         phases = head.split()[1:]
-        valsf = [float(vals[6:][12 * i:12 * (i + 1)].strip()) if vals[6:][12 * i:12 * (i + 1)].strip() != '' else 0.0 for i in range(len(phases))]
+        valsf = [
+            float(vals[6:][12 * i : 12 * (i + 1)].strip()) if vals[6:][12 * i : 12 * (i + 1)].strip() != '' else 0.0
+            for i in range(len(phases))
+        ]
         for phase, val in zip(phases, valsf):
             data[phase].update({'factor': float(val)})
         # thermodynamic state
@@ -451,7 +460,9 @@ class TCResult():
         return cls(T, p, variance=variance, c=c, data=data, ptguess=ptguess)
 
     def __repr__(self):
-        return 'p:{:g} T:{:g} V:{} c:{:g}, Phases: {}'.format(self.p, self.T, self.variance, self.c, ' '.join(self.phases))
+        return 'p:{:g} T:{:g} V:{} c:{:g}, Phases: {}'.format(
+            self.p, self.T, self.variance, self.c, ' '.join(self.phases)
+        )
 
     def __getitem__(self, key):
         if isinstance(key, str):
@@ -472,7 +483,6 @@ class TCResult():
 
 
 class TCResultSet:
-
     def __init__(self, results):
         self.results = results
 
@@ -532,9 +542,8 @@ class TCResultSet:
 
 
 class SectionBase:
-    """Base class for PTsection, TXsection and PXsection
+    """Base class for PTsection, TXsection and PXsection"""
 
-    """
     def __init__(self, **kwargs):
         self.excess = kwargs.get('excess', set())
         self.invpoints = {}
@@ -542,11 +551,15 @@ class SectionBase:
         self.dogmins = {}
 
     def __repr__(self):
-        return '\n'.join(['{}'.format(self.type),
-                          'Univariant lines: {}'.format(len(self.unilines)),
-                          'Invariant points: {}'.format(len(self.invpoints)),
-                          '{} range: {} {}'.format(self.x_var, *self.xrange),
-                          '{} range: {} {}'.format(self.y_var, *self.yrange)])
+        return '\n'.join(
+            [
+                '{}'.format(self.type),
+                'Univariant lines: {}'.format(len(self.unilines)),
+                'Invariant points: {}'.format(len(self.invpoints)),
+                '{} range: {} {}'.format(self.x_var, *self.xrange),
+                '{} range: {} {}'.format(self.y_var, *self.yrange),
+            ]
+        )
 
     @property
     def type(self):
@@ -559,14 +572,12 @@ class SectionBase:
     @property
     def range_shapes(self):
         # default p-t range boundary
-        bnd = [LineString([(self.xrange[0], self.yrange[0]),
-                          (self.xrange[1], self.yrange[0])]),
-               LineString([(self.xrange[1], self.yrange[0]),
-                          (self.xrange[1], self.yrange[1])]),
-               LineString([(self.xrange[1], self.yrange[1]),
-                          (self.xrange[0], self.yrange[1])]),
-               LineString([(self.xrange[0], self.yrange[1]),
-                          (self.xrange[0], self.yrange[0])])]
+        bnd = [
+            LineString([(self.xrange[0], self.yrange[0]), (self.xrange[1], self.yrange[0])]),
+            LineString([(self.xrange[1], self.yrange[0]), (self.xrange[1], self.yrange[1])]),
+            LineString([(self.xrange[1], self.yrange[1]), (self.xrange[0], self.yrange[1])]),
+            LineString([(self.xrange[0], self.yrange[1]), (self.xrange[0], self.yrange[0])]),
+        ]
         return bnd, polygonize(bnd)[0]
 
     def add_inv(self, id, inv):
@@ -574,9 +585,12 @@ class SectionBase:
             inv.results = None
         else:  # temporary compatibility with 2.2.0
             if not isinstance(inv.results, TCResultSet):
-                inv.results = TCResultSet([TCResult(float(x), float(y), variance=inv.variance,
-                                                    data=r['data'], ptguess=r['ptguess'])
-                                           for r, x, y in zip(inv.results, inv.x, inv.y)])
+                inv.results = TCResultSet(
+                    [
+                        TCResult(float(x), float(y), variance=inv.variance, data=r['data'], ptguess=r['ptguess'])
+                        for r, x, y in zip(inv.results, inv.x, inv.y)
+                    ]
+                )
         self.invpoints[id] = inv
         self.invpoints[id].id = id
 
@@ -585,9 +599,12 @@ class SectionBase:
             uni.results = None
         else:  # temporary compatibility with 2.2.0
             if not isinstance(uni.results, TCResultSet):
-                uni.results = TCResultSet([TCResult(float(x), float(y), variance=uni.variance,
-                                                    data=r['data'], ptguess=r['ptguess'])
-                                           for r, x, y in zip(uni.results, uni._x, uni._y)])
+                uni.results = TCResultSet(
+                    [
+                        TCResult(float(x), float(y), variance=uni.variance, data=r['data'], ptguess=r['ptguess'])
+                        for r, x, y in zip(uni.results, uni._x, uni._y)
+                    ]
+                )
         self.unilines[id] = uni
         self.unilines[id].id = id
 
@@ -658,13 +675,11 @@ class SectionBase:
         uni = self.unilines[id]
         if not uni.manual:
             if uni.begin > 0:
-                p1 = Point(self.invpoints[uni.begin].x,
-                           self.ratio * self.invpoints[uni.begin].y)
+                p1 = Point(self.invpoints[uni.begin].x, self.ratio * self.invpoints[uni.begin].y)
             else:
                 p1 = Point(uni._x[0], self.ratio * uni._y[0])
             if uni.end > 0:
-                p2 = Point(self.invpoints[uni.end].x,
-                           self.ratio * self.invpoints[uni.end].y)
+                p2 = Point(self.invpoints[uni.end].x, self.ratio * self.invpoints[uni.end].y)
             else:
                 p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
             #
@@ -679,8 +694,7 @@ class SectionBase:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            uni.used = slice(np.flatnonzero(vdst >= d1)[0].item(),
-                             np.flatnonzero(vdst <= d2)[-1].item() + 1)
+            uni.used = slice(np.flatnonzero(vdst >= d1)[0].item(), np.flatnonzero(vdst <= d2)[-1].item() + 1)
 
         # concatenate begin, keep, end
         if uni.begin > 0:
@@ -723,6 +737,7 @@ class SectionBase:
                                     edges.append(p_seg)
                             return edges, True
             return edges, False
+
         # define bounds and area
         edges, area = self.range_shapes
         lns = []
@@ -753,7 +768,12 @@ class SectionBase:
                     unilist.append(uni_id)
             if unilist:
                 phases = set.intersection(*(self.unilines[id].phases for id in unilist))
-                vd = [phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out or not phases.symmetric_difference(self.unilines[id].phases) or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs for id in unilist]
+                vd = [
+                    phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out
+                    or not phases.symmetric_difference(self.unilines[id].phases)
+                    or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs
+                    for id in unilist
+                ]
                 if all(vd):
                     if frozenset(phases) in shapes:
                         # multivariant field crossed just by single univariant line
@@ -772,7 +792,12 @@ class SectionBase:
                                 unilists[frozenset(phases)] = orig_unilist
                         else:
                             shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
-                            log.append('Area defined by unilines {} is self-intersecting with {}.'.format(' '.join([str(id) for id in unilist]), ' '.join([str(id) for id in unilists[frozenset(phases)]])))
+                            log.append(
+                                'Area defined by unilines {} is self-intersecting with {}.'.format(
+                                    ' '.join([str(id) for id in unilist]),
+                                    ' '.join([str(id) for id in unilists[frozenset(phases)]]),
+                                )
+                            )
                             unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
                     else:
                         if len(unilist) == 1:
@@ -781,7 +806,9 @@ class SectionBase:
                             shapes[frozenset(phases)] = poly
                             unilists[frozenset(phases)] = unilist
             else:
-                log.append('Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in unilist])))
+                log.append(
+                    'Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in unilist]))
+                )
         for unilist, phases, poly in tosolve:
             if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(set.union(*polymorphs)):
                 phases = self.unilines[unilist[0]].phases.difference(self.unilines[unilist[0]].out)
@@ -823,12 +850,11 @@ class SectionBase:
 
 
 class PTsection(SectionBase):
-    """P-T pseudosection class
+    """P-T pseudosection class"""
 
-    """
     def __init__(self, **kwargs):
-        self.xrange = kwargs.get('trange', (200., 1000.))
-        self.yrange = kwargs.get('prange', (0.1, 20.))
+        self.xrange = kwargs.get('trange', (200.0, 1000.0))
+        self.yrange = kwargs.get('prange', (0.1, 20.0))
         self.x_var = 'T'
         self.x_var_label = 'Temperature [C]'
         self.x_var_res = 0.01
@@ -839,12 +865,11 @@ class PTsection(SectionBase):
 
 
 class TXsection(SectionBase):
-    """T-X pseudosection class
+    """T-X pseudosection class"""
 
-    """
     def __init__(self, **kwargs):
-        self.xrange = kwargs.get('trange', (200., 1000.))
-        self.yrange = (0., 1.)
+        self.xrange = kwargs.get('trange', (200.0, 1000.0))
+        self.yrange = (0.0, 1.0)
         self.x_var = 'T'
         self.x_var_label = 'Temperature [C]'
         self.x_var_res = 0.01
@@ -855,12 +880,11 @@ class TXsection(SectionBase):
 
 
 class PXsection(SectionBase):
-    """P-X pseudosection class
+    """P-X pseudosection class"""
 
-    """
     def __init__(self, **kwargs):
-        self.xrange = (0., 1.)
-        self.yrange = kwargs.get('prange', (0.1, 20.))
+        self.xrange = (0.0, 1.0)
+        self.yrange = kwargs.get('prange', (0.1, 20.0))
         self.x_var = 'C'
         self.x_var_label = 'Composition'
         self.x_var_res = 0.001
@@ -872,6 +896,7 @@ class PXsection(SectionBase):
 
 # Descartes https://github.com/benjimin/descartes
 
+
 class Polygon(object):
     # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
     def __init__(self, context):
@@ -882,13 +907,11 @@ class Polygon(object):
 
     @property
     def geom_type(self):
-        return (getattr(self.context, 'geom_type', None)
-                or self.context['type'])
+        return getattr(self.context, 'geom_type', None) or self.context['type']
 
     @property
     def exterior(self):
-        return (getattr(self.context, 'exterior', None)
-                or self.context['coordinates'][0])
+        return getattr(self.context, 'exterior', None) or self.context['coordinates'][0]
 
     @property
     def interiors(self):
@@ -911,12 +934,11 @@ def PolygonPath(polygon):
         vals = np.ones(n, dtype=Path.code_type) * Path.LINETO
         vals[0] = Path.MOVETO
         return vals
+
     vertices = np.concatenate(
-        [np.asarray(this.exterior.coords)[:, :2]]
-        + [np.asarray(r.coords)[:, :2] for r in this.interiors])
-    codes = np.concatenate(
-        [coding(this.exterior)]
-        + [coding(r) for r in this.interiors])
+        [np.asarray(this.exterior.coords)[:, :2]] + [np.asarray(r.coords)[:, :2] for r in this.interiors]
+    )
+    codes = np.concatenate([coding(this.exterior)] + [coding(r) for r in this.interiors])
     return Path(vertices, codes)
 
 

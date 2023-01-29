@@ -18,14 +18,18 @@ import unicodedata
 import string
 
 # recent files
-set_urls = {'metapelite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metapelite-2022-01-23.zip',
-            'metabasite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metabasite-2022-01-30.zip',
-            'igneous': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-igneous-2022-01-23.zip'}
+set_urls = {
+    'metapelite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metapelite-2022-01-23.zip',
+    'metabasite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metabasite-2022-01-30.zip',
+    'igneous': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-igneous-2022-01-23.zip',
+}
 
-exe_urls = {'linux': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-linux-bundle.zip',
-            'win': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350-win-bundle.zip',
-            'mac': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-mac-bundle.zip',
-            'macasi': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-macasi-bundle.zip'}
+exe_urls = {
+    'linux': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-linux-bundle.zip',
+    'win': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350-win-bundle.zip',
+    'mac': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-mac-bundle.zip',
+    'macasi': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-macasi-bundle.zip',
+}
 
 
 def tcprojinit():
@@ -65,9 +69,7 @@ def tcprojinit():
             projname_needed = False
 
     set_needed = True
-    sets = {1: 'metapelite',
-            2: 'metabasite',
-            3: 'igneous'}
+    sets = {1: 'metapelite', 2: 'metabasite', 3: 'igneous'}
     while set_needed:
         print('Choose THEMOCALC input set')
         for k in sets:
@@ -84,9 +86,7 @@ def tcprojinit():
 
     if tcset == 'metapelite':
         ds = '62'
-        systems = {1: 'mp50MnNCKFMASHTO',
-                   2: 'mp50NCKFMASHTO',
-                   3: 'mp50KFMASH'}
+        systems = {1: 'mp50MnNCKFMASHTO', 2: 'mp50NCKFMASHTO', 3: 'mp50KFMASH'}
         system_needed = True
         while system_needed:
             print('Choose system for metapelite set')
@@ -108,8 +108,7 @@ def tcprojinit():
         guesses = metabasite_guesses[system]
     else:
         ds = '633'
-        systems = {1: 'ig50NCKFMASHTOCr',
-                   2: 'ig50NCKFMASTOCr'}
+        systems = {1: 'ig50NCKFMASHTOCr', 2: 'ig50NCKFMASTOCr'}
         system_needed = True
         while system_needed:
             print('Choose system for igneous set')
@@ -192,11 +191,9 @@ def tcprojinit():
 
     # create project file
     with open(dest / f'tc-{projname}.txt', 'w') as f:
-        content = string.Template(tcprj_tmpl).substitute(system=system,
-                                                         project=projname,
-                                                         samecoding=samecoding,
-                                                         guesses=guesses
-                                                         )[1:]
+        content = string.Template(tcprj_tmpl).substitute(
+            system=system, project=projname, samecoding=samecoding, guesses=guesses
+        )[1:]
         f.write(content)
 
 
@@ -470,7 +467,8 @@ xyzguess  Q(hem)       0.8   range -0.99 0.99
 
 xyzguess x(mt1)        0.632160
 xyzguess Q(mt1)        0.564334
-'''}
+''',
+}
 
 metabasite_guesses = {
     'mb50NCKFMASHTO': '''
@@ -610,7 +608,8 @@ xyzguess QAl(chl)      0.424591  range -1.000 1.000
 xyzguess Q1(chl)       0.0859470  range -1.000 1.000
 xyzguess Q4(chl)       0.0245983  range -1.000 1.000
 % -------------------
-'''}
+'''
+}
 
 igneous_guesses = {
     'ig50NCKFMASHTOCr': '''
@@ -919,7 +918,8 @@ xyzguess x(ilm)        0.913364
 xyzguess Q(ilm)        0.627896  range -0.990 0.990
 
 % --------------------------------------------------------
-'''}
+''',
+}
 
 tcprj_tmpl = """
 % ==================================================================

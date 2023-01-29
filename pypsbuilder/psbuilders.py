@@ -4,6 +4,7 @@
 
 import sys
 import os
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -23,7 +24,9 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar)
+    NavigationToolbar2QT as NavigationToolbar,
+)
+
 # from matplotlib.widgets import Cursor
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
@@ -32,6 +35,7 @@ from scipy.interpolate import interp1d
 
 try:
     import networkx as nx
+
     NX_OK = True
 except ImportError:
     NX_OK = False
@@ -42,10 +46,18 @@ from .ui_pxbuilder import Ui_PXBuilder
 from .ui_addinv import Ui_AddInv
 from .ui_adduni import Ui_AddUni
 from .ui_uniguess import Ui_UniGuess
-from .psclasses import (InvPoint, UniLine, polymorphs,
-                        PTsection, TXsection, PXsection,
-                        Dogmin, TCResult, TCResultSet,
-                        PolygonPatch)
+from .psclasses import (
+    InvPoint,
+    UniLine,
+    polymorphs,
+    PTsection,
+    TXsection,
+    PXsection,
+    Dogmin,
+    TCResult,
+    TCResultSet,
+    PolygonPatch,
+)
 from .tcapi import get_tcapi
 from . import __version__
 
@@ -66,9 +78,7 @@ def fmt(x):
     return '{:g}'.format(x)
 
 
-app_icons = dict(PTBuilder='images/ptbuilder.png',
-                 TXBuilder='images/txbuilder.png',
-                 PXBuilder='images/pxbuilder.png')
+app_icons = dict(PTBuilder='images/ptbuilder.png', TXBuilder='images/txbuilder.png', PXBuilder='images/pxbuilder.png')
 
 
 class BuildersBase(QtWidgets.QMainWindow):
@@ -97,8 +107,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.canvas.setParent(self.tabPlot)
         self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.mplvl.addWidget(self.canvas)
-        self.toolbar = NavigationToolbar(self.canvas, self.tabPlot,
-                                         coordinates=True)
+        self.toolbar = NavigationToolbar(self.canvas, self.tabPlot, coordinates=True)
         # remove "Edit curves lines and axes parameters"
         actions = self.toolbar.findChildren(QtWidgets.QAction)
         for a in actions:
@@ -161,7 +170,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.populate_recent()
         self.ready = False
         self.project = None
-        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2021'. format(self.builder_name, __version__))
+        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2021'.format(self.builder_name, __version__))
 
     def initViewModels(self):
         # INVVIEW
@@ -196,7 +205,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.uniview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
         self.uniview.horizontalHeader().hide()
         # edit trigger
-        self.uniview.setEditTriggers(QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked)
+        self.uniview.setEditTriggers(
+            QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked
+        )
         self.uniview.viewport().installEventFilter(self)
         self.uniview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         # signals
@@ -361,8 +372,9 @@ class BuildersBase(QtWidgets.QMainWindow):
     def import_from_old(self):  # FIXME:
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          'PSBuilder 1.X project (*.psb)')[0]
+            projfile = qd.getOpenFileName(
+                self, 'Import from project', str(self.tc.workdir), 'PSBuilder 1.X project (*.psb)'
+            )[0]
             if Path(projfile).exists():
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
@@ -383,37 +395,42 @@ class BuildersBase(QtWidgets.QMainWindow):
                 # Import
                 id_lookup = {0: 0}
                 for row in data['invlist']:
-                    inv = InvPoint(phases=row[2]['phases'].union(self.ps.excess),
-                                   out=row[2]['out'],
-                                   x=row[2]['T'],
-                                   y=row[2]['p'],
-                                   cmd=row[2].get('cmd', ''),
-                                   results=row[2].get('results', [dict(data=None, ptguess=None)]),
-                                   manual=True,
-                                   output='Imported invariant point.')
+                    inv = InvPoint(
+                        phases=row[2]['phases'].union(self.ps.excess),
+                        out=row[2]['out'],
+                        x=row[2]['T'],
+                        y=row[2]['p'],
+                        cmd=row[2].get('cmd', ''),
+                        results=row[2].get('results', [dict(data=None, ptguess=None)]),
+                        manual=True,
+                        output='Imported invariant point.',
+                    )
                     isnew, id_inv = self.ps.getidinv(inv)
                     id_lookup[row[0]] = id_inv
                     if isnew:
                         self.invmodel.appendRow(id_inv, inv)
                 self.invview.resizeColumnsToContents()
                 for row in data['unilist']:
-                    uni = UniLine(phases=row[4]['phases'].union(self.ps.excess),
-                                  out=row[4]['out'],
-                                  x=row[4]['T'],
-                                  y=row[4]['p'],
-                                  cmd=row[4].get('cmd', ''),
-                                  results=row[4].get('results', [dict(data=None, ptguess=None)]),
-                                  manual=True,
-                                  output='Imported univariant line.',
-                                  begin=id_lookup[row[2]],
-                                  end=id_lookup[row[3]])
+                    uni = UniLine(
+                        phases=row[4]['phases'].union(self.ps.excess),
+                        out=row[4]['out'],
+                        x=row[4]['T'],
+                        y=row[4]['p'],
+                        cmd=row[4].get('cmd', ''),
+                        results=row[4].get('results', [dict(data=None, ptguess=None)]),
+                        manual=True,
+                        output='Imported univariant line.',
+                        begin=id_lookup[row[2]],
+                        end=id_lookup[row[3]],
+                    )
                     isnew, id_uni = self.ps.getiduni(uni)
                     if isnew:
                         self.unimodel.appendRow(id_uni, uni)
                 self.uniview.resizeColumnsToContents()
                 # # try to recalc
-                progress = QtWidgets.QProgressDialog("Recalculate inv points", "Cancel",
-                                                     0, len(self.ps.invpoints), self)
+                progress = QtWidgets.QProgressDialog(
+                    "Recalculate inv points", "Cancel", 0, len(self.ps.invpoints), self
+                )
                 progress.setWindowModality(QtCore.Qt.WindowModal)
                 progress.setMinimumDuration(0)
                 old_guesses = self.tc.update_scriptfile(get_old_guesses=True)
@@ -436,8 +453,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 progress.setValue(len(self.ps.invpoints))
                 progress.deleteLater()
                 self.invview.resizeColumnsToContents()
-                progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel",
-                                                     0, len(self.ps.unilines), self)
+                progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel", 0, len(self.ps.unilines), self)
                 progress.setWindowModality(QtCore.Qt.WindowModal)
                 progress.setMinimumDuration(0)
                 for ix, uni in enumerate(self.ps.unilines.values()):
@@ -480,12 +496,13 @@ class BuildersBase(QtWidgets.QMainWindow):
     def import_from_prj(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          self.builder_file_selector)[0]
+            projfile = qd.getOpenFileName(
+                self, 'Import from project', str(self.tc.workdir), self.builder_file_selector
+            )[0]
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
-                if 'section' in data:   # NEW
+                if 'section' in data:  # NEW
                     workdir = Path(data.get('workdir', Path(projfile).resolve().parent)).resolve()
                     if workdir == self.tc.workdir:
                         bnd, area = self.ps.range_shapes
@@ -518,7 +535,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.statusBar().showMessage('Data imported.')
                     else:
                         qb = QtWidgets.QMessageBox
-                        qb.critical(self, 'Workdir error', 'You can import only from projects with same working directory', qb.Abort)
+                        qb.critical(
+                            self,
+                            'Workdir error',
+                            'You can import only from projects with same working directory',
+                            qb.Abort,
+                        )
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', 'Unknown format of the project file', qb.Abort)
@@ -526,8 +548,7 @@ class BuildersBase(QtWidgets.QMainWindow):
     def cleanup_storage(self):
         if self.ready:
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Remove redundant calculations',
-                                'Are you sure?', qb.Yes, qb.No)
+            reply = qb.question(self, 'Remove redundant calculations', 'Are you sure?', qb.Yes, qb.No)
             if reply == qb.Yes:
                 self.ps.cleanup_data()
                 self.changed = True
@@ -544,8 +565,9 @@ class BuildersBase(QtWidgets.QMainWindow):
             for uni in self.ps.unilines.values():
                 used_phases.update(uni.phases)
             for old_phase in used_phases.difference(set(self.tc.phases)):
-                text, ok = QtWidgets.QInputDialog.getText(self, 'Replace {} with'.format(old_phase),
-                                                          'Enter new name (- to remove):')
+                text, ok = QtWidgets.QInputDialog.getText(
+                    self, 'Replace {} with'.format(old_phase), 'Enter new name (- to remove):'
+                )
                 try:
                     if ok:
                         new_phase = str(text).strip()
@@ -553,7 +575,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                             for inv in self.ps.invpoints.values():
                                 if old_phase in inv.out:
                                     qb = QtWidgets.QMessageBox
-                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', self.tc.status, qb.Abort)
+                                    qb.critical(
+                                        self,
+                                        '{} is used as zeromode phase and cannot be deleted.',
+                                        self.tc.status,
+                                        qb.Abort,
+                                    )
                                     raise ValueError()
                                 if old_phase in inv.phases:
                                     inv.phases.remove(old_phase)
@@ -564,7 +591,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                             for uni in self.ps.unilines.values():
                                 if old_phase in uni.out:
                                     qb = QtWidgets.QMessageBox
-                                    qb.critical(self, '{} is used as zeromode phase and cannot be deleted.', self.tc.status, qb.Abort)
+                                    qb.critical(
+                                        self,
+                                        '{} is used as zeromode phase and cannot be deleted.',
+                                        self.tc.status,
+                                        qb.Abort,
+                                    )
                                     raise ValueError()
                                 if old_phase in uni.phases:
                                     uni.phases.remove(old_phase)
@@ -602,11 +634,12 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProject(self):
-        """Save active project to project file
-        """
+        """Save active project to project file"""
         if self.ready:
             if self.project is None:
-                filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project', str(self.tc.workdir), self.builder_file_selector)[0]
+                filename = QtWidgets.QFileDialog.getSaveFileName(
+                    self, 'Save current project', str(self.tc.workdir), self.builder_file_selector
+                )[0]
                 if filename:
                     if not filename.lower().endswith(self.builder_extension):
                         filename = filename + self.builder_extension
@@ -618,10 +651,11 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def saveProjectAs(self):
-        """Save active project to project file with new filename
-        """
+        """Save active project to project file with new filename"""
         if self.ready:
-            filename = QtWidgets.QFileDialog.getSaveFileName(self, 'Save current project as', str(self.tc.workdir), self.builder_file_selector)[0]
+            filename = QtWidgets.QFileDialog.getSaveFileName(
+                self, 'Save current project as', str(self.tc.workdir), self.builder_file_selector
+            )[0]
             if filename:
                 if not filename.lower().endswith(self.builder_extension):
                     filename = filename + self.builder_extension
@@ -631,8 +665,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def do_save(self):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.project is not None:
             # do save
             QtWidgets.QApplication.processEvents()
@@ -664,14 +697,16 @@ class BuildersBase(QtWidgets.QMainWindow):
             if item.checkState() == QtCore.Qt.Checked:
                 out.append(item.text())
         # put to dict
-        data = {'selphases': selphases,
-                'out': out,
-                'section': self.ps,
-                'tcversion': self.tc.tcversion,
-                'workdir': str(self.tc.workdir),
-                'bulk': self.bulk,
-                'datetime': datetime.now(),
-                'version': __version__}
+        data = {
+            'selphases': selphases,
+            'out': out,
+            'section': self.ps,
+            'tcversion': self.tc.tcversion,
+            'workdir': str(self.tc.workdir),
+            'bulk': self.bulk,
+            'datetime': datetime.now(),
+            'version': __version__,
+        }
         return data
 
     @property
@@ -780,7 +815,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                     ix = uniguess.getValue()
                     self.tc.update_scriptfile(guesses=uni.ptguess(idx=ix))
                     self.read_scriptfile()
-                    self.statusBar().showMessage('Univariant line ptguess set for {}'.format(self.format_coord(uni._x[ix], uni._y[ix])))
+                    self.statusBar().showMessage(
+                        'Univariant line ptguess set for {}'.format(self.format_coord(uni._x[ix], uni._y[ix]))
+                    )
             else:
                 self.statusBar().showMessage('Guesses cannot be set from user-defined univariant line.')
 
@@ -808,7 +845,7 @@ class BuildersBase(QtWidgets.QMainWindow):
     def set_phaselist(self, r, show_output=True, useguess=False):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
-            if item.text() in r.phases:   # or item.text() in r.out:
+            if item.text() in r.phases:  # or item.text() in r.out:
                 item.setCheckState(QtCore.Qt.Checked)
             else:
                 item.setCheckState(QtCore.Qt.Unchecked)
@@ -919,11 +956,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                 py.append(uni.y)
                 py.append([np.nan])
         if ox:
-            self.outhigh = self.ax.plot(np.concatenate(ox), np.concatenate(oy),
-                                        '-', **outhigh_kw)
+            self.outhigh = self.ax.plot(np.concatenate(ox), np.concatenate(oy), '-', **outhigh_kw)
         if px:
-            self.presenthigh = self.ax.plot(np.concatenate(px), np.concatenate(py),
-                                            '-', **presenthigh_kw)
+            self.presenthigh = self.ax.plot(np.concatenate(px), np.concatenate(py), '-', **presenthigh_kw)
         self.canvas.draw()
 
     def invviewRightClicked(self, QPos):
@@ -938,25 +973,33 @@ class BuildersBase(QtWidgets.QMainWindow):
             isnew, id = self.ps.getiduni(u1)
             if isnew:
                 menu_item1 = menu.addAction(u1.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u1, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
+                menu_item1.triggered.connect(
+                    lambda: self.set_phaselist(u1, show_output=False, useguess=self.checkUseInvGuess.isChecked())
+                )
                 show_menu = True
             u2 = UniLine(phases=all_uni[1][0], out=all_uni[1][1])
             isnew, id = self.ps.getiduni(u2)
             if isnew:
                 menu_item2 = menu.addAction(u2.label(excess=self.ps.excess))
-                menu_item2.triggered.connect(lambda: self.set_phaselist(u2, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
+                menu_item2.triggered.connect(
+                    lambda: self.set_phaselist(u2, show_output=False, useguess=self.checkUseInvGuess.isChecked())
+                )
                 show_menu = True
             u3 = UniLine(phases=all_uni[2][0], out=all_uni[2][1])
             isnew, id = self.ps.getiduni(u3)
             if isnew:
                 menu_item1 = menu.addAction(u3.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u3, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
+                menu_item1.triggered.connect(
+                    lambda: self.set_phaselist(u3, show_output=False, useguess=self.checkUseInvGuess.isChecked())
+                )
                 show_menu = True
             u4 = UniLine(phases=all_uni[3][0], out=all_uni[3][1])
             isnew, id = self.ps.getiduni(u4)
             if isnew:
                 menu_item1 = menu.addAction(u4.label(excess=self.ps.excess))
-                menu_item1.triggered.connect(lambda: self.set_phaselist(u4, show_output=False, useguess=self.checkUseInvGuess.isChecked()))
+                menu_item1.triggered.connect(
+                    lambda: self.set_phaselist(u4, show_output=False, useguess=self.checkUseInvGuess.isChecked())
+                )
                 show_menu = True
             if show_menu:
                 menu.exec(self.invview.mapToGlobal(QPos))
@@ -1029,8 +1072,7 @@ class BuildersBase(QtWidgets.QMainWindow):
     def remove_from_uni(self, uni):
         xrange = self.ax.get_xlim()
         yrange = self.ax.get_ylim()
-        area = Polygon([(xrange[0], yrange[0]), (xrange[1], yrange[0]),
-                        (xrange[1], yrange[1]), (xrange[0], yrange[1])])
+        area = Polygon([(xrange[0], yrange[0]), (xrange[1], yrange[0]), (xrange[1], yrange[1]), (xrange[0], yrange[1])])
         idx = []
         for ix, x, y in zip(range(len(uni._x)), uni._x, uni._y):
             if not Point(x, y).within(area):
@@ -1056,8 +1098,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             if todel:
                 msg = '{}\nAre you sure?'.format(self.invmodel.data(idx[1]))
                 qb = QtWidgets.QMessageBox
-                reply = qb.question(self, 'Remove invariant point',
-                                    msg, qb.Yes, qb.No)
+                reply = qb.question(self, 'Remove invariant point', msg, qb.Yes, qb.No)
                 if reply == qb.Yes:
 
                     # Check unilines begins and ends
@@ -1073,15 +1114,16 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.plot()
                     self.statusBar().showMessage('Invariant point removed')
             else:
-                self.statusBar().showMessage('Cannot delete invariant point, which define user-defined univariant line.')
+                self.statusBar().showMessage(
+                    'Cannot delete invariant point, which define user-defined univariant line.'
+                )
 
     def remove_uni(self):
         if self.unisel.hasSelection():
             idx = self.unisel.selectedIndexes()
             msg = '{}\nAre you sure?'.format(self.unimodel.data(idx[1]))
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Remove univariant line',
-                                msg, qb.Yes, qb.No)
+            reply = qb.question(self, 'Remove univariant line', msg, qb.Yes, qb.No)
             if reply == qb.Yes:
                 self.unimodel.removeRow(idx[0])
                 self.changed = True
@@ -1093,8 +1135,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             idx = self.dogsel.selectedIndexes()
             msg = '{}\nAre you sure?'.format(self.dogmodel.data(idx[1]))
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Remove dogmin result',
-                                msg, qb.Yes, qb.No)
+            reply = qb.question(self, 'Remove dogmin result', msg, qb.Yes, qb.No)
             if reply == qb.Yes:
                 self.logDogmin.clear()
                 self.dogmodel.removeRow(idx[0])
@@ -1111,8 +1152,14 @@ class BuildersBase(QtWidgets.QMainWindow):
             phases, out = self.get_phases_out()
             if len(out) == 1:
                 if checked:
-                    uni = UniLine(phases=phases, out=out, x=np.array([]), y=np.array([]),
-                                  manual=True, output='User-defined univariant line.')
+                    uni = UniLine(
+                        phases=phases,
+                        out=out,
+                        x=np.array([]),
+                        y=np.array([]),
+                        manual=True,
+                        output='User-defined univariant line.',
+                    )
                     isnew, id_uni = self.ps.getiduni(uni)
                     uni.id = id_uni
                     candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
@@ -1142,8 +1189,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             elif len(out) == 2:
                 if checked:
                     phases, out = self.get_phases_out()
-                    inv = InvPoint(phases=phases, out=out, manual=True,
-                                   output='User-defined invariant point.')
+                    inv = InvPoint(phases=phases, out=out, manual=True, output='User-defined invariant point.')
                     unis = [uni for uni in self.ps.unilines.values() if uni.contains_inv(inv) and not uni.manual]
                     done = False
                     if len(unis) > 1:
@@ -1158,8 +1204,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                             y = np.atleast_1d(np.mean(yy))
                             msg = 'Found intersection of {} unilines.\n Do you want to use it?'.format(len(unis))
                             qb = QtWidgets.QMessageBox
-                            reply = qb.question(self, 'Add manual invariant point',
-                                                msg, qb.Yes, qb.No)
+                            reply = qb.question(self, 'Add manual invariant point', msg, qb.Yes, qb.No)
                             if reply == qb.Yes:
                                 isnew, id_inv = self.ps.getidinv(inv)
                                 inv.id = id_inv
@@ -1212,7 +1257,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.pushManual.setChecked(False)
                     QtWidgets.QApplication.restoreOverrideCursor()
             else:
-                self.statusBar().showMessage('Select exactly one out phase for univariant line or two phases for invariant point.')
+                self.statusBar().showMessage(
+                    'Select exactly one out phase for univariant line or two phases for invariant point.'
+                )
                 self.pushManual.setChecked(False)
         else:
             self.statusBar().showMessage('Project is not yet initialized.')
@@ -1221,8 +1268,7 @@ class BuildersBase(QtWidgets.QMainWindow):
     def clicker(self, event):
         if event.inaxes is not None:
             phases, out = self.get_phases_out()
-            inv = InvPoint(phases=phases, out=out, manual=True,
-                           output='User-defined invariant point.')
+            inv = InvPoint(phases=phases, out=out, manual=True, output='User-defined invariant point.')
             isnew, id_inv = self.ps.getidinv(inv)
             addinv = AddInv(self.ps, inv, isnew, parent=self)
             addinv.set_from_event(event)
@@ -1280,13 +1326,11 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def closeEvent(self, event):
-        """Catch exit of app.
-        """
+        """Catch exit of app."""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Cancel | qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Cancel | qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.saveProject()
@@ -1328,12 +1372,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             if (1 << 0) & bitopt:
                 if (float(self.tminEdit.text()), float(self.tmaxEdit.text())) != self.ps.xrange:
-                    self.ps.xrange = (float(self.tminEdit.text()),
-                                      float(self.tmaxEdit.text()))
+                    self.ps.xrange = (float(self.tminEdit.text()), float(self.tmaxEdit.text()))
                     self.changed = True
                 if (float(self.pminEdit.text()), float(self.pmaxEdit.text())) != self.ps.yrange:
-                    self.ps.yrange = (float(self.pminEdit.text()),
-                                      float(self.pmaxEdit.text()))
+                    self.ps.yrange = (float(self.pminEdit.text()), float(self.pmaxEdit.text()))
                     self.changed = True
                 self.ax.set_xlim(self.ps.xrange)
                 self.ax.set_ylim(self.ps.yrange)
@@ -1356,8 +1398,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Project is not yet initialized.')
 
     def phase_changed(self, item):
-        """Manage phases in outmodel based on selection in phase model.
-        """
+        """Manage phases in outmodel based on selection in phase model."""
         if item.checkState():
             outitem = item.clone()
             outitem.setCheckState(QtCore.Qt.Unchecked)
@@ -1433,16 +1474,33 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             lalfa = self.spinAlpha.value() / 100
             fsize = self.spinFontsize.value()
-            unilabel_kw = dict(ha='center', va='center', size=fsize,
-                               bbox=dict(boxstyle="round,pad=0.2", fc='lightskyblue', alpha=lalfa, pad=2))
-            unilabel_unc_kw = dict(ha='center', va='center', size=fsize,
-                                   bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2))
-            invlabel_kw = dict(ha='center', va='center', size=fsize,
-                               bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2))
-            invlabel_unc_kw = dict(ha='center', va='center', size=fsize,
-                                   bbox=dict(boxstyle="round,pad=0.2", fc='orange', alpha=lalfa, pad=2))
-            doglabel_kw = dict(ha='center', va='center', size=fsize,
-                               bbox=dict(boxstyle="round,pad=0.2", fc='orchid', alpha=lalfa, pad=2))
+            unilabel_kw = dict(
+                ha='center',
+                va='center',
+                size=fsize,
+                bbox=dict(boxstyle="round,pad=0.2", fc='lightskyblue', alpha=lalfa, pad=2),
+            )
+            unilabel_unc_kw = dict(
+                ha='center', va='center', size=fsize, bbox=dict(boxstyle="round,pad=0.2", fc='cyan', alpha=lalfa, pad=2)
+            )
+            invlabel_kw = dict(
+                ha='center',
+                va='center',
+                size=fsize,
+                bbox=dict(boxstyle="round,pad=0.2", fc='yellow', alpha=lalfa, pad=2),
+            )
+            invlabel_unc_kw = dict(
+                ha='center',
+                va='center',
+                size=fsize,
+                bbox=dict(boxstyle="round,pad=0.2", fc='orange', alpha=lalfa, pad=2),
+            )
+            doglabel_kw = dict(
+                ha='center',
+                va='center',
+                size=fsize,
+                bbox=dict(boxstyle="round,pad=0.2", fc='orchid', alpha=lalfa, pad=2),
+            )
             axs = self.figure.get_axes()
             if axs:
                 self.ax = axs[0]
@@ -1459,11 +1517,15 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if self.checkLabelUni.isChecked():
                     if uni.connected < 2:
                         xl, yl = uni.get_label_point()
-                        self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_unc_kw)
+                        self.ax.annotate(
+                            uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_unc_kw
+                        )
                     else:
                         if not self.checkHidedoneUni.isChecked():
                             xl, yl = uni.get_label_point()
-                            self.ax.annotate(uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_kw)
+                            self.ax.annotate(
+                                uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_kw
+                            )
             for inv in self.ps.invpoints.values():
                 all_uni = inv.all_unilines()
                 isnew1, id_uni = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
@@ -1481,10 +1543,14 @@ class BuildersBase(QtWidgets.QMainWindow):
                 unconnected = isnew1 or isnew2 or isnew3 or isnew4
                 if self.checkLabelInv.isChecked():
                     if unconnected:
-                        self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_unc_kw)
+                        self.ax.annotate(
+                            inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_unc_kw
+                        )
                     else:
                         if not self.checkHidedoneInv.isChecked():
-                            self.ax.annotate(inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_kw)
+                            self.ax.annotate(
+                                inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_kw
+                            )
                 else:
                     if unconnected:
                         self.ax.plot(inv.x, inv.y, '.', color='orange', ms=8)
@@ -1492,7 +1558,11 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.ax.plot(inv.x, inv.y, 'k.', ms=8)
             if self.checkLabelDog.isChecked():
                 for dgm in self.ps.dogmins.values():
-                    self.ax.annotate(dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess), (dgm.x, dgm.y), **doglabel_kw)
+                    self.ax.annotate(
+                        dgm.annotation(self.checkLabelDogText.isChecked(), self.ps.excess),
+                        (dgm.x, dgm.y),
+                        **doglabel_kw
+                    )
             self.ax.set_xlabel(self.ps.x_var_label)
             self.ax.set_ylabel(self.ps.y_var_label)
             self.ax.set_title(self.plot_title)
@@ -1557,8 +1627,8 @@ class BuildersBase(QtWidgets.QMainWindow):
 
 
 class PTBuilder(BuildersBase, Ui_PTBuilder):
-    """Main class for ptbuilder
-    """
+    """Main class for ptbuilder"""
+
     def __init__(self, parent=None):
         self.builder_name = 'PTBuilder'
         self.builder_extension = '.ptb'
@@ -1609,20 +1679,44 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
-            self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelUni.setCheckState(
+                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelUniText.setCheckState(
+                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInv.setCheckState(
+                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInvText.setCheckState(
+                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDog.setCheckState(
+                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDogText.setCheckState(
+                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneInv.setCheckState(
+                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneUni.setCheckState(
+                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
-            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkUseInvGuess.setCheckState(builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(
+                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkAutoconnectInv.setCheckState(
+                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkUseInvGuess.setCheckState(
+                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkOverwrite.setCheckState(
+                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
@@ -1636,28 +1730,22 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         pass
 
     def initProject(self, workdir=False):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
-            workdir = qd.getExistingDirectory(self, "Select Directory",
-                                              os.path.expanduser('~'),
-                                              qd.ShowDirsOnly)
+            workdir = qd.getExistingDirectory(self, "Select Directory", os.path.expanduser('~'), qd.ShowDirsOnly)
         if workdir:
             tc, ok = get_tcapi(workdir)
             if ok:
                 self.tc = tc
-                self.ps = PTsection(trange=self.tc.trange,
-                                    prange=self.tc.prange,
-                                    excess=self.tc.excess)
+                self.ps = PTsection(trange=self.tc.trange, prange=self.tc.prange, excess=self.tc.excess)
                 self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
@@ -1670,14 +1758,11 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save,
-                                qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
@@ -1687,8 +1772,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             else:
                 openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Open project', openin,
-                                          self.builder_file_selector + ';;PSBuilder 1.X project (*.psb)')[0]
+            projfile = qd.getOpenFileName(
+                self, 'Open project', openin, self.builder_file_selector + ';;PSBuilder 1.X project (*.psb)'
+            )[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
@@ -1702,9 +1788,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, 'Warning', move_msg,
-                                        qb.Yes | qb.No,
-                                        qb.No)
+                    reply = qb.question(self, 'Warning', move_msg, qb.Yes | qb.No, qb.No)
 
                     if reply == qb.Yes:
                         workdir = active
@@ -1713,9 +1797,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
-                    self.ps = PTsection(trange=data['section'].xrange,
-                                        prange=data['section'].yrange,
-                                        excess=data['section'].excess)
+                    self.ps = PTsection(
+                        trange=data['section'].xrange, prange=data['section'].yrange, excess=data['section'].excess
+                    )
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -1743,7 +1827,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                 if data.get('version', '1.0.0') >= '2.3.0':
                                     self.dogmodel.appendRow(id, dgm)
                                 else:
-                                    output = dgm._output.split('##########################################################\n')[-1]
+                                    output = dgm._output.split(
+                                        '##########################################################\n'
+                                    )[-1]
                                     ndgm = Dogmin(id=dgm.id, output=output, resic=dgm.resic, x=dgm.x, y=dgm.y)
                                     self.dogmodel.appendRow(id, ndgm)
                             self.dogview.resizeColumnsToContents()
@@ -1762,9 +1848,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         if data['bulk'] != self.tc.bulk and data['version'] >= "2.3.0":
                             qb = QtWidgets.QMessageBox
                             bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
-                            reply = qb.question(self, 'Bulk changed', bulk_msg,
-                                                qb.Yes | qb.No,
-                                                qb.No)
+                            reply = qb.question(self, 'Bulk changed', bulk_msg, qb.Yes | qb.No, qb.No)
                             if reply == qb.Yes:
                                 self.bulk = data['bulk']
                                 self.tc.update_scriptfile(bulk=data['bulk'])
@@ -1780,18 +1864,32 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         qb = QtWidgets.QMessageBox
                         missing = used_phases.difference(set(self.tc.phases))
                         if len(missing) > 1:
-                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phases',
+                                'The phases {} are not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                         else:
-                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phase',
+                                'The phase {} is not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc, qb.Abort)
             # VERY OLD FORMAT
             elif data.get('version', '1.0.0') < '2.1.0':
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, 'Old version',
-                            'This project is created in older version.\nUse import from project.',
-                            qb.Abort)
+                qb.critical(
+                    self, 'Old version', 'This project is created in older version.\nUse import from project.', qb.Abort
+                )
             # OLD FORMAT
             elif data.get('version', '1.0.0') < '2.3.0':
                 active = Path(projfile).resolve().parent
@@ -1802,9 +1900,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, 'Warning', move_msg,
-                                        qb.Yes | qb.No,
-                                        qb.No)
+                    reply = qb.question(self, 'Warning', move_msg, qb.Yes | qb.No, qb.No)
 
                     if reply == qb.Yes:
                         workdir = active
@@ -1813,9 +1909,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
-                    self.ps = PTsection(trange=data['trange'],
-                                        prange=data['prange'],
-                                        excess=self.tc.excess)
+                    self.ps = PTsection(trange=data['trange'], prange=data['prange'], excess=self.tc.excess)
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -1830,42 +1924,50 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     # views
                     for row in data['invlist']:
                         if row[2]['manual']:
-                            inv = InvPoint(id=row[0],
-                                           phases=row[2]['phases'],
-                                           out=row[2]['out'],
-                                           x=row[2]['T'],
-                                           y=row[2]['p'],
-                                           manual=True)
+                            inv = InvPoint(
+                                id=row[0],
+                                phases=row[2]['phases'],
+                                out=row[2]['out'],
+                                x=row[2]['T'],
+                                y=row[2]['p'],
+                                manual=True,
+                            )
                         else:
-                            inv = InvPoint(id=row[0],
-                                           phases=row[2]['phases'],
-                                           out=row[2]['out'],
-                                           x=row[2]['T'],
-                                           y=row[2]['p'],
-                                           results=row[2]['results'],
-                                           output=row[2]['output'])
+                            inv = InvPoint(
+                                id=row[0],
+                                phases=row[2]['phases'],
+                                out=row[2]['out'],
+                                x=row[2]['T'],
+                                y=row[2]['p'],
+                                results=row[2]['results'],
+                                output=row[2]['output'],
+                            )
                         self.invmodel.appendRow(row[0], inv)
                     self.invview.resizeColumnsToContents()
                     for row in data['unilist']:
                         if row[4]['manual']:
-                            uni = UniLine(id=row[0],
-                                          phases=row[4]['phases'],
-                                          out=row[4]['out'],
-                                          x=row[4]['T'],
-                                          y=row[4]['p'],
-                                          manual=True,
-                                          begin=row[2],
-                                          end=row[3])
+                            uni = UniLine(
+                                id=row[0],
+                                phases=row[4]['phases'],
+                                out=row[4]['out'],
+                                x=row[4]['T'],
+                                y=row[4]['p'],
+                                manual=True,
+                                begin=row[2],
+                                end=row[3],
+                            )
                         else:
-                            uni = UniLine(id=row[0],
-                                          phases=row[4]['phases'],
-                                          out=row[4]['out'],
-                                          x=row[4]['T'],
-                                          y=row[4]['p'],
-                                          results=row[4]['results'],
-                                          output=row[4]['output'],
-                                          begin=row[2],
-                                          end=row[3])
+                            uni = UniLine(
+                                id=row[0],
+                                phases=row[4]['phases'],
+                                out=row[4]['out'],
+                                x=row[4]['T'],
+                                y=row[4]['p'],
+                                results=row[4]['results'],
+                                output=row[4]['output'],
+                                begin=row[2],
+                                end=row[3],
+                            )
                         self.unimodel.appendRow(row[0], uni)
                         self.ps.trim_uni(row[0])
                     self.uniview.resizeColumnsToContents()
@@ -1898,8 +2000,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
     def import_drfile(self):  # FIXME:
         if self.ready:
             qd = QtWidgets.QFileDialog
-            tpfile = qd.getOpenFileName(self, 'Open drawpd file', str(self.tc.workdir),
-                                        'Drawpd files (*.txt);;All files (*.*)')[0]
+            tpfile = qd.getOpenFileName(
+                self, 'Open drawpd file', str(self.tc.workdir), 'Drawpd files (*.txt);;All files (*.*)'
+            )[0]
             if tpfile:
                 tp = []
                 tpok = True
@@ -1946,7 +2049,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
                 if not self.ps.invpoints[inv_id].manual:
-                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                    old_guesses = self.tc.update_scriptfile(
+                        guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True
+                    )
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -1962,14 +2067,17 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.tc.calc_pt(phases, nout, prange=prange, trange=trange)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'ok':
-                    inv = InvPoint(phases=phases, out=nout, variance=res.variance,
-                                   y=res.y, x=res.x, output=output, results=res)
+                    inv = InvPoint(
+                        phases=phases, out=nout, variance=res.variance, y=res.y, x=res.x, output=output, results=res
+                    )
                     isnew, id = self.ps.getidinv(inv)
                     if isnew:
                         exists, inv_id = '', ''
                     else:
                         exists, inv_id = '*', str(id)
-                    cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
+                    cand.append(
+                        (line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id)
+                    )
 
             for ophase in set(self.tc.phases).difference(self.ps.excess).difference(phases):
                 nphases = phases.union(set([ophase]))
@@ -1977,14 +2085,17 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.tc.calc_pt(nphases, nout, prange=prange, trange=trange)
                 status, res, output = self.tc.parse_logfile()
                 if status == 'ok':
-                    inv = InvPoint(phases=nphases, out=nout, variance=res.variance,
-                                   y=res.y, x=res.x, output=output, results=res)
+                    inv = InvPoint(
+                        phases=nphases, out=nout, variance=res.variance, y=res.y, x=res.x, output=output, results=res
+                    )
                     isnew, id = self.ps.getidinv(inv)
                     if isnew:
                         exists, inv_id = '', ''
                     else:
                         exists, inv_id = '*', str(id)
-                    cand.append((line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id))
+                    cand.append(
+                        (line.project(Point(inv._x, inv._y)), inv._x, inv._y, exists, ' '.join(inv.out), inv_id)
+                    )
 
             # set original ptguesses when needed
             if old_guesses is not None:
@@ -2061,9 +2172,13 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     uni_tmp = UniLine(phases=phases, out=out)
                     isnew, id_uni = self.ps.getiduni(uni_tmp)
                     if calcT:
-                        tcout, ans = self.tc.calc_t(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
+                        tcout, ans = self.tc.calc_t(
+                            uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps
+                        )
                     else:
-                        tcout, ans = self.tc.calc_p(uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps)
+                        tcout, ans = self.tc.calc_p(
+                            uni_tmp.phases, uni_tmp.out, prange=prange, trange=trange, steps=steps
+                        )
                     self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                     status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -2073,8 +2188,17 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 elif len(res) < 2:
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
-                    uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
-                                  variance=res.variance, y=res.y, x=res.x, output=output, results=res)
+                    uni = UniLine(
+                        id=id_uni,
+                        phases=uni_tmp.phases,
+                        out=uni_tmp.out,
+                        cmd=ans,
+                        variance=res.variance,
+                        y=res.y,
+                        x=res.x,
+                        output=output,
+                        results=res,
+                    )
                     if self.checkAutoconnectUni.isChecked():
                         candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
                     if isnew:
@@ -2164,8 +2288,17 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 elif status == 'nir':
                     self.statusBar().showMessage('Nothing in range.')
                 else:
-                    inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
-                                   variance=res.variance, y=res.y, x=res.x, output=output, results=res)
+                    inv = InvPoint(
+                        id=id_inv,
+                        phases=inv_tmp.phases,
+                        out=inv_tmp.out,
+                        cmd=ans,
+                        variance=res.variance,
+                        y=res.y,
+                        x=res.x,
+                        output=output,
+                        results=res,
+                    )
                     if isnew:
                         self.invmodel.appendRow(id_inv, inv)
                         self.invview.resizeColumnsToContents()
@@ -2212,8 +2345,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
 
 
 class TXBuilder(BuildersBase, Ui_TXBuilder):
-    """Main class for txbuilder
-    """
+    """Main class for txbuilder"""
+
     def __init__(self, parent=None):
         self.builder_name = 'TXBuilder'
         self.builder_extension = '.txb'
@@ -2259,21 +2392,45 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.rangeSpin.setValue(builder_settings.value("prange", 0, type=float))
-            self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkLabelUni.setCheckState(
+                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
-            self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelUniText.setCheckState(
+                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInv.setCheckState(
+                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInvText.setCheckState(
+                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDog.setCheckState(
+                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDogText.setCheckState(
+                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneInv.setCheckState(
+                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneUni.setCheckState(
+                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
-            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkUseInvGuess.setCheckState(builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(
+                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkAutoconnectInv.setCheckState(
+                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkUseInvGuess.setCheckState(
+                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkOverwrite.setCheckState(
+                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
@@ -2287,27 +2444,22 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
         self.spinSteps.setValue(self.tc.ptx_steps)
 
     def initProject(self, workdir=False):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
-            workdir = qd.getExistingDirectory(self, "Select Directory",
-                                              os.path.expanduser('~'),
-                                              qd.ShowDirsOnly)
+            workdir = qd.getExistingDirectory(self, "Select Directory", os.path.expanduser('~'), qd.ShowDirsOnly)
         if workdir:
             tc, ok = get_tcapi(workdir)
             if ok:
                 self.tc = tc
-                self.ps = TXsection(trange=self.tc.trange,
-                                    excess=self.tc.excess)
+                self.ps = TXsection(trange=self.tc.trange, excess=self.tc.excess)
                 self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
@@ -2320,14 +2472,11 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save,
-                                qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
@@ -2337,8 +2486,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             else:
                 openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Open project', openin,
-                                          self.builder_file_selector)[0]
+            projfile = qd.getOpenFileName(self, 'Open project', openin, self.builder_file_selector)[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
@@ -2351,9 +2499,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, 'Warning', move_msg,
-                                        qb.Yes | qb.No,
-                                        qb.No)
+                    reply = qb.question(self, 'Warning', move_msg, qb.Yes | qb.No, qb.No)
 
                     if reply == qb.Yes:
                         workdir = active
@@ -2362,8 +2508,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
-                    self.ps = TXsection(trange=data['section'].xrange,
-                                        excess=data['section'].excess)
+                    self.ps = TXsection(trange=data['section'].xrange, excess=data['section'].excess)
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -2382,9 +2527,14 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             if inv.manual:
                                 inv.results = None
                             else:
-                                inv.results = TCResultSet([TCResult(inv.x, inv.y, variance=inv.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in inv.results])
+                                inv.results = TCResultSet(
+                                    [
+                                        TCResult(
+                                            inv.x, inv.y, variance=inv.variance, data=r['data'], ptguess=r['ptguess']
+                                        )
+                                        for r in inv.results
+                                    ]
+                                )
                         self.invmodel.appendRow(id, inv)
                         used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
@@ -2393,9 +2543,14 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                             if uni.manual:
                                 uni.results = None
                             else:
-                                uni.results = TCResultSet([TCResult(uni.x, uni.y, variance=uni.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in uni.results])
+                                uni.results = TCResultSet(
+                                    [
+                                        TCResult(
+                                            uni.x, uni.y, variance=uni.variance, data=r['data'], ptguess=r['ptguess']
+                                        )
+                                        for r in uni.results
+                                    ]
+                                )
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
@@ -2418,13 +2573,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         if data['bulk'] != self.tc.bulk:
                             qb = QtWidgets.QMessageBox
                             bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
-                            reply = qb.question(self, 'Bulk changed', bulk_msg,
-                                                qb.Yes | qb.No,
-                                                qb.No)
+                            reply = qb.question(self, 'Bulk changed', bulk_msg, qb.Yes | qb.No, qb.No)
                             if reply == qb.Yes:
                                 self.bulk = data['bulk']
-                                self.tc.update_scriptfile(bulk=data['bulk'],
-                                                          xsteps=self.spinSteps.value())
+                                self.tc.update_scriptfile(bulk=data['bulk'], xsteps=self.spinSteps.value())
                                 self.read_scriptfile()
                             else:
                                 self.bulk = self.tc.bulk
@@ -2437,9 +2589,23 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         qb = QtWidgets.QMessageBox
                         missing = used_phases.difference(set(self.tc.phases))
                         if len(missing) > 1:
-                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phases',
+                                'The phases {} are not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                         else:
-                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phase',
+                                'The phase {} is not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc, qb.Abort)
@@ -2456,8 +2622,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
     def import_from_pt(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          'PTBuilder project (*.ptb)')[0]
+            projfile = qd.getOpenFileName(
+                self, 'Import from project', str(self.tc.workdir), 'PTBuilder project (*.ptb)'
+            )[0]
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
@@ -2485,13 +2652,29 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         if pt_line.intersects(uni.shape()):
                             isnew, id_uni = self.ps.getiduni(uni)
                             if isnew:
-                                tcout, ans = self.tc.calc_tx(uni.phases, uni.out, prange=(pm, pm), trange=trange, xvals=crange, steps=self.spinSteps.value())
+                                tcout, ans = self.tc.calc_tx(
+                                    uni.phases,
+                                    uni.out,
+                                    prange=(pm, pm),
+                                    trange=trange,
+                                    xvals=crange,
+                                    steps=self.spinSteps.value(),
+                                )
                                 status, res, output = self.tc.parse_logfile()
                                 if status == 'ok':
                                     if len(res) > 1:
                                         # rescale pts from zoomed composition
-                                        uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
-                                                         variance=res.variance, y=res.c, x=res.x, output=output, results=res)
+                                        uni_ok = UniLine(
+                                            id=id_uni,
+                                            phases=uni.phases,
+                                            out=uni.out,
+                                            cmd=ans,
+                                            variance=res.variance,
+                                            y=res.c,
+                                            x=res.x,
+                                            output=output,
+                                            results=res,
+                                        )
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
@@ -2536,14 +2719,19 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
                 if not self.ps.invpoints[inv_id].manual:
-                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                    old_guesses = self.tc.update_scriptfile(
+                        guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True
+                    )
             # Try out from phases
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
             ts = extend * (trange[1] - trange[0]) / 100
             trange = (max(trange[0] - ts, self.tc.trange[0]), min(trange[1] + ts, self.tc.trange[1]))
             pm = sum(self.tc.prange) / 2
-            prange = (max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]), min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]))
+            prange = (
+                max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]),
+                min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]),
+            )
             crange = self.ax.get_ylim()
             cs = extend * (crange[1] - crange[0]) / 100
             crange = (max(crange[0] - cs, 0), min(crange[1] + cs, 1))
@@ -2571,7 +2759,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append(
+                                (line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id)
+                            )
                         else:
                             ix = abs(res.y - pm).argmin()
                             out_section.append((res.x[ix], res.y[ix], exists, ' '.join(inv.out), inv_id))
@@ -2597,7 +2787,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         Xm = splt([pm])
                         Ym = splx([pm])
                         if not np.isnan(Xm[0]):
-                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append(
+                                (line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id)
+                            )
                         else:
                             ix = abs(res.y - pm).argmin()
                             out_section.append((res.x[ix], res.y[ix], exists, ' '.join(inv.out), inv_id))
@@ -2626,7 +2818,11 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     txt += n_format.format(*cc)
 
                 self.textOutput.setPlainText(txt)
-                self.statusBar().showMessage('Searching done. Found {} invariant points and {} out of section.'.format(len(cand), len(out_section)))
+                self.statusBar().showMessage(
+                    'Searching done. Found {} invariant points and {} out of section.'.format(
+                        len(cand), len(out_section)
+                    )
+                )
             else:
                 self.statusBar().showMessage('No invariant points found.')
 
@@ -2698,7 +2894,14 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 if run_tc:
                     uni_tmp = UniLine(phases=phases, out=out)
                     isnew, id_uni = self.ps.getiduni(uni_tmp)
-                    tcout, ans = self.tc.calc_tx(uni_tmp.phases, uni_tmp.out, prange=(pm, pm), trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    tcout, ans = self.tc.calc_tx(
+                        uni_tmp.phases,
+                        uni_tmp.out,
+                        prange=(pm, pm),
+                        trange=trange,
+                        xvals=crange,
+                        steps=self.spinSteps.value(),
+                    )
                     self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                     status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -2709,8 +2912,17 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
                     # rescale pts from zoomed composition
-                    uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
-                                  variance=res.variance, y=res.c, x=res.x, output=output, results=res)
+                    uni = UniLine(
+                        id=id_uni,
+                        phases=uni_tmp.phases,
+                        out=uni_tmp.out,
+                        cmd=ans,
+                        variance=res.variance,
+                        y=res.c,
+                        x=res.x,
+                        output=output,
+                        results=res,
+                    )
                     if self.checkAutoconnectUni.isChecked():
                         candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
                     if isnew:
@@ -2792,8 +3004,18 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 if run_tc:
                     inv_tmp = InvPoint(phases=phases, out=out)
                     isnew, id_inv = self.ps.getidinv(inv_tmp)
-                    prange = (max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]), min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]))
-                    tcout, ans = self.tc.calc_tx(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    prange = (
+                        max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]),
+                        min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]),
+                    )
+                    tcout, ans = self.tc.calc_tx(
+                        inv_tmp.phases,
+                        inv_tmp.out,
+                        prange=prange,
+                        trange=trange,
+                        xvals=crange,
+                        steps=self.spinSteps.value(),
+                    )
                     self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                     status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -2810,11 +3032,24 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     Ym = splx([pm])
                     if np.isnan(Xm[0]):
                         status = 'nir'
-                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in p range {:.2f} - {:.2f}.'.format(min(res.y), max(res.y)))
+                        self.statusBar().showMessage(
+                            'Nothing in range, but exists out ouf section in p range {:.2f} - {:.2f}.'.format(
+                                min(res.y), max(res.y)
+                            )
+                        )
                     else:
-                        ix = np.argmin((res.x - Xm)**2)
-                        inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
-                                       variance=res.variance, y=Ym, x=Xm, output=output, results=res[ix:ix + 1])
+                        ix = np.argmin((res.x - Xm) ** 2)
+                        inv = InvPoint(
+                            id=id_inv,
+                            phases=inv_tmp.phases,
+                            out=inv_tmp.out,
+                            cmd=ans,
+                            variance=res.variance,
+                            y=Ym,
+                            x=Xm,
+                            output=output,
+                            results=res[ix : ix + 1],
+                        )
                         if isnew:
                             self.invmodel.appendRow(id_inv, inv)
                             self.invview.resizeColumnsToContents()
@@ -2862,8 +3097,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
 
 
 class PXBuilder(BuildersBase, Ui_PXBuilder):
-    """Main class for pxbuilder
-    """
+    """Main class for pxbuilder"""
+
     def __init__(self, parent=None):
         self.builder_name = 'PXBuilder'
         self.builder_extension = '.pxb'
@@ -2909,21 +3144,45 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.spinPrec.setValue(builder_settings.value("precision", 1, type=int))
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.rangeSpin.setValue(builder_settings.value("trange", 0, type=int))
-            self.checkLabelUni.setCheckState(builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
+            self.checkLabelUni.setCheckState(
+                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
-            self.checkLabelUniText.setCheckState(builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelInv.setCheckState(builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkLabelInvText.setCheckState(builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDog.setCheckState(builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkLabelDogText.setCheckState(builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneInv.setCheckState(builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
-            self.checkHidedoneUni.setCheckState(builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkLabelUniText.setCheckState(
+                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInv.setCheckState(
+                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelInvText.setCheckState(
+                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDog.setCheckState(
+                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkLabelDogText.setCheckState(
+                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneInv.setCheckState(
+                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
+            self.checkHidedoneUni.setCheckState(
+                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
-            self.checkAutoconnectUni.setCheckState(builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkAutoconnectInv.setCheckState(builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkUseInvGuess.setCheckState(builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState))
-            self.checkOverwrite.setCheckState(builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState))
+            self.checkAutoconnectUni.setCheckState(
+                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkAutoconnectInv.setCheckState(
+                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkUseInvGuess.setCheckState(
+                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+            )
+            self.checkOverwrite.setCheckState(
+                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+            )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
             for ix in range(n):
@@ -2937,27 +3196,22 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
         self.spinSteps.setValue(self.tc.ptx_steps)
 
     def initProject(self, workdir=False):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
-            workdir = qd.getExistingDirectory(self, "Select Directory",
-                                              os.path.expanduser('~'),
-                                              qd.ShowDirsOnly)
+            workdir = qd.getExistingDirectory(self, "Select Directory", os.path.expanduser('~'), qd.ShowDirsOnly)
         if workdir:
             tc, ok = get_tcapi(workdir)
             if ok:
                 self.tc = tc
-                self.ps = PXsection(prange=self.tc.prange,
-                                    excess=self.tc.excess)
+                self.ps = PXsection(prange=self.tc.prange, excess=self.tc.excess)
                 self.bulk = self.tc.bulk
                 self.ready = True
                 self.initViewModels()
@@ -2970,14 +3224,11 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 qb.critical(self, 'Initialization error', tc, qb.Abort)
 
     def openProject(self, checked, projfile=None):
-        """Open working directory and initialize project
-        """
+        """Open working directory and initialize project"""
         if self.changed:
             quit_msg = 'Project have been changed. Save ?'
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, 'Message', quit_msg,
-                                qb.Discard | qb.Save,
-                                qb.Save)
+            reply = qb.question(self, 'Message', quit_msg, qb.Discard | qb.Save, qb.Save)
 
             if reply == qb.Save:
                 self.do_save()
@@ -2987,8 +3238,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             else:
                 openin = os.path.expanduser('~')
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Open project', openin,
-                                          self.builder_file_selector)[0]
+            projfile = qd.getOpenFileName(self, 'Open project', openin, self.builder_file_selector)[0]
         if Path(projfile).is_file():
             with gzip.open(projfile, 'rb') as stream:
                 data = pickle.load(stream)
@@ -3001,9 +3251,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 if workdir != active:
                     move_msg = 'Project have been moved. Change working directory ?'
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, 'Warning', move_msg,
-                                        qb.Yes | qb.No,
-                                        qb.No)
+                    reply = qb.question(self, 'Warning', move_msg, qb.Yes | qb.No, qb.No)
 
                     if reply == qb.Yes:
                         workdir = active
@@ -3012,8 +3260,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
-                    self.ps = PXsection(prange=data['section'].yrange,
-                                        excess=data['section'].excess)
+                    self.ps = PXsection(prange=data['section'].yrange, excess=data['section'].excess)
                     self.initViewModels()
                     # select phases
                     for i in range(self.phasemodel.rowCount()):
@@ -3032,9 +3279,14 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                             if inv.manual:
                                 inv.results = None
                             else:
-                                inv.results = TCResultSet([TCResult(inv.x, inv.y, variance=inv.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in inv.results])
+                                inv.results = TCResultSet(
+                                    [
+                                        TCResult(
+                                            inv.x, inv.y, variance=inv.variance, data=r['data'], ptguess=r['ptguess']
+                                        )
+                                        for r in inv.results
+                                    ]
+                                )
                         self.invmodel.appendRow(id, inv)
                         used_phases.update(inv.phases)
                     self.invview.resizeColumnsToContents()
@@ -3043,9 +3295,14 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                             if uni.manual:
                                 uni.results = None
                             else:
-                                uni.results = TCResultSet([TCResult(uni.x, uni.y, variance=uni.variance,
-                                                                    data=r['data'], ptguess=r['ptguess'])
-                                                           for r in uni.results])
+                                uni.results = TCResultSet(
+                                    [
+                                        TCResult(
+                                            uni.x, uni.y, variance=uni.variance, data=r['data'], ptguess=r['ptguess']
+                                        )
+                                        for r in uni.results
+                                    ]
+                                )
                         self.unimodel.appendRow(id, uni)
                         used_phases.update(uni.phases)
                     self.uniview.resizeColumnsToContents()
@@ -3068,13 +3325,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         if data['bulk'] != self.tc.bulk:
                             qb = QtWidgets.QMessageBox
                             bulk_msg = 'The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?'
-                            reply = qb.question(self, 'Bulk changed', bulk_msg,
-                                                qb.Yes | qb.No,
-                                                qb.No)
+                            reply = qb.question(self, 'Bulk changed', bulk_msg, qb.Yes | qb.No, qb.No)
                             if reply == qb.Yes:
                                 self.bulk = data['bulk']
-                                self.tc.update_scriptfile(bulk=data['bulk'],
-                                                          xsteps=self.spinSteps.value())
+                                self.tc.update_scriptfile(bulk=data['bulk'], xsteps=self.spinSteps.value())
                                 self.read_scriptfile()
                             else:
                                 self.bulk = self.tc.bulk
@@ -3087,9 +3341,23 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         qb = QtWidgets.QMessageBox
                         missing = used_phases.difference(set(self.tc.phases))
                         if len(missing) > 1:
-                            qb.warning(self, 'Missing phases', 'The phases {} are not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phases',
+                                'The phases {} are not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                         else:
-                            qb.warning(self, 'Missing phase', 'The phase {} is not defined.\nCheck your a-x file {}.'.format(' '.join(missing), 'tc-' + self.tc.axname + '.txt'), qb.Ok)
+                            qb.warning(
+                                self,
+                                'Missing phase',
+                                'The phase {} is not defined.\nCheck your a-x file {}.'.format(
+                                    ' '.join(missing), 'tc-' + self.tc.axname + '.txt'
+                                ),
+                                qb.Ok,
+                            )
                 else:
                     qb = QtWidgets.QMessageBox
                     qb.critical(self, 'Error during openning', tc, qb.Abort)
@@ -3106,8 +3374,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
     def import_from_pt(self):
         if self.ready:
             qd = QtWidgets.QFileDialog
-            projfile = qd.getOpenFileName(self, 'Import from project', str(self.tc.workdir),
-                                          'PTBuilder project (*.ptb)')[0]
+            projfile = qd.getOpenFileName(
+                self, 'Import from project', str(self.tc.workdir), 'PTBuilder project (*.ptb)'
+            )[0]
             if Path(projfile).is_file():
                 with gzip.open(projfile, 'rb') as stream:
                     data = pickle.load(stream)
@@ -3140,8 +3409,17 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                 if status == 'ok':
                                     if len(res) > 1:
                                         # rescale pts from zoomed composition
-                                        uni_ok = UniLine(id=id_uni, phases=uni.phases, out=uni.out, cmd=ans,
-                                                         variance=res.variance, y=res.y, x=res.c, output=output, results=res)
+                                        uni_ok = UniLine(
+                                            id=id_uni,
+                                            phases=uni.phases,
+                                            out=uni.out,
+                                            cmd=ans,
+                                            variance=res.variance,
+                                            y=res.y,
+                                            x=res.c,
+                                            output=output,
+                                            results=res,
+                                        )
                                         self.unimodel.appendRow(id_uni, uni_ok)
                                         self.changed = True
                                         last = id_uni
@@ -3187,11 +3465,16 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
                 if not self.ps.invpoints[inv_id].manual:
-                    old_guesses = self.tc.update_scriptfile(guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True)
+                    old_guesses = self.tc.update_scriptfile(
+                        guesses=self.ps.invpoints[inv_id].ptguess(), get_old_guesses=True
+                    )
             # Try out from phases
             extend = self.spinOver.value()
             tm = sum(self.tc.trange) / 2
-            trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
+            trange = (
+                max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]),
+                min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]),
+            )
             prange = self.ax.get_ylim()
             ps = extend * (prange[1] - prange[0]) / 100
             prange = (max(prange[0] - ps, self.tc.prange[0]), min(prange[1] + ps, self.tc.prange[1]))
@@ -3222,7 +3505,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
-                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append(
+                                (line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id)
+                            )
                         else:
                             ix = abs(res.x - tm).argmin()
                             out_section.append((res.x[ix], res.y[ix], exists, ' '.join(inv.out), inv_id))
@@ -3248,7 +3533,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         Ym = splt([tm])
                         Xm = splx([tm])
                         if not np.isnan(Ym[0]):
-                            cand.append((line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id))
+                            cand.append(
+                                (line.project(Point(Xm[0], Ym[0])), Xm[0], Ym[0], exists, ' '.join(inv.out), inv_id)
+                            )
                         else:
                             ix = abs(res.x - tm).argmin()
                             out_section.append((res.x[ix], res.y[ix], exists, ' '.join(inv.out), inv_id))
@@ -3277,7 +3564,11 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     txt += n_format.format(*cc)
 
                 self.textOutput.setPlainText(txt)
-                self.statusBar().showMessage('Searching done. Found {} invariant points and {} out of section.'.format(len(cand), len(out_section)))
+                self.statusBar().showMessage(
+                    'Searching done. Found {} invariant points and {} out of section.'.format(
+                        len(cand), len(out_section)
+                    )
+                )
             else:
                 self.statusBar().showMessage('No invariant points found.')
 
@@ -3349,7 +3640,14 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 if run_tc:
                     uni_tmp = UniLine(phases=phases, out=out)
                     isnew, id_uni = self.ps.getiduni(uni_tmp)
-                    tcout, ans = self.tc.calc_px(uni_tmp.phases, uni_tmp.out, prange=prange, trange=(tm, tm), xvals=crange, steps=self.spinSteps.value())
+                    tcout, ans = self.tc.calc_px(
+                        uni_tmp.phases,
+                        uni_tmp.out,
+                        prange=prange,
+                        trange=(tm, tm),
+                        xvals=crange,
+                        steps=self.spinSteps.value(),
+                    )
                     self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                     status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -3360,8 +3658,17 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     self.statusBar().showMessage('Only one point calculated. Change range.')
                 else:
                     # rescale pts from zoomed composition
-                    uni = UniLine(id=id_uni, phases=uni_tmp.phases, out=uni_tmp.out, cmd=ans,
-                                  variance=res.variance, y=res.y, x=res.c, output=output, results=res)
+                    uni = UniLine(
+                        id=id_uni,
+                        phases=uni_tmp.phases,
+                        out=uni_tmp.out,
+                        cmd=ans,
+                        variance=res.variance,
+                        y=res.y,
+                        x=res.c,
+                        output=output,
+                        results=res,
+                    )
                     if self.checkAutoconnectUni.isChecked():
                         candidates = [inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)]
                     if isnew:
@@ -3443,8 +3750,18 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 if run_tc:
                     inv_tmp = InvPoint(phases=phases, out=out)
                     isnew, id_inv = self.ps.getidinv(inv_tmp)
-                    trange = (max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]), min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]))
-                    tcout, ans = self.tc.calc_px(inv_tmp.phases, inv_tmp.out, prange=prange, trange=trange, xvals=crange, steps=self.spinSteps.value())
+                    trange = (
+                        max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]),
+                        min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]),
+                    )
+                    tcout, ans = self.tc.calc_px(
+                        inv_tmp.phases,
+                        inv_tmp.out,
+                        prange=prange,
+                        trange=trange,
+                        xvals=crange,
+                        steps=self.spinSteps.value(),
+                    )
                     self.logText.setPlainText('Working directory:{}\n\n'.format(self.tc.workdir) + tcout)
                     status, res, output = self.tc.parse_logfile()
                 if status == 'bombed':
@@ -3461,11 +3778,24 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     Xm = splx([tm])
                     if np.isnan(Ym[0]):
                         status = 'nir'
-                        self.statusBar().showMessage('Nothing in range, but exists out ouf section in T range {:.2f} - {:.2f}.'.format(min(res.x), max(res.x)))
+                        self.statusBar().showMessage(
+                            'Nothing in range, but exists out ouf section in T range {:.2f} - {:.2f}.'.format(
+                                min(res.x), max(res.x)
+                            )
+                        )
                     else:
-                        ix = np.argmin((res.y - Ym)**2)
-                        inv = InvPoint(id=id_inv, phases=inv_tmp.phases, out=inv_tmp.out, cmd=ans,
-                                       variance=res.variance, y=Ym, x=Xm, output=output, results=res[ix:ix + 1])
+                        ix = np.argmin((res.y - Ym) ** 2)
+                        inv = InvPoint(
+                            id=id_inv,
+                            phases=inv_tmp.phases,
+                            out=inv_tmp.out,
+                            cmd=ans,
+                            variance=res.variance,
+                            y=Ym,
+                            x=Xm,
+                            output=output,
+                            results=res[ix : ix + 1],
+                        )
                         if isnew:
                             self.invmodel.appendRow(id_inv, inv)
                             self.invview.resizeColumnsToContents()
@@ -3554,15 +3884,14 @@ class InvModel(QtCore.QAbstractTableModel):
                 return inv.label(excess=self.ps.excess)
 
     def appendRow(self, id, inv):
-        """ Append model row. """
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             len(self.invlist), len(self.invlist))
+        """Append model row."""
+        self.beginInsertRows(QtCore.QModelIndex(), len(self.invlist), len(self.invlist))
         self.invlist.append(id)
         self.ps.add_inv(id, inv)
         self.endInsertRows()
 
     def removeRow(self, index):
-        """ Remove model row. """
+        """Remove model row."""
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         id = self.invlist[index.row()]
         del self.invlist[index.row()]
@@ -3636,15 +3965,14 @@ class UniModel(QtCore.QAbstractTableModel):
         return False
 
     def appendRow(self, id, uni):
-        """ Append model row. """
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             len(self.unilist), len(self.unilist))
+        """Append model row."""
+        self.beginInsertRows(QtCore.QModelIndex(), len(self.unilist), len(self.unilist))
         self.unilist.append(id)
         self.ps.add_uni(id, uni)
         self.endInsertRows()
 
     def removeRow(self, index):
-        """ Remove model row. """
+        """Remove model row."""
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         id = self.unilist[index.row()]
         del self.unilist[index.row()]
@@ -3674,6 +4002,7 @@ class ComboDelegate(QtWidgets.QItemDelegate):
     A delegate that places a fully functioning QtWidgets.QComboBox in every
     cell of the column to which it's applied
     """
+
     def __init__(self, ps, invmodel, parent):
         super(ComboDelegate, self).__init__(parent)
         self.ps = ps
@@ -3736,15 +4065,14 @@ class DogminModel(QtCore.QAbstractTableModel):
                 return dgm.label(excess=self.ps.excess)
 
     def appendRow(self, id, dgm):
-        """ Append model row. """
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             len(self.doglist), len(self.doglist))
+        """Append model row."""
+        self.beginInsertRows(QtCore.QModelIndex(), len(self.doglist), len(self.doglist))
         self.doglist.append(id)
         self.ps.add_dogmin(id, dgm)
         self.endInsertRows()
 
     def removeRow(self, index):
-        """ Remove model row. """
+        """Remove model row."""
         self.beginRemoveRows(QtCore.QModelIndex(), index.row(), index.row())
         id = self.doglist[index.row()]
         del self.doglist[index.row()]
@@ -3764,8 +4092,8 @@ class DogminModel(QtCore.QAbstractTableModel):
 
 
 class AddInv(QtWidgets.QDialog, Ui_AddInv):
-    """Add inv dialog class
-    """
+    """Add inv dialog class"""
+
     def __init__(self, ps, inv, isnew, parent=None):
         super(AddInv, self).__init__(parent)
         self.setupUi(self)
@@ -3810,8 +4138,8 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
 
 
 class AddUni(QtWidgets.QDialog, Ui_AddUni):
-    """Add uni dialog class
-    """
+    """Add uni dialog class"""
+
     def __init__(self, label, items, selected=None, parent=None):
         super(AddUni, self).__init__(parent)
         self.setupUi(self)
@@ -3836,8 +4164,8 @@ class AddUni(QtWidgets.QDialog, Ui_AddUni):
 
 
 class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
-    """Choose uni pt dialog class
-    """
+    """Choose uni pt dialog class"""
+
     def __init__(self, values, parent=None):
         super(UniGuess, self).__init__(parent)
         self.setupUi(self)
@@ -3848,8 +4176,8 @@ class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
 
 
 class AboutDialog(QtWidgets.QDialog):
-    """About dialog
-    """
+    """About dialog"""
+
     def __init__(self, builder, version, parent=None):
         """Display a dialog that shows application information."""
         super(AboutDialog, self).__init__(parent)
@@ -3869,10 +4197,14 @@ class AboutDialog(QtWidgets.QDialog):
         author = QtWidgets.QLabel('Ondrej Lexa')
         author.setAlignment(QtCore.Qt.AlignCenter)
 
-        swinfo = QtWidgets.QLabel('Python:{} Qt:{} PyQt:{}'.format(sys.version.split()[0], QT_VERSION_STR, PYQT_VERSION_STR))
+        swinfo = QtWidgets.QLabel(
+            'Python:{} Qt:{} PyQt:{}'.format(sys.version.split()[0], QT_VERSION_STR, PYQT_VERSION_STR)
+        )
         swinfo.setAlignment(QtCore.Qt.AlignCenter)
 
-        github = QtWidgets.QLabel('GitHub: <a href="https://github.com/ondrolexa/pypsbuilder">https://github.com/ondrolexa/pypsbuilder</a>')
+        github = QtWidgets.QLabel(
+            'GitHub: <a href="https://github.com/ondrolexa/pypsbuilder">https://github.com/ondrolexa/pypsbuilder</a>'
+        )
         github.setAlignment(QtCore.Qt.AlignCenter)
         github.setOpenExternalLinks(True)
 
@@ -3889,8 +4221,8 @@ class AboutDialog(QtWidgets.QDialog):
 
 
 class OutputDialog(QtWidgets.QDialog):
-    """Output dialog
-    """
+    """Output dialog"""
+
     def __init__(self, title, txt, parent=None):
         """Display a dialog that shows application information."""
         super(OutputDialog, self).__init__(parent)
@@ -3949,6 +4281,7 @@ class TopologyGraph(QtWidgets.QDialog):
                     edges[out] = [(uni.begin, uni.end)]
 
         import warnings
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
@@ -3957,8 +4290,16 @@ class TopologyGraph(QtWidgets.QDialog):
         widths = Normalize(vmin=0, vmax=len(edges))
         color = cm.get_cmap('tab20', len(edges))
         for ix, out in enumerate(edges):
-            nx.draw_networkx_edges(G, npos, ax=ax, edgelist=edges[out],
-                                   width=2 + 6 * widths(ix), alpha=0.5, edge_color=len(edges[out]) * [color(ix)], label=list(out)[0])
+            nx.draw_networkx_edges(
+                G,
+                npos,
+                ax=ax,
+                edgelist=edges[out],
+                width=2 + 6 * widths(ix),
+                alpha=0.5,
+                edge_color=len(edges[out]) * [color(ix)],
+                label=list(out)[0],
+            )
 
         nx.draw_networkx_nodes(G, npos, ax=ax, node_color='k')
         nx.draw_networkx_labels(G, npos, labels, ax=ax, font_size=9, font_weight='bold', font_color='w')
@@ -3982,6 +4323,7 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     Based on: Sukhbinder
     https://github.com/sukhbinder/intersection
     """
+
     def _rect_inter_inner(x1, x2):
         n1 = x1.shape[0] - 1
         n2 = x2.shape[0] - 1
@@ -4006,9 +4348,9 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
         return ii, jj
 
     # Linear length along the line:
-    d1 = np.cumsum(np.sqrt(np.diff(uni1._x)**2 + np.diff(ratio * uni1._y)**2))
+    d1 = np.cumsum(np.sqrt(np.diff(uni1._x) ** 2 + np.diff(ratio * uni1._y) ** 2))
     d1 = np.insert(d1, 0, 0) / d1[-1]
-    d2 = np.cumsum(np.sqrt(np.diff(uni2._x)**2 + np.diff(ratio * uni2._y)**2))
+    d2 = np.cumsum(np.sqrt(np.diff(uni2._x) ** 2 + np.diff(ratio * uni2._y) ** 2))
     d2 = np.insert(d2, 0, 0) / d2[-1]
     try:
         s1x = interp1d(d1, uni1._x, kind='quadratic', fill_value='extrapolate')

@@ -4,6 +4,10 @@ All notable pypsbuilder changes.
 ## [master]
 ### Added
  - tcinit script added to initialize project directory
+ - bulk table bug fixed
+ - pointcalc method to run TC for given pT added to explorer
+ - fixed some issues with creating areas
+ - experimental vector isoplets for easy editing added (needs scikit-image)
 
 ## [2.3.1] - 2022-10-06
 ### Fixed
