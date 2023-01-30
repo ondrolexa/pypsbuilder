@@ -1043,8 +1043,7 @@ class PS:
         Isopleths are drawn as contours for values evaluated from provided
         expression. Individual divariant fields are contoured separately, so
         final plot allows sharp changes accross univariant lines. Within
-        divariant field the thin-plate radial basis function interpolation is
-        used. See scipy.interpolation.Rbf
+        divariant field the selected interpolation is used.
 
         Args:
             phase (str): Phase or end-member named
@@ -1321,13 +1320,12 @@ class PS:
                     plt.show()
 
     def isopleths_vector(self, phase, expr=None, **kwargs):
-        """Method to draw compositional isopleths.
+        """Method to draw vectorized compositional isopleths.
 
-        Isopleths are drawn as contours for values evaluated from provided
+        Isopleths are drawn as lines for values evaluated from provided
         expression. Individual divariant fields are contoured separately, so
         final plot allows sharp changes accross univariant lines. Within
-        divariant field the thin-plate radial basis function interpolation is
-        used. See scipy.interpolation.Rbf
+        divariant field the selected interpolation is used.
 
         Args:
             phase (str): Phase or end-member named
@@ -1461,7 +1459,7 @@ class PS:
                     scx = (tmax - tmin + 2 * self.gridxstep) / zg.shape[1]
                     scy = (pmax - pmin + 2 * self.gridystep) / zg.shape[0]
                     lns = []
-                    for v in np.linspace(mn, mx, 10):
+                    for v in cntv:
                         contours = measure.find_contours(zg, v)
                         for contour in contours:
                             cnt = np.array(
@@ -1505,7 +1503,8 @@ class PS:
                                 lw=2,
                             )
             try:
-                fig.colorbar(mapper)
+                cbar = fig.colorbar(mapper)
+                cbar.ax.set_yticks(cntv)
             except Exception as e:
                 print('There is trouble to draw colorbar. Sorry.')
                 if self.show_errors:
