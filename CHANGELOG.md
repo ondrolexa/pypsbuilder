@@ -1,7 +1,7 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [master]
+## [2.3.2] - 2023-01-31
 ### Added
  - tcinit script added to initialize project directory
  - bulk table bug fixed
