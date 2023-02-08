@@ -1,7 +1,7 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## master
+## [2.3.3] - 2023-02-08
 ### Fixed
  - gendrawpd bug fixed
  - missing omit or inexcess fix

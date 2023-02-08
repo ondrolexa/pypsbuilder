@@ -725,7 +725,7 @@ class SectionBase:
                         if m.geom_type == 'MultiLineString':
                             p = edge.intersection(l)
                             if p.geom_type == 'MultiPoint':
-                                pts = [l.interpolate(l.project(pt)) for pt in p]
+                                pts = [l.interpolate(l.project(pt)) for pt in p.geoms]
                                 pts = sorted(pts, key=lambda pt: edge.project(pt))
                             else:
                                 pts = [l.interpolate(l.project(p))]
@@ -748,7 +748,7 @@ class SectionBase:
             if ln.geom_type == 'LineString' and not ln.is_empty:
                 lns.append((uni.id, ln))
             if ln.geom_type == 'MultiLineString':
-                for ln_part in ln:
+                for ln_part in ln.geoms:
                     if ln_part.geom_type == 'LineString' and not ln_part.is_empty:
                         lns.append((uni.id, ln_part))
         # split boundaries
