@@ -735,7 +735,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             phases = ''
             for key in self.ax.areas_shown:
                 if self.ax.areas_shown[key].contains(point):
-                    phases = ' '.join(key.difference(self.ps.excess))
+                    phases = ' '.join(sorted(key.difference(self.ps.excess)))
                     break
             return '{} {}={:.{prec}f} {}={:.{prec}f}'.format(phases, self.ps.x_var, x, self.ps.y_var, y, prec=prec)
         else:

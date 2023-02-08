@@ -264,7 +264,7 @@ class TCAPI(object):
     def rundr(self):
         """Method to run drawpd."""
         if self.drexe:
-            instr = self.name + '\n'
+            instr = '\n' + self.name + '\n'
             if sys.platform.startswith('win'):
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags = 1
@@ -394,7 +394,9 @@ class TC35API(TCAPI):
                 if scripts['inexcess']:
                     self.excess = set(scripts['inexcess'][0].split()) - set(['no'])
                 else:
-                    raise ScriptfileError('In case of no excess phases, use inexcess no')
+                    raise ScriptfileError('In case of no excess phases, use inexcess no or remove script')
+            else:
+                self.excess = set()
             # omit
             errinfo = 'Wrong omit in scriptfile.'
             if 'omit' in scripts:
@@ -413,6 +415,8 @@ class TC35API(TCAPI):
             # samecoding
             if 'samecoding' in scripts:
                 self.samecoding = [set(sc.split()) for sc in scripts['samecoding']]
+            else:
+                self.samecoding = [set()]
             # pseudosection
             if 'pseudosection' not in scripts:
                 raise ScriptfileError('No pseudosection script, pseudosection is mandatory script.')

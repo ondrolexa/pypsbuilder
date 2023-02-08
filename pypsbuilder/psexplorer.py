@@ -1650,8 +1650,8 @@ class PS:
             output.write('darkcolour  56 16 101\n\n')
             dt = self.xrange[1] - self.xrange[0]
             dp = self.yrange[1] - self.yrange[0]
-            ts = np.power(10, np.int(np.log10(dt)))
-            ps = np.power(10, np.int(np.log10(dp)))
+            ts = np.power(10, int(np.log10(dt)))
+            ps = np.power(10, int(np.log10(dp)))
             tg = np.arange(0, self.xrange[1] + ts, ts)
             tg = tg[tg >= self.xrange[0]]
             pg = np.arange(0, self.yrange[1] + ps, ps)
@@ -1664,7 +1664,7 @@ class PS:
             output.write('*\n')
             print('Drawpd file generated successfully.')
 
-        if self.tx.drexe is not None:
+        if self.tc.drexe is not None:
             if self.tc.rundr():
                 print('Drawpd sucessfully executed.')
             else:

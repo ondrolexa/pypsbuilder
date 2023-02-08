@@ -1,6 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## master
+### Fixed
+ - gendrawpd bug fixed
+ - missing omit or inexcess fix
+
 ## [2.3.2] - 2023-01-31
 ### Added
  - tcinit script added to initialize project directory
