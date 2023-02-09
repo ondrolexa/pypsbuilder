@@ -1,7 +1,7 @@
-pypsbuilder.psexplorer.TXsection
-================================
+﻿pypsbuilder.psclasses.TXsection
+===============================
 
-.. currentmodule:: pypsbuilder.psexplorer
+.. currentmodule:: pypsbuilder.psclasses
 
 .. autoclass:: TXsection
 
@@ -20,7 +20,6 @@ pypsbuilder.psexplorer.TXsection
       ~TXsection.cleanup_data
       ~TXsection.create_shapes
       ~TXsection.from_file
-      ~TXsection.get_bulk_composition
       ~TXsection.getidinv
       ~TXsection.getiduni
       ~TXsection.read_file
@@ -37,5 +36,6 @@ pypsbuilder.psexplorer.TXsection
    
       ~TXsection.range_shapes
       ~TXsection.ratio
+      ~TXsection.type
    
    

@@ -1,4 +1,4 @@
-pypsbuilder.psexplorer.PTPS
+﻿pypsbuilder.psexplorer.PTPS
 ===========================
 
 .. currentmodule:: pypsbuilder.psexplorer
@@ -16,6 +16,7 @@ pypsbuilder.psexplorer.PTPS
       ~PTPS.__init__
       ~PTPS.add_overlay
       ~PTPS.calculate_composition
+      ~PTPS.check_phase_expr
       ~PTPS.collect_all_data_keys
       ~PTPS.collect_data
       ~PTPS.collect_grid_data
@@ -28,19 +29,22 @@ pypsbuilder.psexplorer.PTPS
       ~PTPS.format_coord
       ~PTPS.gendrawpd
       ~PTPS.get_gridded
+      ~PTPS.get_grids
       ~PTPS.get_nearest_grid_data
       ~PTPS.get_section_id
       ~PTPS.gidentify
       ~PTPS.ginput_path
+      ~PTPS.glabel
       ~PTPS.identify
       ~PTPS.invs_from_unilist
       ~PTPS.isopleths
+      ~PTPS.isopleths_vector
       ~PTPS.merge_data
       ~PTPS.onclick
+      ~PTPS.pointcalc
       ~PTPS.save
       ~PTPS.save_tab
       ~PTPS.show
-      ~PTPS.show_bulk_deviations
       ~PTPS.show_data
       ~PTPS.show_delta
       ~PTPS.show_grid

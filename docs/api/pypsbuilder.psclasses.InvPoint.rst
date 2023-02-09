@@ -1,7 +1,7 @@
-pypsbuilder.psexplorer.InvPoint
-===============================
+﻿pypsbuilder.psclasses.InvPoint
+==============================
 
-.. currentmodule:: pypsbuilder.psexplorer
+.. currentmodule:: pypsbuilder.psclasses
 
 .. autoclass:: InvPoint
 
@@ -16,7 +16,7 @@ pypsbuilder.psexplorer.InvPoint
       ~InvPoint.__init__
       ~InvPoint.all_unilines
       ~InvPoint.annotation
-      ~InvPoint.data
+      ~InvPoint.datakeys
       ~InvPoint.label
       ~InvPoint.ptguess
       ~InvPoint.shape

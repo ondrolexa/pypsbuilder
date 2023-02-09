@@ -1,7 +1,7 @@
-pypsbuilder.psexplorer.UniLine
-==============================
+﻿pypsbuilder.psclasses.UniLine
+=============================
 
-.. currentmodule:: pypsbuilder.psexplorer
+.. currentmodule:: pypsbuilder.psclasses
 
 .. autoclass:: UniLine
 
@@ -16,7 +16,7 @@ pypsbuilder.psexplorer.UniLine
       ~UniLine.__init__
       ~UniLine.annotation
       ~UniLine.contains_inv
-      ~UniLine.data
+      ~UniLine.datakeys
       ~UniLine.get_label_point
       ~UniLine.label
       ~UniLine.ptguess

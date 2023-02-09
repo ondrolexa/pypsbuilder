@@ -42,12 +42,14 @@ tcapi module
      :toctree: api
      :nosignatures:
 
-     get_tcapi
-     TCAPI
+     TC35API
+     TC34API
 
-.. autofunction:: pypsbuilder.tcapi.get_tcapi
+.. autoclass:: pypsbuilder.tcapi.TC35API
+    :members:
+    :inherited-members:
 
-.. autoclass:: pypsbuilder.tcapi.TCAPI
+.. autoclass:: pypsbuilder.tcapi.TC34API
     :members:
     :inherited-members:
 

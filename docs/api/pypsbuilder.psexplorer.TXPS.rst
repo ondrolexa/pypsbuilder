@@ -1,4 +1,4 @@
-pypsbuilder.psexplorer.TXPS
+﻿pypsbuilder.psexplorer.TXPS
 ===========================
 
 .. currentmodule:: pypsbuilder.psexplorer
@@ -16,6 +16,7 @@ pypsbuilder.psexplorer.TXPS
       ~TXPS.__init__
       ~TXPS.add_overlay
       ~TXPS.calculate_composition
+      ~TXPS.check_phase_expr
       ~TXPS.collect_all_data_keys
       ~TXPS.collect_data
       ~TXPS.collect_grid_data
@@ -27,19 +28,22 @@ pypsbuilder.psexplorer.TXPS
       ~TXPS.format_coord
       ~TXPS.gendrawpd
       ~TXPS.get_gridded
+      ~TXPS.get_grids
       ~TXPS.get_nearest_grid_data
       ~TXPS.get_section_id
       ~TXPS.gidentify
       ~TXPS.ginput_path
+      ~TXPS.glabel
       ~TXPS.identify
       ~TXPS.invs_from_unilist
       ~TXPS.isopleths
+      ~TXPS.isopleths_vector
       ~TXPS.merge_data
       ~TXPS.onclick
+      ~TXPS.pointcalc
       ~TXPS.save
       ~TXPS.save_tab
       ~TXPS.show
-      ~TXPS.show_bulk_deviations
       ~TXPS.show_data
       ~TXPS.show_delta
       ~TXPS.show_grid

@@ -1,7 +1,7 @@
-pypsbuilder.psexplorer.PTsection
-================================
+﻿pypsbuilder.psclasses.PTsection
+===============================
 
-.. currentmodule:: pypsbuilder.psexplorer
+.. currentmodule:: pypsbuilder.psclasses
 
 .. autoclass:: PTsection
 
@@ -20,7 +20,6 @@ pypsbuilder.psexplorer.PTsection
       ~PTsection.cleanup_data
       ~PTsection.create_shapes
       ~PTsection.from_file
-      ~PTsection.get_bulk_composition
       ~PTsection.getidinv
       ~PTsection.getiduni
       ~PTsection.read_file
@@ -37,5 +36,6 @@ pypsbuilder.psexplorer.PTsection
    
       ~PTsection.range_shapes
       ~PTsection.ratio
+      ~PTsection.type
    
    
