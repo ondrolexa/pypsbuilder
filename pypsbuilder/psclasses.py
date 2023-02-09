@@ -35,9 +35,11 @@ class PseudoBase:
         out_lbl = ' '.join(sorted(list(self.out)))
         return '{} - {}'.format(phases_lbl, out_lbl)
 
-    def annotation(self, show_out=False):
+    def annotation(self, state=0):
         """str: String representation of ID with possible zermo mode phase."""
-        if show_out:
+        if state == 1:
+            return '{}'.format(' '.join(self.out))
+        elif state == 2:
             return '{:d} {}'.format(self.id, ' '.join(self.out))
         else:
             return '{:d}'.format(self.id)

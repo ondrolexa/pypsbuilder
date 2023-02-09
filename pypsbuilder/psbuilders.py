@@ -59,7 +59,7 @@ from .psclasses import (
     PolygonPatch,
 )
 from .tcapi import get_tcapi
-from . import __version__
+from . import __version__, __copyright__
 
 # Make sure that we are using QT5
 matplotlib.use('Qt5Agg')
@@ -93,7 +93,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         window_icon = resource_filename('pypsbuilder', app_icons[self.builder_name])
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
-        self.about_dialog = AboutDialog(self.builder_name, __version__)
+        self.about_dialog = AboutDialog(self.builder_name, __version__, __copyright__)
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
@@ -170,7 +170,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.populate_recent()
         self.ready = False
         self.project = None
-        self.statusBar().showMessage('{} version {} (c) Ondrej Lexa 2021'.format(self.builder_name, __version__))
+        self.statusBar().showMessage('{} version {} {}'.format(self.builder_name, __version__, __copyright__))
 
     def initViewModels(self):
         # INVVIEW
@@ -375,7 +375,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             projfile = qd.getOpenFileName(
                 self, 'Import from project', str(self.tc.workdir), 'PSBuilder 1.X project (*.psb)'
             )[0]
-            if Path(projfile).exists():
+            if Path(projfile).is_file():
                 QtWidgets.QApplication.processEvents()
                 QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
                 with gzip.open(projfile, 'rb') as stream:
@@ -1518,13 +1518,13 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if uni.connected < 2:
                         xl, yl = uni.get_label_point()
                         self.ax.annotate(
-                            uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_unc_kw
+                            uni.annotation(self.checkLabelUniText.checkState()), (xl, yl), **unilabel_unc_kw
                         )
                     else:
                         if not self.checkHidedoneUni.isChecked():
                             xl, yl = uni.get_label_point()
                             self.ax.annotate(
-                                uni.annotation(self.checkLabelUniText.isChecked()), (xl, yl), **unilabel_kw
+                                uni.annotation(self.checkLabelUniText.checkState()), (xl, yl), **unilabel_kw
                             )
             for inv in self.ps.invpoints.values():
                 all_uni = inv.all_unilines()
@@ -1544,12 +1544,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if self.checkLabelInv.isChecked():
                     if unconnected:
                         self.ax.annotate(
-                            inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_unc_kw
+                            inv.annotation(self.checkLabelInvText.checkState()), (inv.x, inv.y), **invlabel_unc_kw
                         )
                     else:
                         if not self.checkHidedoneInv.isChecked():
                             self.ax.annotate(
-                                inv.annotation(self.checkLabelInvText.isChecked()), (inv.x, inv.y), **invlabel_kw
+                                inv.annotation(self.checkLabelInvText.checkState()), (inv.x, inv.y), **invlabel_kw
                             )
                 else:
                     if unconnected:
@@ -4178,7 +4178,7 @@ class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
 class AboutDialog(QtWidgets.QDialog):
     """About dialog"""
 
-    def __init__(self, builder, version, parent=None):
+    def __init__(self, builder, version, copyright, parent=None):
         """Display a dialog that shows application information."""
         super(AboutDialog, self).__init__(parent)
 
@@ -4194,7 +4194,7 @@ class AboutDialog(QtWidgets.QDialog):
         suptitle = QtWidgets.QLabel('THERMOCALC front-end for constructing pseudosections')
         suptitle.setAlignment(QtCore.Qt.AlignCenter)
 
-        author = QtWidgets.QLabel('Ondrej Lexa')
+        author = QtWidgets.QLabel(copyright)
         author.setAlignment(QtCore.Qt.AlignCenter)
 
         swinfo = QtWidgets.QLabel(

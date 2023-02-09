@@ -1,6 +1,10 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.3.4] - master
+### Added
+ - tristate labeling of uni and inv
+
 ## [2.3.3] - 2023-02-08
 ### Fixed
  - gendrawpd bug fixed

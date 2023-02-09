@@ -501,7 +501,10 @@
               <item row="3" column="1">
                <widget class="QCheckBox" name="checkLabelInvText">
                 <property name="text">
-                 <string>Show zero phases with numbers</string>
+                 <string>Show zero phases with or without numbers</string>
+                </property>
+                <property name="tristate">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -518,7 +521,10 @@
               <item row="4" column="1">
                <widget class="QCheckBox" name="checkLabelUniText">
                 <property name="text">
-                 <string>Show zero phase with numbers</string>
+                 <string>Show zero phase with or without numbers</string>
+                </property>
+                <property name="tristate">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
