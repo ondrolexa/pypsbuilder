@@ -19,7 +19,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, MultiPoint
 from shapely.ops import polygonize, linemerge  # unary_union
 
 polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
@@ -726,6 +726,8 @@ class SectionBase:
                         m = linemerge([edge, l])
                         if m.geom_type == 'MultiLineString':
                             p = edge.intersection(l)
+                            if p.geom_type == 'LineString':  # seems to occur whe duplicate points are on line
+                                p = MultiPoint(p.coords)
                             if p.geom_type == 'MultiPoint':
                                 pts = [l.interpolate(l.project(pt)) for pt in p.geoms]
                                 pts = sorted(pts, key=lambda pt: edge.project(pt))
