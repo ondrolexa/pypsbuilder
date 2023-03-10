@@ -1,9 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.3.4] - master
+## [2.3.4] - 2023-03-10
 ### Added
  - tristate labeling of uni and inv
+### Fixed
+ - TC34API bug fixed
 
 ## [2.3.3] - 2023-02-08
 ### Fixed
