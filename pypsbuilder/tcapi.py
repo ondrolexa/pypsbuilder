@@ -1463,7 +1463,7 @@ class TC34API(TCAPI):
             int: variance
         """
         variance = None
-        tcout = self.tc.runtc('{}\nkill\n\n'.format(' '.join(phases)))
+        tcout = self.runtc('{}\nkill\n\n'.format(' '.join(phases)))
         for ln in tcout.splitlines():
             if 'variance of required equilibrium' in ln:
                 variance = int(ln[ln.index('(') + 1 : ln.index('?')])
