@@ -16,28 +16,28 @@ In the moment you need to have Python and needed modules installed locally and
   file. Open the terminal, change directory where you unzip the source
   and execute following command::
 
-      conda env create -f environment.yml
+      $ conda env create -f environment.yml
 
   .. image:: images/create_environment.png
 
   4. Activate the new environment and install from current directory::
 
-      conda activate pyps
-      pip install .
+      $ conda activate pyps
+      (pyps) $ pip install .
 
   .. image:: images/install_locally.png
 
 Alternatively, you can use ``pip`` to install pypsbuilder::
 
-      pip install pypsbuilder
+      (pyps) $ pip install pypsbuilder
 
 Upgrade to latest version
 -------------------------
 
 You can anytime upgrade your existing pypsbuilder to the latest released version::
 
-		  pip install --upgrade pypsbuilder
+		  (pyps) $ pip install --upgrade pypsbuilder
 
 or to latest master version at github::
 
-      pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+      (pyps) $ pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip

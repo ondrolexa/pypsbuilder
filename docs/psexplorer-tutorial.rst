@@ -1,22 +1,36 @@
 Pseudosection explorers tutorial
 ================================
 
-Using psexplorers in Python (or Jupyter notebook)
--------------------------------------------------
-
 **psexplorers** provides several post-processing methods and visualizations of
 already constructed pseudosections. You can also create isopleths diagrams or do
 calculations along paths.
 
-It also provides four command-line scipts `psgrid`, `psshow` and
-`psiso` for quick visualizations.
+It provides four command-line scipts `psgrid`, `psshow` and
+`psiso` for quick visualizations. For options, check built-in help, e.g.::
 
-To use **psexplorers** we need to import appropriate class, which contains most
+    $ psshow -h
+
+To show pseudosection, you need to provide project file::
+
+    $ psshow -b /some/path/project.ptb
+
+Using psexplorers in Python (or Jupyter notebook)
+-------------------------------------------------
+
+To access all options of **psexplorer** it is suggested to use Python API. You
+need to activate the pyps environment and run python interpreter::
+
+    $ conda activate pyps
+    $ python
+
+To use **psexplorer** we need to import appropriate class, which contains most
 of the methods to work with pseudosection.
 
   - ``PTPS`` class for P-T pseudosection constructed with ``ptbuilder``
   - ``TXPS`` class for T-X pseudosection constructed with ``txbuilder``
   - ``PXPS`` class for P-X pseudosection constructed with ``pxbuilder``
+
+All following commands must be executed in Python interpreter.
 
 .. code:: python
 
