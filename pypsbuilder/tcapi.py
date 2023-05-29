@@ -406,7 +406,11 @@ class TC35API(TCAPI):
             # autoexit
             if 'autoexit' not in scripts:
                 raise ScriptfileError('No autoexit script, autoexit must be provided.')
-            # whith
+            # acceptvar
+            if 'acceptvar' in scripts:
+                if scripts['acceptvar'][0] == 'no':
+                    raise ScriptfileError('Acceptvar script must be yes or removed')
+            # with
             if 'with' in scripts:
                 if scripts['with'][0].split()[0] == 'someof':
                     raise ScriptfileError(
