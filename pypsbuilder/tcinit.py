@@ -6,7 +6,7 @@ and ax file according to user selection
 
 """
 # author: Ondrej Lexa
-# website: petrol.natur.cuni.cz/~ondro
+# website: https://github.com/ondrolexa/pypsbuilder
 
 from pathlib import Path
 import platform

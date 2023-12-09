@@ -22,7 +22,7 @@ requirements = [
 
 setup(
     name='pypsbuilder',
-    version='2.3.4',
+    version='2.3.5',
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + '\n\n' + changelog,
     long_description_content_type="text/markdown",

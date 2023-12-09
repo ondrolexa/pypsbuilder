@@ -18,7 +18,7 @@ Example:
 
 """
 # author: Ondrej Lexa 2020
-# website: petrol.natur.cuni.cz/~ondro
+# website: https://github.com/ondrolexa/pypsbuilder
 
 import argparse
 import sys
@@ -1371,12 +1371,9 @@ class PS:
             which = kwargs.get('which', 7)
             smooth = kwargs.get('smooth', 0)
             epsilon = kwargs.get('epsilon', None)
-            filled = kwargs.get('filled', True)
-            filled_over = kwargs.get('filled_over', False)
             out = kwargs.get('out', None)
             bulk = kwargs.get('bulk', False)
             high = kwargs.get('high', [])
-            nosplit = kwargs.get('nosplit', False)
             step = kwargs.get('step', None)
             N = kwargs.get('N', 10)
             cdf = kwargs.get('cdf', False)
@@ -1458,7 +1455,6 @@ class PS:
                     # ------------
                     scx = (tmax - tmin + 2 * self.gridxstep) / zg.shape[1]
                     scy = (pmax - pmin + 2 * self.gridystep) / zg.shape[0]
-                    lns = []
                     for v in cntv:
                         contours = measure.find_contours(zg, v)
                         for contour in contours:
@@ -1748,7 +1744,6 @@ class PS:
         if self.gridded:
             if self.check_phase_expr(phase, expr):
                 cgd = {}
-                mn, mx = sys.float_info.max, -sys.float_info.max
                 for ix, grid in self.grids.items():
                     gd = np.empty(grid.xg.shape)
                     gd[:] = np.nan

@@ -8,7 +8,7 @@ Todo:
 
 """
 # author: Ondrej Lexa
-# website: petrol.natur.cuni.cz/~ondro
+# website: https://github.com/ondrolexa/pypsbuilder
 
 import sys
 import os

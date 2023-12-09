@@ -3,12 +3,9 @@
 This module contains classes and tools providing API to THERMOCALC, parsing of
 outputs and storage of calculated invariant points and univariant lines.
 
-Todo:
-    * Implement own class for divariant fields
-
 """
 # author: Ondrej Lexa
-# website: petrol.natur.cuni.cz/~ondro
+# website: https://github.com/ondrolexa/pypsbuilder
 
 try:
     import cPickle as pickle
