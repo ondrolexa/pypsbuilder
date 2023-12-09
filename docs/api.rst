@@ -3,7 +3,7 @@ Python API
 
 **pypsbuilder** expose several classes which could be used
 in Python sctipts, interactively or in Jupyter notebooks. Check included
-`jupyter notebook <https://nbviewer.jupyter.org/github/ondrolexa/pypsbuilder/blob/develop/notebooks/pypsbuilder.ipynb>`_
+`jupyter notebook <https://nbviewer.jupyter.org/github/ondrolexa/pypsbuilder/blob/master/notebooks/pypsbuilder.ipynb>`_
 to see how it works.
 
 Here you can find auto-generated documentation of main classes, methods and

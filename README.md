@@ -10,13 +10,21 @@ Not that simplistic THERMOCALC front-end for constructing and visualizations of 
 
 ## How to install
 
-Easiest way to install **pypsbuilder** is to use conda package management system. Create conda environment from the included `environment.yml` file:
+Easiest way to install **pypsbuilder** is to use conda/mamba package management system. Create environment from the included `environment.yml` file:
 
     conda env create -f environment.yml
+
+or
+
+    mamba env create -f environment.yml
 
 Then activate the new environment:
 
     conda activate pyps
+
+or
+
+    mamba activate pyps
 
 and install pypsbuilder using pip:
 
