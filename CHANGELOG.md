@@ -1,6 +1,9 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.3.5] - 2023-12-09
+### Fixed
+ - accept var check
 ## [2.3.4] - 2023-03-10
 ### Added
  - tristate labeling of uni and inv
