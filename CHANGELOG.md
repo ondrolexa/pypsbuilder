@@ -1,6 +1,9 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.3.6] - master
+### Added
+ - search_composition method added to PTPS to find best estimate for isopleths intersection
 ## [2.3.5] - 2023-12-09
 ### Fixed
  - accept var check
