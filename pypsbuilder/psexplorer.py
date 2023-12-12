@@ -1026,6 +1026,8 @@ class PS:
                         aspect="auto",
                         origin="lower",
                     )
+                    ax.contour(self.xspace, self.yspace, err, colors='w')
+                    ax.plot(T, p, 'r*', ms=20)
                     self.add_overlay(
                         ax, label=label, skiplabels=skiplabels, fontsize=labelfs
                     )
