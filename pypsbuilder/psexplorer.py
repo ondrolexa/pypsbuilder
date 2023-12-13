@@ -669,9 +669,14 @@ class PS:
                 Default False.
             show_vertices (bool): Whether to show vertices of drawn areas.
                 Default False.
+            fig (Figure): If not None, axes are added to fig and returned.
+                Default None
             fig_kw: dict passed to subplots method.
+            ax (Axes): Axes to be used. Default None
             filename: If not None, figure is saved to file
             save_kw: dict passed to savefig method.
+            show (bool): When False, Axes are returned, otherwise plot is shown.
+                Default True
         """
         out = kwargs.get("out", None)
         cmap = kwargs.get("cmap", "Purples")
@@ -685,8 +690,10 @@ class PS:
         show_vertices = kwargs.get("show_vertices", False)
         fig = kwargs.get("fig", None)
         fig_kw = kwargs.get("fig_kw", {})
+        ax = kwargs.get("ax", None)
         filename = kwargs.get("filename", None)
         save_kw = kwargs.get("save_kw", {})
+        show = kwargs.get("show", None)
 
         if self.shapes:
             if isinstance(out, str):
@@ -702,10 +709,15 @@ class PS:
                 np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True
             )
             if fig is None:
-                show = True
-                fig, ax = plt.subplots(**fig_kw)
+                if ax is None:
+                    fig, ax = plt.subplots(**fig_kw)
+                else:
+                    if show is None:
+                        show = False
+                    fig = ax.get_figure()
             else:
-                show = False
+                if show is None:
+                    show = False
                 ax = fig.add_subplot()
             for k, shape in self.shapes.items():
                 patch = PolygonPatch(
@@ -815,7 +827,7 @@ class PS:
                 plt.savefig(filename, **save_kw)
                 plt.close(fig)
             else:
-                if show:
+                if show is None or show is True:
                     plt.show()
                 else:
                     return ax
@@ -976,6 +988,9 @@ class PS:
         labelfs=6,
         geterror=False,
         getpt=False,
+        fig=None,
+        fig_kw={},
+        isopleths=False,
     ):
         """Function to plot root squared error of calculated and estimated values.
 
@@ -988,11 +1003,16 @@ class PS:
             interpolation (str): matplotlib imshow interpolation method.
                 Default None.
             label (bool): Whether to label divariant fields. Default False.
-            geterror (bool): When True, calcuilated RMSE is returned. Otherwise
+            geterror (bool): When True, calculated RMSE array is returned. Otherwise
                 error is plotted. Deafult False
-            getpt (bool): When True return tuple of (p, T, err) where error is minimal
+            getpt (bool): When True return tuple of (p, T, err) where error is minimal.
+                Default False
             skiplabels (float): Minimal area fraction of fields to be labelled
             labelfs (float): Size of label font. Default 6
+            fig (Figure): If not None, axes are added to fig and returned.
+                Default None
+            fig_kw: dict passed to subplots method.
+            isopleths (bool): When True, searched isoplots are shown.Default False
 
         Example:
             >>> pt.search_composition(
@@ -1018,7 +1038,10 @@ class PS:
                 elif getpt:
                     return p, T, np.nanmin(err)
                 else:
-                    fig, ax = plt.subplots()
+                    if fig is None:
+                        fig, ax = plt.subplots(**fig_kw)
+                    else:
+                        ax = fig.add_subplot()
                     im = ax.imshow(
                         err,
                         extent=self.xrange + self.yrange,
@@ -1026,8 +1049,14 @@ class PS:
                         aspect="auto",
                         origin="lower",
                     )
-                    ax.contour(self.xspace, self.yspace, err, colors='w')
-                    ax.plot(T, p, 'r*', ms=20)
+                    ax.contour(self.xspace, self.yspace, err, colors="w")
+                    if isopleths:
+                        for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
+                            if self.check_phase_expr(phase, expr):
+                                ax = self.isopleths_vector(
+                                    phase, expr, levels=[val], ax=ax
+                                )
+                    ax.plot(T, p, "r*", ms=20)
                     self.add_overlay(
                         ax, label=label, skiplabels=skiplabels, fontsize=labelfs
                     )
@@ -1291,9 +1320,14 @@ class PS:
                 Default False.
             dt (bool): Whether the gradient should be calculated along
                 temperature or pressure. Default True.
+            fig (Figure): If not None, axes are added to fig and returned.
+                Default None
             fig_kw: dict passed to subplots method.
+            ax (Axes): Axes to be used. Default None
             filename: If not None, figure is saved to file
             save_kw: dict passed to savefig method.
+            show (bool): When False, Axes are returned, otherwise plot is shown.
+                Default True
         """
         if self.check_phase_expr(phase, expr):
             # parse kwargs
@@ -1319,8 +1353,10 @@ class PS:
             labelkeys = kwargs.get("labelkeys", [])
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
+            ax = kwargs.get("ax", None)
             filename = kwargs.get("filename", None)
             save_kw = kwargs.get("save_kw", {})
+            show = kwargs.get("show", None)
 
             if not self.gridded:
                 print(
@@ -1361,10 +1397,15 @@ class PS:
             cntv = kwargs.get("levels", cntv)
             # Thin-plate contouring of areas
             if fig is None:
-                show = True
-                fig, ax = plt.subplots(**fig_kw)
+                if ax is None:
+                    fig, ax = plt.subplots(**fig_kw)
+                else:
+                    if show is None:
+                        show = False
+                    fig = ax.get_figure()
             else:
-                show = False
+                if show is None:
+                    show = False
                 ax = fig.add_subplot()
             for key in recs:
                 phase_parts = phase.split(")")[0].split("(")
@@ -1582,9 +1623,10 @@ class PS:
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc="top")
             else:
                 if only is None:
-                    ax.set_xlim(self.xrange)
-                    ax.set_ylim(self.yrange)
-                    ax.set_title("{}({})".format(phase, expr))
+                    if show is None or show is True:
+                        ax.set_xlim(self.xrange)
+                        ax.set_ylim(self.yrange)
+                        ax.set_title("{}({})".format(phase, expr))
                 else:
                     ax.set_title("{} - {}({})".format(" ".join(only), phase, expr))
             # coords
@@ -1595,8 +1637,10 @@ class PS:
                 plt.savefig(filename, **save_kw)
                 plt.close(fig)
             else:
-                if show:
+                if show is None or show is True:
                     plt.show()
+                else:
+                    return ax
 
     def isopleths_vector(self, phase, expr=None, **kwargs):
         """Method to draw vectorized compositional isopleths.
@@ -1638,9 +1682,14 @@ class PS:
                 Colors are based on variance. Default 'viridis'.
             bulk (bool): Whether to show bulk composition on top of diagram.
                 Default False.
+            fig (Figure): If not None, axes are added to fig and returned.
+                Default None
             fig_kw: dict passed to subplots method.
+            ax (Axes): Axes to be used. Default None
             filename: If not None, figure is saved to file
             save_kw: dict passed to savefig method.
+            show (bool): When False, Axes are returned, otherwise plot is shown.
+                Default True
         """
         from skimage import measure
         from matplotlib.cm import ScalarMappable
@@ -1664,8 +1713,10 @@ class PS:
             cmap = kwargs.get("cmap", "viridis")
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
+            ax = kwargs.get("ax", None)
             filename = kwargs.get("filename", None)
             save_kw = kwargs.get("save_kw", {})
+            show = kwargs.get("show", None)
 
             if not self.gridded:
                 print(
@@ -1701,10 +1752,15 @@ class PS:
             cntv = kwargs.get("levels", cntv)
             # Thin-plate contouring of areas
             if fig is None:
-                show = True
-                fig, ax = plt.subplots(**fig_kw)
+                if ax is None:
+                    fig, ax = plt.subplots(**fig_kw)
+                else:
+                    if show is None:
+                        show = False
+                    fig = ax.get_figure()
             else:
-                show = False
+                if show is None:
+                    show = False
                 ax = fig.add_subplot()
             for key in recs:
                 phase_parts = phase.split(")")[0].split("(")
@@ -1844,9 +1900,10 @@ class PS:
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc="top")
             else:
                 if only is None:
-                    ax.set_xlim(self.xrange)
-                    ax.set_ylim(self.yrange)
-                    ax.set_title("{}({})".format(phase, expr))
+                    if show is None or show is True:
+                        ax.set_xlim(self.xrange)
+                        ax.set_ylim(self.yrange)
+                        ax.set_title("{}({})".format(phase, expr))
                 else:
                     ax.set_title("{} - {}({})".format(" ".join(only), phase, expr))
             # coords
@@ -1857,8 +1914,10 @@ class PS:
                 plt.savefig(filename, **save_kw)
                 plt.close(fig)
             else:
-                if show:
+                if show is None or show is True:
                     plt.show()
+                else:
+                    return ax
 
     def gendrawpd(self, export_areas=True):
         """Method to write drawpd file
