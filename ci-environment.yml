@@ -12,5 +12,6 @@ dependencies:
   - tqdm
   - flake8
   - pytest
+  - pip
   - pip:
       - sphinx_rtd_theme
