@@ -1,6 +1,9 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.3.7] - master
+### Fixed
+ - collect_ptpath missing field check added
 ## [2.3.6] - 2023-12-13
 ### Added
  - search_composition method added to PTPS to find best estimate for isopleths intersection
