@@ -2364,7 +2364,7 @@ class PTPS(PS):
                 t, p = splt(step), splp(step)
                 key = self.identify(t, p)
                 ix = self.get_section_id(t, p)
-                if ix is not None:
+                if (ix is not None) and (key is not None):
                     r, c = self.grids[ix].get_indexes(t, p)
                     calc = None
                     if self.grids[ix].status[r, c] == 1:
@@ -2385,6 +2385,8 @@ class PTPS(PS):
                             results.append(res[0])
                     else:
                         err += 1
+                else:
+                    err += 1
             if err > 0:
                 print("Solution not found on {} points".format(err))
             return PTpath(points, results)
