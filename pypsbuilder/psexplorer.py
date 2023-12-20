@@ -991,6 +991,8 @@ class PS:
         fig=None,
         fig_kw={},
         isopleths=False,
+        which=7,
+        smooth=0,
     ):
         """Function to plot root squared error of calculated and estimated values.
 
@@ -1013,6 +1015,9 @@ class PS:
                 Default None
             fig_kw: dict passed to subplots method.
             isopleths (bool): When True, searched isoplots are shown.Default False
+            which (int): Bitopt defining from where data are collected. 0 bit -
+                invariant points, 1 bit - uniariant lines and 2 bit - GridData
+                points
 
         Example:
             >>> pt.search_composition(
@@ -1027,16 +1032,25 @@ class PS:
                 err = []
                 for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
                     if self.check_phase_expr(phase, expr):
-                        err.append((self.get_gridded(phase, expr) - val) ** 2)
+                        err.append(
+                            (
+                                self.get_gridded(
+                                    phase, expr, which=which, smooth=smooth
+                                )
+                                - val
+                            )
+                            ** 2
+                        )
 
                 err = np.sqrt(sum(err))
                 r, c = np.unravel_index(np.nanargmin(err), err.shape)
                 p = self.yspace[r]
                 T = self.xspace[c]
+                minerr = err[r, c]
                 if geterror:
                     return err
                 elif getpt:
-                    return p, T, np.nanmin(err)
+                    return p, T, minerr
                 else:
                     if fig is None:
                         fig, ax = plt.subplots(**fig_kw)
@@ -1064,7 +1078,7 @@ class PS:
                     ax.set_ylim(self.yrange)
                     fig.colorbar(im)
 
-                    ax.set_title(f"RMSE - Min at {T} {p}")
+                    ax.set_title(f"RMSE - Min {minerr} at {T} {p}")
                     fig.tight_layout()
                     plt.show()
             else:
@@ -2123,15 +2137,18 @@ class PS:
                     tg, pg = self.xg[slc], self.yg[slc]
                     x, y = np.array(recs[key]["pts"]).T
                     # Use scaling
-                    rbf = Rbf(
-                        x,
-                        self.ratio * y,
-                        recs[key]["data"],
-                        function="linear",
-                        smooth=smooth,
-                    )
-                    zg = rbf(tg, self.ratio * pg)
-                    gd[self.masks[key]] = zg[self.masks[key][slc]]
+                    try:
+                        rbf = Rbf(
+                            x,
+                            self.ratio * y,
+                            recs[key]["data"],
+                            function="linear",
+                            smooth=smooth,
+                        )
+                        zg = rbf(tg, self.ratio * pg)
+                        gd[self.masks[key]] = zg[self.masks[key][slc]]
+                    except Exception:
+                        pass # pass silently
                 return gd
         else:
             print("Not yet gridded...")
