@@ -1046,7 +1046,7 @@ class PS:
                             ** 2
                         )
 
-                err = np.sqrt(sum(err))
+                err = np.sqrt(sum(err)) / len(err)
                 r, c = np.unravel_index(np.nanargmin(err), err.shape)
                 p = self.yspace[r]
                 T = self.xspace[c]
@@ -1082,7 +1082,7 @@ class PS:
                     ax.set_ylim(self.yrange)
                     fig.colorbar(im)
 
-                    ax.set_title(f"RMSE - Min {minerr} at {T} {p}")
+                    ax.set_title(f"RMSE - MinErr={minerr:g} at {T} {p}")
                     fig.tight_layout()
                     plt.show()
             else:
