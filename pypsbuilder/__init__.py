@@ -22,7 +22,7 @@ __all__ = (
     "get_tcapi",
 )
 
-__version__ = "2.3.7"
+__version__ = "2.4.0"
 __author__ = "Ondrej Lexa"
 __copyright__ = "© Ondrej Lexa 2023"
 __email__ = "lexa.ondrej@gmail.com"
