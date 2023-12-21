@@ -46,7 +46,7 @@ from matplotlib import ticker
 
 from shapely.geometry import MultiPoint, Point, LineString
 from shapely.ops import linemerge
-from scipy.interpolate import Rbf, interp1d
+from scipy.interpolate import Rbf, interp1d, SmoothBivariateSpline
 from scipy.linalg import LinAlgWarning, lstsq
 from scipy.interpolate import griddata  # interp2d
 from tqdm import tqdm, trange
@@ -539,17 +539,18 @@ class PS:
         if self.gridded:
             for ix, grid in self.grids.items():
                 if key in grid.masks:
-                    results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
+                    ok = grid.masks[key] & (grid.status == 1)
+                    results = grid.gridcalcs[ok]
                     if len(results) > 0:
                         if phase in results[0].phases:
                             gdt = zip(
-                                grid.xg[grid.masks[key]],
-                                grid.yg[grid.masks[key]],
+                                grid.xg[ok],
+                                grid.yg[ok],
                                 results,
-                                grid.status[grid.masks[key]],
+                                grid.status[ok],
                             )
-                            for x, y, res, ok in gdt:
-                                if ok == 1:
+                            for x, y, res, status in gdt:
+                                if status == 1:
                                     dt["pts"].append((x, y))
                                     dt["data"].append(eval_expr(expr, res[phase]))
         # else:
@@ -912,12 +913,15 @@ class PS:
         """
         if self.check_phase_expr(phase, expr):
             dt = self.collect_data(key, phase, expr, which=which)
-            x, y = np.array(dt["pts"]).T
-            fig, ax = plt.subplots()
-            pts = ax.scatter(x, y, c=dt["data"])
-            ax.set_title("{} - {}({})".format(" ".join(key), phase, expr))
-            plt.colorbar(pts)
-            plt.show()
+            if dt["pts"]:
+                x, y = np.array(dt["pts"]).T
+                fig, ax = plt.subplots()
+                pts = ax.scatter(x, y, c=dt["data"])
+                ax.set_title("{} - {}({})".format(" ".join(key), phase, expr))
+                plt.colorbar(pts)
+                plt.show()
+            else:
+                print("No data collected")
 
     def show_grid(
         self, phase, expr=None, interpolation=None, label=False, skiplabels=0, labelfs=6
@@ -1259,6 +1263,38 @@ class PS:
                 print(output)
                 return res[0]
 
+    def remove_grid_data(self, key, phase, expr):
+        """Remove calculated data from grid and mark as failed
+
+        Note: Click on all data to be discarded by mouse and finish be Enter
+
+        Args:
+            key (frozenset): Key identifying divariant field
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+        """
+
+        if self.gridded:
+            dt = self.collect_data(key, phase, expr, which=4)
+            x, y = np.array(dt["pts"]).T
+            fig, ax = plt.subplots()
+            pts = ax.scatter(x, y, c=dt["data"])
+            plt.colorbar(pts)
+            xy = plt.ginput(0)
+            plt.close(fig)
+            for x, y in xy:
+                ix = self.get_section_id(x, y)
+                if ix is not None:
+                    r, c = self.grids[ix].get_indexes(x, y)
+                    self.grids[ix].status[r, c] = 0
+                    # self.grids[ix].masks[key][r, c] = False
+                    self.grids[ix].gridcalcs[r, c] = None
+                    self.grids[ix].delta[r, c] = np.nan
+        else:
+            print("Not yet gridded...")
+
     def ginput_path(self, label=False, skiplabels=0, labelfs=6):
         """Collect Path data by mouse digitizing.
 
@@ -1307,7 +1343,8 @@ class PS:
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points. Default 7 (all data)
             method: Interpolation method. Default is 'rbf', other option is
-                'quadratic', which uses least-square fit to quadratic surface.
+                'quadratic', which uses least-square fit to quadratic surface
+                or 'spline' for bivariate spline interpolation.
             rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
             smooth (int): Values greater than zero increase the smoothness
                 of the approximation. 0 is for interpolation (default),
@@ -1315,7 +1352,9 @@ class PS:
             epsilon (int): Adjustable constant for gaussian or multiquadrics
                 functions - defaults to approximate average distance between
                 nodes (which is a good start).
+            degree (int): Degrees of the bivariate spline. Default is 3.
             refine (int): Degree of grid refinement. Default 1
+            filter_outliers (bool): Whether to filter outliers. Defaut False.
             filled (bool): Whether to contours should be filled. Defaut True.
             filled_over (bool): Whether to overlay contourline over filled
                 contours. Defaut False.
@@ -1360,6 +1399,8 @@ class PS:
             gradient = kwargs.get("gradient", False)
             dx = kwargs.get("dx", True)
             only = kwargs.get("only", None)
+            filter_outliers = kwargs.get("only", False)
+            degree = kwargs.get("degree", 3)
             refine = kwargs.get("refine", 1)
             method = kwargs.get("method", "rbf")
             rbf_func = kwargs.get("rbf_func", "thin_plate")
@@ -1438,9 +1479,22 @@ class PS:
                         self.gridystep / refine,
                     )
                     tg, pg = np.meshgrid(ttspace, ppspace)
-                    x, y = np.array(recs[key]["pts"]).T
-                    pts = recs[key]["pts"]
-                    data = recs[key]["data"]
+                    pts = np.array(recs[key]["pts"])
+                    x, y = pts.T
+                    data = np.array(recs[key]["data"])
+                    # filter outliers
+                    if filter_outliers:
+                        A = np.c_[np.ones_like(x), x, y, x * y, x**2, y**2]
+                        C, _, _, _ = lstsq(A, data)
+                        # evaluate it on a grid
+                        vals = np.dot(
+                            np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C
+                        )
+                        err = abs(vals - data)
+                        ok = err < err.std()
+                        pts = pts[ok, :]
+                        x, y = pts.T
+                        data = data[ok]
                     try:
                         if method == "quadratic":
                             tgg = tg.flatten()
@@ -1459,6 +1513,11 @@ class PS:
                                 ],
                                 C,
                             ).reshape(tg.shape)
+                        elif method == "spline":
+                            interp = SmoothBivariateSpline(
+                                x, self.ratio * y, data, kx=degree, ky=degree
+                            )
+                            zg = interp(tg, self.ratio * pg)
                         else:
                             with warnings.catch_warnings():
                                 warnings.filterwarnings("error")
@@ -1475,29 +1534,19 @@ class PS:
                         if self.show_errors:
                             print(e)
                         try:
-                            if method == "quadratic":
-                                print(
-                                    "Using nearest method in {}".format(
-                                        " ".join(sorted(list(key)))
-                                    )
-                                )
-                                zg = griddata(
-                                    np.array(pts),
-                                    data,
-                                    (tg, pg),
-                                    method="nearest",
-                                    rescale=True,
-                                )
-                            else:
-                                # preprocess with griddata
-                                zg_tmp = griddata(
-                                    pts, data, (tg, pg), method="linear", rescale=True
-                                )
+                            zg = griddata(
+                                np.array(pts),
+                                data,
+                                (tg, pg),
+                                method="nearest",
+                                rescale=True,
+                            )
+                            if method == "rbf":
                                 # locate valid data
-                                ri, ci = np.nonzero(np.isfinite(zg_tmp))
+                                ri, ci = np.nonzero(np.isfinite(zg))
                                 x, y, z = np.array(
                                     [
-                                        [tg[r, c], pg[r, c], zg_tmp[r, c]]
+                                        [tg[r, c], pg[r, c], zg[r, c]]
                                         for r, c in zip(ri, ci)
                                     ]
                                 ).T
@@ -1515,18 +1564,24 @@ class PS:
                                         epsilon=epsilon,
                                     )
                                     zg = rbf(tg, self.ratio * pg)
+                            if method == "spline":
+                                # locate valid data
+                                ri, ci = np.nonzero(np.isfinite(zg))
+                                x, y, z = np.array(
+                                    [
+                                        [tg[r, c], pg[r, c], zg[r, c]]
+                                        for r, c in zip(ri, ci)
+                                    ]
+                                ).T
+                                interp = SmoothBivariateSpline(
+                                    x, self.ratio * y, z, kx=degree, ky=degree
+                                )
+                                zg = interp(tg, self.ratio * pg)
                         except Exception:
                             print(
                                 "Using nearest method in {}".format(
                                     " ".join(sorted(list(key)))
                                 )
-                            )
-                            zg = griddata(
-                                np.array(pts),
-                                data,
-                                (tg, pg),
-                                method="nearest",
-                                rescale=True,
                             )
                     # experimental
                     if gradient:
@@ -1688,6 +1743,9 @@ class PS:
             epsilon (int): Adjustable constant for gaussian or multiquadrics
                 functions - defaults to approximate average distance between
                 nodes (which is a good start).
+            degree (int): Degrees of the bivariate spline. Default is 3.
+            refine (int): Degree of grid refinement. Default 1
+            filter_outliers (bool): Whether to filter outliers. Defaut False.
             out (str or list): Highligt zero-mode lines for given phases.
             overlay (bool): Whether to show assemblage fields. Default True
             high (frozenset or list): Highlight divariant fields identified
@@ -1721,6 +1779,8 @@ class PS:
             cdf = kwargs.get("cdf", False)
             overlay = kwargs.get("overlay", True)
             only = kwargs.get("only", None)
+            filter_outliers = kwargs.get("only", False)
+            degree = kwargs.get("degree", 3)
             refine = kwargs.get("refine", 1)
             method = kwargs.get("method", "rbf")
             rbf_func = kwargs.get("rbf_func", "thin_plate")
@@ -1796,6 +1856,19 @@ class PS:
                     x, y = np.array(recs[key]["pts"]).T
                     pts = recs[key]["pts"]
                     data = recs[key]["data"]
+                    # filter outliers
+                    if filter_outliers:
+                        A = np.c_[np.ones_like(x), x, y, x * y, x**2, y**2]
+                        C, _, _, _ = lstsq(A, data)
+                        # evaluate it on a grid
+                        vals = np.dot(
+                            np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C
+                        )
+                        err = abs(vals - data)
+                        ok = err < err.std()
+                        pts = pts[ok, :]
+                        x, y = pts.T
+                        data = data[ok]
                     try:
                         if method == "quadratic":
                             tgg = tg.flatten()
@@ -1814,22 +1887,76 @@ class PS:
                                 ],
                                 C,
                             ).reshape(tg.shape)
-                        else:
-                            rbf = Rbf(
-                                x,
-                                self.ratio * y,
-                                data,
-                                function=rbf_func,
-                                smooth=smooth,
-                                epsilon=epsilon,
+                        elif method == "spline":
+                            interp = SmoothBivariateSpline(
+                                x, self.ratio * y, data, kx=degree, ky=degree
                             )
-                            zg = rbf(tg, self.ratio * pg)
+                            zg = interp(tg, self.ratio * pg)
+                        else:
+                            with warnings.catch_warnings():
+                                warnings.filterwarnings("error")
+                                rbf = Rbf(
+                                    x,
+                                    self.ratio * y,
+                                    data,
+                                    function=rbf_func,
+                                    smooth=smooth,
+                                    epsilon=epsilon,
+                                )
+                                zg = rbf(tg, self.ratio * pg)
                     except Exception as e:
                         if self.show_errors:
                             print(e)
-                        zg = griddata(
-                            np.array(pts), data, (tg, pg), method="cubic", rescale=True
-                        )
+                        try:
+                            zg = griddata(
+                                np.array(pts),
+                                data,
+                                (tg, pg),
+                                method="nearest",
+                                rescale=True,
+                            )
+                            if method == "rbf":
+                                # locate valid data
+                                ri, ci = np.nonzero(np.isfinite(zg))
+                                x, y, z = np.array(
+                                    [
+                                        [tg[r, c], pg[r, c], zg[r, c]]
+                                        for r, c in zip(ri, ci)
+                                    ]
+                                ).T
+                                # do Rbf extrapolation
+                                with warnings.catch_warnings():
+                                    warnings.filterwarnings(
+                                        "ignore", category=LinAlgWarning
+                                    )
+                                    rbf = Rbf(
+                                        x,
+                                        self.ratio * y,
+                                        z,
+                                        function=rbf_func,
+                                        smooth=smooth,
+                                        epsilon=epsilon,
+                                    )
+                                    zg = rbf(tg, self.ratio * pg)
+                            if method == "spline":
+                                # locate valid data
+                                ri, ci = np.nonzero(np.isfinite(zg))
+                                x, y, z = np.array(
+                                    [
+                                        [tg[r, c], pg[r, c], zg[r, c]]
+                                        for r, c in zip(ri, ci)
+                                    ]
+                                ).T
+                                interp = SmoothBivariateSpline(
+                                    x, self.ratio * y, z, kx=degree, ky=degree
+                                )
+                                zg = interp(tg, self.ratio * pg)
+                        except Exception:
+                            print(
+                                "Using nearest method in {}".format(
+                                    " ".join(sorted(list(key)))
+                                )
+                            )
                     # ------------
                     scx = (tmax - tmin + 2 * self.gridxstep) / zg.shape[1]
                     scy = (pmax - pmin + 2 * self.gridystep) / zg.shape[0]
@@ -2148,7 +2275,7 @@ class PS:
                         zg = rbf(tg, self.ratio * pg)
                         gd[self.masks[key]] = zg[self.masks[key][slc]]
                     except Exception:
-                        pass # pass silently
+                        pass  # pass silently
                 return gd
         else:
             print("Not yet gridded...")
@@ -2907,8 +3034,10 @@ class GridData:
             y (float): y-coordiante of point
 
         """
-        c = np.searchsorted(self.xspace, x)
-        r = np.searchsorted(self.yspace, y)
+        # c = np.searchsorted(self.xspace, x)
+        c = np.argmin((self.xspace - x) ** 2)
+        # r = np.searchsorted(self.yspace, y)
+        r = np.argmin((self.yspace - y) ** 2)
         return r, c
 
     def contains(self, x, y):
