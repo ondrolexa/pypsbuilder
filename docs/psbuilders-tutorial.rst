@@ -234,4 +234,5 @@ use `File>Import > Import into range` to read it.
 T-X and P-X pseudosections
 --------------------------
 
-You can create T-X and P-X pseudosection using exactly same steps like for
+You can create T-X and P-X pseudosection using exactly same steps like for P-T
+pseudosection using `txbuilder` or `pxbuilder`.
