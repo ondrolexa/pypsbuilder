@@ -2533,7 +2533,10 @@ class PTPS(PS):
                     err += 1
             if err > 0:
                 print("Solution not found on {} points".format(err))
-            return PTpath(points, results)
+            if points:
+                return PTpath(points, results)
+            else:
+                print("No results collected.")
         else:
             print("Not yet gridded...")
 
