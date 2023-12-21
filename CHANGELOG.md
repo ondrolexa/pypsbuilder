@@ -3,16 +3,20 @@ All notable pypsbuilder changes.
 
 ## [2.4.0] - 2023-12-21
 ### Fixed
- - important collect_grid_data bug causing isopleths twisting fixed. 
+ - important collect_grid_data bug causing isopleths twisting fixed.
+### Added
  - collect_ptpath missing field check added
  - remove_grid_data method added
  - isopleths bivariate spline method added
+
 ## [2.3.6] - 2023-12-13
 ### Added
  - search_composition method added to PTPS to find best estimate for isopleths intersection
+
 ## [2.3.5] - 2023-12-09
 ### Fixed
  - accept var check
+
 ## [2.3.4] - 2023-03-10
 ### Added
  - tristate labeling of uni and inv
