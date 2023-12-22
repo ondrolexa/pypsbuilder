@@ -1658,7 +1658,6 @@ class PS:
             try:
                 fig.colorbar(cont)
             except Exception as e:
-                print("There is trouble to draw colorbar. Sorry.")
                 if self.show_errors:
                     print(e)
             # Show highlight. Change to list if only single key
@@ -2007,7 +2006,6 @@ class PS:
                 cbar = fig.colorbar(mapper)
                 cbar.ax.set_yticks(cntv)
             except Exception as e:
-                print("There is trouble to draw colorbar. Sorry.")
                 if self.show_errors:
                     print(e)
             # Show highlight. Change to list if only single key
