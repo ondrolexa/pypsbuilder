@@ -19,7 +19,13 @@ from matplotlib.path import Path
 from shapely.geometry import LineString, Point, MultiPoint
 from shapely.ops import polygonize, linemerge  # unary_union
 
-polymorphs = [{'sill', 'and'}, {'ky', 'and'}, {'sill', 'ky'}, {'q', 'coe'}, {'diam', 'gph'}]
+polymorphs = [
+    {"sill", "and"},
+    {"ky", "and"},
+    {"sill", "ky"},
+    {"q", "coe"},
+    {"diam", "gph"},
+]
 """list: List of two-element sets containing polymorphs."""
 
 
@@ -28,18 +34,18 @@ class PseudoBase:
 
     def label(self, excess={}):
         """str: full label with space delimeted phases - zero mode phase."""
-        phases_lbl = ' '.join(sorted(list(self.phases.difference(excess))))
-        out_lbl = ' '.join(sorted(list(self.out)))
-        return '{} - {}'.format(phases_lbl, out_lbl)
+        phases_lbl = " ".join(sorted(list(self.phases.difference(excess))))
+        out_lbl = " ".join(sorted(list(self.out)))
+        return "{} - {}".format(phases_lbl, out_lbl)
 
     def annotation(self, state=0):
         """str: String representation of ID with possible zermo mode phase."""
         if state == 1:
-            return '{}'.format(' '.join(self.out))
+            return "{}".format(" ".join(self.out))
         elif state == 2:
-            return '{:d} {}'.format(self.id, ' '.join(self.out))
+            return "{:d} {}".format(self.id, " ".join(self.out))
         else:
-            return '{:d}'.format(self.id)
+            return "{:d}".format(self.id)
 
     def ptguess(self, **kwargs):
         """list: Get stored ptguesses.
@@ -50,7 +56,7 @@ class PseudoBase:
         Args:
             idx (int): index which guesses to get.
         """
-        idx = kwargs.get('idx', self.midix)
+        idx = kwargs.get("idx", self.midix)
         return self.results[idx].ptguess
 
     def datakeys(self, phase=None):
@@ -85,21 +91,21 @@ class InvPoint(PseudoBase):
     """
 
     def __init__(self, **kwargs):
-        assert 'phases' in kwargs, 'Set of phases must be provided'
-        assert 'out' in kwargs, 'Set of zero phase must be provided'
-        self.id = kwargs.get('id', 0)
-        self.phases = kwargs.get('phases')
-        self.out = kwargs.get('out')
-        self.cmd = kwargs.get('cmd', '')
-        self.variance = kwargs.get('variance', 0)
-        self.x = kwargs.get('x', [])
-        self.y = kwargs.get('y', [])
-        self.results = kwargs.get('results', None)
-        self.output = kwargs.get('output', 'User-defined')
-        self.manual = kwargs.get('manual', False)
+        assert "phases" in kwargs, "Set of phases must be provided"
+        assert "out" in kwargs, "Set of zero phase must be provided"
+        self.id = kwargs.get("id", 0)
+        self.phases = kwargs.get("phases")
+        self.out = kwargs.get("out")
+        self.cmd = kwargs.get("cmd", "")
+        self.variance = kwargs.get("variance", 0)
+        self.x = kwargs.get("x", [])
+        self.y = kwargs.get("y", [])
+        self.results = kwargs.get("results", None)
+        self.output = kwargs.get("output", "User-defined")
+        self.manual = kwargs.get("manual", False)
 
     def __repr__(self):
-        return 'Inv: {}'.format(self.label())
+        return "Inv: {}".format(self.label())
 
     @property
     def midix(self):
@@ -131,7 +137,8 @@ class InvPoint(PseudoBase):
             if poly.issubset(self.phases):
                 fix = True
                 break
-        if fix and (poly != self.out):  # on boundary
+        triple = set(["ky", "and", "sill"])
+        if fix and (poly != self.out) and not triple.issubset(self.phases):
             yespoly = poly.intersection(self.out)
             nopoly = self.out.difference(yespoly)
             aphases = self.phases.difference(yespoly)
@@ -143,7 +150,12 @@ class InvPoint(PseudoBase):
                 (self.phases.difference(nopoly), yespoly),
             )
         else:
-            return ((self.phases, aset), (self.phases, bset), (bphases, aset), (aphases, bset))
+            return (
+                (self.phases, aset),
+                (self.phases, bset),
+                (bphases, aset),
+                (aphases, bset),
+            )
 
 
 class UniLine(PseudoBase):
@@ -170,26 +182,26 @@ class UniLine(PseudoBase):
     """
 
     def __init__(self, **kwargs):
-        assert 'phases' in kwargs, 'Set of phases must be provided'
-        assert 'out' in kwargs, 'Set of zero phase must be provided'
-        self.id = kwargs.get('id', 0)
-        self.phases = kwargs.get('phases')
-        self.out = kwargs.get('out')
-        self.cmd = kwargs.get('cmd', '')
-        self.variance = kwargs.get('variance', 0)
-        self._x = kwargs.get('x', np.array([]))
-        self._y = kwargs.get('y', np.array([]))
-        self.results = kwargs.get('results', None)
-        self.output = kwargs.get('output', 'User-defined')
-        self.manual = kwargs.get('manual', False)
-        self.begin = kwargs.get('begin', 0)
-        self.end = kwargs.get('end', 0)
+        assert "phases" in kwargs, "Set of phases must be provided"
+        assert "out" in kwargs, "Set of zero phase must be provided"
+        self.id = kwargs.get("id", 0)
+        self.phases = kwargs.get("phases")
+        self.out = kwargs.get("out")
+        self.cmd = kwargs.get("cmd", "")
+        self.variance = kwargs.get("variance", 0)
+        self._x = kwargs.get("x", np.array([]))
+        self._y = kwargs.get("y", np.array([]))
+        self.results = kwargs.get("results", None)
+        self.output = kwargs.get("output", "User-defined")
+        self.manual = kwargs.get("manual", False)
+        self.begin = kwargs.get("begin", 0)
+        self.end = kwargs.get("end", 0)
         self.used = slice(0, len(self._x))
         self.x = self._x.copy()
         self.y = self._y.copy()
 
     def __repr__(self):
-        return 'Uni: {}'.format(self.label())
+        return "Uni: {}".format(self.label())
 
     @property
     def midix(self):
@@ -215,7 +227,9 @@ class UniLine(PseudoBase):
             if tolerance is None:
                 return LineString(np.array([self._x, self._y]).T)
             else:
-                ln = LineString(np.array([self._x, ratio * self._y]).T).simplify(tolerance)
+                ln = LineString(np.array([self._x, ratio * self._y]).T).simplify(
+                    tolerance
+                )
                 x, y = np.array(ln.coords).T
                 return LineString(np.array([x, y / ratio]).T)
 
@@ -235,7 +249,9 @@ class UniLine(PseudoBase):
             if tolerance is None:
                 return LineString(np.array([self.x, self.y]).T)
             else:
-                ln = LineString(np.array([self.x, ratio * self.y]).T).simplify(tolerance)
+                ln = LineString(np.array([self.x, ratio * self.y]).T).simplify(
+                    tolerance
+                )
                 x, y = np.array(ln.coords).T
                 return LineString(np.array([x, y / ratio]).T)
 
@@ -250,6 +266,9 @@ class UniLine(PseudoBase):
         """
 
         def checkme(uphases, uout, iphases, iout):
+            triple = set(["ky", "and", "sill"])
+            if triple.issubset(iphases):
+                iphases = iphases.difference(triple.difference(iout))
             a, b = iout
             aset, bset = set([a]), set([b])
             aphases, bphases = iphases.difference(aset), iphases.difference(bset)
@@ -265,7 +284,11 @@ class UniLine(PseudoBase):
         # Check for polymorphs
         fixi, fixu = False, False
         for poly in polymorphs:
-            if poly.issubset(ip.phases) and (poly != ip.out) and (not ip.out.isdisjoint(poly)):
+            if (
+                poly.issubset(ip.phases)
+                and (poly != ip.out)
+                and (not ip.out.isdisjoint(poly))
+            ):
                 fixi = True
                 if poly.issubset(self.phases) and not self.out.isdisjoint(poly):
                     fixu = True
@@ -274,10 +297,15 @@ class UniLine(PseudoBase):
         candidate = checkme(self.phases, self.out, ip.phases, ip.out)
         if fixi and not candidate:
             candidate = checkme(
-                self.phases, self.out, ip.phases, ip.out.difference(poly).union(poly.difference(ip.out))
+                self.phases,
+                self.out,
+                ip.phases,
+                ip.out.difference(poly).union(poly.difference(ip.out)),
             )
         if fixu and not candidate:
-            candidate = checkme(self.phases, poly.difference(self.out), ip.phases, ip.out)
+            candidate = checkme(
+                self.phases, poly.difference(self.out), ip.phases, ip.out
+            )
         return candidate
 
     def get_label_point(self):
@@ -291,7 +319,10 @@ class UniLine(PseudoBase):
                 cl = np.append([0], np.cumsum(d))
                 ix = np.interp(sd / 2, cl, range(len(cl)))
                 cix = int(ix)
-                return self.x[cix] + (ix - cix) * dx[cix], self.y[cix] + (ix - cix) * dy[cix]
+                return (
+                    self.x[cix] + (ix - cix) * dx[cix],
+                    self.y[cix] + (ix - cix) * dy[cix],
+                )
             else:
                 return self.x[0], self.y[0]
         else:
@@ -300,44 +331,60 @@ class UniLine(PseudoBase):
 
 class Dogmin:
     def __init__(self, **kwargs):
-        assert 'output' in kwargs, 'Dogmin output must be provided'
-        assert 'resic' in kwargs, 'ic file content must be provided'
-        self.id = kwargs.get('id', 0)
+        assert "output" in kwargs, "Dogmin output must be provided"
+        assert "resic" in kwargs, "ic file content must be provided"
+        self.id = kwargs.get("id", 0)
         self.phases = set()
-        output = kwargs.get('output')
-        if 'assemblage' in output:
+        output = kwargs.get("output")
+        if "assemblage" in output:
             self.output = output
-            self.resic = kwargs.get('resic')
-            self.phases = set(self.output.split('assemblage')[1].split('\n')[0].split())  # TC 35
+            self.resic = kwargs.get("resic")
+            self.phases = set(
+                self.output.split("assemblage")[1].split("\n")[0].split()
+            )  # TC 35
         else:
-            self.resic = ''
-            asm = output.split('Gibbs energy minimisation info\n')[-1]
-            if len(asm.split('\n  #')) > 1:
-                best = int(asm.split('\n  #')[1].splitlines()[1].split()[0])
-                for blk in output.split('phases :')[1:]:
+            self.resic = ""
+            asm = output.split("Gibbs energy minimisation info\n")[-1]
+            if len(asm.split("\n  #")) > 1:
+                best = int(asm.split("\n  #")[1].splitlines()[1].split()[0])
+                for blk in output.split("phases :")[1:]:
                     head = blk.splitlines()[0]
-                    if '#' in head.split()[-1]:
-                        if best == int(head.split()[-1].replace('#', '')):
-                            if 'or' in head:
-                                head = head.split('or')[0]
+                    if "#" in head.split()[-1]:
+                        if best == int(head.split()[-1].replace("#", "")):
+                            if "or" in head:
+                                head = head.split("or")[0]
                             else:
-                                head = head.split('#')[0]
-                            if '(' in head:
-                                head = head.split('(')[0]
+                                head = head.split("#")[0]
+                            if "(" in head:
+                                head = head.split("(")[0]
                             self.phases = set(head.split())
-                            self.output = 'Gibbs energy minimisation info\n' + asm + '\n' + 'phases :' + blk
+                            self.output = (
+                                "Gibbs energy minimisation info\n"
+                                + asm
+                                + "\n"
+                                + "phases :"
+                                + blk
+                            )
                             break
-                if not self.phases:  # If last block is the best, use it (TC do not output #number)
-                    if 'or' in head:
-                        head = head.split('or')[0]
+                if (
+                    not self.phases
+                ):  # If last block is the best, use it (TC do not output #number)
+                    if "or" in head:
+                        head = head.split("or")[0]
                     else:
-                        head = head.split('#')[0]
-                    if '(' in head:
-                        head = head.split('(')[0]
+                        head = head.split("#")[0]
+                    if "(" in head:
+                        head = head.split("(")[0]
                     self.phases = set(head.split())
-                    self.output = 'Gibbs energy minimisation info\n' + asm + '\n' + 'phases :' + blk
-        self.x = kwargs.get('x', None)
-        self.y = kwargs.get('y', None)
+                    self.output = (
+                        "Gibbs energy minimisation info\n"
+                        + asm
+                        + "\n"
+                        + "phases :"
+                        + blk
+                    )
+        self.x = kwargs.get("x", None)
+        self.y = kwargs.get("y", None)
 
     @property
     def out(self):
@@ -345,25 +392,25 @@ class Dogmin:
 
     def label(self, excess={}):
         """str: full label with space delimeted phases."""
-        return ' '.join(sorted(list(self.phases.difference(excess))))
+        return " ".join(sorted(list(self.phases.difference(excess))))
 
     def annotation(self, show_out=False, excess={}):
         """str: String representation of ID with possible zermo mode phase."""
         if show_out:
             return self.label(excess=excess)
         else:
-            return '{:d}'.format(self.id)
+            return "{:d}".format(self.id)
 
     def ptguess(self):
-        block = [ln for ln in self.output.splitlines() if ln != '']
-        xyz = [ix for ix, ln in enumerate(block) if ln.startswith('xyzguess')]
-        gixs = [ix for ix, ln in enumerate(block) if ln.startswith('ptguess')][0] - 1
+        block = [ln for ln in self.output.splitlines() if ln != ""]
+        xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
+        gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][0] - 1
         gixe = xyz[-1] + 2
         return block[gixs:gixe]
 
 
 class TCResult:
-    def __init__(self, T, p, variance=0, c=0, data={}, ptguess=['']):
+    def __init__(self, T, p, variance=0, c=0, data={}, ptguess=[""]):
         self.data = data
         self.ptguess = ptguess
         self.T = T
@@ -373,103 +420,120 @@ class TCResult:
 
     @classmethod
     def from_block(cls, block, ptguess):
-        info, ax, sf, bulk, rbi, mode, factor, td, sys, *mems, pems = block.split('\n\n')
-        if 'var = 2; seen' in info:
+        info, ax, sf, bulk, rbi, mode, factor, td, sys, *mems, pems = block.split(
+            "\n\n"
+        )
+        if "var = 2; seen" in info:
             # no step in bulk
-            info, ax, sf, rbi, mode, factor, td, sys, *mems, pems = block.split('\n\n')
-            bulk = '\n'.join(rbi.split('\n')[:3])
-            rbi = '\n'.join(rbi.split('\n')[3:])
+            info, ax, sf, rbi, mode, factor, td, sys, *mems, pems = block.split("\n\n")
+            bulk = "\n".join(rbi.split("\n")[:3])
+            rbi = "\n".join(rbi.split("\n")[3:])
         # heading
-        data = {phase: {} for phase in info.split('{')[0].split()}
-        p, T = (float(v.strip()) for v in info.split('{')[1].split('}')[0].split(','))
+        data = {phase: {} for phase in info.split("{")[0].split()}
+        p, T = (float(v.strip()) for v in info.split("{")[1].split("}")[0].split(","))
         # var or ovar?
-        variance = int(info.split('var = ')[1].split(' ')[0].replace(';', ''))
+        variance = int(info.split("var = ")[1].split(" ")[0].replace(";", ""))
         # a-x variables
-        for head, vals in zip(ax.split('\n')[::2], ax.split('\n')[1::2]):
+        for head, vals in zip(ax.split("\n")[::2], ax.split("\n")[1::2]):
             phase, *names = head.split()
             data[phase].update(
-                {name.replace('({})'.format(phase), ''): float(val) for name, val in zip(names, vals.split())}
+                {
+                    name.replace("({})".format(phase), ""): float(val)
+                    for name, val in zip(names, vals.split())
+                }
             )
         # site fractions
-        for head, vals in zip(sf.split('\n')[1::2], sf.split('\n')[2::2]):  # skip site fractions row
+        for head, vals in zip(
+            sf.split("\n")[1::2], sf.split("\n")[2::2]
+        ):  # skip site fractions row
             phase, *names = head.split()
-            data[phase].update({name: float(val) for name, val in zip(names, vals.split())})
+            data[phase].update(
+                {name: float(val) for name, val in zip(names, vals.split())}
+            )
         # bulk composition
         bulk_vals = {}
-        oxhead, vals = bulk.split('\n')[1:]  # skip oxide compositions row
+        oxhead, vals = bulk.split("\n")[1:]  # skip oxide compositions row
         for ox, val in zip(oxhead.split(), vals.split()[1:]):
             bulk_vals[ox] = float(val)
-        data['bulk'] = bulk_vals
+        data["bulk"] = bulk_vals
         # x for TX and pX
-        if 'step' in vals:
-            c = float(vals.split('step')[1].split(', x =')[1])
+        if "step" in vals:
+            c = float(vals.split("step")[1].split(", x =")[1])
         else:
             c = 0
         # rbi
-        for row in rbi.split('\n'):
+        for row in rbi.split("\n"):
             phase, *vals = row.split()
-            data[phase].update({ox: float(val) for ox, val in zip(oxhead.split(), vals)})
+            data[phase].update(
+                {ox: float(val) for ox, val in zip(oxhead.split(), vals)}
+            )
         # modes (zero mode is empty field in tc350 !!!)
-        head, vals = mode.split('\n')
+        head, vals = mode.split("\n")
         phases = head.split()[1:]
         # fixed width parsing !!!
         valsf = [
-            float(vals[6:][12 * i : 12 * (i + 1)].strip()) if vals[6:][12 * i : 12 * (i + 1)].strip() != '' else 0.0
+            float(vals[6:][12 * i : 12 * (i + 1)].strip())
+            if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
+            else 0.0
             for i in range(len(phases))
         ]
         for phase, val in zip(phases, valsf):
-            data[phase].update({'mode': float(val)})
+            data[phase].update({"mode": float(val)})
         # factors
-        head, vals = factor.split('\n')
+        head, vals = factor.split("\n")
         phases = head.split()[1:]
         valsf = [
-            float(vals[6:][12 * i : 12 * (i + 1)].strip()) if vals[6:][12 * i : 12 * (i + 1)].strip() != '' else 0.0
+            float(vals[6:][12 * i : 12 * (i + 1)].strip())
+            if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
+            else 0.0
             for i in range(len(phases))
         ]
         for phase, val in zip(phases, valsf):
-            data[phase].update({'factor': float(val)})
+            data[phase].update({"factor": float(val)})
         # thermodynamic state
-        head, *rows = td.split('\n')
+        head, *rows = td.split("\n")
         for row in rows:
             phase, *vals = row.split()
-            data[phase].update({name: float(val) for name, val in zip(head.split(), vals)})
+            data[phase].update(
+                {name: float(val) for name, val in zip(head.split(), vals)}
+            )
         # bulk thermodynamics
         sys = {}
         for name, val in zip(head.split(), row.split()[1:]):
             sys[name] = float(val)
-        data['sys'] = sys
+        data["sys"] = sys
         # model end-members
         if len(mems) > 0:
-            _, mem0 = mems[0].split('\n', maxsplit=1)
-            head = ['ideal', 'gamma', 'activity', 'prop', 'mu', 'RTlna']
+            _, mem0 = mems[0].split("\n", maxsplit=1)
+            head = ["ideal", "gamma", "activity", "prop", "mu", "RTlna"]
             mems[0] = mem0
             for mem in mems:
-                ems = mem.split('\n')
+                ems = mem.split("\n")
                 phase, ems0 = ems[0].split(maxsplit=1)
                 ems[0] = ems0
                 for row in ems:
                     em, *vals = row.split()
-                    phase_em = '{}({})'.format(phase, em)
+                    phase_em = "{}({})".format(phase, em)
                     data[phase_em] = {name: float(val) for name, val in zip(head, vals)}
         # pure end-members
-        for row in pems.split('\n')[:-1]:
+        for row in pems.split("\n")[:-1]:
             pem, val = row.split()
-            data[pem].update({'mu': float(val)})
+            data[pem].update({"mu": float(val)})
         # Finally
         return cls(T, p, variance=variance, c=c, data=data, ptguess=ptguess)
 
     def __repr__(self):
-        return 'p:{:g} T:{:g} V:{} c:{:g}, Phases: {}'.format(
-            self.p, self.T, self.variance, self.c, ' '.join(self.phases)
+        return "p:{:g} T:{:g} V:{} c:{:g}, Phases: {}".format(
+            self.p, self.T, self.variance, self.c, " ".join(self.phases)
         )
 
     def __getitem__(self, key):
         if isinstance(key, str):
             if key not in self.phases:
-                raise IndexError('The index ({}) do not exists.'.format(key))
+                raise IndexError("The index ({}) do not exists.".format(key))
             return self.data[key]
         else:
-            raise TypeError('Invalid argument type.')
+            raise TypeError("Invalid argument type.")
 
     @property
     def phases(self):
@@ -478,7 +542,7 @@ class TCResult:
     def rename_phase(self, old, new):
         self.data[new] = self.data.pop(old)
         for ix, ln in enumerate(self.ptguess):
-            self.ptguess[ix] = ln.replace('({})'.format(old), '({})'.format(new))
+            self.ptguess[ix] = ln.replace("({})".format(old), "({})".format(new))
 
 
 class TCResultSet:
@@ -486,7 +550,7 @@ class TCResultSet:
         self.results = results
 
     def __repr__(self):
-        return '{} results'.format(len(self.results))
+        return "{} results".format(len(self.results))
 
     def __len__(self):
         return len(self.results)
@@ -499,12 +563,12 @@ class TCResultSet:
             if key < 0:  # Handle negative indices
                 key += len(self.results)
             if key < 0 or key >= len(self.results):
-                raise IndexError('The index ({}) is out of range.'.format(key))
+                raise IndexError("The index ({}) is out of range.".format(key))
             return self.results[key]
         elif isinstance(key, list):
             return TCResultSet([self.results[ix] for ix in key])
         else:
-            raise TypeError('Invalid argument type.')
+            raise TypeError("Invalid argument type.")
 
     @property
     def x(self):
@@ -544,19 +608,19 @@ class SectionBase:
     """Base class for PTsection, TXsection and PXsection"""
 
     def __init__(self, **kwargs):
-        self.excess = kwargs.get('excess', set())
+        self.excess = kwargs.get("excess", set())
         self.invpoints = {}
         self.unilines = {}
         self.dogmins = {}
 
     def __repr__(self):
-        return '\n'.join(
+        return "\n".join(
             [
-                '{}'.format(self.type),
-                'Univariant lines: {}'.format(len(self.unilines)),
-                'Invariant points: {}'.format(len(self.invpoints)),
-                '{} range: {} {}'.format(self.x_var, *self.xrange),
-                '{} range: {} {}'.format(self.y_var, *self.yrange),
+                "{}".format(self.type),
+                "Univariant lines: {}".format(len(self.unilines)),
+                "Invariant points: {}".format(len(self.invpoints)),
+                "{} range: {} {}".format(self.x_var, *self.xrange),
+                "{} range: {} {}".format(self.y_var, *self.yrange),
             ]
         )
 
@@ -572,10 +636,18 @@ class SectionBase:
     def range_shapes(self):
         # default p-t range boundary
         bnd = [
-            LineString([(self.xrange[0], self.yrange[0]), (self.xrange[1], self.yrange[0])]),
-            LineString([(self.xrange[1], self.yrange[0]), (self.xrange[1], self.yrange[1])]),
-            LineString([(self.xrange[1], self.yrange[1]), (self.xrange[0], self.yrange[1])]),
-            LineString([(self.xrange[0], self.yrange[1]), (self.xrange[0], self.yrange[0])]),
+            LineString(
+                [(self.xrange[0], self.yrange[0]), (self.xrange[1], self.yrange[0])]
+            ),
+            LineString(
+                [(self.xrange[1], self.yrange[0]), (self.xrange[1], self.yrange[1])]
+            ),
+            LineString(
+                [(self.xrange[1], self.yrange[1]), (self.xrange[0], self.yrange[1])]
+            ),
+            LineString(
+                [(self.xrange[0], self.yrange[1]), (self.xrange[0], self.yrange[0])]
+            ),
         ]
         return bnd, polygonize(bnd)[0]
 
@@ -586,7 +658,13 @@ class SectionBase:
             if not isinstance(inv.results, TCResultSet):
                 inv.results = TCResultSet(
                     [
-                        TCResult(float(x), float(y), variance=inv.variance, data=r['data'], ptguess=r['ptguess'])
+                        TCResult(
+                            float(x),
+                            float(y),
+                            variance=inv.variance,
+                            data=r["data"],
+                            ptguess=r["ptguess"],
+                        )
                         for r, x, y in zip(inv.results, inv.x, inv.y)
                     ]
                 )
@@ -600,7 +678,13 @@ class SectionBase:
             if not isinstance(uni.results, TCResultSet):
                 uni.results = TCResultSet(
                     [
-                        TCResult(float(x), float(y), variance=uni.variance, data=r['data'], ptguess=r['ptguess'])
+                        TCResult(
+                            float(x),
+                            float(y),
+                            variance=uni.variance,
+                            data=r["data"],
+                            ptguess=r["ptguess"],
+                        )
                         for r, x, y in zip(uni.results, uni._x, uni._y)
                     ]
                 )
@@ -614,24 +698,26 @@ class SectionBase:
     def cleanup_data(self):
         for id_uni, uni in self.unilines.items():
             if not uni.manual:
-                keep = slice(max(uni.used.start - 1, 0), min(uni.used.stop + 1, len(uni._x)))
+                keep = slice(
+                    max(uni.used.start - 1, 0), min(uni.used.stop + 1, len(uni._x))
+                )
                 uni._x = uni._x[keep]
                 uni._y = uni._y[keep]
                 uni.results = uni.results[keep]
             else:
-                uni.cmd = ''
+                uni.cmd = ""
                 uni.variance = 0
                 uni._x = np.array([])
                 uni._y = np.array([])
                 uni.results = [dict(data=None, ptguess=None)]
-                uni.output = 'User-defined'
+                uni.output = "User-defined"
                 uni.used = slice(0, 0)
                 uni.x = np.array([])
                 uni.y = np.array([])
             self.trim_uni(id_uni)
 
     def getidinv(self, inv=None):
-        '''Return id of either new or existing invariant point'''
+        """Return id of either new or existing invariant point"""
         ids = 0
         # collect polymorphs identities
         if inv is not None:
@@ -652,7 +738,7 @@ class SectionBase:
         return True, ids + 1
 
     def getiduni(self, uni=None):
-        '''Return id of either new or existing univariant line'''
+        """Return id of either new or existing univariant line"""
         ids = 0
         # collect polymorphs identities
         if uni is not None:
@@ -674,11 +760,16 @@ class SectionBase:
         uni = self.unilines[id]
         if not uni.manual:
             if uni.begin > 0:
-                p1 = Point(self.invpoints[uni.begin].x, self.ratio * self.invpoints[uni.begin].y)
+                p1 = Point(
+                    self.invpoints[uni.begin].x,
+                    self.ratio * self.invpoints[uni.begin].y,
+                )
             else:
                 p1 = Point(uni._x[0], self.ratio * uni._y[0])
             if uni.end > 0:
-                p2 = Point(self.invpoints[uni.end].x, self.ratio * self.invpoints[uni.end].y)
+                p2 = Point(
+                    self.invpoints[uni.end].x, self.ratio * self.invpoints[uni.end].y
+                )
             else:
                 p2 = Point(uni._x[-1], self.ratio * uni._y[-1])
             #
@@ -693,7 +784,10 @@ class SectionBase:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            uni.used = slice(np.flatnonzero(vdst >= d1)[0].item(), np.flatnonzero(vdst <= d2)[-1].item() + 1)
+            uni.used = slice(
+                np.flatnonzero(vdst >= d1)[0].item(),
+                np.flatnonzero(vdst <= d2)[-1].item() + 1,
+            )
 
         # concatenate begin, keep, end
         if uni.begin > 0:
@@ -716,22 +810,26 @@ class SectionBase:
 
     def create_shapes(self, tolerance=None):
         def splitme(edges):
-            '''Recursive boundary splitter'''
+            """Recursive boundary splitter"""
             for idx, edge in enumerate(edges):
                 for _, l in lns:
                     if edge.intersects(l):
                         m = linemerge([edge, l])
-                        if m.geom_type == 'MultiLineString':
+                        if m.geom_type == "MultiLineString":
                             p = edge.intersection(l)
-                            if p.geom_type == 'LineString':  # seems to occur whe duplicate points are on line
+                            if (
+                                p.geom_type == "LineString"
+                            ):  # seems to occur whe duplicate points are on line
                                 p = MultiPoint(p.coords)
-                            if p.geom_type == 'MultiPoint':
+                            if p.geom_type == "MultiPoint":
                                 pts = [l.interpolate(l.project(pt)) for pt in p.geoms]
                                 pts = sorted(pts, key=lambda pt: edge.project(pt))
                             else:
                                 pts = [l.interpolate(l.project(p))]
                             edges.pop(idx)
-                            pts = [Point(edge.coords[0])] + pts + [Point(edge.coords[-1])]
+                            pts = (
+                                [Point(edge.coords[0])] + pts + [Point(edge.coords[-1])]
+                            )
                             for start, stop in zip(pts[:-1], pts[1:]):
                                 p_seg = LineString([start, stop])
                                 if p_seg.is_valid:
@@ -746,11 +844,11 @@ class SectionBase:
         # trim univariant lines
         for uni in self.unilines.values():
             ln = area.intersection(uni.shape(ratio=self.ratio, tolerance=tolerance))
-            if ln.geom_type == 'LineString' and not ln.is_empty:
+            if ln.geom_type == "LineString" and not ln.is_empty:
                 lns.append((uni.id, ln))
-            if ln.geom_type == 'MultiLineString':
+            if ln.geom_type == "MultiLineString":
                 for ln_part in ln.geoms:
-                    if ln_part.geom_type == 'LineString' and not ln_part.is_empty:
+                    if ln_part.geom_type == "LineString" and not ln_part.is_empty:
                         lns.append((uni.id, ln_part))
         # split boundaries
         do = True
@@ -765,14 +863,18 @@ class SectionBase:
         for ix, poly in enumerate(polys):
             unilist = []
             for uni_id, ln in lns:
-                if ln.relate_pattern(poly, '*1*F*****'):
+                if ln.relate_pattern(poly, "*1*F*****"):
                     unilist.append(uni_id)
             if unilist:
                 phases = set.intersection(*(self.unilines[id].phases for id in unilist))
                 vd = [
-                    phases.symmetric_difference(self.unilines[id].phases) == self.unilines[id].out
+                    phases.symmetric_difference(self.unilines[id].phases)
+                    == self.unilines[id].out
                     or not phases.symmetric_difference(self.unilines[id].phases)
-                    or phases.symmetric_difference(self.unilines[id].phases).union(self.unilines[id].out) in polymorphs
+                    or phases.symmetric_difference(self.unilines[id].phases).union(
+                        self.unilines[id].out
+                    )
+                    in polymorphs
                     for id in unilist
                 ]
                 if all(vd):
@@ -780,26 +882,38 @@ class SectionBase:
                         # multivariant field crossed just by single univariant line
                         if len(unilist) == 1:
                             if self.unilines[unilist[0]].out.issubset(phases):
-                                phases = phases.difference(self.unilines[unilist[0]].out)
+                                phases = phases.difference(
+                                    self.unilines[unilist[0]].out
+                                )
                                 shapes[frozenset(phases)] = poly
                                 unilists[frozenset(phases)] = unilist
                         elif len(unilists[frozenset(phases)]) == 1:
-                            if self.unilines[unilists[frozenset(phases)][0]].out.issubset(phases):
+                            if self.unilines[
+                                unilists[frozenset(phases)][0]
+                            ].out.issubset(phases):
                                 orig_unilist = unilists[frozenset(phases)]
                                 shapes[frozenset(phases)] = poly
                                 unilists[frozenset(phases)] = unilist
-                                phases = phases.difference(self.unilines[orig_unilist[0]].out)
+                                phases = phases.difference(
+                                    self.unilines[orig_unilist[0]].out
+                                )
                                 shapes[frozenset(phases)] = poly
                                 unilists[frozenset(phases)] = orig_unilist
                         else:
-                            shapes[frozenset(phases)] = shapes[frozenset(phases)].union(poly).buffer(0.00001)
+                            shapes[frozenset(phases)] = (
+                                shapes[frozenset(phases)].union(poly).buffer(0.00001)
+                            )
                             log.append(
-                                'Area defined by unilines {} is self-intersecting with {}.'.format(
-                                    ' '.join([str(id) for id in unilist]),
-                                    ' '.join([str(id) for id in unilists[frozenset(phases)]]),
+                                "Area defined by unilines {} is self-intersecting with {}.".format(
+                                    " ".join([str(id) for id in unilist]),
+                                    " ".join(
+                                        [str(id) for id in unilists[frozenset(phases)]]
+                                    ),
                                 )
                             )
-                            unilists[frozenset(phases)] = list(set(unilists[frozenset(phases)] + unilist))
+                            unilists[frozenset(phases)] = list(
+                                set(unilists[frozenset(phases)] + unilist)
+                            )
                     else:
                         if len(unilist) == 1:
                             tosolve.append((unilist, phases, poly))
@@ -808,11 +922,17 @@ class SectionBase:
                             unilists[frozenset(phases)] = unilist
             else:
                 log.append(
-                    'Area defined by unilines {} is not valid field.'.format(' '.join([str(id) for id in unilist]))
+                    "Area defined by unilines {} is not valid field.".format(
+                        " ".join([str(id) for id in unilist])
+                    )
                 )
         for unilist, phases, poly in tosolve:
-            if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(set.union(*polymorphs)):
-                phases = self.unilines[unilist[0]].phases.difference(self.unilines[unilist[0]].out)
+            if len(unilist) == 1 and self.unilines[unilist[0]].out.issubset(
+                set.union(*polymorphs)
+            ):
+                phases = self.unilines[unilist[0]].phases.difference(
+                    self.unilines[unilist[0]].out
+                )
                 shapes[frozenset(phases)] = poly
                 unilists[frozenset(phases)] = unilist
             elif frozenset(phases) in shapes:
@@ -826,10 +946,10 @@ class SectionBase:
 
     def show(self):
         for ln in self.unilines.values():
-            plt.plot(ln.x, ln.y, 'k-')
+            plt.plot(ln.x, ln.y, "k-")
 
         for ln in self.invpoints.values():
-            plt.plot(ln.x, ln.y, 'ro')
+            plt.plot(ln.x, ln.y, "ro")
 
         plt.xlim(self.xrange)
         plt.ylim(self.yrange)
@@ -839,28 +959,28 @@ class SectionBase:
 
     @staticmethod
     def read_file(projfile):
-        with gzip.open(str(projfile), 'rb') as stream:
+        with gzip.open(str(projfile), "rb") as stream:
             data = pickle.load(stream)
         return data
 
     @staticmethod
     def from_file(projfile):
-        with gzip.open(str(projfile), 'rb') as stream:
+        with gzip.open(str(projfile), "rb") as stream:
             data = pickle.load(stream)
-        return data['section']
+        return data["section"]
 
 
 class PTsection(SectionBase):
     """P-T pseudosection class"""
 
     def __init__(self, **kwargs):
-        self.xrange = kwargs.get('trange', (200.0, 1000.0))
-        self.yrange = kwargs.get('prange', (0.1, 20.0))
-        self.x_var = 'T'
-        self.x_var_label = 'Temperature [C]'
+        self.xrange = kwargs.get("trange", (200.0, 1000.0))
+        self.yrange = kwargs.get("prange", (0.1, 20.0))
+        self.x_var = "T"
+        self.x_var_label = "Temperature [C]"
         self.x_var_res = 0.01
-        self.y_var = 'p'
-        self.y_var_label = 'Pressure [kbar]'
+        self.y_var = "p"
+        self.y_var_label = "Pressure [kbar]"
         self.y_var_res = 0.001
         super(PTsection, self).__init__(**kwargs)
 
@@ -869,13 +989,13 @@ class TXsection(SectionBase):
     """T-X pseudosection class"""
 
     def __init__(self, **kwargs):
-        self.xrange = kwargs.get('trange', (200.0, 1000.0))
+        self.xrange = kwargs.get("trange", (200.0, 1000.0))
         self.yrange = (0.0, 1.0)
-        self.x_var = 'T'
-        self.x_var_label = 'Temperature [C]'
+        self.x_var = "T"
+        self.x_var_label = "Temperature [C]"
         self.x_var_res = 0.01
-        self.y_var = 'C'
-        self.y_var_label = 'Composition'
+        self.y_var = "C"
+        self.y_var_label = "Composition"
         self.y_var_res = 0.001
         super(TXsection, self).__init__(**kwargs)
 
@@ -885,12 +1005,12 @@ class PXsection(SectionBase):
 
     def __init__(self, **kwargs):
         self.xrange = (0.0, 1.0)
-        self.yrange = kwargs.get('prange', (0.1, 20.0))
-        self.x_var = 'C'
-        self.x_var_label = 'Composition'
+        self.yrange = kwargs.get("prange", (0.1, 20.0))
+        self.x_var = "C"
+        self.x_var_label = "Composition"
         self.x_var_res = 0.001
-        self.y_var = 'p'
-        self.y_var_label = 'Pressure [kbar]'
+        self.y_var = "p"
+        self.y_var_label = "Pressure [kbar]"
         self.y_var_res = 0.001
         super(PXsection, self).__init__(**kwargs)
 
@@ -901,24 +1021,24 @@ class PXsection(SectionBase):
 class Polygon(object):
     # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
     def __init__(self, context):
-        if hasattr(context, 'interiors'):
+        if hasattr(context, "interiors"):
             self.context = context
         else:
-            self.context = getattr(context, '__geo_interface__', context)
+            self.context = getattr(context, "__geo_interface__", context)
 
     @property
     def geom_type(self):
-        return getattr(self.context, 'geom_type', None) or self.context['type']
+        return getattr(self.context, "geom_type", None) or self.context["type"]
 
     @property
     def exterior(self):
-        return getattr(self.context, 'exterior', None) or self.context['coordinates'][0]
+        return getattr(self.context, "exterior", None) or self.context["coordinates"][0]
 
     @property
     def interiors(self):
-        value = getattr(self.context, 'interiors', None)
+        value = getattr(self.context, "interiors", None)
         if value is None:
-            value = self.context['coordinates'][1:]
+            value = self.context["coordinates"][1:]
         return value
 
 
@@ -926,20 +1046,23 @@ def PolygonPath(polygon):
     """Constructs a compound matplotlib path from a Shapely or GeoJSON-like
     geometric object"""
     this = Polygon(polygon)
-    assert this.geom_type == 'Polygon'
+    assert this.geom_type == "Polygon"
 
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
         # beginning of each subpath
-        n = len(getattr(ob, 'coords', None) or ob)
+        n = len(getattr(ob, "coords", None) or ob)
         vals = np.ones(n, dtype=Path.code_type) * Path.LINETO
         vals[0] = Path.MOVETO
         return vals
 
     vertices = np.concatenate(
-        [np.asarray(this.exterior.coords)[:, :2]] + [np.asarray(r.coords)[:, :2] for r in this.interiors]
+        [np.asarray(this.exterior.coords)[:, :2]]
+        + [np.asarray(r.coords)[:, :2] for r in this.interiors]
     )
-    codes = np.concatenate([coding(this.exterior)] + [coding(r) for r in this.interiors])
+    codes = np.concatenate(
+        [coding(this.exterior)] + [coding(r) for r in this.interiors]
+    )
     return Path(vertices, codes)
 
 

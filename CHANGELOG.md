@@ -1,6 +1,10 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.4.1] - master
+### Fixed
+ - fixed and-ky-sill triple point uniline suggestions
+
 ## [2.4.0] - 2023-12-21
 ### Fixed
  - important collect_grid_data bug causing isopleths twisting fixed.

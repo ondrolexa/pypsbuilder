@@ -15,7 +15,7 @@ requirements = ["numpy", "matplotlib>=3", "scipy", "networkx", "shapely>=2", "tq
 
 setup(
     name="pypsbuilder",
-    version="2.4.0",
+    version="2.4.1",
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + "\n\n" + changelog,
     long_description_content_type="text/markdown",
