@@ -43,6 +43,8 @@ from matplotlib.colorbar import ColorbarBase
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.table import table
 from matplotlib import ticker
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 
 from shapely.geometry import MultiPoint, Point, LineString
 from shapely.ops import linemerge
@@ -1337,11 +1339,13 @@ class PS:
                 Default None.
             cdf (bool): When True contour levels are percentile based.
                 Default False.
+            alpha (float): Alpha value for filled contours. Default 1
             levels (list): User-defined contour levels. If defined, N and step
                 is ignored.
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points. Default 7 (all data)
+            colorbar (bool): Whether to show colorbar. Default True
             method: Interpolation method. Default is 'rbf', other option is
                 'quadratic', which uses least-square fit to quadratic surface
                 or 'spline' for bivariate spline interpolation.
@@ -1361,8 +1365,7 @@ class PS:
             out (str or list): Highligt zero-mode lines for given phases.
             high (frozenset or list): Highlight divariant fields identified
                 by key(s).
-            cmap (str): matplotlib colormap used to divariant fields coloring.
-                Colors are based on variance. Default 'viridis'.
+            cmap (str): matplotlib colormap used for contours. Default 'viridis'.
             bulk (bool): Whether to show bulk composition on top of diagram.
                 Default False.
             labelkeys (frozenset or list): Keys of divariant fields where contours
@@ -1405,6 +1408,9 @@ class PS:
             method = kwargs.get("method", "rbf")
             rbf_func = kwargs.get("rbf_func", "thin_plate")
             cmap = kwargs.get("cmap", "viridis")
+            colors = kwargs.get("colors", None)
+            colorbar = kwargs.get("colorbar", True)
+            alpha = kwargs.get("alpha", 1)
             labelkeys = kwargs.get("labelkeys", [])
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
@@ -1598,13 +1604,27 @@ class PS:
                     with warnings.catch_warnings():
                         warnings.filterwarnings("ignore", category=UserWarning)
                         if filled:
-                            cont = ax.contourf(tg, pg, zg, cntv, cmap=cmap)
-                            if filled_over:
-                                contover = ax.contour(
-                                    tg, pg, zg, cntv, colors="whitesmoke"
+                            if colors is not None:
+                                cont = ax.contourf(
+                                    tg, pg, zg, cntv, colors=colors, alpha=alpha
                                 )
+                                if filled_over:
+                                    contover = ax.contour(
+                                        tg, pg, zg, cntv, colors=colors
+                                    )
+                            else:
+                                cont = ax.contourf(
+                                    tg, pg, zg, cntv, cmap=cmap, alpha=alpha
+                                )
+                                if filled_over:
+                                    contover = ax.contour(
+                                        tg, pg, zg, cntv, colors="whitesmoke"
+                                    )
                         else:
-                            cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
+                            if colors is not None:
+                                cont = ax.contour(tg, pg, zg, cntv, colors=colors)
+                            else:
+                                cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
                     patch = PolygonPatch(self.shapes[key], fc="none", ec="none")
                     ax.add_patch(patch)
                     for col in cont.collections:
@@ -1655,11 +1675,12 @@ class PS:
                                 np.hstack([(*seg[1], np.nan) for seg in xy]),
                                 lw=2,
                             )
-            try:
-                fig.colorbar(cont)
-            except Exception as e:
-                if self.show_errors:
-                    print(e)
+            if colorbar:
+                try:
+                    fig.colorbar(cont)
+                except Exception as e:
+                    if self.show_errors:
+                        print(e)
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
                 high = [high]
@@ -1710,6 +1731,91 @@ class PS:
                 else:
                     return ax
 
+    def overlap_isopleths(self, *args, **kwargs):
+        """Function to overlaped isopleths ranges.
+
+        Args:
+            phase (str): Phase or end-member named
+            expr (str): Expression to evaluate. It could use any variable
+                existing for given phase. Check `all_data_keys` property for
+                possible variables.
+            levels (tuple): tuple of min an max values for isopleth band
+            alpha (float): Alpha value for filled contours. Default 1
+            fig (Figure): If not None, axes are added to fig and returned.
+                Default None
+            fig_kw: dict passed to subplots method.
+
+        Example:
+            >>> pt.overlap_isopleths(
+                    'g', 'xMgX', (0.07, 0.13),
+                    'g', 'xFeX', (0.51, 0.65),
+                    'g', 'xCaX', (0.06, 0.15),
+                    'g', 'xMnX', (0.16, 0.27),
+                )
+        """
+        if len(args) % 3 == 0:
+            if self.gridded:
+                fig = kwargs.get("fig", None)
+                fig_kw = kwargs.get("fig_kw", {})
+                ax = kwargs.get("ax", None)
+                alpha = kwargs.get("alpha", 0.5)
+                filename = kwargs.get("filename", None)
+                save_kw = kwargs.get("save_kw", {})
+                show = kwargs.get("show", None)
+                colors = kwargs.get("colors", None)
+                if colors is None:
+                    cc = list(mcolors.TABLEAU_COLORS.keys())
+                    cixs = np.random.choice(
+                        range(len(cc)), size=len(args) // 3, replace=False
+                    )
+                handles = []
+                if fig is None:
+                    if ax is None:
+                        fig, ax = plt.subplots(**fig_kw)
+                    else:
+                        if show is None:
+                            show = False
+                        fig = ax.get_figure()
+                else:
+                    if show is None:
+                        show = False
+                    ax = fig.add_subplot()
+                for phase, expr, levels, color in zip(
+                    args[::3], args[1::3], args[2::3], cixs
+                ):
+                    ax = self.isopleths(
+                        phase,
+                        expr,
+                        levels=levels,
+                        colorbar=False,
+                        filled_over=True,
+                        colors=[cc[color]],
+                        alpha=alpha,
+                        show=False,
+                        ax=ax,
+                    )
+                    handles.append(
+                        mpatches.Patch(color=cc[color], alpha=alpha, label=expr)
+                    )
+                self.add_overlay(ax)
+                ax.legend(handles=handles)
+                # coords
+                ax.format_coord = self.format_coord
+                # connect button press
+                # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+                if filename is not None:
+                    plt.savefig(filename, **save_kw)
+                    plt.close(fig)
+                else:
+                    if show is None or show is True:
+                        plt.show()
+                    else:
+                        return ax
+            else:
+                print("Not yet gridded...")
+        else:
+            print("The number of argumets must be multiple of 3...")
+
     def isopleths_vector(self, phase, expr=None, **kwargs):
         """Method to draw vectorized compositional isopleths.
 
@@ -1733,6 +1839,7 @@ class PS:
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points. Default 7 (all data)
+            colorbar (bool): Whether to show colorbar. Default True
             method: Interpolation method. Default is 'rbf', other option is
                 'quadratic', which uses least-square fit to quadratic surface.
             rbf_func: Default 'thin_plate'. See scipy.interpolation.Rbf
@@ -1784,6 +1891,7 @@ class PS:
             method = kwargs.get("method", "rbf")
             rbf_func = kwargs.get("rbf_func", "thin_plate")
             cmap = kwargs.get("cmap", "viridis")
+            colorbar = kwargs.get("colorbar", True)
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
             ax = kwargs.get("ax", None)
@@ -2002,12 +2110,13 @@ class PS:
                                 np.hstack([(*seg[1], np.nan) for seg in xy]),
                                 lw=2,
                             )
-            try:
-                cbar = fig.colorbar(mapper)
-                cbar.ax.set_yticks(cntv)
-            except Exception as e:
-                if self.show_errors:
-                    print(e)
+            if colorbar:
+                try:
+                    cbar = fig.colorbar(mapper)
+                    cbar.ax.set_yticks(cntv)
+                except Exception as e:
+                    if self.show_errors:
+                        print(e)
             # Show highlight. Change to list if only single key
             if not isinstance(high, list):
                 high = [high]

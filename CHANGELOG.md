@@ -4,6 +4,8 @@ All notable pypsbuilder changes.
 ## [2.4.1] - master
 ### Fixed
  - fixed and-ky-sill triple point uniline suggestions
+### Added
+ - overlap_isopleths method added
 
 ## [2.4.0] - 2023-12-21
 ### Fixed
