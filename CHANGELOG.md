@@ -1,9 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.4.1] - master
+## master
+
+## [2.4.1] - 2024-03-07
 ### Fixed
  - fixed and-ky-sill triple point uniline suggestions
+ - filled_over labeling fixed
+ - cdf isoplths bug fixed
 ### Added
  - overlap_isopleths method added
 
