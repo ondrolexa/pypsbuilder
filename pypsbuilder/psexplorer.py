@@ -1451,7 +1451,7 @@ class PS:
                     dd = []
                     for key in recs:
                         dd.extend(recs[key]["data"])
-                    cntv = np.percentile(dd, np.linspace(0, 100, N))
+                    cntv = np.unique(np.percentile(dd, np.linspace(0, 100, N)))
                 else:
                     ml = ticker.MaxNLocator(nbins=N)
                     cntv = ml.tick_values(vmin=mn, vmax=mx)
@@ -1627,15 +1627,11 @@ class PS:
                                 cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
                     patch = PolygonPatch(self.shapes[key], fc="none", ec="none")
                     ax.add_patch(patch)
-                    for col in cont.collections:
-                        col.set_clip_path(patch)
-                    if filled and filled_over:
-                        for col in contover.collections:
-                            col.set_clip_path(patch)
                     # label if needed
-                    if not filled and key in labelkyes_ok:
+                    if (not filled or filled_over) and key in labelkyes_ok:
                         positions = []
-                        for col in cont.collections:
+                        contlbl = contover if filled_over else cont
+                        for col in contlbl.collections:
                             for seg in col.get_paths():  # get_segments():
                                 inside = np.fromiter(
                                     map(
@@ -1647,13 +1643,19 @@ class PS:
                                 if np.any(inside):
                                     positions.append(seg.vertices[inside].mean(axis=0))
                         ax.clabel(
-                            cont,
+                            contlbl,
                             fontsize=9,
                             manual=positions,
                             fmt="%g",
                             inline_spacing=3,
                             inline=not nosplit,
                         )
+                    for col in cont.collections:
+                        col.set_clip_path(patch)
+                    if filled and filled_over:
+                        for col in contover.collections:
+                            col.set_clip_path(patch)
+
             if only is None:
                 self.add_overlay(ax)
                 # zero mode lines
