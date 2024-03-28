@@ -1714,10 +1714,10 @@ class PS:
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc="top")
             else:
                 if only is None:
-                    if show is None or show is True:
-                        ax.set_xlim(self.xrange)
-                        ax.set_ylim(self.yrange)
-                        ax.set_title("{}({})".format(phase, expr))
+                    #if show is None or show is True:
+                    ax.set_xlim(self.xrange)
+                    ax.set_ylim(self.yrange)
+                    ax.set_title("{}({})".format(phase, expr))
                 else:
                     ax.set_title("{} - {}({})".format(" ".join(only), phase, expr))
             # coords
