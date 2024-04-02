@@ -999,6 +999,8 @@ class PS:
         isopleths=False,
         which=7,
         smooth=0,
+        alpha=0.5,
+        lw=2,
     ):
         """Function to plot root squared error of calculated and estimated values.
 
@@ -1020,7 +1022,7 @@ class PS:
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
-            isopleths (bool): When True, searched isoplots are shown.Default False
+            isopleths (bool): When True, searched isopleths are shown. Default False
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points
@@ -1036,6 +1038,7 @@ class PS:
         if len(args) % 3 == 0:
             if self.gridded:
                 err = []
+                prop_cycle = plt.rcParams["axes.prop_cycle"]
                 for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
                     if self.check_phase_expr(phase, expr):
                         err.append(
@@ -1068,13 +1071,19 @@ class PS:
                         interpolation=interpolation,
                         aspect="auto",
                         origin="lower",
+                        alpha=alpha,
                     )
                     ax.contour(self.xspace, self.yspace, err, colors="w")
                     if isopleths:
-                        for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
+                        for phase, expr, val, cc in zip(
+                            args[::3],
+                            args[1::3],
+                            args[2::3],
+                            prop_cycle.by_key()["color"],
+                        ):
                             if self.check_phase_expr(phase, expr):
                                 ax = self.isopleths_vector(
-                                    phase, expr, levels=[val], ax=ax
+                                    phase, expr, levels=[val], ax=ax, lw=lw, color=cc
                                 )
                     ax.plot(T, p, "r*", ms=20)
                     self.add_overlay(
@@ -1714,7 +1723,7 @@ class PS:
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc="top")
             else:
                 if only is None:
-                    #if show is None or show is True:
+                    # if show is None or show is True:
                     ax.set_xlim(self.xrange)
                     ax.set_ylim(self.yrange)
                     ax.set_title("{}({})".format(phase, expr))
@@ -1746,6 +1755,10 @@ class PS:
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
+            filename: If not None, figure is saved to file
+            save_kw: dict passed to savefig method.
+            show (bool): When False, Axes are returned, otherwise plot is shown.
+                Default True
 
         Example:
             >>> pt.overlap_isopleths(
@@ -1858,16 +1871,17 @@ class PS:
             overlay (bool): Whether to show assemblage fields. Default True
             high (frozenset or list): Highlight divariant fields identified
                 by key(s).
-            cmap (str): matplotlib colormap used to divariant fields coloring.
-                Colors are based on variance. Default 'viridis'.
+            cmap (str): matplotlib colormap used isopleths coloring. Default 'viridis'.
             bulk (bool): Whether to show bulk composition on top of diagram.
                 Default False.
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
+            lw (float): Linewidth of isopleths. Default 1.0
             ax (Axes): Axes to be used. Default None
             filename: If not None, figure is saved to file
             save_kw: dict passed to savefig method.
+            color: matplotlib color for isopleths. If None cmap is used. Default None.
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
         """
@@ -1893,9 +1907,11 @@ class PS:
             method = kwargs.get("method", "rbf")
             rbf_func = kwargs.get("rbf_func", "thin_plate")
             cmap = kwargs.get("cmap", "viridis")
+            color = kwargs.get("color", None)
             colorbar = kwargs.get("colorbar", True)
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
+            lw = kwargs.get("lw", 1.0)
             ax = kwargs.get("ax", None)
             filename = kwargs.get("filename", None)
             save_kw = kwargs.get("save_kw", {})
@@ -2085,11 +2101,19 @@ class PS:
                                     for lnp in ln.geoms:
                                         lnp = lnp.simplify(tolerance=0.01)
                                         x, y = np.array(lnp.coords).T
-                                        ax.plot(x, y, color=mapper.to_rgba(v))
+                                        if color is None:
+                                            ax.plot(
+                                                x, y, color=mapper.to_rgba(v), lw=lw
+                                            )
+                                        else:
+                                            ax.plot(x, y, color=color, lw=lw)
                                 else:
                                     ln = ln.simplify(tolerance=0.01)
                                     x, y = np.array(ln.coords).T
-                                    ax.plot(x, y, color=mapper.to_rgba(v))
+                                    if color is None:
+                                        ax.plot(x, y, color=mapper.to_rgba(v), lw=lw)
+                                    else:
+                                        ax.plot(x, y, color=color, lw=lw)
             if only is None:
                 if overlay:
                     self.add_overlay(ax)
