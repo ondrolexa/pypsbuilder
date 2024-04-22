@@ -282,8 +282,8 @@ class UniLine(PseudoBase):
             return candidate
 
         # Check for polymorphs
-        fixi, fixu = False, False
         for poly in polymorphs:
+            fixi, fixu = False, False
             if (
                 poly.issubset(ip.phases)
                 and (poly != ip.out)
@@ -292,20 +292,21 @@ class UniLine(PseudoBase):
                 fixi = True
                 if poly.issubset(self.phases) and not self.out.isdisjoint(poly):
                     fixu = True
+            # check invs
+            candidate = checkme(self.phases, self.out, ip.phases, ip.out)
+            if fixi and not candidate:
+                candidate = checkme(
+                    self.phases,
+                    self.out,
+                    ip.phases,
+                    ip.out.difference(poly).union(poly.difference(ip.out)),
+                )
+            if fixu and not candidate:
+                candidate = checkme(
+                    self.phases, poly.difference(self.out), ip.phases, ip.out
+                )
+            if candidate:
                 break
-        # check invs
-        candidate = checkme(self.phases, self.out, ip.phases, ip.out)
-        if fixi and not candidate:
-            candidate = checkme(
-                self.phases,
-                self.out,
-                ip.phases,
-                ip.out.difference(poly).union(poly.difference(ip.out)),
-            )
-        if fixu and not candidate:
-            candidate = checkme(
-                self.phases, poly.difference(self.out), ip.phases, ip.out
-            )
         return candidate
 
     def get_label_point(self):
