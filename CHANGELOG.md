@@ -1,8 +1,9 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## master
-
+## [2.4.2] - 2024-04-23
+### Fixed
+ - another fix of and-ky-sill triple point linking
 ## [2.4.1] - 2024-03-07
 ### Fixed
  - fixed and-ky-sill triple point uniline suggestions
