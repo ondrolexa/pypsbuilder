@@ -1818,6 +1818,7 @@ class PS:
                 ax.format_coord = self.format_coord
                 # connect button press
                 # cid = fig.canvas.mpl_connect('button_press_event', self.onclick)
+                ax.set_title(self.name)
                 if filename is not None:
                     plt.savefig(filename, **save_kw)
                     plt.close(fig)
