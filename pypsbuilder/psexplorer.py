@@ -1015,6 +1015,7 @@ class PS:
             interpolation (str): matplotlib imshow interpolation method.
                 Default None.
             label (bool): Whether to label divariant fields. Default False.
+            logerr (bool): When True, plot logarithms of error. Default True
             geterror (bool): When True, calculated RMSE array is returned. Otherwise
                 error is plotted. Deafult False
             getpt (bool): When True return tuple of (p, T, err) where error is minimal.
