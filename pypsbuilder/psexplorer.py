@@ -636,12 +636,13 @@ class PS:
         mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
-            d = self.collect_data(key, phase, expr, which=which)
-            z = d["data"]
-            if z:
-                recs[key] = d
-                mn = min(mn, min(z))
-                mx = max(mx, max(z))
+            if phase in key:
+                d = self.collect_data(key, phase, expr, which=which)
+                z = d["data"]
+                if z:
+                    recs[key] = d
+                    mn = min(mn, min(z))
+                    mx = max(mx, max(z))
             # res = self.grid.gridcalcs[self.grid.masks[key]]
             # if len(res) > 0:
             #     if phase in res[0]['data']:
@@ -948,7 +949,7 @@ class PS:
                 cgd = {}
                 mn, mx = sys.float_info.max, -sys.float_info.max
                 for ix, grid in self.grids.items():
-                    gd = np.empty(grid.xg.shape)
+                    gd = np.empty(grid.xg.shape, dtype=float)
                     gd[:] = np.nan
                     for key in grid.masks:
                         results = grid.gridcalcs[grid.masks[key] & (grid.status == 1)]
@@ -992,6 +993,7 @@ class PS:
         label=False,
         skiplabels=0,
         labelfs=6,
+        logerr=True,
         geterror=False,
         getpt=False,
         fig=None,
@@ -1073,7 +1075,10 @@ class PS:
                         origin="lower",
                         alpha=alpha,
                     )
-                    ax.contour(self.xspace, self.yspace, err, colors="w")
+                    if logerr:
+                        ax.contour(self.xspace, self.yspace, np.log(err), colors="w")
+                    else:
+                        ax.contour(self.xspace, self.yspace, err, colors="w")
                     if isopleths:
                         for phase, expr, val, cc in zip(
                             args[::3],
@@ -1762,10 +1767,10 @@ class PS:
 
         Example:
             >>> pt.overlap_isopleths(
-                    'g', 'xMgX', (0.07, 0.13),
                     'g', 'xFeX', (0.51, 0.65),
-                    'g', 'xCaX', (0.06, 0.15),
+                    'g', 'xMgX', (0.07, 0.13),
                     'g', 'xMnX', (0.16, 0.27),
+                    'g', 'xCaX', (0.06, 0.15),
                 )
         """
         if len(args) % 3 == 0:
@@ -1779,10 +1784,7 @@ class PS:
                 show = kwargs.get("show", None)
                 colors = kwargs.get("colors", None)
                 if colors is None:
-                    cc = list(mcolors.TABLEAU_COLORS.keys())
-                    cixs = np.random.choice(
-                        range(len(cc)), size=len(args) // 3, replace=False
-                    )
+                    colors = list(mcolors.TABLEAU_COLORS.keys())[: len(args) // 3]
                 handles = []
                 if fig is None:
                     if ax is None:
@@ -1796,7 +1798,7 @@ class PS:
                         show = False
                     ax = fig.add_subplot()
                 for phase, expr, levels, color in zip(
-                    args[::3], args[1::3], args[2::3], cixs
+                    args[::3], args[1::3], args[2::3], colors
                 ):
                     ax = self.isopleths(
                         phase,
@@ -1804,14 +1806,12 @@ class PS:
                         levels=levels,
                         colorbar=False,
                         filled_over=True,
-                        colors=[cc[color]],
+                        colors=[color],
                         alpha=alpha,
                         show=False,
                         ax=ax,
                     )
-                    handles.append(
-                        mpatches.Patch(color=cc[color], alpha=alpha, label=expr)
-                    )
+                    handles.append(mpatches.Patch(color=color, alpha=alpha, label=expr))
                 self.add_overlay(ax)
                 ax.legend(handles=handles)
                 # coords
@@ -2382,7 +2382,7 @@ class PS:
                     self.common_grid_and_masks()
                 #  interpolate on common grid
                 recs, mn, mx = self.merge_data(phase, expr, which=which)
-                gd = np.empty(self.xg.shape)
+                gd = np.empty(self.xg.shape, dtype=float)
                 gd[:] = np.nan
                 for key in recs:
                     xmin, ymin, xmax, ymax = self.shapes[key].bounds
