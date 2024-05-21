@@ -990,10 +990,12 @@ class PS:
         self,
         *args,
         interpolation=None,
+        colors=None,
         label=False,
         skiplabels=0,
         labelfs=6,
         logerr=True,
+        maxerr=10,
         geterror=False,
         getpt=False,
         fig=None,
@@ -1003,6 +1005,8 @@ class PS:
         smooth=0,
         alpha=0.5,
         lw=2,
+        filename=None,
+        save_kw={},
     ):
         """Function to plot root squared error of calculated and estimated values.
 
@@ -1025,6 +1029,8 @@ class PS:
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
+            filename: If not None, figure is saved to file
+            save_kw: dict passed to savefig method.
             isopleths (bool): When True, searched isopleths are shown. Default False
             which (int): Bitopt defining from where data are collected. 0 bit -
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
@@ -1041,7 +1047,8 @@ class PS:
         if len(args) % 3 == 0:
             if self.gridded:
                 err = []
-                prop_cycle = plt.rcParams["axes.prop_cycle"]
+                if colors is None:
+                    colors = list(mcolors.TABLEAU_COLORS.keys())[: len(args) // 3]
                 for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
                     if self.check_phase_expr(phase, expr):
                         err.append(
@@ -1055,6 +1062,7 @@ class PS:
                         )
 
                 err = np.sqrt(sum(err)) / len(err)
+                err[err > maxerr] = np.nan
                 r, c = np.unravel_index(np.nanargmin(err), err.shape)
                 p = self.yspace[r]
                 T = self.xspace[c]
@@ -1085,7 +1093,7 @@ class PS:
                             args[::3],
                             args[1::3],
                             args[2::3],
-                            prop_cycle.by_key()["color"],
+                            colors,
                         ):
                             if self.check_phase_expr(phase, expr):
                                 ax = self.isopleths_vector(
@@ -1099,9 +1107,14 @@ class PS:
                     ax.set_ylim(self.yrange)
                     fig.colorbar(im)
 
-                    ax.set_title(f"RMSE - MinErr={minerr:g} at {T} {p}")
+                    ax.set_title(f"RMSE - MinErr={minerr:g} at {T:g} {p:g}")
                     fig.tight_layout()
-                    plt.show()
+
+                    if filename is not None:
+                        plt.savefig(filename, **save_kw)
+                        plt.close(fig)
+                    else:
+                        plt.show()
             else:
                 print("Not yet gridded...")
         else:
