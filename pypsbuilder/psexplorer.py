@@ -636,7 +636,7 @@ class PS:
         mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
-            if phase in key:
+            if phase.split('(')[0] in key:
                 d = self.collect_data(key, phase, expr, which=which)
                 z = d["data"]
                 if z:
