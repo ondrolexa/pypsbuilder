@@ -873,8 +873,6 @@ class SectionBase:
                     unilist.append(uni_id)
             if unilist:
                 phases = set.intersection(*(self.unilines[id].phases for id in unilist))
-                print(phases, unilist)
-                print("---")
                 vd = [
                     phases.symmetric_difference(self.unilines[id].phases)
                     == self.unilines[id].out
