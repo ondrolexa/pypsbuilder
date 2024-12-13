@@ -15,6 +15,9 @@ from pathlib import Path
 from datetime import datetime
 import itertools
 
+import warnings
+warnings.filterwarnings("ignore")
+
 import importlib.resources as ires
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QT_VERSION_STR
