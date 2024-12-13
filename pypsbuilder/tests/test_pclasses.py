@@ -238,9 +238,7 @@ def test_getiduni():
 
 def test_auto_connect():
     for uni in pytest.ps.unilines.values():
-        candidates = [
-            inv for inv in pytest.ps.invpoints.values() if uni.contains_inv(inv)
-        ]
+        candidates = [inv for inv in pytest.ps.invpoints.values() if uni.contains_inv(inv)]
         assert len(candidates) == 2, "Error to detect auto_connect possibility"
 
 

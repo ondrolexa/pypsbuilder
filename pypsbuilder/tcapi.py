@@ -67,9 +67,7 @@ def get_tcapi(workdir=".", TCenc="mac-roman"):
             startupinfo.wShowWindow = 0
         else:
             startupinfo = None
-        p = subprocess.Popen(
-            str(tcexe), cwd=str(workdir), startupinfo=startupinfo, **popen_kw
-        )
+        p = subprocess.Popen(str(tcexe), cwd=str(workdir), startupinfo=startupinfo, **popen_kw)
         out, err = p.communicate(input="kill\n\n".encode(TCenc))
         if err is not None:
             print(err.decode("utf-8"))
@@ -88,11 +86,7 @@ def get_tcapi(workdir=".", TCenc="mac-roman"):
             else:
                 return api.status, False
     except BaseException as e:
-        if (
-            isinstance(e, InitError)
-            or isinstance(e, ScriptfileError)
-            or isinstance(e, TCError)
-        ):
+        if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
             status = "{}: {}".format(type(e).__name__, str(e))
         else:
             status = "{}: {} {}".format(type(e).__name__, str(e), errinfo)
@@ -249,9 +243,7 @@ class TCAPI(object):
             resic = None
         try:
             with self.logfile.open("r", encoding=self.TCenc) as f:
-                output = f.read().split(
-                    "##########################################################\n"
-                )[-1]
+                output = f.read().split("##########################################################\n")[-1]
         except Exception:
             output = None
         return output, resic
@@ -271,9 +263,7 @@ class TCAPI(object):
             startupinfo.wShowWindow = 0
         else:
             startupinfo = None
-        p = subprocess.Popen(
-            str(self.tcexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw
-        )
+        p = subprocess.Popen(str(self.tcexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw)
         output, err = p.communicate(input=instr.encode(self.TCenc))
         if err is not None:
             print(err.decode("utf-8"))
@@ -290,12 +280,7 @@ class TCAPI(object):
                 startupinfo.wShowWindow = 0
             else:
                 startupinfo = None
-            p = subprocess.Popen(
-                str(self.drexe),
-                cwd=str(self.workdir),
-                startupinfo=startupinfo,
-                **popen_kw
-            )
+            p = subprocess.Popen(str(self.drexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw)
             p.communicate(input=instr.encode(self.TCenc))
             sys.stdout.flush()
             return True
@@ -318,9 +303,7 @@ class TC35API(TCAPI):
             if not self.workdir.joinpath("tc-prefs.txt").exists():
                 raise InitError("No tc-prefs.txt file in working directory.")
             errinfo = "tc-prefs.txt file in working directory cannot be accessed."
-            for line in self.workdir.joinpath("tc-prefs.txt").open(
-                "r", encoding=self.TCenc
-            ):
+            for line in self.workdir.joinpath("tc-prefs.txt").open("r", encoding=self.TCenc):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == "scriptfile":
@@ -345,11 +328,7 @@ class TC35API(TCAPI):
             self.ptx_steps = 20  # IS IT NEEDED ????
             # Checks run output
             if "exit, and correct the scriptfile ?" in self.tcout:
-                raise ScriptfileError(
-                    self.tcout.split("exit, and correct the scriptfile ?")[0].split(
-                        "\n"
-                    )[-4]
-                )
+                raise ScriptfileError(self.tcout.split("exit, and correct the scriptfile ?")[0].split("\n")[-4])
             # Checks various settings
             errinfo = "Scriptfile error!"
             with self.scriptfile.open("r", encoding=self.TCenc) as f:
@@ -358,17 +337,11 @@ class TC35API(TCAPI):
             lines = lines[: lines.index("*")]  # remove part not used by TC
             # Check pypsbuilder blocks
             if not ("%{PSBGUESS-BEGIN}" in lines and "%{PSBGUESS-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.")
             if not ("%{PSBCALC-BEGIN}" in lines and "%{PSBCALC-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBCALC-BEGIN} and {PSBCALC-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBCALC-BEGIN} and {PSBCALC-END} tags in your scriptfile.")
             if not ("%{PSBBULK-BEGIN}" in lines and "%{PSBBULK-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile.")
             # Create scripts directory
             scripts = {}
             for ln in lines:
@@ -388,16 +361,10 @@ class TC35API(TCAPI):
             errinfo = "Missing argument for axfile script in scriptfile."
             self.axname = scripts["axfile"][0]
             if not self.axfile.exists():
-                raise ScriptfileError(
-                    "axfile "
-                    + str(self.axfile)
-                    + " does not exists in working directory"
-                )
+                raise ScriptfileError("axfile " + str(self.axfile) + " does not exists in working directory")
             # diagramPT
             if "diagramPT" not in scripts:
-                raise ScriptfileError(
-                    "No diagramPT script, diagramPT is mandatory script."
-                )
+                raise ScriptfileError("No diagramPT script, diagramPT is mandatory script.")
             errinfo = "Wrong arguments for diagramPT script in scriptfile."
             pmin, pmax, tmin, tmax = scripts["diagramPT"][0].split()
             self.prange = float(pmin), float(pmax)
@@ -412,20 +379,14 @@ class TC35API(TCAPI):
             self.bulk.append(scripts["bulk"][0].split())
             self.bulk.append(scripts["bulk"][1].split())
             if len(scripts["bulk"]) == 3:
-                self.bulk.append(
-                    scripts["bulk"][2].split()[: len(self.bulk[0])]
-                )  # remove possible number of steps
+                self.bulk.append(scripts["bulk"][2].split()[: len(self.bulk[0])])  # remove possible number of steps
             # try to get actual bulk from output
             self.usedbulk = None
             if "specification of bulk composition" in self.tcout:
                 try:
-                    part = self.tcout.split("specification of bulk composition")[
-                        1
-                    ].split(
+                    part = self.tcout.split("specification of bulk composition")[1].split(
                         "<==========================================================>"
-                    )[
-                        0
-                    ]
+                    )[0]
                     lns = [ln for ln in part.split(os.linesep) if ln.startswith(" ")]
                     self.usedbulk = []
                     self.usedbulk.append(lns[0].split())
@@ -437,16 +398,12 @@ class TC35API(TCAPI):
             # inexcess
             errinfo = "Wrong inexcess in scriptfile."
             if "setexcess" in scripts:
-                raise ScriptfileError(
-                    "setexcess script depreceated, use inexcess instead."
-                )
+                raise ScriptfileError("setexcess script depreceated, use inexcess instead.")
             if "inexcess" in scripts:
                 if scripts["inexcess"]:
                     self.excess = set(scripts["inexcess"][0].split()) - set(["no"])
                 else:
-                    raise ScriptfileError(
-                        "In case of no excess phases, use inexcess no or remove script"
-                    )
+                    raise ScriptfileError("In case of no excess phases, use inexcess no or remove script")
             else:
                 self.excess = set()
             # omit
@@ -475,37 +432,25 @@ class TC35API(TCAPI):
                 self.samecoding = [set()]
             # pseudosection
             if "pseudosection" not in scripts:
-                raise ScriptfileError(
-                    "No pseudosection script, pseudosection is mandatory script."
-                )
+                raise ScriptfileError("No pseudosection script, pseudosection is mandatory script.")
             # dogmin
             if "dogmin" in scripts:
-                raise ScriptfileError(
-                    "Dogmin script should be removed from scriptfile."
-                )
+                raise ScriptfileError("Dogmin script should be removed from scriptfile.")
             # union ax phases and samecoding and diff omit
             if "BOMBED" in self.tcout:
                 raise TCError(self.tcout.split("BOMBED")[1].split(os.linesep)[0])
             else:
-                ax_phases = set(
-                    self.tcout.split("reading ax:")[1].split(2 * os.linesep)[0].split()
-                )
+                ax_phases = set(self.tcout.split("reading ax:")[1].split(2 * os.linesep)[0].split())
                 self.phases = ax_phases.union(*self.samecoding) - self.omit
             # OK
             self.status = "Initial check done."
             self.OK = True
         except BaseException as e:
-            if (
-                isinstance(e, InitError)
-                or isinstance(e, ScriptfileError)
-                or isinstance(e, TCError)
-            ):
+            if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
                 self.status = "{}: {}".format(type(e).__name__, str(e))
             else:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
-                self.status = "{}: {} on line {}".format(
-                    type(e).__name__, str(e), exc_tb.tb_lineno
-                )
+                self.status = "{}: {} on line {}".format(type(e).__name__, str(e), exc_tb.tb_lineno)
             self.OK = False
 
     def parse_logfile(self, **kwargs):
@@ -535,9 +480,7 @@ class TC35API(TCAPI):
         try:
             if output is None:
                 with self.logfile.open("r", encoding=self.TCenc) as f:
-                    output = f.read().split(
-                        "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                    )[1]
+                    output = f.read().split("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n")[1]
             lines = [ln for ln in output.splitlines() if ln != ""]
             results = None
             do_parse = True
@@ -557,9 +500,7 @@ class TC35API(TCAPI):
                 bstarts = [
                     ix
                     for ix, ln in enumerate(lines)
-                    if ln.startswith(
-                        "------------------------------------------------------------"
-                    )
+                    if ln.startswith("------------------------------------------------------------")
                 ]
                 bstarts.append(len(lines))
                 ptguesses = []
@@ -570,18 +511,12 @@ class TC35API(TCAPI):
                         corrects.append(False)
                     else:
                         corrects.append(True)
-                    xyz = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")
-                    ]
-                    gixs = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("ptguess")
-                    ][0] - 3
+                    xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
+                    gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][0] - 3
                     gixe = xyz[-1] + 2
                     ptguesses.append(block[gixs:gixe])
                 # parse icfile
-                blocks = resic.split(
-                    "\n===========================================================\n\n"
-                )[1:]
+                blocks = resic.split("\n===========================================================\n\n")[1:]
                 # done
                 if len(blocks) > 0:
                     rlist = [
@@ -606,9 +541,7 @@ class TC35API(TCAPI):
                 for ln in calcs:
                     script = ln.split("%")[0].strip()
                     if script.startswith("with"):
-                        phases = set(script.split("with", 1)[1].split()).union(
-                            self.excess
-                        )
+                        phases = set(script.split("with", 1)[1].split()).union(self.excess)
                     if script.startswith("zeromodeisopleth"):
                         out = set(script.split("zeromodeisopleth", 1)[1].split())
                 return status, results, output, (phases, out, calcs)
@@ -645,9 +578,7 @@ class TC35API(TCAPI):
             bstarts = [
                 ix
                 for ix, ln in enumerate(lines)
-                if ln.startswith(
-                    "--------------------------------------------------------------------"
-                )
+                if ln.startswith("--------------------------------------------------------------------")
             ]
             bstarts.append(len(lines))
             ptguesses = []
@@ -659,15 +590,11 @@ class TC35API(TCAPI):
                 else:
                     corrects.append(True)
                 xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][
-                    0
-                ] - 3
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][0] - 3
                 gixe = xyz[-1] + 2
                 ptguesses.append(block[gixs:gixe])
             # parse icfile
-            blocks = resic.split(
-                "\n===========================================================\n\n"
-            )[1:]
+            blocks = resic.split("\n===========================================================\n\n")[1:]
             # done
             if len(blocks) > 0:
                 rlist = [
@@ -714,25 +641,13 @@ class TC35API(TCAPI):
         old, scf_2 = rem.split("%{PSBCALC-END}")
         old_calcs = old.strip().splitlines()
         if calcs is not None:
-            scf = (
-                scf_1
-                + "%{PSBCALC-BEGIN}\n"
-                + "\n".join(calcs)
-                + "\n%{PSBCALC-END}"
-                + scf_2
-            )
+            scf = scf_1 + "%{PSBCALC-BEGIN}\n" + "\n".join(calcs) + "\n%{PSBCALC-END}" + scf_2
             changed = True
         scf_1, rem = scf.split("%{PSBGUESS-BEGIN}")
         old, scf_2 = rem.split("%{PSBGUESS-END}")
         old_guesses = old.strip().splitlines()
         if guesses is not None:
-            scf = (
-                scf_1
-                + "%{PSBGUESS-BEGIN}\n"
-                + "\n".join(guesses)
-                + "\n%{PSBGUESS-END}"
-                + scf_2
-            )
+            scf = scf_1 + "%{PSBGUESS-BEGIN}\n" + "\n".join(guesses) + "\n%{PSBGUESS-END}" + scf_2
             changed = True
         if bulk is not None:
             scf_1, rem = scf.split("%{PSBBULK-BEGIN}")
@@ -745,13 +660,7 @@ class TC35API(TCAPI):
                 bulk_lines.append("bulk {}".format(" ".join(bulk[0])))
                 bulk_lines.append("bulk {}".format(" ".join(bulk[1])))
                 bulk_lines.append("bulk {} {}".format(" ".join(bulk[2]), xsteps))
-            scf = (
-                scf_1
-                + "%{PSBBULK-BEGIN}\n"
-                + "\n".join(bulk_lines)
-                + "\n%{PSBBULK-END}"
-                + scf_2
-            )
+            scf = scf_1 + "%{PSBBULK-BEGIN}\n" + "\n".join(bulk_lines) + "\n%{PSBBULK-END}" + scf_2
             changed = True
         if xsteps is not None:
             bulk_lines = []
@@ -761,13 +670,7 @@ class TC35API(TCAPI):
                 bulk_lines.append("bulk {}".format(" ".join(self.bulk[0])))
                 bulk_lines.append("bulk {}".format(" ".join(self.bulk[1])))
                 bulk_lines.append("bulk {} {}".format(" ".join(self.bulk[2]), xsteps))
-            scf = (
-                scf_1
-                + "%{PSBBULK-BEGIN}\n"
-                + "\n".join(bulk_lines)
-                + "\n%{PSBBULK-END}"
-                + scf_2
-            )
+            scf = scf_1 + "%{PSBBULK-BEGIN}\n" + "\n".join(bulk_lines) + "\n%{PSBBULK-END}" + scf_2
             changed = True
         if changed:
             with self.scriptfile.open("w", encoding=self.TCenc) as f:
@@ -1034,9 +937,7 @@ class TC34API(TCAPI):
             if not self.workdir.joinpath("tc-prefs.txt").exists():
                 raise InitError("No tc-prefs.txt file in working directory.")
             errinfo = "tc-prefs.txt file in working directory cannot be accessed."
-            for line in self.workdir.joinpath("tc-prefs.txt").open(
-                "r", encoding=self.TCenc
-            ):
+            for line in self.workdir.joinpath("tc-prefs.txt").open("r", encoding=self.TCenc):
                 kw = line.split()
                 if kw != []:
                     if kw[0] == "scriptfile":
@@ -1092,20 +993,14 @@ class TC34API(TCAPI):
                         self.axname = kw[1]
                         if not self.axfile.exists():
                             raise ScriptfileError(
-                                "Axfile "
-                                + str(self.axfile)
-                                + " does not exists in working directory"
+                                "Axfile " + str(self.axfile) + " does not exists in working directory"
                             )
                         check["axfile"] = True
                     elif kw[0] == "setdefTwindow":
-                        errinfo = (
-                            "Wrong arguments for setdefTwindow keyword in scriptfile."
-                        )
+                        errinfo = "Wrong arguments for setdefTwindow keyword in scriptfile."
                         self.trange = (float(kw[-2]), float(kw[-1]))
                     elif kw[0] == "setdefPwindow":
-                        errinfo = (
-                            "Wrong arguments for setdefPwindow keyword in scriptfile."
-                        )
+                        errinfo = "Wrong arguments for setdefPwindow keyword in scriptfile."
                         self.prange = (float(kw[-2]), float(kw[-1]))
                     elif kw[0] == "setbulk":
                         errinfo = "Wrong arguments for setbulk keyword in scriptfile."
@@ -1142,9 +1037,7 @@ class TC34API(TCAPI):
                     #         raise ScriptfileError('Drawpd must be set to yes.')
                     #     check['drawpd'] = True
                     elif kw[0] == "printbulkinfo":
-                        errinfo = (
-                            "Wrong argument for printbulkinfo keyword in scriptfile."
-                        )
+                        errinfo = "Wrong argument for printbulkinfo keyword in scriptfile."
                         if kw[1] == "no":
                             raise ScriptfileError("Printbulkinfo must be set to yes.")
                         check["printbulkinfo"] = True
@@ -1158,9 +1051,7 @@ class TC34API(TCAPI):
                         if not kw[1] == "no":
                             raise ScriptfileError("Dogmin must be set to no.")
                     elif kw[0] == "fluidpresent":
-                        raise ScriptfileError(
-                            "Fluidpresent must be deleted from scriptfile."
-                        )
+                        raise ScriptfileError("Fluidpresent must be deleted from scriptfile.")
                     elif kw[0] == "seta":
                         errinfo = "Wrong argument for seta keyword in scriptfile."
                         if not kw[1] == "no":
@@ -1174,15 +1065,11 @@ class TC34API(TCAPI):
                         if kw[1] == "ask":
                             raise ScriptfileError("Usecalcq must be yes or no.")
                     elif kw[0] == "pseudosection":
-                        errinfo = (
-                            "Wrong argument for pseudosection keyword in scriptfile."
-                        )
+                        errinfo = "Wrong argument for pseudosection keyword in scriptfile."
                         if kw[1] == "ask":
                             raise ScriptfileError("Pseudosection must be yes or no.")
                     elif kw[0] == "zeromodeiso":
-                        errinfo = (
-                            "Wrong argument for zeromodeiso keyword in scriptfile."
-                        )
+                        errinfo = "Wrong argument for zeromodeiso keyword in scriptfile."
                         if not kw[1] == "yes":
                             raise ScriptfileError("Zeromodeiso must be set to yes.")
                     elif kw[0] == "setmodeiso":
@@ -1215,34 +1102,22 @@ class TC34API(TCAPI):
                     "Printxyz must be set to yes. To suppress this error put printxyz yes keyword to your scriptfile."
                 )
             if not (gsb and gse):
-                raise ScriptfileError(
-                    "There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile.")
             if not (dgb and dge):
-                raise ScriptfileError(
-                    "There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBDOGMIN-BEGIN} and {PSBDOGMIN-END} tags in your scriptfile.")
             if not (bub and bue):
-                raise ScriptfileError(
-                    "There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile."
-                )
+                raise ScriptfileError("There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile.")
 
             # TC
             if "BOMBED" in self.tcout:
                 raise TCError(self.tcout.split("BOMBED")[1].split("\n")[0])
             else:
-                self.phases = set(
-                    self.tcout.split("choose from:")[1].split("\n")[0].split()
-                )
+                self.phases = set(self.tcout.split("choose from:")[1].split("\n")[0].split())
             # OK
             self.status = "Initial check done."
             self.OK = True
         except BaseException as e:
-            if (
-                isinstance(e, InitError)
-                or isinstance(e, ScriptfileError)
-                or isinstance(e, TCError)
-            ):
+            if isinstance(e, InitError) or isinstance(e, ScriptfileError) or isinstance(e, TCError):
                 self.status = "{}: {}".format(type(e).__name__, str(e))
             else:
                 self.status = "{}: {} {}".format(type(e).__name__, str(e), errinfo)
@@ -1275,11 +1150,7 @@ class TC34API(TCAPI):
             if output is None:
                 with self.logfile.open("r", encoding=self.TCenc) as f:
                     output = f.read()
-            lines = [
-                "".join([c for c in ln if ord(c) < 128])
-                for ln in output.splitlines()
-                if ln != ""
-            ]
+            lines = ["".join([c for c in ln if ord(c) < 128]) for ln in output.splitlines() if ln != ""]
             pts = []
             res = []
             variance = -1
@@ -1290,25 +1161,17 @@ class TC34API(TCAPI):
                     if "variance of required equilibrium" in ln:
                         variance = int(ln[ln.index("(") + 1 : ln.index("?")])
                         break
-                bstarts = [
-                    ix for ix, ln in enumerate(lines) if ln.startswith(" P(kbar)")
-                ]
+                bstarts = [ix for ix, ln in enumerate(lines) if ln.startswith(" P(kbar)")]
                 bstarts.append(len(lines))
                 for bs, be in zip(bstarts[:-1], bstarts[1:]):
                     block = lines[bs:be]
                     pts.append([float(n) for n in block[1].split()[:2]])
-                    xyz = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")
-                    ]
-                    gixs = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("ptguess")
-                    ][0] - 3
+                    xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
+                    gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][0] - 3
                     gixe = xyz[-1] + 2
                     ptguess = block[gixs:gixe]
                     data = {}
-                    rbix = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("rbi yes")
-                    ][0]
+                    rbix = [ix for ix, ln in enumerate(block) if ln.startswith("rbi yes")][0]
                     phases = block[rbix - 1].split()[1:]
                     for phase, val in zip(phases, block[rbix].split()[2:]):
                         data[phase] = dict(mode=float(val))
@@ -1327,12 +1190,7 @@ class TC34API(TCAPI):
                         data[phase][comp] = float(block[ix].split()[2])
                     rbiox = block[rbix + 1].split()[2:]
                     for delta in range(len(phases)):
-                        rbi = {
-                            c: float(v)
-                            for c, v in zip(
-                                rbiox, block[rbix + 2 + delta].split()[2:-2]
-                            )
-                        }
+                        rbi = {c: float(v) for c, v in zip(rbiox, block[rbix + 2 + delta].split()[2:-2])}
                         rbi["H2O"] = float(block[rbix + 2 + delta].split()[1])
                         # data[phases[delta]]['rbi'] = comp
                         data[phases[delta]].update(rbi)
@@ -1415,9 +1273,7 @@ class TC34API(TCAPI):
                 sc = sc[: gsb[0] + 1] + [gln + "\n" for gln in guesses] + sc[gse[0] :]
                 changed = True
         if dogmin is not None:
-            dgb = [
-                ix for ix, ln in enumerate(sc) if ln.startswith("%{PSBDOGMIN-BEGIN}")
-            ]
+            dgb = [ix for ix, ln in enumerate(sc) if ln.startswith("%{PSBDOGMIN-BEGIN}")]
             dge = [ix for ix, ln in enumerate(sc) if ln.startswith("%{PSBDOGMIN-END}")]
             dglines = []
             dglines.append("dogmin {}\n".format(dogmin))
@@ -1433,14 +1289,8 @@ class TC34API(TCAPI):
             bue = [ix for ix, ln in enumerate(sc) if ln.startswith("%{PSBBULK-END}")]
             bulines = []
             if len(bulk) == 2:
-                bulines.append(
-                    "setbulk yes {} % x={:g}\n".format(" ".join(bulk[0]), xvals[0])
-                )
-                bulines.append(
-                    "setbulk yes {} {:d} % x={:g}\n".format(
-                        " ".join(bulk[1]), xsteps, xvals[1]
-                    )
-                )
+                bulines.append("setbulk yes {} % x={:g}\n".format(" ".join(bulk[0]), xvals[0]))
+                bulines.append("setbulk yes {} {:d} % x={:g}\n".format(" ".join(bulk[1]), xsteps, xvals[1]))
             else:
                 bulines.append("setbulk yes {}\n".format(" ".join(bulk[0])))
             if bub and bue:
@@ -1482,23 +1332,14 @@ class TC34API(TCAPI):
         trange = kwargs.get("trange", self.trange)
         steps = kwargs.get("steps", 50)
         if np.diff(prange)[0] < 0.001:
-            prec = kwargs.get(
-                "prec", max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1
-            )
+            prec = kwargs.get("prec", max(int(2 - np.floor(np.log10(np.diff(trange)[0]))), 0) + 1)
         elif np.diff(trange)[0] < 0.001:
-            prec = kwargs.get(
-                "prec", max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1
-            )
+            prec = kwargs.get("prec", max(int(2 - np.floor(np.log10(np.diff(prange)[0]))), 0) + 1)
         else:
             prec = kwargs.get(
                 "prec",
                 max(
-                    int(
-                        2
-                        - np.floor(
-                            np.log10(min(np.diff(trange)[0], np.diff(prange)[0]))
-                        )
-                    ),
+                    int(2 - np.floor(np.log10(min(np.diff(trange)[0], np.diff(prange)[0])))),
                     0,
                 )
                 + 1,
@@ -1522,9 +1363,7 @@ class TC34API(TCAPI):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (prange[1] - prange[0]) / steps
         tmpl = "{}\n\n{}\ny\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n"
-        ans = tmpl.format(
-            " ".join(phases), " ".join(out), *prange, *trange, step, prec=prec
-        )
+        ans = tmpl.format(" ".join(phases), " ".join(out), *prange, *trange, step, prec=prec)
         tcout = self.runtc(ans)
         return tcout, ans
 
@@ -1545,9 +1384,7 @@ class TC34API(TCAPI):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         step = (trange[1] - trange[0]) / steps
         tmpl = "{}\n\n{}\nn\n{:.{prec}f} {:.{prec}f}\n{:.{prec}f} {:.{prec}f}\n{:g}\nn\n\nkill\n\n"
-        ans = tmpl.format(
-            " ".join(phases), " ".join(out), *trange, *prange, step, prec=prec
-        )
+        ans = tmpl.format(" ".join(phases), " ".join(out), *trange, *prange, step, prec=prec)
         tcout = self.runtc(ans)
         return tcout, ans
 
@@ -1566,9 +1403,7 @@ class TC34API(TCAPI):
             Input ans could be used to reproduce calculation.
         """
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
-        tmpl = (
-            "{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n"
-        )
+        tmpl = "{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n"
         ans = tmpl.format(" ".join(phases), " ".join(out), *trange, *prange, prec=prec)
         tcout = self.runtc(ans)
         return tcout, ans
@@ -1590,9 +1425,7 @@ class TC34API(TCAPI):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         if len(out) > 1:
             tmpl = "{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n"
-            ans = tmpl.format(
-                " ".join(phases), " ".join(out), *trange, *prange, prec=prec
-            )
+            ans = tmpl.format(" ".join(phases), " ".join(out), *trange, *prange, prec=prec)
         else:
             tmpl = "{}\n\n{}\ny\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n"
             ans = tmpl.format(" ".join(phases), " ".join(out), *trange, prec=prec)
@@ -1616,9 +1449,7 @@ class TC34API(TCAPI):
         prange, trange, steps, prec = self.parse_kwargs(**kwargs)
         if len(out) > 1:
             tmpl = "{}\n\n{}\n{:.{prec}f} {:.{prec}f} {:.{prec}f} {:.{prec}f}\nn\n\nkill\n\n"
-            ans = tmpl.format(
-                " ".join(phases), " ".join(out), *trange, *prange, prec=prec
-            )
+            ans = tmpl.format(" ".join(phases), " ".join(out), *trange, *prange, prec=prec)
         else:
             tmpl = "{}\n\n{}\nn\n\n{:.{prec}f} {:.{prec}f}\nn\nkill\n\n"
             ans = tmpl.format(" ".join(phases), " ".join(out), *prange, prec=prec)

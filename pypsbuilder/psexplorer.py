@@ -71,13 +71,9 @@ class PS:
             origwd (bool): If True TCAPI uses original stored working directory
                 Default False.
         """
-        projfiles = [
-            Path(projfile).resolve() for projfile in args if Path(projfile).exists()
-        ]
+        projfiles = [Path(projfile).resolve() for projfile in args if Path(projfile).exists()]
         assert len(projfiles) > 0, "You have to provide existing filename."
-        assert hasattr(
-            self, "section_class"
-        ), "You can not instantiate base class directly. Use PTPS, TXPS or PXPS."
+        assert hasattr(self, "section_class"), "You can not instantiate base class directly. Use PTPS, TXPS or PXPS."
         # parse kwargs
         tolerance = kwargs.get("tolerance", None)
         origwd = kwargs.get("origwd", False)
@@ -100,9 +96,7 @@ class PS:
             with gzip.open(str(projfile), "rb") as stream:
                 data = pickle.load(stream)
             # check section type
-            assert (
-                type(data["section"]) == self.section_class
-            ), "The provided project file is not {}.".format(
+            assert type(data["section"]) == self.section_class, "The provided project file is not {}.".format(
                 self.section_class.__name__
             )
             self.sections[ix] = data["section"]
@@ -113,60 +107,24 @@ class PS:
             if self.tc is None:
                 if origwd:
                     tc, ok = get_tcapi(Path(data["workdir"]))
-                    assert (
-                        ok
-                    ), "Error during initialization of THERMOCALC in {}\n{}".format(
-                        data["workdir"], tc
-                    )
+                    assert ok, "Error during initialization of THERMOCALC in {}\n{}".format(data["workdir"], tc)
                 else:
                     tc, ok = get_tcapi(projfile.parent)
-                    assert (
-                        ok
-                    ), "Error during initialization of THERMOCALC in {}\n{}".format(
-                        projfile.parent, tc
-                    )
+                    assert ok, "Error during initialization of THERMOCALC in {}\n{}".format(projfile.parent, tc)
                 self.tc = tc
             else:
                 if origwd:
-                    assert data["workdir"] == str(
-                        tc.workdir
-                    ), "Workdirs of merged profiles must be same."
+                    assert data["workdir"] == str(tc.workdir), "Workdirs of merged profiles must be same."
                 else:
-                    assert (
-                        projfile.parent == tc.workdir
-                    ), "Workdirs of merged profiles must be same."
+                    assert projfile.parent == tc.workdir, "Workdirs of merged profiles must be same."
 
-            self._shapes[ix], self.unilists[ix], log = self.sections[ix].create_shapes(
-                tolerance=self.tolerance
-            )
+            self._shapes[ix], self.unilists[ix], log = self.sections[ix].create_shapes(tolerance=self.tolerance)
             if log:
                 print("\n".join(log))
             # process variances
             if "variance" in data:
                 self._variance[ix] = data["variance"]
             else:
-                # # calculate variance
-                # variance = {}
-                # calcs = ['calcP {} {}'.format(*self.tc.prange),
-                #          'calcT {} {}'.format(*self.tc.trange),
-                #          'with someof {}'.format(' '.join(self.tc.phases - self.tc.excess)),
-                #          'acceptvar no']
-                # old_calcs = self.tc.update_scriptfile(get_old_calcs=True, calcs=calcs)
-                # for key in self._shapes[ix]:
-                #     ans = '{}\nkill\n\n'.format(' '.join(key))
-                #     tcout = self.tc.runtc(ans)
-                #     try:
-                #         for ln in tcout.splitlines():
-                #             if 'variance of required equilibrium' in ln:
-                #                 break
-                #         variance[key] = int(ln[ln.index('(') + 1:ln.index('?')])
-                #     except Exception:
-                #         variance[key] = 0
-                #         print('Variance calculation failed for {} field.'.format(key))
-                #         if self.show_errors:
-                #             print(tcout)
-                # self._variance[ix] = variance
-                # self.tc.update_scriptfile(calcs=old_calcs)
                 variance = {}
                 for key in self._shapes[ix]:
                     variance[key] = self.tc.calc_variance(key)
@@ -210,15 +168,11 @@ class PS:
 
     @property
     def xrange(self):
-        return min(ps.xrange[0] for ps in self.sections.values()), max(
-            ps.xrange[1] for ps in self.sections.values()
-        )
+        return min(ps.xrange[0] for ps in self.sections.values()), max(ps.xrange[1] for ps in self.sections.values())
 
     @property
     def yrange(self):
-        return min(ps.yrange[0] for ps in self.sections.values()), max(
-            ps.yrange[1] for ps in self.sections.values()
-        )
+        return min(ps.yrange[0] for ps in self.sections.values()), max(ps.yrange[1] for ps in self.sections.values())
 
     @property
     def x_var(self):
@@ -267,11 +221,7 @@ class PS:
     def endmembers(self):
         """Returns dictionary with phases and their end-members names"""
         em = {}
-        for comp in (
-            set(self.all_data_keys.keys())
-            .difference(self.phases)
-            .difference(set(["bulk", "sys"]))
-        ):
+        for comp in set(self.all_data_keys.keys()).difference(self.phases).difference(set(["bulk", "sys"])):
             k, v = comp.split(")")[0].split("(")
             if k in em:
                 em[k].append(v)
@@ -302,11 +252,7 @@ class PS:
                 msg = "Missing expression argument. Available variables for phase {} are:\n{}"
                 print(msg.format(phase, " ".join(self.all_data_keys[phase])))
                 if phase in self.endmembers:
-                    print(
-                        "Available end-members for {}: {}".format(
-                            phase, " ".join(self.endmembers[phase])
-                        )
-                    )
+                    print("Available end-members for {}: {}".format(phase, " ".join(self.endmembers[phase])))
                 return False
             else:
                 return True
@@ -369,36 +315,24 @@ class PS:
                 points = MultiPoint(list(zip(grid.xg.flatten(), grid.yg.flatten())))
                 shapes = self._shapes[ix]
                 for key in shapes:
-                    grid.masks[key] = np.array(
-                        list(map(shapes[key].contains, points.geoms))
-                    ).reshape(grid.xg.shape)
+                    grid.masks[key] = np.array(list(map(shapes[key].contains, points.geoms))).reshape(grid.xg.shape)
         else:
             print("Not yet gridded...")
 
     def common_grid_and_masks(self, **kwargs):
         """Initialize common grid and mask for all partial grids"""
-        nx = kwargs.get(
-            "nx", np.round(np.diff(self.xrange)[0] / self.gridxstep).astype(int)
-        )
-        ny = kwargs.get(
-            "ny", np.round(np.diff(self.yrange)[0] / self.gridystep).astype(int)
-        )
+        nx = kwargs.get("nx", np.round(np.diff(self.xrange)[0] / self.gridxstep).astype(int))
+        ny = kwargs.get("ny", np.round(np.diff(self.yrange)[0] / self.gridystep).astype(int))
         self.xstep = np.diff(self.xrange)[0] / nx
         self.ystep = np.diff(self.yrange)[0] / ny
-        self.xspace = np.linspace(
-            self.xrange[0] + self.xstep / 2, self.xrange[1] - self.xstep / 2, nx
-        )
-        self.yspace = np.linspace(
-            self.yrange[0] + self.ystep / 2, self.yrange[1] - self.ystep / 2, ny
-        )
+        self.xspace = np.linspace(self.xrange[0] + self.xstep / 2, self.xrange[1] - self.xstep / 2, nx)
+        self.yspace = np.linspace(self.yrange[0] + self.ystep / 2, self.yrange[1] - self.ystep / 2, ny)
         self.xg, self.yg = np.meshgrid(self.xspace, self.yspace)
         # Create data masks
         self.masks = {}
         points = MultiPoint(list(zip(self.xg.flatten(), self.yg.flatten())))
         for key in self.shapes:
-            self.masks[key] = np.array(
-                list(map(self.shapes[key].contains, points.geoms))
-            ).reshape(self.xg.shape)
+            self.masks[key] = np.array(list(map(self.shapes[key].contains, points.geoms))).reshape(self.xg.shape)
 
     def collect_all_data_keys(self):
         """Collect all phases and variables calculated on grid.
@@ -485,9 +419,7 @@ class PS:
                         if phase in inv.results.phases:
                             if self.shapes[key].intersects(Point(inv._x, inv._y)):
                                 dt["pts"].append((inv._x, inv._y))
-                                dt["data"].append(
-                                    eval_expr(expr, inv.results[0][phase])
-                                )
+                                dt["data"].append(eval_expr(expr, inv.results[0][phase]))
         return dt
 
     def collect_uni_data(self, key, phase, expr):
@@ -710,9 +642,7 @@ class PS:
             # Set alpha
             pscolors[:, -1] = alpha
             pscmap = ListedColormap(pscolors)
-            norm = BoundaryNorm(
-                np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True
-            )
+            norm = BoundaryNorm(np.arange(min(vari) - 0.5, max(vari) + 1.5), poc, clip=True)
             if fig is None:
                 if ax is None:
                     fig, ax = plt.subplots(**fig_kw)
@@ -725,9 +655,7 @@ class PS:
                     show = False
                 ax = fig.add_subplot()
             for k, shape in self.shapes.items():
-                patch = PolygonPatch(
-                    shape, fc=pscmap(norm(self.variance[k])), ec="none"
-                )
+                patch = PolygonPatch(shape, fc=pscmap(norm(self.variance[k])), ec="none")
                 ax.add_patch(patch)
                 if show_vertices:
                     x, y = zip(*patch.get_path().vertices)
@@ -755,9 +683,7 @@ class PS:
                         )
                 # Shrink current axis's width
                 box = ax.get_position()
-                ax.set_position(
-                    [box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height]
-                )
+                ax.set_position([box.x0 + box.width * 0.07, box.y0, box.width * 0.95, box.height])
                 # Put a legend below current axis
                 ax.legend(
                     loc="upper right",
@@ -788,18 +714,13 @@ class PS:
                     k = frozenset(k.split())
                 k = k.union(self.tc.excess)
                 if k in self.keys:
-                    ax.add_patch(
-                        PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2)
-                    )
+                    ax.add_patch(PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2))
                 else:
                     print("Field {} not found.".format(" ".join(k)))
             # Show bulk
             if bulk:
                 if label:
-                    ax.set_xlabel(
-                        self.name
-                        + (len(self.tc.excess) * " +{}").format(*self.tc.excess)
-                    )
+                    ax.set_xlabel(self.name + (len(self.tc.excess) * " +{}").format(*self.tc.excess))
                 else:
                     ax.set_xlabel(self.name)
                 # bulk composition
@@ -817,10 +738,7 @@ class PS:
                     table(ax=ax, cellText=[val1, val2], colLabels=ox, loc="top")
             else:
                 if label:
-                    ax.set_title(
-                        self.name
-                        + (len(self.tc.excess) * " +{}").format(*self.tc.excess)
-                    )
+                    ax.set_title(self.name + (len(self.tc.excess) * " +{}").format(*self.tc.excess))
                 else:
                     ax.set_title(self.name)
             # coords
@@ -837,9 +755,7 @@ class PS:
                 else:
                     return ax
         else:
-            print(
-                "There is no single area defined in your pseudosection. Check topology."
-            )
+            print("There is no single area defined in your pseudosection. Check topology.")
 
     def format_coord(self, x, y):
         prec = 2
@@ -849,9 +765,7 @@ class PS:
             if shape.contains(point):
                 phases = " ".join(sorted(list(key.difference(self.tc.excess))))
                 break
-        return "{}={:.{prec}f} {}={:.{prec}f} {}".format(
-            self.x_var, x, self.y_var, y, phases, prec=prec
-        )
+        return "{}={:.{prec}f} {}={:.{prec}f} {}".format(self.x_var, x, self.y_var, y, phases, prec=prec)
 
     def add_overlay(self, ax, fc="none", ec="k", label=False, skiplabels=0, fontsize=6):
         area = (self.xrange[1] - self.xrange[0]) * (self.yrange[1] - self.yrange[0])
@@ -868,10 +782,7 @@ class PS:
                 txt = "\n".join(
                     [
                         " ".join([self.abbr.get(sa, sa) for sa in s])
-                        for s in [
-                            tl[i * len(tl) // wp : (i + 1) * len(tl) // wp]
-                            for i in range(wp)
-                        ]
+                        for s in [tl[i * len(tl) // wp : (i + 1) * len(tl) // wp] for i in range(wp)]
                     ]
                 )
                 if shape.geom_type == "MultiPolygon":
@@ -927,9 +838,7 @@ class PS:
             else:
                 print("No data collected")
 
-    def show_grid(
-        self, phase, expr=None, interpolation=None, label=False, skiplabels=0, labelfs=6
-    ):
+    def show_grid(self, phase, expr=None, interpolation=None, label=False, skiplabels=0, labelfs=6):
         """Convinient function to show values of expression for given phase only
         from Grid Data.
 
@@ -959,9 +868,7 @@ class PS:
                                 rows, cols = np.nonzero(grid.masks[key])
                                 for r, c in zip(rows, cols):
                                     if grid.status[r, c] == 1:
-                                        gd[r, c] = eval_expr(
-                                            expr, grid.gridcalcs[r, c][phase]
-                                        )
+                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c][phase])
                     cgd[ix] = gd
                     mn = min(np.nanmin(gd), mn)
                     mx = max(np.nanmax(gd), mx)
@@ -975,9 +882,7 @@ class PS:
                         vmin=mn,
                         vmax=mx,
                     )
-                self.add_overlay(
-                    ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                )
+                self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
                 ax.set_xlim(self.xrange)
                 ax.set_ylim(self.yrange)
                 fig.colorbar(im)
@@ -1052,15 +957,7 @@ class PS:
                     colors = list(mcolors.TABLEAU_COLORS.keys())[: len(args) // 3]
                 for phase, expr, val in zip(args[::3], args[1::3], args[2::3]):
                     if self.check_phase_expr(phase, expr):
-                        err.append(
-                            (
-                                self.get_gridded(
-                                    phase, expr, which=which, smooth=smooth
-                                )
-                                - val
-                            )
-                            ** 2
-                        )
+                        err.append((self.get_gridded(phase, expr, which=which, smooth=smooth) - val) ** 2)
 
                 err = np.sqrt(sum(err)) / len(err)
                 err[err > maxerr] = np.nan
@@ -1097,13 +994,9 @@ class PS:
                             colors,
                         ):
                             if self.check_phase_expr(phase, expr):
-                                ax = self.isopleths_vector(
-                                    phase, expr, levels=[val], ax=ax, lw=lw, color=cc
-                                )
+                                ax = self.isopleths_vector(phase, expr, levels=[val], ax=ax, lw=lw, color=cc)
                     ax.plot(T, p, "r*", ms=20)
-                    self.add_overlay(
-                        ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                    )
+                    self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
                     ax.set_xlim(self.xrange)
                     ax.set_ylim(self.yrange)
                     fig.colorbar(im)
@@ -1241,9 +1134,7 @@ class PS:
         pts = plt.ginput(0)
         plt.close(fig)
         for ix, (x, y) in enumerate(pts):
-            print(
-                f'{ix+1}: {" ".join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}'
-            )
+            print(f'{ix+1}: {" ".join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}')
 
     def pointcalc(self, label=False, skiplabels=0, labelfs=6):
         fig, ax = plt.subplots()
@@ -1283,9 +1174,7 @@ class PS:
                                     dst = d2
                                     id_close = id_uni
                                     vix_close = vix
-                    self.tc.update_scriptfile(
-                        guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                    )
+                    self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                 tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                 status, res, output = self.tc.parse_logfile()
             if res is None:
@@ -1449,9 +1338,7 @@ class PS:
             show = kwargs.get("show", None)
 
             if not self.gridded:
-                print(
-                    "Collecting only from uni lines and inv points. Not yet gridded..."
-                )
+                print("Collecting only from uni lines and inv points. Not yet gridded...")
             # fix labelkeys
             if not isinstance(labelkeys, list):
                 labelkeys = [labelkeys]
@@ -1522,9 +1409,7 @@ class PS:
                         A = np.c_[np.ones_like(x), x, y, x * y, x**2, y**2]
                         C, _, _, _ = lstsq(A, data)
                         # evaluate it on a grid
-                        vals = np.dot(
-                            np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C
-                        )
+                        vals = np.dot(np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C)
                         err = abs(vals - data)
                         ok = err < err.std()
                         pts = pts[ok, :]
@@ -1549,9 +1434,7 @@ class PS:
                                 C,
                             ).reshape(tg.shape)
                         elif method == "spline":
-                            interp = SmoothBivariateSpline(
-                                x, self.ratio * y, data, kx=degree, ky=degree
-                            )
+                            interp = SmoothBivariateSpline(x, self.ratio * y, data, kx=degree, ky=degree)
                             zg = interp(tg, self.ratio * pg)
                         else:
                             with warnings.catch_warnings():
@@ -1579,17 +1462,10 @@ class PS:
                             if method == "rbf":
                                 # locate valid data
                                 ri, ci = np.nonzero(np.isfinite(zg))
-                                x, y, z = np.array(
-                                    [
-                                        [tg[r, c], pg[r, c], zg[r, c]]
-                                        for r, c in zip(ri, ci)
-                                    ]
-                                ).T
+                                x, y, z = np.array([[tg[r, c], pg[r, c], zg[r, c]] for r, c in zip(ri, ci)]).T
                                 # do Rbf extrapolation
                                 with warnings.catch_warnings():
-                                    warnings.filterwarnings(
-                                        "ignore", category=LinAlgWarning
-                                    )
+                                    warnings.filterwarnings("ignore", category=LinAlgWarning)
                                     rbf = Rbf(
                                         x,
                                         self.ratio * y,
@@ -1602,22 +1478,11 @@ class PS:
                             if method == "spline":
                                 # locate valid data
                                 ri, ci = np.nonzero(np.isfinite(zg))
-                                x, y, z = np.array(
-                                    [
-                                        [tg[r, c], pg[r, c], zg[r, c]]
-                                        for r, c in zip(ri, ci)
-                                    ]
-                                ).T
-                                interp = SmoothBivariateSpline(
-                                    x, self.ratio * y, z, kx=degree, ky=degree
-                                )
+                                x, y, z = np.array([[tg[r, c], pg[r, c], zg[r, c]] for r, c in zip(ri, ci)]).T
+                                interp = SmoothBivariateSpline(x, self.ratio * y, z, kx=degree, ky=degree)
                                 zg = interp(tg, self.ratio * pg)
                         except Exception:
-                            print(
-                                "Using nearest method in {}".format(
-                                    " ".join(sorted(list(key)))
-                                )
-                            )
+                            print("Using nearest method in {}".format(" ".join(sorted(list(key)))))
                     # experimental
                     if gradient:
                         grd = np.gradient(zg, self.gridxstep, self.gridystep)
@@ -1634,21 +1499,13 @@ class PS:
                         warnings.filterwarnings("ignore", category=UserWarning)
                         if filled:
                             if colors is not None:
-                                cont = ax.contourf(
-                                    tg, pg, zg, cntv, colors=colors, alpha=alpha
-                                )
+                                cont = ax.contourf(tg, pg, zg, cntv, colors=colors, alpha=alpha)
                                 if filled_over:
-                                    contover = ax.contour(
-                                        tg, pg, zg, cntv, colors=colors
-                                    )
+                                    contover = ax.contour(tg, pg, zg, cntv, colors=colors)
                             else:
-                                cont = ax.contourf(
-                                    tg, pg, zg, cntv, cmap=cmap, alpha=alpha
-                                )
+                                cont = ax.contourf(tg, pg, zg, cntv, cmap=cmap, alpha=alpha)
                                 if filled_over:
-                                    contover = ax.contour(
-                                        tg, pg, zg, cntv, colors="whitesmoke"
-                                    )
+                                    contover = ax.contour(tg, pg, zg, cntv, colors="whitesmoke")
                         else:
                             if colors is not None:
                                 cont = ax.contour(tg, pg, zg, cntv, colors=colors)
@@ -1721,9 +1578,7 @@ class PS:
                         k = frozenset(k.split())
                     k = k.union(self.tc.excess)
                     if k in self.shapes:
-                        ax.add_patch(
-                            PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2)
-                        )
+                        ax.add_patch(PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2))
                     else:
                         print("Field {} not found.".format(" ".join(k)))
             # bulk
@@ -1812,9 +1667,7 @@ class PS:
                     if show is None:
                         show = False
                     ax = fig.add_subplot()
-                for phase, expr, levels, color in zip(
-                    args[::3], args[1::3], args[2::3], colors
-                ):
+                for phase, expr, levels, color in zip(args[::3], args[1::3], args[2::3], colors):
                     ax = self.isopleths(
                         phase,
                         expr,
@@ -1934,9 +1787,7 @@ class PS:
             show = kwargs.get("show", None)
 
             if not self.gridded:
-                print(
-                    "Collecting only from uni lines and inv points. Not yet gridded..."
-                )
+                print("Collecting only from uni lines and inv points. Not yet gridded...")
             if isinstance(out, str):
                 out = [out]
             if only is not None:
@@ -1949,9 +1800,7 @@ class PS:
                     mx = max(z)
             else:
                 recs, mn, mx = self.merge_data(phase, expr, which=which)
-            mapper = ScalarMappable(
-                norm=Normalize(vmin=mn, vmax=mx, clip=True), cmap=cmap
-            )
+            mapper = ScalarMappable(norm=Normalize(vmin=mn, vmax=mx, clip=True), cmap=cmap)
             if step:
                 cntv = np.arange(0, mx + step, step)
                 cntv = cntv[cntv >= mn - step]
@@ -2002,9 +1851,7 @@ class PS:
                         A = np.c_[np.ones_like(x), x, y, x * y, x**2, y**2]
                         C, _, _, _ = lstsq(A, data)
                         # evaluate it on a grid
-                        vals = np.dot(
-                            np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C
-                        )
+                        vals = np.dot(np.c_[np.ones_like(x), x, y, x * y, x**2, y**2], C)
                         err = abs(vals - data)
                         ok = err < err.std()
                         pts = pts[ok, :]
@@ -2029,9 +1876,7 @@ class PS:
                                 C,
                             ).reshape(tg.shape)
                         elif method == "spline":
-                            interp = SmoothBivariateSpline(
-                                x, self.ratio * y, data, kx=degree, ky=degree
-                            )
+                            interp = SmoothBivariateSpline(x, self.ratio * y, data, kx=degree, ky=degree)
                             zg = interp(tg, self.ratio * pg)
                         else:
                             with warnings.catch_warnings():
@@ -2059,17 +1904,10 @@ class PS:
                             if method == "rbf":
                                 # locate valid data
                                 ri, ci = np.nonzero(np.isfinite(zg))
-                                x, y, z = np.array(
-                                    [
-                                        [tg[r, c], pg[r, c], zg[r, c]]
-                                        for r, c in zip(ri, ci)
-                                    ]
-                                ).T
+                                x, y, z = np.array([[tg[r, c], pg[r, c], zg[r, c]] for r, c in zip(ri, ci)]).T
                                 # do Rbf extrapolation
                                 with warnings.catch_warnings():
-                                    warnings.filterwarnings(
-                                        "ignore", category=LinAlgWarning
-                                    )
+                                    warnings.filterwarnings("ignore", category=LinAlgWarning)
                                     rbf = Rbf(
                                         x,
                                         self.ratio * y,
@@ -2082,22 +1920,11 @@ class PS:
                             if method == "spline":
                                 # locate valid data
                                 ri, ci = np.nonzero(np.isfinite(zg))
-                                x, y, z = np.array(
-                                    [
-                                        [tg[r, c], pg[r, c], zg[r, c]]
-                                        for r, c in zip(ri, ci)
-                                    ]
-                                ).T
-                                interp = SmoothBivariateSpline(
-                                    x, self.ratio * y, z, kx=degree, ky=degree
-                                )
+                                x, y, z = np.array([[tg[r, c], pg[r, c], zg[r, c]] for r, c in zip(ri, ci)]).T
+                                interp = SmoothBivariateSpline(x, self.ratio * y, z, kx=degree, ky=degree)
                                 zg = interp(tg, self.ratio * pg)
                         except Exception:
-                            print(
-                                "Using nearest method in {}".format(
-                                    " ".join(sorted(list(key)))
-                                )
-                            )
+                            print("Using nearest method in {}".format(" ".join(sorted(list(key)))))
                     # ------------
                     scx = (tmax - tmin + 2 * self.gridxstep) / zg.shape[1]
                     scy = (pmax - pmin + 2 * self.gridystep) / zg.shape[0]
@@ -2118,9 +1945,7 @@ class PS:
                                         lnp = lnp.simplify(tolerance=0.01)
                                         x, y = np.array(lnp.coords).T
                                         if color is None:
-                                            ax.plot(
-                                                x, y, color=mapper.to_rgba(v), lw=lw
-                                            )
+                                            ax.plot(x, y, color=mapper.to_rgba(v), lw=lw)
                                         else:
                                             ax.plot(x, y, color=color, lw=lw)
                                 else:
@@ -2168,9 +1993,7 @@ class PS:
                         k = frozenset(k.split())
                     k = k.union(self.tc.excess)
                     if k in self.shapes:
-                        ax.add_patch(
-                            PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2)
-                        )
+                        ax.add_patch(PolygonPatch(self.shapes[k], fc="none", ec="red", lw=2))
                     else:
                         print("Field {} not found.".format(" ".join(k)))
             # bulk
@@ -2217,9 +2040,7 @@ class PS:
         """
         with self.tc.drawpdfile.open("w", encoding=self.tc.TCenc) as output:
             output.write("% Generated by pypsbuilder (c) Ondrej Lexa 2020\n")
-            output.write(
-                "2    % no. of variables in each line of data, in this case P, T\n"
-            )
+            output.write("2    % no. of variables in each line of data, in this case P, T\n")
             exc = frozenset.intersection(*self.keys)
             nc = frozenset.union(*self.keys)
             # ex.insert(0, '')
@@ -2236,11 +2057,7 @@ class PS:
                     all_points_number += 1
                     all_points[ix][inv.id] = all_points_number
                     output.write("% ------------------------------\n")
-                    output.write(
-                        "i{}   {}\n".format(
-                            all_points_number, inv.label(excess=ps.excess)
-                        )
-                    )
+                    output.write("i{}   {}\n".format(all_points_number, inv.label(excess=ps.excess)))
                     output.write("\n")
                     output.write("{} {}\n".format(inv._y, inv._x))
                     output.write("\n")
@@ -2255,11 +2072,7 @@ class PS:
                     all_lines_number += 1
                     all_lines[ix][uni.id] = all_lines_number
                     output.write("% ------------------------------\n")
-                    output.write(
-                        "u{}   {}\n".format(
-                            all_lines_number, uni.label(excess=ps.excess)
-                        )
-                    )
+                    output.write("u{}   {}\n".format(all_lines_number, uni.label(excess=ps.excess)))
                     output.write("\n")
                     if uni.begin == 0:
                         b1 = "begin"
@@ -2290,9 +2103,7 @@ class PS:
                         mnv = self.variance[key]
                     if self.variance[key] > mxv:
                         mxv = self.variance[key]
-                shades = np.linspace(1, 0, mxv - mnv + 3)[
-                    1:-1
-                ]  # exclude extreme values
+                shades = np.linspace(1, 0, mxv - mnv + 3)[1:-1]  # exclude extreme values
                 for key in self.shapes:
                     uids = [
                         all_lines[ix][uid]
@@ -2302,10 +2113,7 @@ class PS:
                         if uid in all_lines[ix]
                     ]
                     poly = linemerge([all_lines_topology[uid].shape() for uid in uids])
-                    positions = [
-                        poly.project(Point(*all_lines_topology[uid].get_label_point()))
-                        for uid in uids
-                    ]
+                    positions = [poly.project(Point(*all_lines_topology[uid].get_label_point())) for uid in uids]
                     orderix = sorted(range(len(positions)), key=lambda k: positions[k])
                     d = "{:.2f} {} % {}\n".format(
                         shades[self.variance[key] - mnv],
@@ -2326,16 +2134,8 @@ class PS:
             tg = tg[tg >= self.xrange[0]]
             pg = np.arange(0, self.yrange[1] + ps, ps)
             pg = pg[pg >= self.yrange[0]]
-            output.write(
-                "bigticks {} {} {} {}\n\n".format(
-                    tg[1] - tg[0], tg[0], pg[1] - pg[0], pg[0]
-                )
-            )
-            output.write(
-                "smallticks {} {}\n\n".format(
-                    (tg[1] - tg[0]) / 10, (pg[1] - pg[0]) / 10
-                )
-            )
+            output.write("bigticks {} {} {} {}\n\n".format(tg[1] - tg[0], tg[0], pg[1] - pg[0], pg[0]))
+            output.write("smallticks {} {}\n\n".format((tg[1] - tg[0]) / 10, (pg[1] - pg[0]) / 10))
             output.write("numbering yes\n\n")
             if export_areas:
                 output.write("doareas yes\n\n")
@@ -2451,9 +2251,7 @@ class PS:
                                 rows, cols = np.nonzero(grid.masks[key])
                                 for r, c in zip(rows, cols):
                                     if grid.status[r, c] == 1:
-                                        gd[r, c] = eval_expr(
-                                            expr, grid.gridcalcs[r, c][phase]
-                                        )
+                                        gd[r, c] = eval_expr(expr, grid.gridcalcs[r, c][phase])
                     cgd[ix] = gd
                 return cgd
 
@@ -2511,15 +2309,11 @@ class PTPS(PS):
                             dst = d2
                             id_close = id_inv
                     if id_close != last_inv and not ps.invpoints[id_close].manual:
-                        self.tc.update_scriptfile(
-                            guesses=ps.invpoints[id_close].ptguess()
-                        )
+                        self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
                         last_inv = id_close
                     grid.status[r, c] = 0
                     start_time = time.time()
-                    tcout, ans = self.tc.calc_assemblage(
-                        k.difference(self.tc.excess), y, x
-                    )
+                    tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                     delta = time.time() - start_time
                     status, res, output = self.tc.parse_logfile()
                     if res is not None:
@@ -2538,13 +2332,9 @@ class PTPS(PS):
                                         dst = d2
                                         id_close = id_uni
                                         vix_close = vix
-                        self.tc.update_scriptfile(
-                            guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                        )
+                        self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                         start_time = time.time()
-                        tcout, ans = self.tc.calc_assemblage(
-                            k.difference(self.tc.excess), y, x
-                        )
+                        tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                         delta = time.time() - start_time
                         status, res, output = self.tc.parse_logfile()
                         if res is not None:
@@ -2556,11 +2346,7 @@ class PTPS(PS):
                             grid.status[r, c] = 0
                 else:
                     grid.gridcalcs[r, c] = None
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
+            print("Grid search done. {} empty points left.".format(len(np.flatnonzero(grid.status == 0))))
             gpleft += len(np.flatnonzero(grid.status == 0))
             self.grids[ix] = grid
         if gpleft > 0:
@@ -2591,13 +2377,9 @@ class PTPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(
-                                    guesses=grid.gridcalcs[rn, cn].ptguess
-                                )
+                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn].ptguess)
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, x
-                                )
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -2605,17 +2387,11 @@ class PTPS(PS):
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
                                     fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
+                                    tq.set_description(desc="Fix ({}/{})".format(fixed, ftot))
                                     break
                     if grid.status[r, c] == 0:
                         log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
+                log.append("Fix done. {} empty grid points left.".format(len(np.flatnonzero(grid.status == 0))))
                 print("\n".join(log))
         else:
             print("Not yet gridded...")
@@ -2639,12 +2415,8 @@ class PTPS(PS):
         """
         if self.gridded:
             tpath, ppath = np.asarray(tpath), np.asarray(ppath)
-            assert (
-                tpath.shape == ppath.shape
-            ), "Shape of temperatures and pressures should be same."
-            assert (
-                tpath.ndim == 1
-            ), "Temperatures and pressures should be 1D array like data."
+            assert tpath.shape == ppath.shape, "Shape of temperatures and pressures should be same."
+            assert tpath.ndim == 1, "Temperatures and pressures should be 1D array like data."
             gpath = np.arange(tpath.shape[0], dtype=float)
             gpath /= gpath[-1]
             if gpath.size < 3:
@@ -2669,9 +2441,7 @@ class PTPS(PS):
                                 break
                     if calc is not None:
                         self.tc.update_scriptfile(guesses=calc.ptguess)
-                        tcout, ans = self.tc.calc_assemblage(
-                            key.difference(self.tc.excess), p, t
-                        )
+                        tcout, ans = self.tc.calc_assemblage(key.difference(self.tc.excess), p, t)
                         status, res, output = self.tc.parse_logfile()
                         if res is not None:
                             points.append((t, p))
@@ -2734,9 +2504,7 @@ class PTPS(PS):
                 lc.set_array(exs)
                 lc.set_linewidth(pathwidth)
                 line = ax.add_collection(lc)
-                self.add_overlay(
-                    ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                )
+                self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             cbar = fig.colorbar(line, ax=ax)
             cbar.set_label("{}[{}]".format(phase, expr))
             ax.set_xlim(self.xrange)
@@ -2766,13 +2534,7 @@ class PTPS(PS):
                     pset.add(key)
         phases = sorted(list(pset))
         modes = np.array(
-            [
-                [
-                    res[phase]["mode"] if phase in res.phases else 0
-                    for res in ptpath.results
-                ]
-                for phase in phases
-            ]
+            [[res[phase]["mode"] if phase in res.phases else 0 for res in ptpath.results] for phase in phases]
         )
         modes = 100 * modes / modes.sum(axis=0)
         cm = plt.get_cmap(cmap)
@@ -2792,9 +2554,7 @@ class PTPS(PS):
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
         # Put a legend to the right of the current axis
-        ax.legend(
-            bars, phases, fancybox=True, loc="center left", bbox_to_anchor=(1.05, 0.5)
-        )
+        ax.legend(bars, phases, fancybox=True, loc="center left", bbox_to_anchor=(1.05, 0.5))
         plt.show()
 
 
@@ -2852,19 +2612,12 @@ class TXPS(PS):
                                 if d2 < dst:
                                     dst = d2
                                     id_close = id_inv
-                            if (
-                                id_close != last_inv
-                                and not ps.invpoints[id_close].manual
-                            ):
-                                self.tc.update_scriptfile(
-                                    guesses=ps.invpoints[id_close].ptguess()
-                                )
+                            if id_close != last_inv and not ps.invpoints[id_close].manual:
+                                self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
                                 last_inv = id_close
                             grid.status[r, c] = 0
                             start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(
-                                k.difference(self.tc.excess), pm, x, onebulk=y
-                            )
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                             delta = time.time() - start_time
                             status, res, output = self.tc.parse_logfile()
                             if res is not None:
@@ -2878,20 +2631,14 @@ class TXPS(PS):
                                     uni = ps.unilines[id_uni]
                                     if not uni.manual:
                                         for vix in list(range(len(uni._x))[uni.used]):
-                                            d2 = (uni._x[vix] - x) ** 2 + (
-                                                uni._y[vix] - y
-                                            ) ** 2
+                                            d2 = (uni._x[vix] - x) ** 2 + (uni._y[vix] - y) ** 2
                                             if d2 < dst:
                                                 dst = d2
                                                 id_close = id_uni
                                                 vix_close = vix
-                                self.tc.update_scriptfile(
-                                    guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                                )
+                                self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), pm, x, onebulk=y
-                                )
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -2904,11 +2651,7 @@ class TXPS(PS):
                         else:
                             grid.gridcalcs[r, c] = None
                         pbar.update(1)
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
+            print("Grid search done. {} empty points left.".format(len(np.flatnonzero(grid.status == 0))))
             gpleft += len(np.flatnonzero(grid.status == 0))
             self.grids[ix] = grid
         if gpleft > 0:
@@ -2940,13 +2683,9 @@ class TXPS(PS):
                         # search already done grid neighs
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(
-                                    guesses=grid.gridcalcs[rn, cn]["ptguess"]
-                                )
+                                self.tc.update_scriptfile(guesses=grid.gridcalcs[rn, cn]["ptguess"])
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), pm, x, onebulk=y
-                                )
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), pm, x, onebulk=y)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -2954,17 +2693,11 @@ class TXPS(PS):
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
                                     fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
+                                    tq.set_description(desc="Fix ({}/{})".format(fixed, ftot))
                                     break
                     if grid.status[r, c] == 0:
                         log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
+                log.append("Fix done. {} empty grid points left.".format(len(np.flatnonzero(grid.status == 0))))
                 print("\n".join(log))
         else:
             print("Not yet gridded...")
@@ -3021,19 +2754,12 @@ class PXPS(PS):
                                 if d2 < dst:
                                     dst = d2
                                     id_close = id_inv
-                            if (
-                                id_close != last_inv
-                                and not ps.invpoints[id_close].manual
-                            ):
-                                self.tc.update_scriptfile(
-                                    guesses=ps.invpoints[id_close].ptguess()
-                                )
+                            if id_close != last_inv and not ps.invpoints[id_close].manual:
+                                self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
                                 last_inv = id_close
                             grid.status[r, c] = 0
                             start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(
-                                k.difference(self.tc.excess), y, tm, onebulk=x
-                            )
+                            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                             delta = time.time() - start_time
                             status, res, output = self.tc.parse_logfile()
                             if res is not None:
@@ -3047,20 +2773,14 @@ class PXPS(PS):
                                     uni = ps.unilines[id_uni]
                                     if not uni.manual:
                                         for vix in list(range(len(uni._x))[uni.used]):
-                                            d2 = (uni._x[vix] - x) ** 2 + (
-                                                uni._y[vix] - y
-                                            ) ** 2
+                                            d2 = (uni._x[vix] - x) ** 2 + (uni._y[vix] - y) ** 2
                                             if d2 < dst:
                                                 dst = d2
                                                 id_close = id_uni
                                                 vix_close = vix
-                                self.tc.update_scriptfile(
-                                    guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                                )
+                                self.tc.update_scriptfile(guesses=ps.unilines[id_close].ptguess(idx=vix_close))
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, tm, onebulk=x
-                                )
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -3073,11 +2793,7 @@ class PXPS(PS):
                         else:
                             grid.gridcalcs[r, c] = None
                         pbar.update(1)
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
+            print("Grid search done. {} empty points left.".format(len(np.flatnonzero(grid.status == 0))))
             gpleft += len(np.flatnonzero(grid.status == 0))
             self.grids[ix] = grid
         if gpleft > 0:
@@ -3110,9 +2826,7 @@ class PXPS(PS):
                         for rn, cn in grid.neighs(r, c):
                             if grid.status[rn, cn] == 1:
                                 start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, tm, onebulk=x
-                                )
+                                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, tm, onebulk=x)
                                 delta = time.time() - start_time
                                 status, res, output = self.tc.parse_logfile()
                                 if res is not None:
@@ -3120,17 +2834,11 @@ class PXPS(PS):
                                     grid.status[r, c] = 1
                                     grid.delta[r, c] = delta
                                     fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
+                                    tq.set_description(desc="Fix ({}/{})".format(fixed, ftot))
                                     break
                     if grid.status[r, c] == 0:
                         log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
+                log.append("Fix done. {} empty grid points left.".format(len(np.flatnonzero(grid.status == 0))))
                 print("\n".join(log))
         else:
             print("Not yet gridded...")
@@ -3258,12 +2966,7 @@ class PTpath:
         self.results = results
 
     def get_path_data(self, phase, expr):
-        ex = np.array(
-            [
-                eval_expr(expr, res[phase]) if phase in res.phases else np.nan
-                for res in self.results
-            ]
-        )
+        ex = np.array([eval_expr(expr, res[phase]) if phase in res.phases else np.nan for res in self.results])
         return ex
 
 
@@ -3313,19 +3016,11 @@ explorers = {".ptb": PTPS, ".txb": TXPS, ".pxb": PXPS}
 def ps_show():
     parser = argparse.ArgumentParser(description="Draw pseudosection from project file")
     parser.add_argument("project", type=str, nargs="+", help="builder project file(s)")
-    parser.add_argument(
-        "-o", "--out", nargs="+", help="highlight out lines for given phases"
-    )
+    parser.add_argument("-o", "--out", nargs="+", help="highlight out lines for given phases")
     parser.add_argument("-l", "--label", action="store_true", help="show area labels")
-    parser.add_argument(
-        "--origwd", action="store_true", help="use stored original working directory"
-    )
-    parser.add_argument(
-        "-b", "--bulk", action="store_true", help="show bulk composition on figure"
-    )
-    parser.add_argument(
-        "--cmap", type=str, default="Purples", help="name of the colormap"
-    )
+    parser.add_argument("--origwd", action="store_true", help="use stored original working directory")
+    parser.add_argument("-b", "--bulk", action="store_true", help="show bulk composition on figure")
+    parser.add_argument("--cmap", type=str, default="Purples", help="name of the colormap")
     parser.add_argument("--alpha", type=float, default=0.6, help="alpha of colormap")
     parser.add_argument(
         "--connect",
@@ -3369,9 +3064,7 @@ def ps_grid():
     parser.add_argument("project", type=str, nargs="+", help="builder project file(s)")
     parser.add_argument("--nx", type=int, default=50, help="number of T steps")
     parser.add_argument("--ny", type=int, default=50, help="number of P steps")
-    parser.add_argument(
-        "--origwd", action="store_true", help="use stored original working directory"
-    )
+    parser.add_argument("--origwd", action="store_true", help="use stored original working directory")
     parser.add_argument(
         "--tolerance",
         type=float,
@@ -3399,30 +3092,20 @@ def ps_iso():
         default=None,
         help="expression evaluated to calculate values",
     )
-    parser.add_argument(
-        "-f", "--filled", action="store_true", help="filled contours", default=False
-    )
-    parser.add_argument(
-        "--origwd", action="store_true", help="use stored original working directory"
-    )
-    parser.add_argument(
-        "-o", "--out", nargs="+", help="highlight out lines for given phases"
-    )
+    parser.add_argument("-f", "--filled", action="store_true", help="filled contours", default=False)
+    parser.add_argument("--origwd", action="store_true", help="use stored original working directory")
+    parser.add_argument("-o", "--out", nargs="+", help="highlight out lines for given phases")
     parser.add_argument(
         "--nosplit",
         action="store_true",
         help="controls whether the underlying contour is removed or not",
     )
-    parser.add_argument(
-        "-b", "--bulk", action="store_true", help="show bulk composition on figure"
-    )
+    parser.add_argument("-b", "--bulk", action="store_true", help="show bulk composition on figure")
     parser.add_argument("--step", type=float, default=None, help="contour step")
     parser.add_argument("--ncont", type=int, default=10, help="number of contours")
     parser.add_argument("--colors", type=str, default=None, help="color for all levels")
     parser.add_argument("--cmap", type=str, default=None, help="name of the colormap")
-    parser.add_argument(
-        "--smooth", type=float, default=0, help="smoothness of the approximation"
-    )
+    parser.add_argument("--smooth", type=float, default=0, help="smoothness of the approximation")
     parser.add_argument(
         "--labelkey",
         action="append",
@@ -3469,15 +3152,9 @@ def ps_iso():
 
 def ps_drawpd():
     parser = argparse.ArgumentParser(description="Generate drawpd file from project")
-    parser.add_argument(
-        "project", type=str, nargs="+", help="psbuilder project file(s)"
-    )
-    parser.add_argument(
-        "-a", "--areas", action="store_true", help="export also areas", default=True
-    )
-    parser.add_argument(
-        "--origwd", action="store_true", help="use stored original working directory"
-    )
+    parser.add_argument("project", type=str, nargs="+", help="psbuilder project file(s)")
+    parser.add_argument("-a", "--areas", action="store_true", help="export also areas", default=True)
+    parser.add_argument("--origwd", action="store_true", help="use stored original working directory")
     parser.add_argument(
         "--tolerance",
         type=float,
