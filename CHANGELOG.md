@@ -2,6 +2,9 @@
 All notable pypsbuilder changes.
 
 ## [2.5.0] - 2024-12-13
+Fully refactored tp pyproject.toml
+
+## [2.5.0] - 2024-12-13
 ### Fixed
  - fix for coe-q
 
