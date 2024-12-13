@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import datetime
 import itertools
 
-from pkg_resources import resource_filename
+import importlib.resources as ires
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QT_VERSION_STR
 from PyQt5.Qt import PYQT_VERSION_STR
@@ -94,7 +94,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         res = QtWidgets.QDesktopWidget().screenGeometry()
         self.resize(min(1280, res.width() - 10), min(720, res.height() - 10))
         self.setWindowTitle(self.builder_name)
-        window_icon = resource_filename("pypsbuilder", app_icons[self.builder_name])
+        window_icon = str(ires.files("pypsbuilder").joinpath(app_icons[self.builder_name]))
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog(self.builder_name, __version__, __copyright__)
@@ -5097,7 +5097,7 @@ class TopologyGraph(QtWidgets.QDialog):
     def __init__(self, ps, parent=None):
         super(TopologyGraph, self).__init__(parent)
         self.setWindowTitle("Topology graph")
-        window_icon = resource_filename("pypsbuilder", "images/pypsbuilder.png")
+        window_icon = str(ires.files("pypsbuilder").joinpath("images/pypsbuilder.png"))
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.setWindowFlags(
             QtCore.Qt.WindowMinMaxButtonsHint | QtCore.Qt.WindowCloseButtonHint

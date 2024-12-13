@@ -15,7 +15,7 @@ requirements = ["numpy", "matplotlib>=3", "scipy", "networkx", "shapely>=2", "tq
 
 setup(
     name="pypsbuilder",
-    version="2.4.2",
+    version="2.5.0",
     description="THERMOCALC front-end for constructing and analyzing PT pseudosections",
     long_description=readme + "\n\n" + changelog,
     long_description_content_type="text/markdown",
@@ -23,7 +23,7 @@ setup(
     author_email="lexa.ondrej@gmail.com",
     url="https://github.com/ondrolexa/pypsbuilder",
     license="MIT",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     packages=find_packages(),
     package_data={"pypsbuilder.images": ["*.png"]},
     entry_points="""

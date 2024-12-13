@@ -1,9 +1,14 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.5.0] - 2024-12-13
+### Fixed
+ - fix for coe-q
+
 ## [2.4.2] - 2024-04-23
 ### Fixed
  - another fix of and-ky-sill triple point linking
+
 ## [2.4.1] - 2024-03-07
 ### Fixed
  - fixed and-ky-sill triple point uniline suggestions
@@ -59,7 +64,7 @@ All notable pypsbuilder changes.
 - latest THERMOCALC 3.50 compatibility
 
 ### Added
-- isopleths quadratic surface fit method added 
+- isopleths quadratic surface fit method added
 - isopleths figure and savefig options added
 
 ## [2.2.2] - 2021-01-25

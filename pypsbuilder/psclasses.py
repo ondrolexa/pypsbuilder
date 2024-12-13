@@ -4,6 +4,7 @@ This module contains classes and tools providing API to THERMOCALC, parsing of
 outputs and storage of calculated invariant points and univariant lines.
 
 """
+
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
@@ -473,9 +474,11 @@ class TCResult:
         phases = head.split()[1:]
         # fixed width parsing !!!
         valsf = [
-            float(vals[6:][12 * i : 12 * (i + 1)].strip())
-            if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
-            else 0.0
+            (
+                float(vals[6:][12 * i : 12 * (i + 1)].strip())
+                if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
+                else 0.0
+            )
             for i in range(len(phases))
         ]
         for phase, val in zip(phases, valsf):
@@ -484,9 +487,11 @@ class TCResult:
         head, vals = factor.split("\n")
         phases = head.split()[1:]
         valsf = [
-            float(vals[6:][12 * i : 12 * (i + 1)].strip())
-            if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
-            else 0.0
+            (
+                float(vals[6:][12 * i : 12 * (i + 1)].strip())
+                if vals[6:][12 * i : 12 * (i + 1)].strip() != ""
+                else 0.0
+            )
             for i in range(len(phases))
         ]
         for phase, val in zip(phases, valsf):
@@ -868,6 +873,8 @@ class SectionBase:
                     unilist.append(uni_id)
             if unilist:
                 phases = set.intersection(*(self.unilines[id].phases for id in unilist))
+                print(phases, unilist)
+                print("---")
                 vd = [
                     phases.symmetric_difference(self.unilines[id].phases)
                     == self.unilines[id].out
@@ -934,6 +941,13 @@ class SectionBase:
                 phases = self.unilines[unilist[0]].phases.difference(
                     self.unilines[unilist[0]].out
                 )
+                if frozenset(phases) in shapes:  # switch polymorph
+                    for pp in polymorphs:
+                        if self.unilines[unilist[0]].out.issubset(pp):
+                            phases = self.unilines[unilist[0]].phases.difference(
+                                pp.difference(self.unilines[unilist[0]].out)
+                            )
+                            break
                 shapes[frozenset(phases)] = poly
                 unilists[frozenset(phases)] = unilist
             elif frozenset(phases) in shapes:
