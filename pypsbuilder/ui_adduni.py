@@ -35,7 +35,9 @@ class Ui_AddUni(object):
         self.comboBegin = QtWidgets.QComboBox(AddUni)
         self.comboBegin.setObjectName("comboBegin")
         self.horizontalLayout.addWidget(self.comboBegin)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout.addItem(spacerItem)
         self.label_3 = QtWidgets.QLabel(AddUni)
         self.label_3.setObjectName("label_3")
@@ -46,13 +48,15 @@ class Ui_AddUni(object):
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.buttonBox = QtWidgets.QDialogButtonBox(AddUni)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok
+        )
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.retranslateUi(AddUni)
-        self.buttonBox.accepted.connect(AddUni.accept) # type: ignore
-        self.buttonBox.rejected.connect(AddUni.reject) # type: ignore
+        self.buttonBox.accepted.connect(AddUni.accept)  # type: ignore
+        self.buttonBox.rejected.connect(AddUni.reject)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(AddUni)
 
     def retranslateUi(self, AddUni):

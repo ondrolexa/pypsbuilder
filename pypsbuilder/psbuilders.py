@@ -1,4 +1,5 @@
 """Visual pseudosection builder for THERMOCALC."""
+
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
@@ -94,7 +95,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         res = QtWidgets.QDesktopWidget().screenGeometry()
         self.resize(min(1280, res.width() - 10), min(720, res.height() - 10))
         self.setWindowTitle(self.builder_name)
-        window_icon = str(ires.files("pypsbuilder").joinpath(app_icons[self.builder_name]))
+        window_icon = str(
+            ires.files("pypsbuilder").joinpath(app_icons[self.builder_name])
+        )
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
         self.about_dialog = AboutDialog(self.builder_name, __version__, __copyright__)

@@ -23,7 +23,9 @@ class Ui_UniGuess(object):
         self.label_2.setObjectName("label_2")
         self.horizontalLayout.addWidget(self.label_2)
         self.comboPoint = QtWidgets.QComboBox(UniGuess)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.comboPoint.sizePolicy().hasHeightForWidth())
@@ -33,13 +35,15 @@ class Ui_UniGuess(object):
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.buttonBox = QtWidgets.QDialogButtonBox(UniGuess)
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(
+            QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok
+        )
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
 
         self.retranslateUi(UniGuess)
-        self.buttonBox.accepted.connect(UniGuess.accept) # type: ignore
-        self.buttonBox.rejected.connect(UniGuess.reject) # type: ignore
+        self.buttonBox.accepted.connect(UniGuess.accept)  # type: ignore
+        self.buttonBox.rejected.connect(UniGuess.reject)  # type: ignore
         QtCore.QMetaObject.connectSlotsByName(UniGuess)
 
     def retranslateUi(self, UniGuess):

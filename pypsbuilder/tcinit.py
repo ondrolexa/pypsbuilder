@@ -5,6 +5,7 @@ download the latest 3.5 version of THERMOCALC and appropriate dataset
 and ax file according to user selection
 
 """
+
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
@@ -19,16 +20,16 @@ import string
 
 # recent files
 set_urls = {
-    'metapelite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metapelite-2022-01-23.zip',
-    'metabasite': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metabasite-2022-01-30.zip',
-    'igneous': 'https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-igneous-2022-01-23.zip',
+    "metapelite": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metapelite-2022-01-23.zip",
+    "metabasite": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metabasite-2022-01-30.zip",
+    "igneous": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-igneous-2022-01-23.zip",
 }
 
 exe_urls = {
-    'linux': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-linux-bundle.zip',
-    'win': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350-win-bundle.zip',
-    'mac': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-mac-bundle.zip',
-    'macasi': 'https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-macasi-bundle.zip',
+    "linux": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-linux-bundle.zip",
+    "win": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350-win-bundle.zip",
+    "mac": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-mac-bundle.zip",
+    "macasi": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-macasi-bundle.zip",
 }
 
 
@@ -36,8 +37,8 @@ def tcprojinit():
     cwd = Path.cwd()
     dir_needed = True
     while dir_needed:
-        dest_tmp = input(f'Enter project directory [{cwd}]: ')
-        if dest_tmp == '':
+        dest_tmp = input(f"Enter project directory [{cwd}]: ")
+        if dest_tmp == "":
             dest = cwd
         else:
             dest = Path(dest_tmp)
@@ -45,152 +46,156 @@ def tcprojinit():
             if not any(dest.iterdir()):
                 dir_needed = False
             else:
-                print(f'ERROR: {dest} is not empty...')
+                print(f"ERROR: {dest} is not empty...")
         else:
-            print(f'ERROR: {dest} is not valid directory...')
+            print(f"ERROR: {dest} is not valid directory...")
 
     projname_needed = True
-    whitelist = f'_{string.ascii_letters}{string.digits}'
+    whitelist = f"_{string.ascii_letters}{string.digits}"
     while projname_needed:
-        projname = input('Enter name of the project (max 8 chars) [project]: ')
-        if projname == '':
-            projname = 'project'
+        projname = input("Enter name of the project (max 8 chars) [project]: ")
+        if projname == "":
+            projname = "project"
         # replace spaces
-        projname = projname.replace(' ', '_')
+        projname = projname.replace(" ", "_")
         # keep only valid ascii chars
-        projname = unicodedata.normalize('NFKD', projname).encode('ASCII', 'ignore').decode()
+        projname = (
+            unicodedata.normalize("NFKD", projname).encode("ASCII", "ignore").decode()
+        )
         # keep only whitelisted chars
-        projname = ''.join(c for c in projname if c in whitelist)
+        projname = "".join(c for c in projname if c in whitelist)
         if len(projname) < 1:
-            print('ERROR: project name may not be empty')
+            print("ERROR: project name may not be empty")
         elif len(projname) > 8:
-            print('ERROR: project name may not be longer than 8 characters')
+            print("ERROR: project name may not be longer than 8 characters")
         else:
             projname_needed = False
 
     set_needed = True
-    sets = {1: 'metapelite', 2: 'metabasite', 3: 'igneous'}
+    sets = {1: "metapelite", 2: "metabasite", 3: "igneous"}
     while set_needed:
-        print('Choose THEMOCALC input set')
+        print("Choose THEMOCALC input set")
         for k in sets:
-            print(f' {k}. {sets[k]} set')
+            print(f" {k}. {sets[k]} set")
         try:
-            n = input('Which set? [1]: ')
-            if n == '':
-                n = '1'
+            n = input("Which set? [1]: ")
+            if n == "":
+                n = "1"
             if int(n) in [1, 2, 3]:
                 set_needed = False
         except ValueError:
-            print('ERROR: enter 1, 2 or 3')
+            print("ERROR: enter 1, 2 or 3")
     tcset = sets[int(n)]
 
-    if tcset == 'metapelite':
-        ds = '62'
-        systems = {1: 'mp50MnNCKFMASHTO', 2: 'mp50NCKFMASHTO', 3: 'mp50KFMASH'}
+    if tcset == "metapelite":
+        ds = "62"
+        systems = {1: "mp50MnNCKFMASHTO", 2: "mp50NCKFMASHTO", 3: "mp50KFMASH"}
         system_needed = True
         while system_needed:
-            print('Choose system for metapelite set')
+            print("Choose system for metapelite set")
             for k in systems:
-                print(f' {k}. {systems[k]}')
+                print(f" {k}. {systems[k]}")
             try:
-                v = input('Which system? [1]: ')
-                if v == '':
-                    v = '1'
+                v = input("Which system? [1]: ")
+                if v == "":
+                    v = "1"
                 if int(v) in [1, 2, 3]:
                     system_needed = False
             except ValueError:
-                print('ERROR: enter 1, 2 or 3')
+                print("ERROR: enter 1, 2 or 3")
         system = systems[int(v)]
         guesses = metapelite_guesses[system]
-    elif tcset == 'metabasite':
-        ds = '62'
-        system = 'mb50NCKFMASHTO'
+    elif tcset == "metabasite":
+        ds = "62"
+        system = "mb50NCKFMASHTO"
         guesses = metabasite_guesses[system]
     else:
-        ds = '633'
-        systems = {1: 'ig50NCKFMASHTOCr', 2: 'ig50NCKFMASTOCr'}
+        ds = "633"
+        systems = {1: "ig50NCKFMASHTOCr", 2: "ig50NCKFMASTOCr"}
         system_needed = True
         while system_needed:
-            print('Choose system for igneous set')
+            print("Choose system for igneous set")
             for k in systems:
-                print(f' {k}. {systems[k]}')
+                print(f" {k}. {systems[k]}")
             try:
-                v = input('Which system? [1]: ')
-                if v == '':
-                    v = '1'
+                v = input("Which system? [1]: ")
+                if v == "":
+                    v = "1"
                 if int(v) in [1, 2]:
                     system_needed = False
             except ValueError:
-                print('ERROR: enter 1 or 2')
+                print("ERROR: enter 1 or 2")
         system = systems[int(v)]
         guesses = igneous_guesses[system]
 
     # create prefs file
-    with open(dest / 'tc-prefs.txt', 'w') as f:
-        content = string.Template(tcpref_tmpl).substitute(dataset=ds, project=projname)[1:]
+    with open(dest / "tc-prefs.txt", "w") as f:
+        content = string.Template(tcpref_tmpl).substitute(dataset=ds, project=projname)[
+            1:
+        ]
         f.write(content)
 
     # download executable
     comp = platform.system()
-    if comp == 'Linux':
-        with urlopen(exe_urls['linux']) as zip:
+    if comp == "Linux":
+        with urlopen(exe_urls["linux"]) as zip:
             with ZipFile(BytesIO(zip.read())) as zfile:
-                source = zfile.open('tc350beta-linux-bundle/tc350beta')
-                target = open(dest / 'tc350beta', 'wb')
+                source = zfile.open("tc350beta-linux-bundle/tc350beta")
+                target = open(dest / "tc350beta", "wb")
                 with source, target:
                     shutil.copyfileobj(source, target)
-                Path(dest / 'tc350beta').chmod(33261)
-    elif comp == 'Windows':
-        with urlopen(exe_urls['win']) as zip:
+                Path(dest / "tc350beta").chmod(33261)
+    elif comp == "Windows":
+        with urlopen(exe_urls["win"]) as zip:
             with ZipFile(BytesIO(zip.read())) as zfile:
-                source = zfile.open('tc350-win-bundle/tc350beta.exe')
-                target = open(dest / 'tc350beta.exe', 'wb')
+                source = zfile.open("tc350-win-bundle/tc350beta.exe")
+                target = open(dest / "tc350beta.exe", "wb")
                 with source, target:
                     shutil.copyfileobj(source, target)
-                Path(dest / 'tc350beta.exe').chmod(33261)
-    elif comp == 'Darwin':
+                Path(dest / "tc350beta.exe").chmod(33261)
+    elif comp == "Darwin":
         proc = platform.processor()
-        if proc == 'x86_64':
-            with urlopen(exe_urls['mac']) as zip:
+        if proc == "x86_64":
+            with urlopen(exe_urls["mac"]) as zip:
                 with ZipFile(BytesIO(zip.read())) as zfile:
-                    source = zfile.open('tc350beta-bundle/tc350beta')
-                    target = open(dest / 'tc350beta', 'wb')
+                    source = zfile.open("tc350beta-bundle/tc350beta")
+                    target = open(dest / "tc350beta", "wb")
                     with source, target:
                         shutil.copyfileobj(source, target)
-                    Path(dest / 'tc350beta').chmod(33261)
-        elif proc == 'arm':
-            with urlopen(exe_urls['macasi']) as zip:
+                    Path(dest / "tc350beta").chmod(33261)
+        elif proc == "arm":
+            with urlopen(exe_urls["macasi"]) as zip:
                 with ZipFile(BytesIO(zip.read())) as zfile:
-                    source = zfile.open('tc350beta-macASi-bundle/tc350si')
-                    target = open(dest / 'tc350si', 'wb')
+                    source = zfile.open("tc350beta-macASi-bundle/tc350si")
+                    target = open(dest / "tc350si", "wb")
                     with source, target:
                         shutil.copyfileobj(source, target)
-                    Path(dest / 'tc350si').chmod(33261)
+                    Path(dest / "tc350si").chmod(33261)
         else:
-            raise AttributeError(f'Unsupported MacOS {proc} processor')
+            raise AttributeError(f"Unsupported MacOS {proc} processor")
     else:
-        raise AttributeError(f'Unsupported {comp} platform')
+        raise AttributeError(f"Unsupported {comp} platform")
 
     # download set
     tcset_url = set_urls[tcset]
-    prefix = tcset_url.split('/')[-1].split('.')[0]
+    prefix = tcset_url.split("/")[-1].split(".")[0]
     with urlopen(tcset_url) as zip:
         with ZipFile(BytesIO(zip.read())) as zfile:
-            with zfile.open(f'{prefix}/samecoding_and_starting_guesses.txt') as f:
+            with zfile.open(f"{prefix}/samecoding_and_starting_guesses.txt") as f:
                 scsg = f.readlines()
-            scsg = [s.decode('mac-roman') for s in scsg]
-            samecoding = ''.join([ln for ln in scsg if ln.startswith('samecoding')])
-            source = zfile.open(f'{prefix}/tc-ds{ds}.txt')
-            target = open(dest / f'tc-ds{ds}.txt', 'wb')
+            scsg = [s.decode("mac-roman") for s in scsg]
+            samecoding = "".join([ln for ln in scsg if ln.startswith("samecoding")])
+            source = zfile.open(f"{prefix}/tc-ds{ds}.txt")
+            target = open(dest / f"tc-ds{ds}.txt", "wb")
             with source, target:
                 shutil.copyfileobj(source, target)
-            source = zfile.open(f'{prefix}/tc-{system}.txt')
-            target = open(dest / f'tc-{system}.txt', 'wb')
+            source = zfile.open(f"{prefix}/tc-{system}.txt")
+            target = open(dest / f"tc-{system}.txt", "wb")
             with source, target:
                 shutil.copyfileobj(source, target)
 
     # create project file
-    with open(dest / f'tc-{projname}.txt', 'w') as f:
+    with open(dest / f"tc-{projname}.txt", "w") as f:
         content = string.Template(tcprj_tmpl).substitute(
             system=system, project=projname, samecoding=samecoding, guesses=guesses
         )[1:]
@@ -206,7 +211,7 @@ calcmode 1
 """
 
 metapelite_guesses = {
-    'mp50KFMASH': '''
+    "mp50KFMASH": """
 % --------------------------------------------------------
 %  Starting guesses in KFMASH
 %  for g liq mu bi opx sa cd st chl ctd sp1
@@ -249,8 +254,8 @@ xyzguess Q4(chl)      0.0641869  range -1.000 1.000
 xyzguess x(ctd)           0.88
 
 xyzguess x(sp1)           0.9
-''',
-    'mp50NCKFMASHTO': '''
+""",
+    "mp50NCKFMASHTO": """
 % --------------------------------------------------------
 %  Starting guesses in NCKFMASHTO
 %  for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1
@@ -353,8 +358,8 @@ xyzguess  Q(hem)       0.8   range -0.99 0.99
 
 xyzguess x(mt1)        0.683170
 xyzguess Q(mt1)        0.727847
-''',
-    'mp50MnNCKFMASHTO': '''
+""",
+    "mp50MnNCKFMASHTO": """
 % --------------------------------------------------------
 %  Starting guesses in MnNCKFMASHTO
 %  for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1
@@ -467,11 +472,11 @@ xyzguess  Q(hem)       0.8   range -0.99 0.99
 
 xyzguess x(mt1)        0.632160
 xyzguess Q(mt1)        0.564334
-''',
+""",
 }
 
 metabasite_guesses = {
-    'mb50NCKFMASHTO': '''
+    "mb50NCKFMASHTO": """
 % -------------------
 xyzguess q(L)          0.151242
 xyzguess fsp(L)        0.248743
@@ -608,11 +613,11 @@ xyzguess QAl(chl)      0.424591  range -1.000 1.000
 xyzguess Q1(chl)       0.0859470  range -1.000 1.000
 xyzguess Q4(chl)       0.0245983  range -1.000 1.000
 % -------------------
-'''
+"""
 }
 
 igneous_guesses = {
-    'ig50NCKFMASHTOCr': '''
+    "ig50NCKFMASHTOCr": """
 % silicate melt, hydrous (NCKFMASHTOCr)
 xyzguess wo(L)         0.107216
 xyzguess sl(L)        0.0873506
@@ -765,8 +770,8 @@ xyzguess x(ilm)        0.913364
 xyzguess Q(ilm)        0.627896  range -0.990 0.990
 
 % --------------------------------------------------------
-''',
-    'ig50NCKFMASTOCr': '''
+""",
+    "ig50NCKFMASTOCr": """
 % silicate melt, dry (NCKFMASTOCr)
 xyzguess wo(L)         0.228033
 xyzguess sl(L)         0.123908
@@ -918,7 +923,7 @@ xyzguess x(ilm)        0.913364
 xyzguess Q(ilm)        0.627896  range -0.990 0.990
 
 % --------------------------------------------------------
-''',
+""",
 }
 
 tcprj_tmpl = """

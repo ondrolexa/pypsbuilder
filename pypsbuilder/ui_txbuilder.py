@@ -15,16 +15,22 @@ class Ui_TXBuilder(object):
     def setupUi(self, TXBuilder):
         TXBuilder.setObjectName("TXBuilder")
         TXBuilder.resize(1106, 727)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(TXBuilder.sizePolicy().hasHeightForWidth())
         TXBuilder.setSizePolicy(sizePolicy)
         self.centralwidget = QtWidgets.QWidget(TXBuilder)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.centralwidget.sizePolicy().hasHeightForWidth()
+        )
         self.centralwidget.setSizePolicy(sizePolicy)
         self.centralwidget.setMinimumSize(QtCore.QSize(0, 0))
         self.centralwidget.setObjectName("centralwidget")
@@ -40,7 +46,9 @@ class Ui_TXBuilder(object):
         self.splitter_left.setOrientation(QtCore.Qt.Horizontal)
         self.splitter_left.setObjectName("splitter_left")
         self.groupBox_3 = QtWidgets.QGroupBox(self.splitter_left)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox_3.sizePolicy().hasHeightForWidth())
@@ -91,7 +99,9 @@ class Ui_TXBuilder(object):
         self.horizontalLayout_5.addWidget(self.spinVariance)
         self.verticalLayout.addLayout(self.horizontalLayout_5)
         self.tabMain = QtWidgets.QTabWidget(self.splitter_left)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tabMain.sizePolicy().hasHeightForWidth())
@@ -119,7 +129,9 @@ class Ui_TXBuilder(object):
         self.gridLayout = QtWidgets.QGridLayout(self.groupBox)
         self.gridLayout.setObjectName("gridLayout")
         self.label_6 = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
@@ -127,7 +139,9 @@ class Ui_TXBuilder(object):
         self.label_6.setObjectName("label_6")
         self.gridLayout.addWidget(self.label_6, 0, 2, 1, 1)
         self.pminEdit = QtWidgets.QLineEdit(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pminEdit.sizePolicy().hasHeightForWidth())
@@ -135,7 +149,9 @@ class Ui_TXBuilder(object):
         self.pminEdit.setObjectName("pminEdit")
         self.gridLayout.addWidget(self.pminEdit, 1, 1, 1, 1)
         self.tminEdit = QtWidgets.QLineEdit(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tminEdit.sizePolicy().hasHeightForWidth())
@@ -143,7 +159,9 @@ class Ui_TXBuilder(object):
         self.tminEdit.setObjectName("tminEdit")
         self.gridLayout.addWidget(self.tminEdit, 0, 1, 1, 1)
         self.tmaxEdit = QtWidgets.QLineEdit(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tmaxEdit.sizePolicy().hasHeightForWidth())
@@ -151,7 +169,9 @@ class Ui_TXBuilder(object):
         self.tmaxEdit.setObjectName("tmaxEdit")
         self.gridLayout.addWidget(self.tmaxEdit, 0, 3, 1, 1)
         self.label_7 = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
@@ -159,7 +179,9 @@ class Ui_TXBuilder(object):
         self.label_7.setObjectName("label_7")
         self.gridLayout.addWidget(self.label_7, 1, 0, 1, 1)
         self.pmaxEdit = QtWidgets.QLineEdit(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pmaxEdit.sizePolicy().hasHeightForWidth())
@@ -167,7 +189,9 @@ class Ui_TXBuilder(object):
         self.pmaxEdit.setObjectName("pmaxEdit")
         self.gridLayout.addWidget(self.pmaxEdit, 1, 3, 1, 1)
         self.label_8 = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
@@ -175,17 +199,23 @@ class Ui_TXBuilder(object):
         self.label_8.setObjectName("label_8")
         self.gridLayout.addWidget(self.label_8, 1, 2, 1, 1)
         self.label_5 = QtWidgets.QLabel(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
         self.label_5.setSizePolicy(sizePolicy)
         self.label_5.setObjectName("label_5")
         self.gridLayout.addWidget(self.label_5, 0, 0, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.gridLayout.addItem(spacerItem, 0, 5, 1, 1)
         self.pushFromAxes = QtWidgets.QPushButton(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushFromAxes.sizePolicy().hasHeightForWidth())
@@ -193,10 +223,14 @@ class Ui_TXBuilder(object):
         self.pushFromAxes.setObjectName("pushFromAxes")
         self.gridLayout.addWidget(self.pushFromAxes, 0, 4, 1, 1)
         self.pushResetSettings = QtWidgets.QPushButton(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushResetSettings.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushResetSettings.sizePolicy().hasHeightForWidth()
+        )
         self.pushResetSettings.setSizePolicy(sizePolicy)
         self.pushResetSettings.setObjectName("pushResetSettings")
         self.gridLayout.addWidget(self.pushResetSettings, 1, 4, 1, 1)
@@ -213,7 +247,9 @@ class Ui_TXBuilder(object):
         self.gridLayout.addWidget(self.rangeSpin, 2, 1, 1, 1)
         self.verticalLayout_3.addWidget(self.groupBox)
         self.groupBox_2 = QtWidgets.QGroupBox(self.tabSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
@@ -225,7 +261,9 @@ class Ui_TXBuilder(object):
         self.label.setObjectName("label")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
         self.spinPrec = QtWidgets.QSpinBox(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.spinPrec.sizePolicy().hasHeightForWidth())
@@ -239,7 +277,9 @@ class Ui_TXBuilder(object):
         self.label_4.setObjectName("label_4")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_4)
         self.spinOver = QtWidgets.QSpinBox(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.spinOver.sizePolicy().hasHeightForWidth())
@@ -253,7 +293,9 @@ class Ui_TXBuilder(object):
         self.label_10.setObjectName("label_10")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label_10)
         self.spinDoglevel = QtWidgets.QSpinBox(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.spinDoglevel.sizePolicy().hasHeightForWidth())
@@ -266,30 +308,44 @@ class Ui_TXBuilder(object):
         self.checkLabelInv = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelInv.setChecked(True)
         self.checkLabelInv.setObjectName("checkLabelInv")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.checkLabelInv)
+        self.formLayout.setWidget(
+            3, QtWidgets.QFormLayout.LabelRole, self.checkLabelInv
+        )
         self.checkLabelInvText = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelInvText.setTristate(True)
         self.checkLabelInvText.setObjectName("checkLabelInvText")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.checkLabelInvText)
+        self.formLayout.setWidget(
+            3, QtWidgets.QFormLayout.FieldRole, self.checkLabelInvText
+        )
         self.checkLabelUni = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelUni.setChecked(True)
         self.checkLabelUni.setObjectName("checkLabelUni")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.checkLabelUni)
+        self.formLayout.setWidget(
+            4, QtWidgets.QFormLayout.LabelRole, self.checkLabelUni
+        )
         self.checkLabelUniText = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelUniText.setTristate(True)
         self.checkLabelUniText.setObjectName("checkLabelUniText")
-        self.formLayout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.checkLabelUniText)
+        self.formLayout.setWidget(
+            4, QtWidgets.QFormLayout.FieldRole, self.checkLabelUniText
+        )
         self.checkLabelDog = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelDog.setObjectName("checkLabelDog")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.checkLabelDog)
+        self.formLayout.setWidget(
+            5, QtWidgets.QFormLayout.LabelRole, self.checkLabelDog
+        )
         self.checkLabelDogText = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkLabelDogText.setObjectName("checkLabelDogText")
-        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.checkLabelDogText)
+        self.formLayout.setWidget(
+            5, QtWidgets.QFormLayout.FieldRole, self.checkLabelDogText
+        )
         self.label_2 = QtWidgets.QLabel(self.groupBox_2)
         self.label_2.setObjectName("label_2")
         self.formLayout.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.label_2)
         self.spinAlpha = QtWidgets.QSpinBox(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.spinAlpha.sizePolicy().hasHeightForWidth())
@@ -304,7 +360,9 @@ class Ui_TXBuilder(object):
         self.label_3.setObjectName("label_3")
         self.formLayout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.label_3)
         self.spinFontsize = QtWidgets.QSpinBox(self.groupBox_2)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.spinFontsize.sizePolicy().hasHeightForWidth())
@@ -318,32 +376,50 @@ class Ui_TXBuilder(object):
         self.formLayout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.spinFontsize)
         self.checkOverwrite = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkOverwrite.setObjectName("checkOverwrite")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.checkOverwrite)
+        self.formLayout.setWidget(
+            8, QtWidgets.QFormLayout.LabelRole, self.checkOverwrite
+        )
         self.checkHidedoneInv = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkHidedoneInv.setObjectName("checkHidedoneInv")
-        self.formLayout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.checkHidedoneInv)
+        self.formLayout.setWidget(
+            8, QtWidgets.QFormLayout.FieldRole, self.checkHidedoneInv
+        )
         self.checkAutoconnectUni = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkAutoconnectUni.setObjectName("checkAutoconnectUni")
-        self.formLayout.setWidget(9, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectUni)
+        self.formLayout.setWidget(
+            9, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectUni
+        )
         self.checkHidedoneUni = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkHidedoneUni.setObjectName("checkHidedoneUni")
-        self.formLayout.setWidget(9, QtWidgets.QFormLayout.FieldRole, self.checkHidedoneUni)
+        self.formLayout.setWidget(
+            9, QtWidgets.QFormLayout.FieldRole, self.checkHidedoneUni
+        )
         self.checkAutoconnectInv = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkAutoconnectInv.setObjectName("checkAutoconnectInv")
-        self.formLayout.setWidget(10, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectInv)
+        self.formLayout.setWidget(
+            10, QtWidgets.QFormLayout.LabelRole, self.checkAutoconnectInv
+        )
         self.checkUseInvGuess = QtWidgets.QCheckBox(self.groupBox_2)
         self.checkUseInvGuess.setObjectName("checkUseInvGuess")
-        self.formLayout.setWidget(10, QtWidgets.QFormLayout.FieldRole, self.checkUseInvGuess)
+        self.formLayout.setWidget(
+            10, QtWidgets.QFormLayout.FieldRole, self.checkUseInvGuess
+        )
         self.verticalLayout_3.addWidget(self.groupBox_2)
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_7.addItem(spacerItem1)
         self.pushApplySettings = QtWidgets.QPushButton(self.tabSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushApplySettings.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushApplySettings.sizePolicy().hasHeightForWidth()
+        )
         self.pushApplySettings.setSizePolicy(sizePolicy)
         self.pushApplySettings.setObjectName("pushApplySettings")
         self.horizontalLayout_7.addWidget(self.pushApplySettings)
@@ -354,7 +430,9 @@ class Ui_TXBuilder(object):
         self.verticalLayout_8 = QtWidgets.QVBoxLayout(self.tabScript)
         self.verticalLayout_8.setObjectName("verticalLayout_8")
         self.outScript = QtWidgets.QPlainTextEdit(self.tabScript)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.outScript.sizePolicy().hasHeightForWidth())
@@ -365,21 +443,31 @@ class Ui_TXBuilder(object):
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_4.setContentsMargins(0, 0, 9, 9)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_4.addItem(spacerItem2)
         self.pushReadScript = QtWidgets.QPushButton(self.tabScript)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushReadScript.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushReadScript.sizePolicy().hasHeightForWidth()
+        )
         self.pushReadScript.setSizePolicy(sizePolicy)
         self.pushReadScript.setObjectName("pushReadScript")
         self.horizontalLayout_4.addWidget(self.pushReadScript)
         self.pushSaveScript = QtWidgets.QPushButton(self.tabScript)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushSaveScript.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushSaveScript.sizePolicy().hasHeightForWidth()
+        )
         self.pushSaveScript.setSizePolicy(sizePolicy)
         self.pushSaveScript.setObjectName("pushSaveScript")
         self.horizontalLayout_4.addWidget(self.pushSaveScript)
@@ -390,7 +478,9 @@ class Ui_TXBuilder(object):
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.tabDogmin)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.splitter = QtWidgets.QSplitter(self.tabDogmin)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
@@ -399,14 +489,18 @@ class Ui_TXBuilder(object):
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setObjectName("splitter")
         self.dogview = QtWidgets.QTableView(self.splitter)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dogview.sizePolicy().hasHeightForWidth())
         self.dogview.setSizePolicy(sizePolicy)
         self.dogview.setObjectName("dogview")
         self.logDogmin = QtWidgets.QPlainTextEdit(self.splitter)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.logDogmin.sizePolicy().hasHeightForWidth())
@@ -417,21 +511,31 @@ class Ui_TXBuilder(object):
         self.verticalLayout_5.addWidget(self.splitter)
         self.horizontalLayout_9 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_9.setObjectName("horizontalLayout_9")
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem3 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_9.addItem(spacerItem3)
         self.pushGuessDogmin = QtWidgets.QPushButton(self.tabDogmin)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushGuessDogmin.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushGuessDogmin.sizePolicy().hasHeightForWidth()
+        )
         self.pushGuessDogmin.setSizePolicy(sizePolicy)
         self.pushGuessDogmin.setObjectName("pushGuessDogmin")
         self.horizontalLayout_9.addWidget(self.pushGuessDogmin)
         self.pushDogminRemove = QtWidgets.QPushButton(self.tabDogmin)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushDogminRemove.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushDogminRemove.sizePolicy().hasHeightForWidth()
+        )
         self.pushDogminRemove.setSizePolicy(sizePolicy)
         self.pushDogminRemove.setObjectName("pushDogminRemove")
         self.horizontalLayout_9.addWidget(self.pushDogminRemove)
@@ -474,7 +578,9 @@ class Ui_TXBuilder(object):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.groupBox_5)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.uniview = QtWidgets.QTableView(self.groupBox_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.uniview.sizePolicy().hasHeightForWidth())
@@ -485,10 +591,14 @@ class Ui_TXBuilder(object):
         self.verticalLayout_2.addWidget(self.uniview)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem4 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_2.addItem(spacerItem4)
         self.pushGuessUni = QtWidgets.QPushButton(self.groupBox_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushGuessUni.sizePolicy().hasHeightForWidth())
@@ -496,18 +606,26 @@ class Ui_TXBuilder(object):
         self.pushGuessUni.setObjectName("pushGuessUni")
         self.horizontalLayout_2.addWidget(self.pushGuessUni)
         self.pushUniRemove = QtWidgets.QPushButton(self.groupBox_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushUniRemove.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushUniRemove.sizePolicy().hasHeightForWidth()
+        )
         self.pushUniRemove.setSizePolicy(sizePolicy)
         self.pushUniRemove.setObjectName("pushUniRemove")
         self.horizontalLayout_2.addWidget(self.pushUniRemove)
         self.pushUniSearch = QtWidgets.QPushButton(self.groupBox_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushUniSearch.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushUniSearch.sizePolicy().hasHeightForWidth()
+        )
         self.pushUniSearch.setSizePolicy(sizePolicy)
         self.pushUniSearch.setObjectName("pushUniSearch")
         self.horizontalLayout_2.addWidget(self.pushUniSearch)
@@ -517,7 +635,9 @@ class Ui_TXBuilder(object):
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.groupBox_6)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
         self.invview = QtWidgets.QTableView(self.groupBox_6)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.invview.sizePolicy().hasHeightForWidth())
@@ -528,10 +648,14 @@ class Ui_TXBuilder(object):
         self.verticalLayout_6.addWidget(self.invview)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem5 = QtWidgets.QSpacerItem(
+            40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         self.horizontalLayout_3.addItem(spacerItem5)
         self.pushGuessInv = QtWidgets.QPushButton(self.groupBox_6)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushGuessInv.sizePolicy().hasHeightForWidth())
@@ -539,15 +663,21 @@ class Ui_TXBuilder(object):
         self.pushGuessInv.setObjectName("pushGuessInv")
         self.horizontalLayout_3.addWidget(self.pushGuessInv)
         self.pushInvRemove = QtWidgets.QPushButton(self.groupBox_6)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushInvRemove.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.pushInvRemove.sizePolicy().hasHeightForWidth()
+        )
         self.pushInvRemove.setSizePolicy(sizePolicy)
         self.pushInvRemove.setObjectName("pushInvRemove")
         self.horizontalLayout_3.addWidget(self.pushInvRemove)
         self.pushInvAuto = QtWidgets.QPushButton(self.groupBox_6)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushInvAuto.sizePolicy().hasHeightForWidth())
@@ -601,7 +731,9 @@ class Ui_TXBuilder(object):
         self.actionFixphase = QtWidgets.QAction(TXBuilder)
         self.actionFixphase.setObjectName("actionFixphase")
         self.actionParse_working_directory = QtWidgets.QAction(TXBuilder)
-        self.actionParse_working_directory.setObjectName("actionParse_working_directory")
+        self.actionParse_working_directory.setObjectName(
+            "actionParse_working_directory"
+        )
         self.menuImport.addAction(self.actionImport_project)
         self.menuImport.addAction(self.actionImport_from_PT)
         self.menuFile.addAction(self.actionNew)
@@ -667,8 +799,13 @@ class Ui_TXBuilder(object):
         self.pushMerge.setText(_translate("TXBuilder", "+"))
         self.pushManual.setText(_translate("TXBuilder", "Manual"))
         self.pushDogmin.setText(_translate("TXBuilder", "Gmin"))
-        self.tabMain.setTabText(self.tabMain.indexOf(self.tabPlot), _translate("TXBuilder", "T-X Pseudosection"))
-        self.groupBox.setTitle(_translate("TXBuilder", "Default PT range for calculations"))
+        self.tabMain.setTabText(
+            self.tabMain.indexOf(self.tabPlot),
+            _translate("TXBuilder", "T-X Pseudosection"),
+        )
+        self.groupBox.setTitle(
+            _translate("TXBuilder", "Default PT range for calculations")
+        )
         self.label_6.setText(_translate("TXBuilder", "T max:"))
         self.label_7.setText(_translate("TXBuilder", "X min:"))
         self.label_8.setText(_translate("TXBuilder", "X max:"))
@@ -678,33 +815,71 @@ class Ui_TXBuilder(object):
         self.label_9.setText(_translate("TXBuilder", "p range"))
         self.groupBox_2.setTitle(_translate("TXBuilder", "Other settings"))
         self.label.setText(_translate("TXBuilder", "Coordinates precision (scale)"))
-        self.label_4.setText(_translate("TXBuilder", "Extend view range to calculation range [%]"))
+        self.label_4.setText(
+            _translate("TXBuilder", "Extend view range to calculation range [%]")
+        )
         self.label_10.setText(_translate("TXBuilder", "Dogmin doglevel"))
         self.checkLabelInv.setText(_translate("TXBuilder", "Label invariant points"))
-        self.checkLabelInvText.setText(_translate("TXBuilder", "Show zero phases with or without numbers"))
+        self.checkLabelInvText.setText(
+            _translate("TXBuilder", "Show zero phases with or without numbers")
+        )
         self.checkLabelUni.setText(_translate("TXBuilder", "Label univariant lines"))
-        self.checkLabelUniText.setText(_translate("TXBuilder", "Show zero phase with or without numbers"))
+        self.checkLabelUniText.setText(
+            _translate("TXBuilder", "Show zero phase with or without numbers")
+        )
         self.checkLabelDog.setText(_translate("TXBuilder", "Label dogmins"))
-        self.checkLabelDogText.setText(_translate("TXBuilder", "Show phases instead numbers"))
+        self.checkLabelDogText.setText(
+            _translate("TXBuilder", "Show phases instead numbers")
+        )
         self.label_2.setText(_translate("TXBuilder", "Labels alpha"))
         self.label_3.setText(_translate("TXBuilder", "Label fontsize"))
-        self.checkOverwrite.setText(_translate("TXBuilder", "Do not overwrite already calculated lines and points"))
-        self.checkHidedoneInv.setText(_translate("TXBuilder", "Hide labels of fully connected lines and points"))
-        self.checkAutoconnectUni.setText(_translate("TXBuilder", "Automatically connect new univariant lines if possible"))
-        self.checkHidedoneUni.setText(_translate("TXBuilder", "Hide labels of fully connected lines"))
-        self.checkAutoconnectInv.setText(_translate("TXBuilder", "Automatically connect new invariant points if possible"))
-        self.checkUseInvGuess.setText(_translate("TXBuilder", "Use ptguess from connected invariant point"))
+        self.checkOverwrite.setText(
+            _translate(
+                "TXBuilder", "Do not overwrite already calculated lines and points"
+            )
+        )
+        self.checkHidedoneInv.setText(
+            _translate("TXBuilder", "Hide labels of fully connected lines and points")
+        )
+        self.checkAutoconnectUni.setText(
+            _translate(
+                "TXBuilder", "Automatically connect new univariant lines if possible"
+            )
+        )
+        self.checkHidedoneUni.setText(
+            _translate("TXBuilder", "Hide labels of fully connected lines")
+        )
+        self.checkAutoconnectInv.setText(
+            _translate(
+                "TXBuilder", "Automatically connect new invariant points if possible"
+            )
+        )
+        self.checkUseInvGuess.setText(
+            _translate("TXBuilder", "Use ptguess from connected invariant point")
+        )
         self.pushApplySettings.setText(_translate("TXBuilder", "Apply"))
-        self.tabMain.setTabText(self.tabMain.indexOf(self.tabSettings), _translate("TXBuilder", "Settings"))
+        self.tabMain.setTabText(
+            self.tabMain.indexOf(self.tabSettings), _translate("TXBuilder", "Settings")
+        )
         self.pushReadScript.setText(_translate("TXBuilder", "Reset"))
         self.pushSaveScript.setText(_translate("TXBuilder", "Save"))
-        self.tabMain.setTabText(self.tabMain.indexOf(self.tabScript), _translate("TXBuilder", "Script file"))
+        self.tabMain.setTabText(
+            self.tabMain.indexOf(self.tabScript), _translate("TXBuilder", "Script file")
+        )
         self.pushGuessDogmin.setText(_translate("TXBuilder", "Set ptguess"))
         self.pushDogminRemove.setText(_translate("TXBuilder", "Remove"))
-        self.tabMain.setTabText(self.tabMain.indexOf(self.tabDogmin), _translate("TXBuilder", "Dogmin"))
-        self.tabMain.setTabText(self.tabMain.indexOf(self.tabLog), _translate("TXBuilder", "Log"))
-        self.tabOutput.setTabText(self.tabOutput.indexOf(self.tabModes), _translate("TXBuilder", "Modes"))
-        self.tabOutput.setTabText(self.tabOutput.indexOf(self.tabFull), _translate("TXBuilder", "Full output"))
+        self.tabMain.setTabText(
+            self.tabMain.indexOf(self.tabDogmin), _translate("TXBuilder", "Dogmin")
+        )
+        self.tabMain.setTabText(
+            self.tabMain.indexOf(self.tabLog), _translate("TXBuilder", "Log")
+        )
+        self.tabOutput.setTabText(
+            self.tabOutput.indexOf(self.tabModes), _translate("TXBuilder", "Modes")
+        )
+        self.tabOutput.setTabText(
+            self.tabOutput.indexOf(self.tabFull), _translate("TXBuilder", "Full output")
+        )
         self.groupBox_5.setTitle(_translate("TXBuilder", "Univariant lines"))
         self.pushGuessUni.setText(_translate("TXBuilder", "Set ptguess"))
         self.pushUniRemove.setText(_translate("TXBuilder", "Remove"))
@@ -734,8 +909,14 @@ class Ui_TXBuilder(object):
         self.actionSave_as.setText(_translate("TXBuilder", "Save project as"))
         self.actionShow_areas.setText(_translate("TXBuilder", "Show &areas"))
         self.actionShow_topology.setText(_translate("TXBuilder", "Show &topology"))
-        self.actionImport_project.setText(_translate("TXBuilder", "&Import into range..."))
-        self.actionImport_from_PT.setText(_translate("TXBuilder", "Import from PT section"))
+        self.actionImport_project.setText(
+            _translate("TXBuilder", "&Import into range...")
+        )
+        self.actionImport_from_PT.setText(
+            _translate("TXBuilder", "Import from PT section")
+        )
         self.actionCleanup.setText(_translate("TXBuilder", "Cleanup storage"))
         self.actionFixphase.setText(_translate("TXBuilder", "Fix phasenames"))
-        self.actionParse_working_directory.setText(_translate("TXBuilder", "Parse working directory"))
+        self.actionParse_working_directory.setText(
+            _translate("TXBuilder", "Parse working directory")
+        )
