@@ -6,10 +6,7 @@
 import sys
 import os
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import gzip
 from pathlib import Path
 from datetime import datetime
@@ -20,17 +17,15 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import importlib.resources as ires
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QT_VERSION_STR
-from PyQt5.Qt import PYQT_VERSION_STR
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import QT_VERSION_STR
+from PyQt6.QtCore import PYQT_VERSION_STR
 
 import numpy as np
 import matplotlib
 from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt5agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar,
-)
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 
 # from matplotlib.widgets import Cursor
 from matplotlib import cm
@@ -66,8 +61,8 @@ from .psclasses import (
 from .tcapi import get_tcapi
 from . import __version__, __copyright__
 
-# Make sure that we are using QT5
-matplotlib.use("Qt5Agg")
+# Make sure that we are using QT
+matplotlib.use("QtAgg")
 
 matplotlib.rcParams["xtick.direction"] = "out"
 matplotlib.rcParams["ytick.direction"] = "out"
@@ -96,7 +91,7 @@ class BuildersBase(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(BuildersBase, self).__init__(parent)
         self.setupUi(self)
-        res = QtWidgets.QDesktopWidget().screenGeometry()
+        res = QtGui.QGuiApplication.primaryScreen().availableGeometry()
         self.resize(min(1280, res.width() - 10), min(720, res.height() - 10))
         self.setWindowTitle(self.builder_name)
         window_icon = str(ires.files("pypsbuilder").joinpath(app_icons[self.builder_name]))
@@ -114,11 +109,11 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.figure = Figure(facecolor="white")
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setParent(self.tabPlot)
-        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.canvas.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.mplvl.addWidget(self.canvas)
         self.toolbar = NavigationToolbar(self.canvas, self.tabPlot, coordinates=True)
         # remove "Edit curves lines and axes parameters"
-        actions = self.toolbar.findChildren(QtWidgets.QAction)
+        actions = self.toolbar.findChildren(QtGui.QAction)
         for a in actions:
             if a.text() == "Customize":
                 self.toolbar.removeAction(a)
@@ -130,12 +125,12 @@ class BuildersBase(QtWidgets.QMainWindow):
         # Create phasemodel and define some logic
         self.phasemodel = QtGui.QStandardItemModel(self.phaseview)
         self.phaseview.setModel(self.phasemodel)
-        self.phaseview.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.phaseview.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.phaseview.show()
         # Create outmodel
         self.outmodel = QtGui.QStandardItemModel(self.outview)
         self.outview.setModel(self.outmodel)
-        self.outview.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.outview.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.outview.show()
 
         # SET PT RANGE VALIDATORS
@@ -155,19 +150,19 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.pmaxEdit.textChanged.emit(self.pmaxEdit.text())
 
         # SET OUTPUT TEXT FIXED FONTS
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
-        self.textOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.FixedFont)
+        self.textOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.textOutput.setReadOnly(True)
         self.textOutput.setFont(f)
-        self.textFullOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.textFullOutput.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.textFullOutput.setReadOnly(True)
         self.textFullOutput.setFont(f)
-        self.outScript.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.outScript.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.outScript.setFont(f)
-        self.logText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.logText.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.logText.setReadOnly(True)
         self.logText.setFont(f)
-        self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.logDogmin.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.logDogmin.setReadOnly(True)
         self.logDogmin.setFont(f)
 
@@ -188,13 +183,13 @@ class BuildersBase(QtWidgets.QMainWindow):
         # enable sorting
         self.invview.setSortingEnabled(False)
         # select rows
-        self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.invview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.invview.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.invview.horizontalHeader().setMinimumSectionSize(40)
-        self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.invview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.invview.horizontalHeader().hide()
         self.invsel = self.invview.selectionModel()
-        self.invview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.invview.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         # signals
         self.invsel.selectionChanged.connect(self.sel_changed)
 
@@ -208,17 +203,17 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.uniview.setItemDelegateForColumn(2, ComboDelegate(self.ps, self.invmodel, self.uniview))
         self.uniview.setItemDelegateForColumn(3, ComboDelegate(self.ps, self.invmodel, self.uniview))
         # select rows
-        self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.uniview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.uniview.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.uniview.horizontalHeader().setMinimumSectionSize(40)
-        self.uniview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.uniview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.uniview.horizontalHeader().hide()
         # edit trigger
         self.uniview.setEditTriggers(
-            QtWidgets.QAbstractItemView.CurrentChanged | QtWidgets.QAbstractItemView.SelectedClicked
+            QtWidgets.QAbstractItemView.EditTrigger.CurrentChanged | QtWidgets.QAbstractItemView.EditTrigger.SelectedClicked
         )
         self.uniview.viewport().installEventFilter(self)
-        self.uniview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.uniview.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         # signals
         self.unimodel.dataChanged.connect(self.uni_edited)
         self.unisel = self.uniview.selectionModel()
@@ -230,10 +225,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         # enable sorting
         self.dogview.setSortingEnabled(False)
         # select rows
-        self.dogview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.dogview.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.dogview.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.dogview.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
         self.dogview.horizontalHeader().setMinimumSectionSize(40)
-        self.dogview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.dogview.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.dogview.horizontalHeader().hide()
         # signals
         self.dogsel = self.dogview.selectionModel()
@@ -284,9 +279,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.invview.customContextMenuRequested[QtCore.QPoint].connect(self.invviewRightClicked)
         self.dogview.doubleClicked.connect(self.set_dogmin_phases)
         # additional keyboard shortcuts
-        self.scHome = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
+        self.scHome = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+H"), self)
         self.scHome.activated.connect(self.toolbar.home)
-        self.showAreas = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
+        self.showAreas = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+A"), self)
         self.showAreas.activated.connect(self.check_prj_areas)
 
     def reinitialize(self):
@@ -295,12 +290,12 @@ class BuildersBase(QtWidgets.QMainWindow):
             phases = []
             for i in range(self.phasemodel.rowCount()):
                 item = self.phasemodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
+                if item.checkState() == QtCore.Qt.CheckState.Checked:
                     phases.append(item.text())
             out = []
             for i in range(self.outmodel.rowCount()):
                 item = self.outmodel.item(i)
-                if item.checkState() == QtCore.Qt.Checked:
+                if item.checkState() == QtCore.Qt.CheckState.Checked:
                     out.append(item.text())
             # reread script file
             tc, ok = get_tcapi(self.tc.workdir)
@@ -310,12 +305,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                 for i in range(self.phasemodel.rowCount()):
                     item = self.phasemodel.item(i)
                     if item.text() in phases:
-                        item.setCheckState(QtCore.Qt.Checked)
+                        item.setCheckState(QtCore.Qt.CheckState.Checked)
                 # select out
                 for i in range(self.outmodel.rowCount()):
                     item = self.outmodel.item(i)
                     if item.text() in out:
-                        item.setCheckState(QtCore.Qt.Checked)
+                        item.setCheckState(QtCore.Qt.CheckState.Checked)
                 # update excess changes
                 self.ps.excess = self.tc.excess
                 self.invview.resizeColumnsToContents()
@@ -327,7 +322,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.changed = True
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, "Initialization error", tc, qb.Abort)
+                qb.critical(self, "Initialization error", tc, qb.StandardButton.Abort)
         else:
             self.statusBar().showMessage("Project is not yet initialized.")
 
@@ -389,7 +384,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             )[0]
             if Path(projfile).is_file():
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 with gzip.open(projfile, "rb") as stream:
                     data = pickle.load(stream)
                 # do import
@@ -398,12 +393,12 @@ class BuildersBase(QtWidgets.QMainWindow):
                 for i in range(self.phasemodel.rowCount()):
                     item = self.phasemodel.item(i)
                     if item.text() in data["selphases"]:
-                        item.setCheckState(QtCore.Qt.Checked)
+                        item.setCheckState(QtCore.Qt.CheckState.Checked)
                 # select out
                 for i in range(self.outmodel.rowCount()):
                     item = self.outmodel.item(i)
                     if item.text() in data["out"]:
-                        item.setCheckState(QtCore.Qt.Checked)
+                        item.setCheckState(QtCore.Qt.CheckState.Checked)
                 # Import
                 id_lookup = {0: 0}
                 for row in data["invlist"]:
@@ -443,7 +438,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 progress = QtWidgets.QProgressDialog(
                     "Recalculate inv points", "Cancel", 0, len(self.ps.invpoints), self
                 )
-                progress.setWindowModality(QtCore.Qt.WindowModal)
+                progress.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
                 progress.setMinimumDuration(0)
                 old_guesses = self.tc.update_scriptfile(get_old_guesses=True)
                 for ix, inv in enumerate(self.ps.invpoints.values()):
@@ -466,7 +461,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 progress.deleteLater()
                 self.invview.resizeColumnsToContents()
                 progress = QtWidgets.QProgressDialog("Recalculate uni lines", "Cancel", 0, len(self.ps.unilines), self)
-                progress.setWindowModality(QtCore.Qt.WindowModal)
+                progress.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
                 progress.setMinimumDuration(0)
                 for ix, uni in enumerate(self.ps.unilines.values()):
                     progress.setValue(ix)
@@ -554,7 +549,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                             self,
                             "Workdir error",
                             "You can import only from projects with same working directory",
-                            qb.Abort,
+                            qb.StandardButton.Abort,
                         )
                 else:
                     qb = QtWidgets.QMessageBox
@@ -562,14 +557,14 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self,
                         "Error during openning",
                         "Unknown format of the project file",
-                        qb.Abort,
+                        qb.StandardButton.Abort,
                     )
 
     def cleanup_storage(self):
         if self.ready:
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Remove redundant calculations", "Are you sure?", qb.Yes, qb.No)
-            if reply == qb.Yes:
+            reply = qb.question(self, "Remove redundant calculations", "Are you sure?", qb.StandardButton.Yes, qb.StandardButton.No)
+            if reply == qb.StandardButton.Yes:
                 self.ps.cleanup_data()
                 self.changed = True
                 self.refresh_gui()
@@ -601,7 +596,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                                         self,
                                         "{} is used as zeromode phase and cannot be deleted.",
                                         self.tc.status,
-                                        qb.Abort,
+                                        qb.StandardButton.Abort,
                                     )
                                     raise ValueError()
                                 if old_phase in inv.phases:
@@ -617,7 +612,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                                         self,
                                         "{} is used as zeromode phase and cannot be deleted.",
                                         self.tc.status,
-                                        qb.Abort,
+                                        qb.StandardButton.Abort,
                                     )
                                     raise ValueError()
                                 if old_phase in uni.phases:
@@ -697,7 +692,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.project is not None:
             # do save
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             with gzip.open(self.project, "wb") as stream:
                 pickle.dump(self.data, stream)
             self.changed = False
@@ -717,12 +712,12 @@ class BuildersBase(QtWidgets.QMainWindow):
         selphases = []
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
-            if item.checkState() == QtCore.Qt.Checked:
+            if item.checkState() == QtCore.Qt.CheckState.Checked:
                 selphases.append(item.text())
         out = []
         for i in range(self.outmodel.rowCount()):
             item = self.outmodel.item(i)
-            if item.checkState() == QtCore.Qt.Checked:
+            if item.checkState() == QtCore.Qt.CheckState.Checked:
                 out.append(item.text())
         # put to dict
         data = {
@@ -861,12 +856,12 @@ class BuildersBase(QtWidgets.QMainWindow):
         phases = []
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
-            if item.checkState() == QtCore.Qt.Checked:
+            if item.checkState() == QtCore.Qt.CheckState.Checked:
                 phases.append(item.text())
         out = []
         for i in range(self.outmodel.rowCount()):
             item = self.outmodel.item(i)
-            if item.checkState() == QtCore.Qt.Checked:
+            if item.checkState() == QtCore.Qt.CheckState.Checked:
                 out.append(item.text())
         return set(phases).union(self.ps.excess), set(out)
 
@@ -874,16 +869,16 @@ class BuildersBase(QtWidgets.QMainWindow):
         for i in range(self.phasemodel.rowCount()):
             item = self.phasemodel.item(i)
             if item.text() in r.phases:  # or item.text() in r.out:
-                item.setCheckState(QtCore.Qt.Checked)
+                item.setCheckState(QtCore.Qt.CheckState.Checked)
             else:
-                item.setCheckState(QtCore.Qt.Unchecked)
+                item.setCheckState(QtCore.Qt.CheckState.Unchecked)
         # select out
         for i in range(self.outmodel.rowCount()):
             item = self.outmodel.item(i)
             if item.text() in r.out:
-                item.setCheckState(QtCore.Qt.Checked)
+                item.setCheckState(QtCore.Qt.CheckState.Checked)
             else:
-                item.setCheckState(QtCore.Qt.Unchecked)
+                item.setCheckState(QtCore.Qt.CheckState.Unchecked)
         if show_output:
             if not r.manual:
                 txt = ""
@@ -1110,7 +1105,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
             self.statusBar().showMessage("Running auto univariant lines calculations...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             self.tc.update_scriptfile(guesses=inv.ptguess())
             all_uni = inv.all_unilines()
             triple = set(["ky", "and", "sill"])
@@ -1174,8 +1169,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             if todel:
                 msg = "{}\nAre you sure?".format(self.invmodel.data(idx[1]))
                 qb = QtWidgets.QMessageBox
-                reply = qb.question(self, "Remove invariant point", msg, qb.Yes, qb.No)
-                if reply == qb.Yes:
+                reply = qb.question(self, "Remove invariant point", msg, qb.StandardButton.Yes, qb.StandardButton.No)
+                if reply == qb.StandardButton.Yes:
                     # Check unilines begins and ends
                     for uni in self.ps.unilines.values():
                         if uni.begin == inv_id:
@@ -1198,8 +1193,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             idx = self.unisel.selectedIndexes()
             msg = "{}\nAre you sure?".format(self.unimodel.data(idx[1]))
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Remove univariant line", msg, qb.Yes, qb.No)
-            if reply == qb.Yes:
+            reply = qb.question(self, "Remove univariant line", msg, qb.StandardButton.Yes, qb.StandardButton.No)
+            if reply == qb.StandardButton.Yes:
                 self.unimodel.removeRow(idx[0])
                 self.changed = True
                 self.plot()
@@ -1210,8 +1205,8 @@ class BuildersBase(QtWidgets.QMainWindow):
             idx = self.dogsel.selectedIndexes()
             msg = "{}\nAre you sure?".format(self.dogmodel.data(idx[1]))
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Remove dogmin result", msg, qb.Yes, qb.No)
-            if reply == qb.Yes:
+            reply = qb.question(self, "Remove dogmin result", msg, qb.StandardButton.Yes, qb.StandardButton.No)
+            if reply == qb.StandardButton.Yes:
                 self.logDogmin.clear()
                 self.dogmodel.removeRow(idx[0])
                 self.changed = True
@@ -1284,8 +1279,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                             y = np.atleast_1d(np.mean(yy))
                             msg = "Found intersection of {} unilines.\n Do you want to use it?".format(len(unis))
                             qb = QtWidgets.QMessageBox
-                            reply = qb.question(self, "Add manual invariant point", msg, qb.Yes, qb.No)
-                            if reply == qb.Yes:
+                            reply = qb.question(self, "Add manual invariant point", msg, qb.StandardButton.Yes, qb.StandardButton.No)
+                            if reply == qb.StandardButton.Yes:
                                 isnew, id_inv = self.ps.getidinv(inv)
                                 inv.id = id_inv
                                 inv.x, inv.y = x, y
@@ -1328,7 +1323,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                         self.tabMain.setCurrentIndex(0)
                         self.statusBar().showMessage("Click on canvas to add invariant point.")
                         QtWidgets.QApplication.processEvents()
-                        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
+                        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.CrossCursor)
                 else:
                     self.statusBar().showMessage("")
                     if self.cid is not None:
@@ -1415,16 +1410,16 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Cancel | qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Cancel | qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.saveProject()
                 if self.project is not None:
                     self.app_settings(write=True)
                     event.accept()
                 else:
                     event.ignore()
-            elif reply == qb.Discard:
+            elif reply == qb.StandardButton.Discard:
                 event.accept()
             else:
                 event.ignore()
@@ -1433,9 +1428,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         sender = self.sender()
         validator = sender.validator()
         state = validator.validate(sender.text(), 0)[0]
-        if state == QtGui.QValidator.Acceptable:
+        if state == QtGui.QValidator.State.Acceptable:
             color = "#c4df9b"  # green
-        elif state == QtGui.QValidator.Intermediate:
+        elif state == QtGui.QValidator.State.Intermediate:
             color = "#fff79a"  # yellow
         else:
             color = "#f6989d"  # red
@@ -1496,11 +1491,11 @@ class BuildersBase(QtWidgets.QMainWindow):
 
     def phase_changed(self, item):
         """Manage phases in outmodel based on selection in phase model."""
-        if item.checkState():
+        if item.checkState() == QtCore.Qt.CheckState.Checked:
             outitem = item.clone()
-            outitem.setCheckState(QtCore.Qt.Unchecked)
+            outitem.setCheckState(QtCore.Qt.CheckState.Unchecked)
             self.outmodel.appendRow(outitem)
-            self.outmodel.sort(0, QtCore.Qt.AscendingOrder)
+            self.outmodel.sort(0, QtCore.Qt.SortOrder.AscendingOrder)
         else:
             for it in self.outmodel.findItems(item.text()):
                 self.outmodel.removeRow(it.row())
@@ -1524,7 +1519,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     self.tabMain.setCurrentIndex(0)
                     self.statusBar().showMessage("Click on canvas to run dogmin at this point.")
                     QtWidgets.QApplication.processEvents()
-                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CrossCursor)
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.CrossCursor)
                 else:
                     self.statusBar().showMessage("You need to select phases to consider for dogmin.")
                     self.pushDogmin.setChecked(False)
@@ -1701,7 +1696,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.ready:
             if not hasattr(self.ax, "areas_shown"):
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 shapes, _, log = self.ps.create_shapes()
                 if log:
                     self.textOutput.setPlainText("\n".join(log))
@@ -1757,9 +1752,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         self.actionImport_drfile.triggered.connect(self.import_drfile)
         self.actionImport_from_old.triggered.connect(self.import_from_old)
         # additional keyboard shortcuts
-        self.scCalcTatP = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
+        self.scCalcTatP = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalcTatP.activated.connect(lambda: self.do_calc(True))
-        self.scCalcPatT = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+P"), self)
+        self.scCalcPatT = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+P"), self)
         self.scCalcPatT.activated.connect(lambda: self.do_calc(False))
 
     def app_settings(self, write=False):
@@ -1795,42 +1790,42 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
             self.checkLabelUni.setCheckState(
-                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelUniText.setCheckState(
-                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInv.setCheckState(
-                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInvText.setCheckState(
-                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDog.setCheckState(
-                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDogText.setCheckState(
-                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneInv.setCheckState(
-                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_inv", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneUni.setCheckState(
-                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_uni", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(
-                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectuni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkAutoconnectInv.setCheckState(
-                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectinv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkUseInvGuess.setCheckState(
-                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("use_inv_guess", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkOverwrite.setCheckState(
-                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("overwrite", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -1849,13 +1844,13 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
-            workdir = qd.getExistingDirectory(self, "Select Directory", os.path.expanduser("~"), qd.ShowDirsOnly)
+            workdir = qd.getExistingDirectory(self, "Select Directory", os.path.expanduser("~"), qd.Option.ShowDirsOnly)
         if workdir:
             tc, ok = get_tcapi(workdir)
             if ok:
@@ -1870,16 +1865,16 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage("Project initialized successfully.")
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, "Initialization error", tc, qb.Abort)
+                qb.critical(self, "Initialization error", tc, qb.StandardButton.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project"""
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         if projfile is None:
             if self.ready:
@@ -1906,12 +1901,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 if workdir != active:
                     move_msg = "Project have been moved. Change working directory ?"
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, "Warning", move_msg, qb.Yes | qb.No, qb.No)
+                    reply = qb.question(self, "Warning", move_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
 
-                    if reply == qb.Yes:
+                    if reply == qb.StandardButton.Yes:
                         workdir = active
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
@@ -1925,12 +1920,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     for i in range(self.phasemodel.rowCount()):
                         item = self.phasemodel.item(i)
                         if item.text() in data["selphases"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # select out
                     for i in range(self.outmodel.rowCount()):
                         item = self.outmodel.item(i)
                         if item.text() in data["out"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # views
                     used_phases = set()
                     for id, inv in data["section"].invpoints.items():
@@ -1974,8 +1969,8 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         if data["bulk"] != self.tc.bulk and data["version"] >= "2.3.0":
                             qb = QtWidgets.QMessageBox
                             bulk_msg = "The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?"
-                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.Yes | qb.No, qb.No)
-                            if reply == qb.Yes:
+                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
+                            if reply == qb.StandardButton.Yes:
                                 self.bulk = data["bulk"]
                                 self.tc.update_scriptfile(bulk=data["bulk"])
                                 self.read_scriptfile()
@@ -1996,7 +1991,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                 "The phases {} are not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                         else:
                             qb.warning(
@@ -2005,11 +2000,11 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                                 "The phase {} is not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, "Error during openning", tc, qb.Abort)
+                    qb.critical(self, "Error during openning", tc, qb.StandardButton.Abort)
             # VERY OLD FORMAT
             elif data.get("version", "1.0.0") < "2.1.0":
                 qb = QtWidgets.QMessageBox
@@ -2017,7 +2012,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     self,
                     "Old version",
                     "This project is created in older version.\nUse import from project.",
-                    qb.Abort,
+                    qb.StandardButton.Abort,
                 )
             # OLD FORMAT
             elif data.get("version", "1.0.0") < "2.3.0":
@@ -2029,12 +2024,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 if workdir != active:
                     move_msg = "Project have been moved. Change working directory ?"
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, "Warning", move_msg, qb.Yes | qb.No, qb.No)
+                    reply = qb.question(self, "Warning", move_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
 
-                    if reply == qb.Yes:
+                    if reply == qb.StandardButton.Yes:
                         workdir = active
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
@@ -2048,12 +2043,12 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     for i in range(self.phasemodel.rowCount()):
                         item = self.phasemodel.item(i)
                         if item.text() in data["selphases"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # select out
                     for i in range(self.outmodel.rowCount()):
                         item = self.outmodel.item(i)
                         if item.text() in data["out"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # views
                     for row in data["invlist"]:
                         if row[2]["manual"]:
@@ -2119,14 +2114,14 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     self.statusBar().showMessage("Project loaded.")
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, "Error during openning", tc, qb.Abort)
+                    qb.critical(self, "Error during openning", tc, qb.StandardButton.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(
                     self,
                     "Error during openning",
                     "Unknown format of the project file",
-                    qb.Abort,
+                    qb.StandardButton.Abort,
                 )
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
@@ -2185,7 +2180,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             old_guesses = None
             self.statusBar().showMessage("Searching for invariant points...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
@@ -2293,7 +2288,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             doglevel = self.spinDoglevel.value()
             self.statusBar().showMessage("Running dogmin with max variance of equilibria at {}...".format(variance))
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             tcout = self.tc.dogmin(phases, event.ydata, event.xdata, variance, doglevel=doglevel)
             self.read_scriptfile()
             QtWidgets.QApplication.restoreOverrideCursor()
@@ -2327,7 +2322,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             ###########
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -2550,7 +2545,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
         self.pushCalc.clicked.connect(self.do_calc)
         self.actionImport_from_PT.triggered.connect(self.import_from_pt)
         # additional keyboard shortcuts
-        self.scCalc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
+        self.scCalc = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalc.activated.connect(self.do_calc)
 
     def app_settings(self, write=False):
@@ -2585,43 +2580,43 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.rangeSpin.setValue(builder_settings.value("prange", 0, type=float))
             self.checkLabelUni.setCheckState(
-                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
             self.checkLabelUniText.setCheckState(
-                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInv.setCheckState(
-                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInvText.setCheckState(
-                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDog.setCheckState(
-                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDogText.setCheckState(
-                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneInv.setCheckState(
-                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_inv", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneUni.setCheckState(
-                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_uni", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(
-                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectuni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkAutoconnectInv.setCheckState(
-                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectinv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkUseInvGuess.setCheckState(
-                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("use_inv_guess", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkOverwrite.setCheckState(
-                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("overwrite", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -2640,9 +2635,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
@@ -2661,16 +2656,16 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self.statusBar().showMessage("Project initialized successfully.")
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, "Initialization error", tc, qb.Abort)
+                qb.critical(self, "Initialization error", tc, qb.StandardButton.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project"""
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         if projfile is None:
             if self.ready:
@@ -2691,12 +2686,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 if workdir != active:
                     move_msg = "Project have been moved. Change working directory ?"
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, "Warning", move_msg, qb.Yes | qb.No, qb.No)
+                    reply = qb.question(self, "Warning", move_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
 
-                    if reply == qb.Yes:
+                    if reply == qb.StandardButton.Yes:
                         workdir = active
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
@@ -2706,12 +2701,12 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     for i in range(self.phasemodel.rowCount()):
                         item = self.phasemodel.item(i)
                         if item.text() in data["selphases"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # select out
                     for i in range(self.outmodel.rowCount()):
                         item = self.outmodel.item(i)
                         if item.text() in data["out"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # views
                     used_phases = set()
                     for id, inv in data["section"].invpoints.items():
@@ -2773,8 +2768,8 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         if data["bulk"] != self.tc.bulk:
                             qb = QtWidgets.QMessageBox
                             bulk_msg = "The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?"
-                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.Yes | qb.No, qb.No)
-                            if reply == qb.Yes:
+                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
+                            if reply == qb.StandardButton.Yes:
                                 self.bulk = data["bulk"]
                                 self.tc.update_scriptfile(bulk=data["bulk"], xsteps=self.spinSteps.value())
                                 self.read_scriptfile()
@@ -2795,7 +2790,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                 "The phases {} are not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                         else:
                             qb.warning(
@@ -2804,18 +2799,18 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                                 "The phase {} is not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, "Error during openning", tc, qb.Abort)
+                    qb.critical(self, "Error during openning", tc, qb.StandardButton.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(
                     self,
                     "Error during openning",
                     "Unknown format of the project file",
-                    qb.Abort,
+                    qb.StandardButton.Abort,
                 )
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
@@ -2853,7 +2848,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     #
                     self.statusBar().showMessage("Importing from PT section...")
                     QtWidgets.QApplication.processEvents()
-                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                     # change bulk
                     # bulk = self.tc.interpolate_bulk(crange)
                     # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
@@ -2904,7 +2899,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self,
                         "Error during openning",
                         "Unknown format of the project file",
-                        qb.Abort,
+                        qb.StandardButton.Abort,
                     )
 
     @property
@@ -2930,7 +2925,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             old_guesses = None
             self.statusBar().showMessage("Searching for invariant points...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
@@ -3101,7 +3096,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.statusBar().showMessage("Running dogmin with max variance of equilibria at {}...".format(variance))
             # self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             tcout = self.tc.dogmin(
                 phases,
                 pm,
@@ -3144,7 +3139,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             ###########
             extend = self.spinOver.value()
             trange = self.ax.get_xlim()
@@ -3388,7 +3383,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
         self.pushCalc.clicked.connect(self.do_calc)
         self.actionImport_from_PT.triggered.connect(self.import_from_pt)
         # additional keyboard shortcuts
-        self.scCalc = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
+        self.scCalc = QtGui.QShortcut(QtGui.QKeySequence("Ctrl+T"), self)
         self.scCalc.activated.connect(self.do_calc)
 
     def app_settings(self, write=False):
@@ -3423,43 +3418,43 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.spinOver.setValue(builder_settings.value("extend_range", 5, type=int))
             self.rangeSpin.setValue(builder_settings.value("trange", 0, type=int))
             self.checkLabelUni.setCheckState(
-                builder_settings.value("label_uni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.spinDoglevel.setValue(builder_settings.value("dogmin_level", 1, type=int))
             self.checkLabelUniText.setCheckState(
-                builder_settings.value("label_uni_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_uni_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInv.setCheckState(
-                builder_settings.value("label_inv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelInvText.setCheckState(
-                builder_settings.value("label_inv_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_inv_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDog.setCheckState(
-                builder_settings.value("label_dog", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkLabelDogText.setCheckState(
-                builder_settings.value("label_dog_text", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("label_dog_text", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneInv.setCheckState(
-                builder_settings.value("hide_done_inv", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_inv", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.checkHidedoneUni.setCheckState(
-                builder_settings.value("hide_done_uni", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("hide_done_uni", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.spinAlpha.setValue(builder_settings.value("label_alpha", 50, type=int))
             self.spinFontsize.setValue(builder_settings.value("label_fontsize", 8, type=int))
             self.checkAutoconnectUni.setCheckState(
-                builder_settings.value("autoconnectuni", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectuni", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkAutoconnectInv.setCheckState(
-                builder_settings.value("autoconnectinv", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("autoconnectinv", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkUseInvGuess.setCheckState(
-                builder_settings.value("use_inv_guess", QtCore.Qt.Checked, type=QtCore.Qt.CheckState)
+                builder_settings.value("use_inv_guess", QtCore.Qt.CheckState.Checked, type=QtCore.Qt.CheckState)
             )
             self.checkOverwrite.setCheckState(
-                builder_settings.value("overwrite", QtCore.Qt.Unchecked, type=QtCore.Qt.CheckState)
+                builder_settings.value("overwrite", QtCore.Qt.CheckState.Unchecked, type=QtCore.Qt.CheckState)
             )
             self.recent = []
             n = builder_settings.beginReadArray("recent")
@@ -3478,9 +3473,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         qd = QtWidgets.QFileDialog
         if not workdir:
@@ -3499,16 +3494,16 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self.statusBar().showMessage("Project initialized successfully.")
             else:
                 qb = QtWidgets.QMessageBox
-                qb.critical(self, "Initialization error", tc, qb.Abort)
+                qb.critical(self, "Initialization error", tc, qb.StandardButton.Abort)
 
     def openProject(self, checked, projfile=None):
         """Open working directory and initialize project"""
         if self.changed:
             quit_msg = "Project have been changed. Save ?"
             qb = QtWidgets.QMessageBox
-            reply = qb.question(self, "Message", quit_msg, qb.Discard | qb.Save, qb.Save)
+            reply = qb.question(self, "Message", quit_msg, qb.StandardButton.Discard | qb.StandardButton.Save, qb.StandardButton.Save)
 
-            if reply == qb.Save:
+            if reply == qb.StandardButton.Save:
                 self.do_save()
         if projfile is None:
             if self.ready:
@@ -3529,12 +3524,12 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 if workdir != active:
                     move_msg = "Project have been moved. Change working directory ?"
                     qb = QtWidgets.QMessageBox
-                    reply = qb.question(self, "Warning", move_msg, qb.Yes | qb.No, qb.No)
+                    reply = qb.question(self, "Warning", move_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
 
-                    if reply == qb.Yes:
+                    if reply == qb.StandardButton.Yes:
                         workdir = active
                 QtWidgets.QApplication.processEvents()
-                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                 tc, ok = get_tcapi(workdir)
                 if ok:
                     self.tc = tc
@@ -3544,12 +3539,12 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     for i in range(self.phasemodel.rowCount()):
                         item = self.phasemodel.item(i)
                         if item.text() in data["selphases"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # select out
                     for i in range(self.outmodel.rowCount()):
                         item = self.outmodel.item(i)
                         if item.text() in data["out"]:
-                            item.setCheckState(QtCore.Qt.Checked)
+                            item.setCheckState(QtCore.Qt.CheckState.Checked)
                     # views
                     used_phases = set()
                     for id, inv in data["section"].invpoints.items():
@@ -3611,8 +3606,8 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         if data["bulk"] != self.tc.bulk:
                             qb = QtWidgets.QMessageBox
                             bulk_msg = "The bulk coposition in project differs from one in scriptfile.\nDo you want to update your script file?"
-                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.Yes | qb.No, qb.No)
-                            if reply == qb.Yes:
+                            reply = qb.question(self, "Bulk changed", bulk_msg, qb.StandardButton.Yes | qb.StandardButton.No, qb.StandardButton.No)
+                            if reply == qb.StandardButton.Yes:
                                 self.bulk = data["bulk"]
                                 self.tc.update_scriptfile(bulk=data["bulk"], xsteps=self.spinSteps.value())
                                 self.read_scriptfile()
@@ -3633,7 +3628,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                 "The phases {} are not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                         else:
                             qb.warning(
@@ -3642,18 +3637,18 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                                 "The phase {} is not defined.\nCheck your a-x file {}.".format(
                                     " ".join(missing), "tc-" + self.tc.axname + ".txt"
                                 ),
-                                qb.Ok,
+                                qb.StandardButton.Ok,
                             )
                 else:
                     qb = QtWidgets.QMessageBox
-                    qb.critical(self, "Error during openning", tc, qb.Abort)
+                    qb.critical(self, "Error during openning", tc, qb.StandardButton.Abort)
             else:
                 qb = QtWidgets.QMessageBox
                 qb.critical(
                     self,
                     "Error during openning",
                     "Unknown format of the project file",
-                    qb.Abort,
+                    qb.StandardButton.Abort,
                 )
             QtWidgets.QApplication.restoreOverrideCursor()
         else:
@@ -3688,7 +3683,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     #
                     self.statusBar().showMessage("Importing from PT section...")
                     QtWidgets.QApplication.processEvents()
-                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+                    QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
                     # change bulk
                     # bulk = self.tc.interpolate_bulk(crange)
                     # self.tc.update_scriptfile(bulk=bulk, xsteps=self.spinSteps.value(), xvals=crange)
@@ -3733,7 +3728,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self,
                         "Error during openning",
                         "Unknown format of the project file",
-                        qb.Abort,
+                        qb.StandardButton.Abort,
                     )
 
     @property
@@ -3759,7 +3754,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             old_guesses = None
             self.statusBar().showMessage("Searching for invariant points...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             # set guesses temporarily when asked
             if uni.connected == 1 and self.checkUseInvGuess.isChecked():
                 inv_id = sorted([uni.begin, uni.end])[1]
@@ -3930,7 +3925,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.statusBar().showMessage("Running dogmin with max variance of equilibria at {}...".format(variance))
             # self.read_scriptfile()
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             tcout = self.tc.dogmin(
                 phases,
                 event.ydata,
@@ -3973,7 +3968,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
-            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
             ###########
             extend = self.spinOver.value()
             tm = sum(self.tc.trange) / 2
@@ -4216,7 +4211,7 @@ class InvModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self.header)
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         inv = self.ps.invpoints[self.invlist[index.row()]]
@@ -4231,12 +4226,12 @@ class InvModel(QtCore.QAbstractTableModel):
         #         brush = QtGui.QBrush()
         #         brush.setColor(QtGui.QColor('red'))
         #         return brush
-        if role == QtCore.Qt.FontRole:
+        if role == QtCore.Qt.ItemDataRole.FontRole:
             if inv.manual:
                 font = QtGui.QFont()
                 font.setItalic(True)
                 return font
-        elif role != QtCore.Qt.DisplayRole:
+        elif role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
         else:
             if index.column() == 0:
@@ -4259,8 +4254,8 @@ class InvModel(QtCore.QAbstractTableModel):
         del self.ps.invpoints[id]
         self.endRemoveRows()
 
-    def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
+    def headerData(self, col, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if (orientation == QtCore.Qt.Orientation.Horizontal) & (role == QtCore.Qt.ItemDataRole.DisplayRole):
             return self.header[col]
         return None
 
@@ -4284,7 +4279,7 @@ class UniModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self.header)
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         uni = self.ps.unilines[self.unilist[index.row()]]
@@ -4293,7 +4288,7 @@ class UniModel(QtCore.QAbstractTableModel):
         #         brush = QtGui.QBrush()
         #         brush.setColor(QtGui.QColor('red'))
         #         return brush
-        if role == QtCore.Qt.FontRole:
+        if role == QtCore.Qt.ItemDataRole.FontRole:
             if uni.manual:
                 font = QtGui.QFont()
                 font.setItalic(True)
@@ -4302,7 +4297,7 @@ class UniModel(QtCore.QAbstractTableModel):
                 font = QtGui.QFont()
                 font.setBold(True)
                 return font
-        elif role != QtCore.Qt.DisplayRole:
+        elif role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
         else:
             if index.column() == 0:
@@ -4314,9 +4309,9 @@ class UniModel(QtCore.QAbstractTableModel):
             else:
                 return uni.label(excess=self.ps.excess)
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
+    def setData(self, index, value, role=QtCore.Qt.ItemDataRole.EditRole):
         # DO change and emit plot
-        if role == QtCore.Qt.EditRole:
+        if role == QtCore.Qt.ItemDataRole.EditRole:
             uni = self.ps.unilines[self.unilist[index.row()]]
             if index.column() == 2:
                 uni.begin = value
@@ -4340,16 +4335,16 @@ class UniModel(QtCore.QAbstractTableModel):
         del self.ps.unilines[id]
         self.endRemoveRows()
 
-    def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
+    def headerData(self, col, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if (orientation == QtCore.Qt.Orientation.Horizontal) & (role == QtCore.Qt.ItemDataRole.DisplayRole):
             return self.header[col]
         return None
 
     def flags(self, index):
         if index.column() > 1:
-            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return QtCore.Qt.ItemFlag.ItemIsEditable | QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
         else:
-            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable
 
     def getRowID(self, index):
         return self.unilist[index.row()]
@@ -4413,11 +4408,11 @@ class DogminModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent=None):
         return len(self.header)
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
+    def data(self, index, role=QtCore.Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         dgm = self.ps.dogmins[self.doglist[index.row()]]
-        if role != QtCore.Qt.DisplayRole:
+        if role != QtCore.Qt.ItemDataRole.DisplayRole:
             return None
         else:
             if index.column() == 0:
@@ -4440,8 +4435,8 @@ class DogminModel(QtCore.QAbstractTableModel):
         del self.ps.dogmins[id]
         self.endRemoveRows()
 
-    def headerData(self, col, orientation, role=QtCore.Qt.DisplayRole):
-        if orientation == QtCore.Qt.Horizontal & role == QtCore.Qt.DisplayRole:
+    def headerData(self, col, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+        if (orientation == QtCore.Qt.Orientation.Horizontal) & (role == QtCore.Qt.ItemDataRole.DisplayRole):
             return self.header[col]
         return None
 
@@ -4463,7 +4458,7 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
         self.x_label.setText(ps.x_var)
         self.y_label.setText(ps.y_var)
         # Keep Results
-        self.checkKeep.setCheckState(QtCore.Qt.Unchecked)
+        self.checkKeep.setCheckState(QtCore.Qt.CheckState.Unchecked)
         if isnew:
             self.checkKeep.setEnabled(False)
         else:
@@ -4547,30 +4542,30 @@ class AboutDialog(QtWidgets.QDialog):
         self.resize(300, 100)
 
         title = QtWidgets.QLabel("{} {}".format(builder, version))
-        title.setAlignment(QtCore.Qt.AlignCenter)
+        title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         myFont = QtGui.QFont()
         myFont.setBold(True)
         title.setFont(myFont)
 
         suptitle = QtWidgets.QLabel("THERMOCALC front-end for constructing pseudosections")
-        suptitle.setAlignment(QtCore.Qt.AlignCenter)
+        suptitle.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         author = QtWidgets.QLabel(copyright)
-        author.setAlignment(QtCore.Qt.AlignCenter)
+        author.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         swinfo = QtWidgets.QLabel(
             "Python:{} Qt:{} PyQt:{}".format(sys.version.split()[0], QT_VERSION_STR, PYQT_VERSION_STR)
         )
-        swinfo.setAlignment(QtCore.Qt.AlignCenter)
+        swinfo.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         github = QtWidgets.QLabel(
             'GitHub: <a href="https://github.com/ondrolexa/pypsbuilder">https://github.com/ondrolexa/pypsbuilder</a>'
         )
-        github.setAlignment(QtCore.Qt.AlignCenter)
+        github.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         github.setOpenExternalLinks(True)
 
         self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setAlignment(QtCore.Qt.AlignVCenter)
+        self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         self.layout.addWidget(title)
         self.layout.addWidget(suptitle)
@@ -4750,7 +4745,7 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
         try:
             T[:, i] = np.linalg.solve(AA[:, :, i], BB[:, i])
         except Exception:
-            T[:, i] = np.NaN
+            T[:, i] = np.nan
 
     in_range = (T[0, :] >= 0) & (T[1, :] >= 0) & (T[0, :] <= 1) & (T[1, :] <= 1)
 
@@ -4762,31 +4757,31 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
 def ptbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = PTBuilder()
-    desktop = QtWidgets.QDesktopWidget().availableGeometry()
+    desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
     height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
-    sys.exit(application.exec_())
+    sys.exit(application.exec())
 
 
 def txbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = TXBuilder()
-    desktop = QtWidgets.QDesktopWidget().availableGeometry()
+    desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
     height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
-    sys.exit(application.exec_())
+    sys.exit(application.exec())
 
 
 def pxbuilder():
     application = QtWidgets.QApplication(sys.argv)
     window = PXBuilder()
-    desktop = QtWidgets.QDesktopWidget().availableGeometry()
+    desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
     height = (desktop.height() - window.height()) // 2
     window.show()
     window.move(width, height)
-    sys.exit(application.exec_())
+    sys.exit(application.exec())
