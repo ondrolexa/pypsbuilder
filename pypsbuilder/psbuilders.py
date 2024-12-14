@@ -1874,6 +1874,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 idx = self.invsel.selectedIndexes()
                 inv = self.ps.invpoints[self.invmodel.getRowID(idx[0])]
                 self.invhigh = self.ax.plot(inv.x, inv.y, "o", **invhigh_kw)
+            self.figure.tight_layout()
             self.canvas.draw()
 
     def check_prj_areas(self):
