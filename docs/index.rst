@@ -3,10 +3,21 @@ Welcome to pypsbuilder documentation!
 
 .. toctree::
    :maxdepth: 1
+   :caption: Introduction
 
-   installation
+   readme
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
    psbuilders-tutorial
    psexplorer-tutorial
+
+.. toctree::
+   :maxdepth: 1
+   :caption: References
+
    command-line
    api
    authors
@@ -33,9 +44,4 @@ below to see **pypsbuilder** in action.
     allow="accelerometer; autoplay; encrypted-media; gyroscope;
     picture-in-picture" allowfullscreen></iframe>
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. mdinclude:: ../CHANGELOG.md

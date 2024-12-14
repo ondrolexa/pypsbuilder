@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import importlib.metadata
 from pypsbuilder.psexplorer import PTPS, TXPS, PXPS
 from pypsbuilder.psclasses import (
     InvPoint,
@@ -23,7 +22,7 @@ __all__ = (
     "get_tcapi",
 )
 
-__version__ = importlib.metadata.version("pypsbuilder")
+__version__ = "2.5.2"
 __author__ = "Ondrej Lexa"
 __copyright__ = "© Ondrej Lexa 2016-2024"
 __email__ = "lexa.ondrej@gmail.com"

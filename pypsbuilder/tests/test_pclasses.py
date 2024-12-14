@@ -39,8 +39,8 @@ def test_parse_ini1(mock_tc):
     assert res[0].p == 12.2438, "Wrong pressure"
     assert res[0].T == 530.136, "Wrong temperature"
     assert len(res) == 1, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_parse_ini2(mock_tc):
@@ -72,8 +72,8 @@ def test_parse_ini2(mock_tc):
     assert res[0].p == 7.0359, "Wrong pressure"
     assert res[0].T == 504.062, "Wrong temperature"
     assert len(res) == 1, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_parse_ini3(mock_tc):
@@ -105,8 +105,8 @@ def test_parse_ini3(mock_tc):
     assert res[0].p == 11.908, "Wrong pressure"
     assert res[0].T == 561.425, "Wrong temperature"
     assert len(res) == 1, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_parse_uni1(mock_tc):
@@ -140,8 +140,8 @@ def test_parse_uni1(mock_tc):
     assert res[15].p == 8.3, "Wrong pressure"
     assert res[15].T == 516.896, "Wrong temperature"
     assert len(res) == 33, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_parse_uni2(mock_tc):
@@ -175,8 +175,8 @@ def test_parse_uni2(mock_tc):
     assert res[25].p == 12.0698, "Wrong pressure"
     assert res[25].T == 546.413, "Wrong temperature"
     assert len(res) == 51, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_parse_uni3(mock_tc):
@@ -210,8 +210,8 @@ def test_parse_uni3(mock_tc):
     assert res[14].p == 8.08, "Wrong pressure"
     assert res[14].T == 523.539, "Wrong temperature"
     assert len(res) == 31, "Wrong results length"
-    assert type(res[0].data) == dict, "Wrong data type data"
-    assert type(res[0].ptguess) == list, "Wrong data type of ptguess"
+    assert isinstance(res[0].data, dict), "Wrong data type data"
+    assert isinstance(res[0].ptguess, list), "Wrong data type of ptguess"
 
 
 def test_contains_inv():
@@ -238,7 +238,9 @@ def test_getiduni():
 
 def test_auto_connect():
     for uni in pytest.ps.unilines.values():
-        candidates = [inv for inv in pytest.ps.invpoints.values() if uni.contains_inv(inv)]
+        candidates = [
+            inv for inv in pytest.ps.invpoints.values() if uni.contains_inv(inv)
+        ]
         assert len(candidates) == 2, "Error to detect auto_connect possibility"
 
 

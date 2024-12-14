@@ -40,9 +40,12 @@
       ~TXPS.isopleths_vector
       ~TXPS.merge_data
       ~TXPS.onclick
+      ~TXPS.overlap_isopleths
       ~TXPS.pointcalc
+      ~TXPS.remove_grid_data
       ~TXPS.save
       ~TXPS.save_tab
+      ~TXPS.search_composition
       ~TXPS.show
       ~TXPS.show_data
       ~TXPS.show_delta

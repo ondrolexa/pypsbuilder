@@ -59,7 +59,9 @@ def tcprojinit():
         # replace spaces
         projname = projname.replace(" ", "_")
         # keep only valid ascii chars
-        projname = unicodedata.normalize("NFKD", projname).encode("ASCII", "ignore").decode()
+        projname = (
+            unicodedata.normalize("NFKD", projname).encode("ASCII", "ignore").decode()
+        )
         # keep only whitelisted chars
         projname = "".join(c for c in projname if c in whitelist)
         if len(projname) < 1:
@@ -128,7 +130,9 @@ def tcprojinit():
 
     # create prefs file
     with open(dest / "tc-prefs.txt", "w") as f:
-        content = string.Template(tcpref_tmpl).substitute(dataset=ds, project=projname)[1:]
+        content = string.Template(tcpref_tmpl).substitute(dataset=ds, project=projname)[
+            1:
+        ]
         f.write(content)
 
     # download executable
