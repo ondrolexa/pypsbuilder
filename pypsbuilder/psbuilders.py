@@ -377,6 +377,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.apply_setting(4)
         # read scriptfile
         self.read_scriptfile()
+        self.clean_high()
         # update plot
         self.figure.clear()
         self.plot()
