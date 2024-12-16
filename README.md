@@ -8,13 +8,46 @@ Not that simplistic THERMOCALC front-end for constructing and visualizations of 
 
 ## How to install
 
-Easiest way to install **pypsbuilder** is to use pip:
+It is strongly suggested to install **pypsbuilder** into separate environment. You can create
+Python virtual environment. For Linux and macOS use:
+
+    python -m venv pyps
+    source pyps/bin/activate
+
+for Windows use PowerShell:
+
+    py -m venv pyps
+    pyps\Scripts\activate
+
+#### I'm using conda or mamba to manage environments
+
+If you have already have conda or mamba installed, you can create environment with:
+
+    conda create -n pyps numpy matplotlib scipy networkx shapely pyqt tqdm jupyterlab
+
+or
+
+    mamba create -n pyps numpy matplotlib scipy networkx shapely pyqt tqdm jupyterlab
+
+Then activate the new environment:
+
+    conda activate pyps
+
+or
+
+    mamba activate pyps
+
+#### Install pypsbuilder
+
+To install **pypsbuilder**, use pip within the environment:
 
     pip install pypsbuilder
 
-or if you downloaded pypsbuilder repository, run in unzipped folder:
+#### Note for macOS
 
-    pip install .
+If you have environment created with conda/mamba install the pypsbuilder with:
+
+    pip install pypsbuilder --no-deps
 
 #### Install master version
 
@@ -31,24 +64,6 @@ To upgrade an already installed **pypsbuilder** to the latest release:
 or to latest master version:
 
     pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
-
-### Install using conda or mamba
-
- Create environment from the included `environment.yml` file:
-
-    conda env create -f environment.yml
-
-or
-
-    mamba env create -f environment.yml
-
-Then activate the new environment:
-
-    conda activate pyps
-
-or
-
-    mamba activate pyps
 
 ## Documentation and tutorials
 
