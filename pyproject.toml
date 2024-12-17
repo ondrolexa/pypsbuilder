@@ -1,13 +1,18 @@
-[tool.poetry]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
 name = "pypsbuilder"
-version = "2.5.2"
+dynamic = ["version"]
 description = "THERMOCALC front-end for constructing and analyzing PT pseudosections"
-authors = ["Ondrej Lexa <lexa.ondrej@gmail.com>"]
 readme = "README.md"
-license = "MIT"
-repository = "https://github.com/ondrolexa/pypsbuilder"
-documentation = "https://pypsbuilder.readthedocs.io"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
 keywords = ["petrology", "THERMOCALC"]
+authors = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
+maintainers = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -16,52 +21,45 @@ classifiers = [
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
 ]
-include = ["AUTHORS.md", "CHANGELOG.md", "CONTRIBUTING.md"]
+dependencies = ["numpy", "matplotlib", "pyqt5", "scipy", "shapely>=2", "tqdm"]
 
+[project.optional-dependencies]
+extra = ["networkx"]
+docs = ["sphinx", "sphinx_mdinclude", "sphinx_rtd_theme"]
+tests = ["pytest", "pytest-cov"]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "networkx",
+    "sphinx",
+    "sphinx_mdinclude",
+    "sphinx_rtd_theme",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^2.1"
-matplotlib = "^3.9"
-pyqt5 = "^5.15"
-scipy = "^1.14"
-networkx = "^3.3"
-shapely = "^2"
-tqdm = "^4"
+[project.urls]
+Homepage = "https://github.com/ondrolexa/pypsbuilder"
+Documentation = "https://pypsbuilder.readthedocs.io"
+Repository = "https://github.com/ondrolexa/pypsbuilder.git"
+Issues = "https://github.com/ondrolexa/pypsbuilder/issues"
+Changelog = "https://github.com/ondrolexa/pypsbuilder/blob/master/CHANGELOG.md"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-black = "*"
-
-[tool.poetry.scripts]
-ptbuilder = "pypsbuilder.psbuilders:ptbuilder"
-txbuilder = "pypsbuilder.psbuilders:txbuilder"
-pxbuilder = "pypsbuilder.psbuilders:pxbuilder"
+[project.scripts]
 psshow = "pypsbuilder.psexplorer:ps_show"
 psiso = "pypsbuilder.psexplorer:ps_iso"
 psgrid = "pypsbuilder.psexplorer:ps_grid"
 psdrawpd = "pypsbuilder.psexplorer:ps_drawpd"
 tcinit = "pypsbuilder.tcinit:tcprojinit"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[project.gui-scripts]
+ptbuilder = "pypsbuilder.psbuilders:ptbuilder"
+txbuilder = "pypsbuilder.psbuilders:txbuilder"
+pxbuilder = "pypsbuilder.psbuilders:pxbuilder"
+
+[tool.hatch.version]
+path = "pypsbuilder/__init__.py"
 
 [tool.black]
-line-length = 120
-include = '\.pyi?$'
-exclude = '''
-/(
-  \.toml
-  |\.sh
-  |\.git
-  |\.ini
-)/
-'''
-
-[[tool.poetry.source]]
-name = "pypi-public"
-url = "https://pypi.org/simple/"
+line-length = 88
+extend-exclude = '''.*ui_.*'''
