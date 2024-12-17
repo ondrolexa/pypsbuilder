@@ -20,16 +20,16 @@ import string
 
 # recent files
 set_urls = {
-    "metapelite": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metapelite-2022-01-23.zip",
-    "metabasite": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-metabasite-2022-01-30.zip",
-    "igneous": "https://hpxeosandthermocalc.files.wordpress.com/2022/01/tc-thermoinput-igneous-2022-01-23.zip",
+    "metapelite": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-metapelite-2022-01-23.zip",
+    "metabasite": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-metabasite-2022-01-30.zip",
+    "igneous": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-igneous-2022-01-23.zip",
 }
 
 exe_urls = {
-    "linux": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-linux-bundle.zip",
-    "win": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350-win-bundle.zip",
-    "mac": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-mac-bundle.zip",
-    "macasi": "https://hpxeosandthermocalc.files.wordpress.com/2020/12/tc350beta-macasi-bundle.zip",
+    "linux": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-linux-bundle.zip",
+    "win": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350-win-bundle.zip",
+    "mac": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-mac-bundle.zip",
+    "macasi": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-macasi-bundle.zip",
 }
 
 
@@ -960,8 +960,8 @@ diagramPT 2 10 350 800
 calcP 11 15 0.08
 calcT 370 425
 calctatp yes
-with bi ab pa sph mu g ep
-zeromodeisopleth ab
+with bi g mu q ilm hem
+zeromodeisopleth q
 %{PSBCALC-END}
 
 % =====================

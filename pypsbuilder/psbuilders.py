@@ -279,7 +279,10 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionCleanup.triggered.connect(self.cleanup_storage)
         self.actionFixphase.triggered.connect(self.fix_phasenames)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
-        self.actionShow_topology.triggered.connect(self.show_topology)
+        if NX_OK:
+            self.actionShow_topology.triggered.connect(self.show_topology)
+        else:
+            self.actionShow_topology.setVisible(False)
         self.actionParse_working_directory.triggered.connect(
             lambda: self.do_calc(True, run_tc=False)
         )
@@ -904,8 +907,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                     for x, y in zip(uni._x, uni._y)
                 ]
                 uniguess = UniGuess(lbl, self)
-                respond = uniguess.exec()
-                if respond == QtWidgets.QDialog.Accepted:
+                if uniguess.exec():
                     ix = uniguess.getValue()
                     self.tc.update_scriptfile(guesses=uni.ptguess(idx=ix))
                     self.read_scriptfile()
@@ -1489,8 +1491,7 @@ class BuildersBase(QtWidgets.QMainWindow):
             isnew, id_inv = self.ps.getidinv(inv)
             addinv = AddInv(self.ps, inv, isnew, parent=self)
             addinv.set_from_event(event)
-            respond = addinv.exec()
-            if respond == QtWidgets.QDialog.Accepted:
+            if addinv.exec():
                 inv.id = id_inv
                 inv.x, inv.y = addinv.getValues()
                 if isnew:
@@ -1920,13 +1921,8 @@ class BuildersBase(QtWidgets.QMainWindow):
 
     def show_topology(self):
         if self.ready:
-            if NX_OK:
-                dia = TopologyGraph(self.ps)
-                dia.exec_()
-            else:
-                self.statusBar().showMessage(
-                    "Topology graph needs networkx to be installed"
-                )
+            dia = TopologyGraph(self.ps)
+            dia.exec()
         else:
             self.statusBar().showMessage("Project is not yet initialized.")
 
@@ -1954,7 +1950,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        qtver = QtCore.PYQT_VERSION_STR.split('.')[0]
+        qtver = QtCore.PYQT_VERSION_STR.split(".")[0]
         builder_settings = QtCore.QSettings("LX", f"ptbuilder pyqt{qtver}")
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
@@ -4968,11 +4964,6 @@ class UniModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return None
         uni = self.ps.unilines[self.unilist[index.row()]]
-        # elif role == QtCore.Qt.ForegroundRole:
-        #     if self.unilist[index.row()][self.header.index('Data')]['manual']:
-        #         brush = QtGui.QBrush()
-        #         brush.setColor(QtGui.QColor('red'))
-        #         return brush
         if role == QtCore.Qt.ItemDataRole.FontRole:
             if uni.manual:
                 font = QtGui.QFont()
@@ -5172,9 +5163,9 @@ class AddInv(QtWidgets.QDialog, Ui_AddInv):
         sender = self.sender()
         validator = sender.validator()
         state = validator.validate(sender.text(), 0)[0]
-        if state == QtGui.QValidator.Acceptable:
+        if state == QtGui.QValidator.State.Acceptable:
             color = "#c4df9b"  # green
-        elif state == QtGui.QValidator.Intermediate:
+        elif state == QtGui.QValidator.State.Intermediate:
             color = "#fff79a"  # yellow
         else:
             color = "#f6989d"  # red
@@ -5288,12 +5279,12 @@ class OutputDialog(QtWidgets.QDialog):
         self.resize(800, 600)
 
         self.plainText = QtWidgets.QPlainTextEdit(self)
-        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)
         self.plainText.setReadOnly(True)
-        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.FixedFont)
+        f = QtGui.QFontDatabase.systemFont(QtGui.QFontDatabase.SystemFont.FixedFont)
         self.plainText.setFont(f)
         self.layout = QtWidgets.QVBoxLayout()
-        self.layout.setAlignment(QtCore.Qt.AlignVCenter)
+        self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
         self.layout.addWidget(self.plainText)
         self.setLayout(self.layout)
         self.plainText.setPlainText(txt)
@@ -5306,12 +5297,13 @@ class TopologyGraph(QtWidgets.QDialog):
         window_icon = str(ires.files("pypsbuilder").joinpath("images/pypsbuilder.png"))
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.setWindowFlags(
-            QtCore.Qt.WindowMinMaxButtonsHint | QtCore.Qt.WindowCloseButtonHint
+            QtCore.Qt.WindowType.WindowMinMaxButtonsHint
+            | QtCore.Qt.WindowType.WindowCloseButtonHint
         )
         self.figure = Figure(facecolor="white")
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setParent(self)
-        self.canvas.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.canvas.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.toolbar = NavigationToolbar(self.canvas, self)
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(self.canvas)
@@ -5339,13 +5331,9 @@ class TopologyGraph(QtWidgets.QDialog):
                 else:
                     edges[out] = [(uni.begin, uni.end)]
 
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
+        npos = nx.forceatlas2_layout(G, pos=nx.planar_layout(G))
         # npos = nx.planar_layout(G)
-        # npos = nx.kamada_kawai_layout(G, pos=pos)
+        # npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
         widths = Normalize(vmin=0, vmax=len(edges))
         color = cm.get_cmap("tab20", len(edges))
         for ix, out in enumerate(edges):
