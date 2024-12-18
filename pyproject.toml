@@ -22,7 +22,14 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
 ]
-dependencies = ["numpy", "matplotlib", "pyqt6", "scipy", "shapely>=2", "tqdm"]
+dependencies = [
+    "numpy",
+    "matplotlib>=3.8",
+    "pyqt6",
+    "scipy",
+    "shapely>=2",
+    "tqdm",
+]
 
 [project.optional-dependencies]
 extra = ["networkx"]

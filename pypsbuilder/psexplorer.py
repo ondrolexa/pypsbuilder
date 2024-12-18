@@ -1638,17 +1638,16 @@ class PS:
                     if (not filled or filled_over) and key in labelkyes_ok:
                         positions = []
                         contlbl = contover if filled_over else cont
-                        for col in contlbl.collections:
-                            for seg in col.get_paths():  # get_segments():
-                                inside = np.fromiter(
-                                    map(
-                                        self.shapes[key].contains,
-                                        MultiPoint(seg.vertices).geoms,
-                                    ),
-                                    dtype=bool,
-                                )
-                                if np.any(inside):
-                                    positions.append(seg.vertices[inside].mean(axis=0))
+                        for seg in contlbl.get_paths():
+                            inside = np.fromiter(
+                                map(
+                                    self.shapes[key].contains,
+                                    MultiPoint(seg.vertices).geoms,
+                                ),
+                                dtype=bool,
+                            )
+                            if np.any(inside):
+                                positions.append(seg.vertices[inside].mean(axis=0))
                         ax.clabel(
                             contlbl,
                             fontsize=9,
@@ -1657,11 +1656,9 @@ class PS:
                             inline_spacing=3,
                             inline=not nosplit,
                         )
-                    for col in cont.collections:
-                        col.set_clip_path(patch)
+                    cont.set_clip_path(patch)
                     if filled and filled_over:
-                        for col in contover.collections:
-                            col.set_clip_path(patch)
+                        contover.set_clip_path(patch)
 
             if only is None:
                 self.add_overlay(ax)
