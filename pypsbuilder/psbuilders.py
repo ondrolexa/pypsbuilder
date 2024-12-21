@@ -5449,6 +5449,7 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
 
 def ptbuilder():
     application = QtWidgets.QApplication(sys.argv)
+    application.setStyle("Fusion")
     window = PTBuilder()
     desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
@@ -5460,6 +5461,7 @@ def ptbuilder():
 
 def txbuilder():
     application = QtWidgets.QApplication(sys.argv)
+    application.setStyle("Fusion")
     window = TXBuilder()
     desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
@@ -5471,6 +5473,7 @@ def txbuilder():
 
 def pxbuilder():
     application = QtWidgets.QApplication(sys.argv)
+    application.setStyle("Fusion")
     window = PXBuilder()
     desktop = QtGui.QGuiApplication.primaryScreen().availableGeometry()
     width = (desktop.width() - window.width()) // 2
