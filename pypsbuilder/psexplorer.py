@@ -18,17 +18,14 @@ Example:
 
 """
 
-# author: Ondrej Lexa 2020
+# author: Ondrej Lexa 2020-2024
 # website: https://github.com/ondrolexa/pypsbuilder
 
 import argparse
 import sys
 
 # import os
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import gzip
 import ast
 import time
