@@ -1,10 +1,8 @@
 # pypsbuilder
 
-![master](https://github.com/ondrolexa/pypsbuilder/actions/workflows/master.yml/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=latest)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/ondrolexa/pypsbuilder/blob/master/LICENSE)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ondrolexa/pypsbuilder)](https://github.com/ondrolexa/pypsbuilder/releases/latest)
-[![Twitter](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fondrolexa%2Fpypsbuilder)
+[![PyPI version](https://badge.fury.io/py/pypsbuilder.svg)](https://badge.fury.io/py/pypsbuilder)
+[![Testing](https://github.com/ondrolexa/pypsbuilder/actions/workflows/testing.yml/badge.svg?event=push)](https://github.com/ondrolexa/pypsbuilder)
+[![Documentation Status](https://readthedocs.org/projects/polylx/badge/?version=stable)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
 
 Not that simplistic THERMOCALC front-end for constructing and visualizations of P-T, T-X and P-X pseudosections
 

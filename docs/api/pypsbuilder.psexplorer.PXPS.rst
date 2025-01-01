@@ -40,9 +40,12 @@
       ~PXPS.isopleths_vector
       ~PXPS.merge_data
       ~PXPS.onclick
+      ~PXPS.overlap_isopleths
       ~PXPS.pointcalc
+      ~PXPS.remove_grid_data
       ~PXPS.save
       ~PXPS.save_tab
+      ~PXPS.search_composition
       ~PXPS.show
       ~PXPS.show_data
       ~PXPS.show_delta

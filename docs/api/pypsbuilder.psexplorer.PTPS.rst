@@ -41,9 +41,12 @@
       ~PTPS.isopleths_vector
       ~PTPS.merge_data
       ~PTPS.onclick
+      ~PTPS.overlap_isopleths
       ~PTPS.pointcalc
+      ~PTPS.remove_grid_data
       ~PTPS.save
       ~PTPS.save_tab
+      ~PTPS.search_composition
       ~PTPS.show
       ~PTPS.show_data
       ~PTPS.show_delta
