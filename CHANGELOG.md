@@ -1,11 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.6.0] - develop
-Dependencies changed to PyQt6 and minimum matplotlib version 3.8
+## [2.6.0] - 2025-01-23
+Initial PyQt6 release
 
-## [2.5.0] - 2024-12-13
-Fully refactored tp pyproject.toml
+## [2.5.3] - 2024-12-18
+Latest version using PyQt5
 
 ## [2.5.0] - 2024-12-13
 ### Fixed
