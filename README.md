@@ -19,7 +19,22 @@ for Windows use PowerShell:
     py -m venv pyps
     pyps\Scripts\activate
 
-#### I'm using conda or mamba to manage environments
+> [!NOTE]
+> On Microsoft Windows, it may be required to enable the activate script by setting the execution policy for the user.
+> You can do this by issuing the following PowerShell command:
+>```bash
+PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+and install **pypsbuilder** using pip within the environment:
+
+    pip install pypsbuilder
+
+Jupyter Lab could be also installed providing extra option:
+
+    pip install pypsbuilder[extra]
+
+## I'm using conda or mamba to manage environments
 
 If you have already have conda or mamba installed, you can create environment with:
 
@@ -37,17 +52,16 @@ or
 
     mamba activate pyps
 
-#### Install pypsbuilder
+and install with pip. Note that PyQt6 is not yet available in conda repositories,
+so we eed to use latest PyQt5 version
 
-To install **pypsbuilder**, use pip within the environment:
-
-    pip install pypsbuilder
+    pip install pypsbuilder==2.5.3
 
 #### Note for macOS
 
 If you have environment created with conda/mamba install the pypsbuilder with:
 
-    pip install pypsbuilder --no-deps
+    pip install pypsbuilder==2.5.3 --no-deps
 
 #### Install master version
 
