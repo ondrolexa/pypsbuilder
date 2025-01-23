@@ -1,6 +1,6 @@
 # pypsbuilder
 
-[![PyPI version](https://badge.fury.io/py/pypsbuilder.svg)](https://badge.fury.io/py/pypsbuilder)
+[![PyPI - Version](https://img.shields.io/pypi/v/pypsbuilder)](https://pypi.org/project/pypsbuilder/)
 [![Testing](https://github.com/ondrolexa/pypsbuilder/actions/workflows/testing.yml/badge.svg?event=push)](https://github.com/ondrolexa/pypsbuilder)
 [![Documentation Status](https://readthedocs.org/projects/polylx/badge/?version=stable)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
 
