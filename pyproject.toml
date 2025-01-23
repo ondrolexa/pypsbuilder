@@ -27,12 +27,13 @@ dependencies = [
     "matplotlib>=3.8",
     "pyqt6",
     "scipy",
+    "scikit-image",
+    "networkx",
     "shapely>=2",
     "tqdm",
 ]
 
 [project.optional-dependencies]
-extra = ["networkx"]
 docs = ["sphinx", "sphinx_mdinclude", "sphinx_rtd_theme"]
 tests = ["pytest", "pytest-cov"]
 dev = [
