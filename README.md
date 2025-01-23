@@ -22,9 +22,9 @@ for Windows use PowerShell:
 > [!NOTE]
 > On Microsoft Windows, it may be required to enable the activate script by setting the execution policy for the user.
 > You can do this by issuing the following PowerShell command:
->```bash
-PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
+> ```
+> PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
 
 and install **pypsbuilder** using pip within the environment:
 
@@ -53,7 +53,7 @@ or
     mamba activate pyps
 
 and install with pip. Note that PyQt6 is not yet available in conda repositories,
-so we eed to use latest PyQt5 version
+so we need to use the 2.5.3 version:
 
     pip install pypsbuilder==2.5.3
 
