@@ -26,11 +26,11 @@ for Windows use PowerShell:
 > PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
-and install **pypsbuilder** using pip within the environment:
+and install **pypsbuilder** using pip within the environment. **You should choose the UI framework using option `pyqt5` or `pyqt6`**:
 
     pip install pypsbuilder[pyqt6]
 
-Providing jupyter option, JupyterLab will be also installed:
+JupyterLab could also be installed providing the `jupyter` option:
 
     pip install pypsbuilder[pyqt6,jupyter]
 
