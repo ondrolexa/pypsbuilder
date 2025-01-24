@@ -52,15 +52,14 @@ or
 
     mamba activate pyps
 
-and install with pip. Note that PyQt6 is not yet available in conda repositories,
-so we need to use the pyqt5 version:
+and install with pip. As PyQt is already installed with mamba/conda, we will install **pypsbuilder** without UI framework:
 
-    pip install pypsbuilder[pyqt5]
+    pip install pypsbuilder
 
 > [!NOTE]
 > If you encounter errors during install, try to install without upgrading dependencies:
 > ```
-> pip install --no-deps pypsbuilder[pyqt5]
+> pip install --no-deps pypsbuilder
 > ```
 
 #### Upgrade existing installation
