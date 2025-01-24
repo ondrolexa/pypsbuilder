@@ -28,11 +28,11 @@ for Windows use PowerShell:
 
 and install **pypsbuilder** using pip within the environment:
 
-    pip install pypsbuilder
+    pip install pypsbuilder[pyqt6]
 
-Jupyter Lab could be also installed providing extra option:
+Providing jupyter option, JupyterLab will be also installed:
 
-    pip install pypsbuilder[extra]
+    pip install pypsbuilder[pyqt6,jupyter]
 
 ## I'm using conda or mamba to manage environments
 
@@ -53,21 +53,15 @@ or
     mamba activate pyps
 
 and install with pip. Note that PyQt6 is not yet available in conda repositories,
-so we need to use the 2.5.3 version:
+so we need to use the pyqt5 version:
 
-    pip install pypsbuilder==2.5.3
+    pip install pypsbuilder[pyqt5]
 
-#### Note for macOS
-
-If you have environment created with conda/mamba install the pypsbuilder with:
-
-    pip install pypsbuilder==2.5.3 --no-deps
-
-#### Install master version
-
-You can install latest version from master branch on GitHub:
-
-    pip install https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+> [!NOTE]
+> If you encounter errors during install, try to install without upgrading dependencies:
+> ```
+> pip install --no-deps pypsbuilder[pyqt5]
+> ```
 
 #### Upgrade existing installation
 
@@ -75,7 +69,7 @@ To upgrade an already installed **pypsbuilder** to the latest release:
 
     pip install --upgrade pypsbuilder
 
-or to latest master version:
+or to the latest master version:
 
     pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
 

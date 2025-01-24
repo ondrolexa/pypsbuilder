@@ -7,3 +7,4 @@ pyuic6 adduni.ui > ../ui_adduni.py
 pyuic6 addinv.ui > ../ui_addinv.py
 pyuic6 uniguess.ui > ../ui_uniguess.py
 
+# do not forget to replace PyQt6 with qtpy in all generated .py files

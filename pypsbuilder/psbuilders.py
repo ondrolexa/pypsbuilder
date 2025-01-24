@@ -15,9 +15,10 @@ import itertools
 import warnings
 
 import importlib.resources as ires
-from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import QT_VERSION_STR
-from PyQt6.QtCore import PYQT_VERSION_STR
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QT_VERSION
+from qtpy import API as QTPY_API
+
 
 import numpy as np
 import matplotlib
@@ -1347,7 +1348,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                             self.unimodel.appendRow(id_uni, uni)
                             self.uni_connect(id_uni, candidates)
                             self.changed = True
-                            # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                            # self.unisel.select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect | QtCore.QItemSelectionModel.SelectionFlag.Rows)
                             idx = self.unimodel.getIndexID(id_uni)
                             self.uniview.selectRow(idx.row())
                             self.uniview.scrollToBottom()
@@ -1950,8 +1951,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        qtver = QtCore.PYQT_VERSION_STR.split(".")[0]
-        builder_settings = QtCore.QSettings("LX", f"ptbuilder pyqt{qtver}")
+        builder_settings = QtCore.QSettings("LX", f"ptbuilder {QTPY_API}{QT_VERSION.split(".")[0]}")
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
@@ -2713,7 +2713,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                         self.unimodel.appendRow(id_uni, uni)
                         self.uniview.resizeColumnsToContents()
                         self.changed = True
-                        # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                        # self.unisel.select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect | QtCore.QItemSelectionModel.SelectionFlag.Rows)
                         idx = self.unimodel.getIndexID(id_uni)
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
@@ -3686,7 +3686,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                         self.unimodel.appendRow(id_uni, uni)
                         self.uniview.resizeColumnsToContents()
                         self.changed = True
-                        # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                        # self.unisel.select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect | QtCore.QItemSelectionModel.SelectionFlag.Rows)
                         idx = self.unimodel.getIndexID(id_uni)
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
@@ -4682,7 +4682,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                         self.unimodel.appendRow(id_uni, uni)
                         self.uniview.resizeColumnsToContents()
                         self.changed = True
-                        # self.unisel.select(idx, QtCore.QItemSelectionModel.ClearAndSelect | QtCore.QItemSelectionModel.Rows)
+                        # self.unisel.select(idx, QtCore.QItemSelectionModel.SelectionFlag.ClearAndSelect | QtCore.QItemSelectionModel.SelectionFlag.Rows)
                         idx = self.unimodel.getIndexID(id_uni)
                         self.uniview.selectRow(idx.row())
                         self.uniview.scrollToBottom()
@@ -4895,7 +4895,7 @@ class InvModel(QtCore.QAbstractTableModel):
             return None
         inv = self.ps.invpoints[self.invlist[index.row()]]
         # highlight not finished invpoints - move to plot ???
-        # if role == QtCore.Qt.ForegroundRole:
+        # if role == QtCore.Qt.ItemDataRole.ForegroundRole:
         #     all_uni = inv.all_unilines()
         #     isnew1, id = self.ps.getiduni(UniLine(phases=all_uni[0][0], out=all_uni[0][1]))
         #     isnew2, id = self.ps.getiduni(UniLine(phases=all_uni[1][0], out=all_uni[1][1]))
@@ -5244,10 +5244,7 @@ class AboutDialog(QtWidgets.QDialog):
         author.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         swinfo = QtWidgets.QLabel(
-            "Python:{} Qt:{} PyQt:{}".format(
-                sys.version.split()[0], QT_VERSION_STR, PYQT_VERSION_STR
-            )
-        )
+            f"Python:{sys.version.split()[0]} {QTPY_API} {QT_VERSION}")
         swinfo.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         github = QtWidgets.QLabel(
