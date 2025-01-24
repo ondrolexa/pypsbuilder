@@ -26,11 +26,11 @@ for Windows use PowerShell:
 > PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
-and install **pypsbuilder** using pip within the environment:
+and install **pypsbuilder** using pip within the environment. **You should choose the UI framework using option** `pyqt5` **or** `pyqt6`:
 
     pip install pypsbuilder[pyqt6]
 
-Providing jupyter option, JupyterLab will be also installed:
+JupyterLab could also be installed providing the `jupyter` option:
 
     pip install pypsbuilder[pyqt6,jupyter]
 
@@ -38,11 +38,11 @@ Providing jupyter option, JupyterLab will be also installed:
 
 If you have already have conda or mamba installed, you can create environment with:
 
-    conda create -n pyps numpy matplotlib scipy networkx shapely pyqt tqdm jupyterlab
+    conda create -n pyps matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
 
 or
 
-    mamba create -n pyps numpy matplotlib scipy networkx shapely pyqt tqdm jupyterlab
+    mamba create -n pyps matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
 
 Then activate the new environment:
 
@@ -52,15 +52,14 @@ or
 
     mamba activate pyps
 
-and install with pip. Note that PyQt6 is not yet available in conda repositories,
-so we need to use the pyqt5 version:
+and install with pip. As PyQt is already installed with mamba/conda, we will install **pypsbuilder** without UI framework:
 
-    pip install pypsbuilder[pyqt5]
+    pip install pypsbuilder
 
 > [!NOTE]
 > If you encounter errors during install, try to install without upgrading dependencies:
 > ```
-> pip install --no-deps pypsbuilder[pyqt5]
+> pip install --no-deps pypsbuilder
 > ```
 
 #### Upgrade existing installation
