@@ -11,19 +11,19 @@ Not that simplistic THERMOCALC front-end for constructing and visualizations of 
 It is strongly suggested to install **pypsbuilder** into separate environment. You can create
 Python virtual environment. For Linux and macOS use:
 
-    python -m venv pyps
-    source pyps/bin/activate
+    python -m venv .venv
+    source .venv/bin/activate
 
-for Windows use PowerShell:
+for Windows use Command Prompt or PowerShell:
 
-    py -m venv pyps
-    pyps\Scripts\activate
+    python -m venv .venv
+    .venv\Scripts\activate
 
 > [!NOTE]
-> On Microsoft Windows, it may be required to enable the activate script by setting the execution policy for the user.
+> On Microsoft Windows, it may be required to set the execution policy in PowerShell for the user.
 > You can do this by issuing the following PowerShell command:
 > ```
-> PS C:\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 > ```
 
 and install **pypsbuilder** using pip within the environment. **You should choose the UI framework using option** `pyqt5` **or** `pyqt6`:
