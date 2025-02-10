@@ -1220,55 +1220,6 @@ class PS:
                 f'{ix + 1}: {" ".join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}'
             )
 
-    def pointcalc(self, label=False, skiplabels=0, labelfs=6):
-        fig, ax = plt.subplots()
-        ax.autoscale_view()
-        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
-        ax.set_xlim(self.xrange)
-        ax.set_ylim(self.yrange)
-        ax.format_coord = self.format_coord
-        x, y = plt.ginput(1)[0]
-        plt.close(fig)
-        k = self.identify(x, y)
-        if k is not None:
-            last_inv = 0
-            for ix, ps in self.sections.items():
-                # update guesses from closest inv point
-                dst = sys.float_info.max
-                for id_inv, inv in ps.invpoints.items():
-                    d2 = (inv._x - x) ** 2 + (inv._y - y) ** 2
-                    if d2 < dst:
-                        dst = d2
-                        id_close = id_inv
-                if id_close != last_inv and not ps.invpoints[id_close].manual:
-                    self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
-                    last_inv = id_close
-            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-            status, res, output = self.tc.parse_logfile()
-            if res is None:
-                for ix, ps in self.sections.items():
-                    # update guesses from closest uni line point
-                    dst = sys.float_info.max
-                    for id_uni in self.unilists[ix][k]:
-                        uni = ps.unilines[id_uni]
-                        if not uni.manual:
-                            for vix in list(range(len(uni._x))[uni.used]):
-                                d2 = (uni._x[vix] - x) ** 2 + (uni._y[vix] - y) ** 2
-                                if d2 < dst:
-                                    dst = d2
-                                    id_close = id_uni
-                                    vix_close = vix
-                    self.tc.update_scriptfile(
-                        guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                    )
-                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), y, x)
-                status, res, output = self.tc.parse_logfile()
-            if res is None:
-                print("Calculation failed")
-            else:
-                print(output)
-                return res[0]
-
     def remove_grid_data(self, key, phase, expr):
         """Remove calculated data from grid and mark as failed
 
@@ -2768,6 +2719,60 @@ class PTPS(PS):
             bars, phases, fancybox=True, loc="center left", bbox_to_anchor=(1.05, 0.5)
         )
         plt.show()
+
+    def pointcalc(self, t=None, p=None, label=False, skiplabels=0, labelfs=6, show_output=False):
+        if t is None or p is None:
+            fig, ax = plt.subplots()
+            ax.autoscale_view()
+            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+            ax.set_xlim(self.xrange)
+            ax.set_ylim(self.yrange)
+            ax.format_coord = self.format_coord
+            t, p = plt.ginput(1)[0]
+            plt.close(fig)
+        k = self.identify(t, p)
+        if k is not None:
+            last_inv = 0
+            id_close = 0
+            for ix, ps in self.sections.items():
+                # update guesses from closest inv point
+                dst = sys.float_info.max
+                for id_inv, inv in ps.invpoints.items():
+                    d2 = (inv._x - t) ** 2 + (inv._y - p) ** 2
+                    if d2 < dst:
+                        dst = d2
+                        id_close = id_inv
+                if id_close != last_inv and not ps.invpoints[id_close].manual:
+                    self.tc.update_scriptfile(guesses=ps.invpoints[id_close].ptguess())
+                    last_inv = id_close
+            tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), p, t)
+            status, res, output = self.tc.parse_logfile()
+            if res is None:
+                for ix, ps in self.sections.items():
+                    # update guesses from closest uni line point
+                    dst = sys.float_info.max
+                    for id_uni in self.unilists[ix][k]:
+                        uni = ps.unilines[id_uni]
+                        if not uni.manual:
+                            for vix in list(range(len(uni._x))[uni.used]):
+                                d2 = (uni._x[vix] - t) ** 2 + (uni._y[vix] - p) ** 2
+                                if d2 < dst:
+                                    dst = d2
+                                    id_close = id_uni
+                                    vix_close = vix
+                    self.tc.update_scriptfile(
+                        guesses=ps.unilines[id_close].ptguess(idx=vix_close)
+                    )
+                tcout, ans = self.tc.calc_assemblage(k.difference(self.tc.excess), p, t)
+                status, res, output = self.tc.parse_logfile()
+            if res is None:
+                print("Calculation failed")
+            else:
+                if show_output:
+                    print(output)
+                return res[0]
+        else:
+            print(f"No assembplage found at T={t}, p-{p}")
 
 
 class TXPS(PS):

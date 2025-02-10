@@ -8,10 +8,7 @@ outputs and storage of calculated invariant points and univariant lines.
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import gzip
 import numpy as np
 import matplotlib.pyplot as plt
