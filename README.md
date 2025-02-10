@@ -38,11 +38,11 @@ JupyterLab could also be installed providing the `jupyter` option:
 
 If you have already have conda or mamba installed, you can create environment with:
 
-    conda create -n pyps matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
+    conda create -n pyps python=3.12.8 matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
 
 or
 
-    mamba create -n pyps matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
+    mamba create -n pyps python=3.12.8 matplotlib shapely pyqt tqdm scikit-image qtpy jupyterlab
 
 Then activate the new environment:
 
