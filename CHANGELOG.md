@@ -1,7 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.6.1] - master
+## [2.6.2] - 2025-02-11
+### Fixed
+ - f-string py3.10 bugfix
+
+## [2.6.1] - 2025-01-24
 ### Added
  - Both PyQt5 and PyQt6 are supported and need to be specified as
    extra option during installation
