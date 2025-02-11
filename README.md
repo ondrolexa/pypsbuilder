@@ -19,6 +19,11 @@ for Windows use Command Prompt or PowerShell:
     python -m venv .venv
     .venv\Scripts\activate
 
+or, if you will got error *'python' is not recognized as an internal or external command*, try:
+
+    py -m venv .venv
+    .venv\Scripts\activate
+
 > [!NOTE]
 > On Microsoft Windows, it may be required to set the execution policy in PowerShell for the user.
 > You can do this by issuing the following PowerShell command:
