@@ -1951,7 +1951,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings("LX", f"ptbuilder {QTPY_API}{QT_VERSION.split(".")[0]}")
+        builder_settings = QtCore.QSettings("LX", f"ptbuilder {QTPY_API}{QT_VERSION.split('.')[0]}")
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
