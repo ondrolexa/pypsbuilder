@@ -700,13 +700,18 @@ class PS:
                     show = False
                 ax = fig.add_subplot()
             for k, shape in self.shapes.items():
-                patch = PolygonPatch(
-                    shape, fc=pscmap(norm(self.variance[k])), ec="none"
-                )
-                ax.add_patch(patch)
-                if show_vertices:
-                    x, y = zip(*patch.get_path().vertices)
-                    ax.plot(x, y, "k.", ms=3)
+                if shape.geom_type == "MultiPolygon":
+                    shapelist = list(shape.geoms)
+                else:
+                    shapelist = [shape]
+                for shape in shapelist:
+                    patch = PolygonPatch(
+                        shape, fc=pscmap(norm(self.variance[k])), ec="none"
+                    )
+                    ax.add_patch(patch)
+                    if show_vertices:
+                        x, y = zip(*patch.get_path().vertices)
+                        ax.plot(x, y, "k.", ms=3)
             ax.autoscale_view()
             self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
             if out:
@@ -831,27 +836,42 @@ class PS:
     def add_overlay(self, ax, fc="none", ec="k", label=False, skiplabels=0, fontsize=6):
         area = (self.xrange[1] - self.xrange[0]) * (self.yrange[1] - self.yrange[0])
         for k, shape in self.shapes.items():
-            ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=0.5))
-            if label and (100 * shape.area / area > skiplabels):
-                # multiline for long labels
-                tl = sorted(list(k.difference(self.tc.excess)))
-                extra = self.tc.excess.difference(self.tc.excess.intersection(k))
-                # if excess in scriptfile is not accurate
-                if extra:
-                    tl += ["-{}".format(pp) for pp in extra]
-                wp = len(tl) // 4 + int(len(tl) % 4 > 1)
-                txt = "\n".join(
-                    [
-                        " ".join([self.abbr.get(sa, sa) for sa in s])
-                        for s in [
-                            tl[i * len(tl) // wp : (i + 1) * len(tl) // wp]
-                            for i in range(wp)
+            if shape.geom_type == "MultiPolygon":
+                shapelist = list(shape.geoms)
+            else:
+                shapelist = [shape]
+            for shape in shapelist:
+                ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=0.5))
+                if label and (100 * shape.area / area > skiplabels):
+                    # multiline for long labels
+                    tl = sorted(list(k.difference(self.tc.excess)))
+                    extra = self.tc.excess.difference(self.tc.excess.intersection(k))
+                    # if excess in scriptfile is not accurate
+                    if extra:
+                        tl += ["-{}".format(pp) for pp in extra]
+                    wp = len(tl) // 4 + int(len(tl) % 4 > 1)
+                    txt = "\n".join(
+                        [
+                            " ".join([self.abbr.get(sa, sa) for sa in s])
+                            for s in [
+                                tl[i * len(tl) // wp : (i + 1) * len(tl) // wp]
+                                for i in range(wp)
+                            ]
                         ]
-                    ]
-                )
-                if shape.geom_type == "MultiPolygon":
-                    for part in shape:
-                        xy = part.representative_point().coords[0]
+                    )
+                    if shape.geom_type == "MultiPolygon":
+                        for part in shape:
+                            xy = part.representative_point().coords[0]
+                            ax.annotate(
+                                text=txt,
+                                xy=xy,
+                                weight="bold",
+                                fontsize=fontsize,
+                                ha="center",
+                                va="center",
+                            )
+                    else:
+                        xy = shape.representative_point().coords[0]
                         ax.annotate(
                             text=txt,
                             xy=xy,
@@ -860,16 +880,6 @@ class PS:
                             ha="center",
                             va="center",
                         )
-                else:
-                    xy = shape.representative_point().coords[0]
-                    ax.annotate(
-                        text=txt,
-                        xy=xy,
-                        weight="bold",
-                        fontsize=fontsize,
-                        ha="center",
-                        va="center",
-                    )
 
     def show_data(self, key, phase, expr=None, which=7):
         """Convinient function to show values of expression
@@ -1556,57 +1566,62 @@ class PS:
                         else:
                             cntv = 10
                     # ------------
-                    with warnings.catch_warnings():
-                        warnings.filterwarnings("ignore", category=UserWarning)
-                        if filled:
-                            if colors is not None:
-                                cont = ax.contourf(
-                                    tg, pg, zg, cntv, colors=colors, alpha=alpha
-                                )
-                                if filled_over:
-                                    contover = ax.contour(
-                                        tg, pg, zg, cntv, colors=colors
+                    if self.shapes[key].geom_type == "MultiPolygon":
+                        shapelist = list(self.shapes[key].geoms)
+                    else:
+                        shapelist = [self.shapes[key]]
+                    for shape in shapelist:
+                        with warnings.catch_warnings():
+                            warnings.filterwarnings("ignore", category=UserWarning)
+                            if filled:
+                                if colors is not None:
+                                    cont = ax.contourf(
+                                        tg, pg, zg, cntv, colors=colors, alpha=alpha
                                     )
-                            else:
-                                cont = ax.contourf(
-                                    tg, pg, zg, cntv, cmap=cmap, alpha=alpha
-                                )
-                                if filled_over:
-                                    contover = ax.contour(
-                                        tg, pg, zg, cntv, colors="whitesmoke"
+                                    if filled_over:
+                                        contover = ax.contour(
+                                            tg, pg, zg, cntv, colors=colors
+                                        )
+                                else:
+                                    cont = ax.contourf(
+                                        tg, pg, zg, cntv, cmap=cmap, alpha=alpha
                                     )
-                        else:
-                            if colors is not None:
-                                cont = ax.contour(tg, pg, zg, cntv, colors=colors)
+                                    if filled_over:
+                                        contover = ax.contour(
+                                            tg, pg, zg, cntv, colors="whitesmoke"
+                                        )
                             else:
-                                cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
-                    patch = PolygonPatch(self.shapes[key], fc="none", ec="none")
-                    ax.add_patch(patch)
-                    # label if needed
-                    if (not filled or filled_over) and key in labelkyes_ok:
-                        positions = []
-                        contlbl = contover if filled_over else cont
-                        for seg in contlbl.get_paths():
-                            inside = np.fromiter(
-                                map(
-                                    self.shapes[key].contains,
-                                    MultiPoint(seg.vertices).geoms,
-                                ),
-                                dtype=bool,
+                                if colors is not None:
+                                    cont = ax.contour(tg, pg, zg, cntv, colors=colors)
+                                else:
+                                    cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
+                        patch = PolygonPatch(shape, fc="none", ec="none")
+                        ax.add_patch(patch)
+                        # label if needed
+                        if (not filled or filled_over) and key in labelkyes_ok:
+                            positions = []
+                            contlbl = contover if filled_over else cont
+                            for seg in contlbl.get_paths():
+                                inside = np.fromiter(
+                                    map(
+                                        shape.contains,
+                                        MultiPoint(seg.vertices).geoms,
+                                    ),
+                                    dtype=bool,
+                                )
+                                if np.any(inside):
+                                    positions.append(seg.vertices[inside].mean(axis=0))
+                            ax.clabel(
+                                contlbl,
+                                fontsize=9,
+                                manual=positions,
+                                fmt="%g",
+                                inline_spacing=3,
+                                inline=not nosplit,
                             )
-                            if np.any(inside):
-                                positions.append(seg.vertices[inside].mean(axis=0))
-                        ax.clabel(
-                            contlbl,
-                            fontsize=9,
-                            manual=positions,
-                            fmt="%g",
-                            inline_spacing=3,
-                            inline=not nosplit,
-                        )
-                    cont.set_clip_path(patch)
-                    if filled and filled_over:
-                        contover.set_clip_path(patch)
+                        cont.set_clip_path(patch)
+                        if filled and filled_over:
+                            contover.set_clip_path(patch)
 
             if only is None:
                 self.add_overlay(ax)
@@ -2720,7 +2735,9 @@ class PTPS(PS):
         )
         plt.show()
 
-    def pointcalc(self, t=None, p=None, label=False, skiplabels=0, labelfs=6, show_output=False):
+    def pointcalc(
+        self, t=None, p=None, label=False, skiplabels=0, labelfs=6, show_output=False
+    ):
         if t is None or p is None:
             fig, ax = plt.subplots()
             ax.autoscale_view()
