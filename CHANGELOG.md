@@ -1,6 +1,10 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.6.3] - 2025-04-03
+### Fixed
+ - fxed multipolygon bug when subsections are merged
+
 ## [2.6.2] - 2025-02-11
 ### Fixed
  - f-string py3.10 bugfix
