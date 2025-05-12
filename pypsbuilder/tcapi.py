@@ -74,7 +74,7 @@ def get_tcapi(workdir=".", TCenc="mac-roman"):
         if err is not None:
             print(err.decode("utf-8"))
         sys.stdout.flush()
-        output = out.decode(TCenc)
+        output = out.decode(TCenc).strip()
         if float(output.split("\n")[0].split()[1]) < 3.5:
             api = TC34API(workdir, tcexe, drexe)
             if api.OK:
@@ -226,9 +226,9 @@ class TCAPI(object):
         return self.tcout.split("\n")[0]
 
     @property
-    def tcnewversion(self):
-        """bool: False for THERMOCALC older than 3.5."""
-        return not float(self.tcversion.split()[1]) < 3.5
+    def tcversionfloat(self):
+        """Returns THERMOCALC version as float"""
+        return float(self.tcversion.split()[1])
 
     @property
     def datasetfile(self):
@@ -313,7 +313,7 @@ class TC35API(TCAPI):
         try:
             # TC version
             errinfo = "THERMOCALC executable test."
-            self.tcout = self.runtc("\nkill\n\n")
+            self.tcout = self.runtc("\nkill\n\n").strip()
             # tc-prefs file
             if not self.workdir.joinpath("tc-prefs.txt").exists():
                 raise InitError("No tc-prefs.txt file in working directory.")
@@ -442,7 +442,11 @@ class TC35API(TCAPI):
                 )
             if "inexcess" in scripts:
                 if scripts["inexcess"]:
-                    self.excess = set(scripts["inexcess"][0].split()) - set(["no"])
+                    self.excess = (
+                        set(scripts["inexcess"][0].split())
+                        - set(["no"])
+                        - set(["none"])
+                    )
                 else:
                     raise ScriptfileError(
                         "In case of no excess phases, use inexcess no or remove script"
@@ -552,7 +556,6 @@ class TC35API(TCAPI):
                     with self.icfile.open("r", encoding=self.TCenc) as f:
                         resic = f.read()
             if do_parse:
-                lines = [ln for ln in output.splitlines() if ln != ""]
                 # parse ptguesses
                 bstarts = [
                     ix
@@ -584,11 +587,22 @@ class TC35API(TCAPI):
                 )[1:]
                 # done
                 if len(blocks) > 0:
-                    rlist = [
-                        TCResult.from_block(block, ptguess)
-                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
-                        if correct
-                    ]
+                    if self.tcversionfloat > 3.5:
+                        rlist = [
+                            TCResult.from_block351(block, ptguess)
+                            for block, ptguess, correct in zip(
+                                blocks, ptguesses, corrects
+                            )
+                            if correct
+                        ]
+                    else:
+                        rlist = [
+                            TCResult.from_block(block, ptguess)
+                            for block, ptguess, correct in zip(
+                                blocks, ptguesses, corrects
+                            )
+                            if correct
+                        ]
                     if len(rlist) > 0:
                         status = "ok"
                         results = TCResultSet(rlist)
@@ -670,11 +684,18 @@ class TC35API(TCAPI):
             )[1:]
             # done
             if len(blocks) > 0:
-                rlist = [
-                    TCResult.from_block(block, ptguess)
-                    for block, ptguess, correct in zip(blocks, ptguesses, corrects)
-                    if correct
-                ]
+                if self.tcversionfloat > 3.5:
+                    rlist = [
+                        TCResult.from_block351(block, ptguess)
+                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
+                        if correct
+                    ]
+                else:
+                    rlist = [
+                        TCResult.from_block(block, ptguess)
+                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
+                        if correct
+                    ]
                 if len(rlist) > 0:
                     status = "ok"
                     results = TCResultSet(rlist)

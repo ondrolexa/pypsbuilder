@@ -5,14 +5,14 @@
 
 .. autoclass:: TC35API
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~TC35API.__init__
       ~TC35API.calc_assemblage
       ~TC35API.calc_p
@@ -30,15 +30,15 @@
       ~TC35API.rundr
       ~TC35API.runtc
       ~TC35API.update_scriptfile
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~TC35API.axfile
       ~TC35API.csvfile
       ~TC35API.dataset
@@ -51,7 +51,5 @@
       ~TC35API.ofile
       ~TC35API.prefsfile
       ~TC35API.scriptfile
-      ~TC35API.tcnewversion
+      ~TC35API.tcversionfloat
       ~TC35API.tcversion
-   
-   

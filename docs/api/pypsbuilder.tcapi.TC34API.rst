@@ -5,14 +5,14 @@
 
 .. autoclass:: TC34API
 
-   
+
    .. automethod:: __init__
 
-   
+
    .. rubric:: Methods
 
    .. autosummary::
-   
+
       ~TC34API.__init__
       ~TC34API.calc_assemblage
       ~TC34API.calc_p
@@ -31,15 +31,15 @@
       ~TC34API.rundr
       ~TC34API.runtc
       ~TC34API.update_scriptfile
-   
-   
 
-   
-   
+
+
+
+
    .. rubric:: Attributes
 
    .. autosummary::
-   
+
       ~TC34API.axfile
       ~TC34API.csvfile
       ~TC34API.dataset
@@ -52,7 +52,5 @@
       ~TC34API.ofile
       ~TC34API.prefsfile
       ~TC34API.scriptfile
-      ~TC34API.tcnewversion
+      ~TC34API.tcversionfloat
       ~TC34API.tcversion
-   
-   

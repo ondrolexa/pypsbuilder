@@ -451,7 +451,7 @@ class TCResult:
             )
         # bulk composition
         bulk_vals = {}
-        oxhead, vals = bulk.split("\n")[1:]  # skip oxide compositions row
+        oxhead, vals = bulk.split("\n")[1:3]  # skip oxide compositions row
         for ox, val in zip(oxhead.split(), vals.split()[1:]):
             bulk_vals[ox] = float(val)
         data["bulk"] = bulk_vals
@@ -503,6 +503,109 @@ class TCResult:
         # bulk thermodynamics
         sys = {}
         for name, val in zip(head.split(), row.split()[1:]):
+            sys[name] = float(val)
+        data["sys"] = sys
+        # model end-members
+        if len(mems) > 0:
+            _, mem0 = mems[0].split("\n", maxsplit=1)
+            head = ["ideal", "gamma", "activity", "prop", "mu", "RTlna"]
+            mems[0] = mem0
+            for mem in mems:
+                ems = mem.split("\n")
+                phase, ems0 = ems[0].split(maxsplit=1)
+                ems[0] = ems0
+                for row in ems:
+                    em, *vals = row.split()
+                    phase_em = "{}({})".format(phase, em)
+                    data[phase_em] = {name: float(val) for name, val in zip(head, vals)}
+        # pure end-members
+        for row in pems.split("\n")[:-1]:
+            pem, val = row.split()
+            data[pem].update({"mu": float(val)})
+        # Finally
+        return cls(T, p, variance=variance, c=c, data=data, ptguess=ptguess)
+
+    @classmethod
+    def from_block351(cls, block, ptguess):
+        info, ax, sf, rbi, mode, factor, td, *mems, pems = block.split("\n\n")
+        bulk = "\n".join(rbi.split("\n")[:3])
+        rbi = "\n".join(rbi.split("\n")[3:])
+        # heading
+        data = {phase: {} for phase in info.split("{")[0].split()}
+        p, T = (float(v.strip()) for v in info.split("{")[1].split("}")[0].split(","))
+        # var or ovar?
+        variance = int(info.split("var = ")[1].split(" ")[0].replace(";", ""))
+        # a-x variables
+        for head, vals in zip(ax.split("\n")[::2], ax.split("\n")[1::2]):
+            phase, *names = head.split()
+            data[phase].update(
+                {
+                    name.replace("({})".format(phase), ""): float(val)
+                    for name, val in zip(names, vals.split())
+                }
+            )
+        # site fractions
+        for head, vals in zip(
+            sf.split("\n")[1::2], sf.split("\n")[2::2]
+        ):  # skip site fractions row
+            phase, *names = head.split()
+            data[phase].update(
+                {name: float(val) for name, val in zip(names, vals.split())}
+            )
+        # bulk composition
+        bulk_vals = {}
+        oxhead, vals = bulk.split("\n")[1:3]  # skip oxide compositions row
+        for ox, val in zip(oxhead.split(), vals.split()[1:]):
+            bulk_vals[ox] = float(val)
+        data["bulk"] = bulk_vals
+        # x for TX and pX
+        if "step" in vals:
+            c = float(vals.split("step")[1].split(", x =")[1])
+        else:
+            c = 0
+        # rbi
+        for row in rbi.split("\n"):
+            phase, *vals = row.split()
+            data[phase].update(
+                {ox: float(val) for ox, val in zip(oxhead.split(), vals)}
+            )
+        # modes (zero mode is empty field in tc350 !!!)
+        head, vals = mode.split("\n")
+        phases = head.split()[1:]
+        # fixed width parsing !!!
+        valsf = [
+            (
+                float(vals[6:][9 * i : 9 * (i + 1)].strip())
+                if vals[6:][9 * i : 9 * (i + 1)].strip() != ""
+                else 0.0
+            )
+            for i in range(len(phases))
+        ]
+        for phase, val in zip(phases, valsf):
+            data[phase].update({"mode": float(val)})
+        # factors
+        head, vals = factor.split("\n")
+        phases = head.split()[1:]
+        valsf = [
+            (
+                float(vals[6:][9 * i : 9 * (i + 1)].strip())
+                if vals[6:][9 * i : 9 * (i + 1)].strip() != ""
+                else 0.0
+            )
+            for i in range(len(phases))
+        ]
+        for phase, val in zip(phases, valsf):
+            data[phase].update({"factor": float(val)})
+        # thermodynamic state
+        head, *rows = td.split("\n")
+        for row in rows[:-1]:
+            phase, *vals = row.split()
+            data[phase].update(
+                {name: float(val) for name, val in zip(head.split(), vals)}
+            )
+        # bulk thermodynamics
+        sys = {}
+        for name, val in zip(head.split(), rows[-1].split()[1:]):
             sys[name] = float(val)
         data["sys"] = sys
         # model end-members
@@ -815,20 +918,20 @@ class SectionBase:
         def splitme(edges):
             """Recursive boundary splitter"""
             for idx, edge in enumerate(edges):
-                for _, l in lns:
-                    if edge.intersects(l):
-                        m = linemerge([edge, l])
+                for _, ln in lns:
+                    if edge.intersects(ln):
+                        m = linemerge([edge, ln])
                         if m.geom_type == "MultiLineString":
-                            p = edge.intersection(l)
+                            p = edge.intersection(ln)
                             if (
                                 p.geom_type == "LineString"
                             ):  # seems to occur whe duplicate points are on line
                                 p = MultiPoint(p.coords)
                             if p.geom_type == "MultiPoint":
-                                pts = [l.interpolate(l.project(pt)) for pt in p.geoms]
+                                pts = [ln.interpolate(ln.project(pt)) for pt in p.geoms]
                                 pts = sorted(pts, key=lambda pt: edge.project(pt))
                             else:
-                                pts = [l.interpolate(l.project(p))]
+                                pts = [ln.interpolate(ln.project(p))]
                             edges.pop(idx)
                             pts = (
                                 [Point(edge.coords[0])] + pts + [Point(edge.coords[-1])]
@@ -858,7 +961,7 @@ class SectionBase:
         while do:
             edges, do = splitme(edges)
         # polygonize
-        polys = list(polygonize(edges + [l for _, l in lns]))
+        polys = list(polygonize(edges + [ln for _, ln in lns]))
         # create shapes
         shapes = {}
         unilists = {}
