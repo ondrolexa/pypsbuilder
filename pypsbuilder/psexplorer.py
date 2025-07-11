@@ -1335,6 +1335,7 @@ class PS:
                 Default False.
             labelkeys (frozenset or list): Keys of divariant fields where contours
                 should be labeled.
+            clabelfs (int): Contour labels font size. Default 9
             nosplit (bool): Controls whether the contour underlying labels are
                 removed or not. Defaut True
             gradient (bool): Whether the first derivate of values should be used.
@@ -1613,7 +1614,7 @@ class PS:
                                     positions.append(seg.vertices[inside].mean(axis=0))
                             ax.clabel(
                                 contlbl,
-                                fontsize=9,
+                                fontsize=kwargs.get("clabelfs", 9),
                                 manual=positions,
                                 fmt="%g",
                                 inline_spacing=3,
