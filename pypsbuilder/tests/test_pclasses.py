@@ -7,9 +7,7 @@ pytest.ps = PTsection(trange=(400.0, 700.0), prange=(7.0, 16.0))
 
 @pytest.fixture
 def mock_tc():
-    api = TC35API("./examples/outputs", None, None)
-    api.tcout = "THERMOCALC 3.50"
-    return api
+    return TC35API("./examples/outputs", None, None)
 
 
 def test_parse_ini1(mock_tc):
