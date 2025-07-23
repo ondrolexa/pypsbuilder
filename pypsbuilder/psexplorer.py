@@ -245,7 +245,7 @@ class PS:
         for comp in (
             set(self.all_data_keys.keys())
             .difference(self.phases)
-            .difference(set(["bulk", "sys"]))
+            .difference({'sys'})
         ):
             k, v = comp.split(")")[0].split("(")
             if k in em:
@@ -434,6 +434,7 @@ class PS:
         #             if len(res) > 0:
         #                 for k in res[0]['data'].keys():
         #                     data[k] = list(res[0]['data'][k].keys())
+        data['sys'] = ['G', 'H', 'S', 'V', 'rho']
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
@@ -612,7 +613,7 @@ class PS:
         mn, mx = sys.float_info.max, -sys.float_info.max
         recs = OrderedDict()
         for key in self:
-            if phase.split("(")[0] in key:
+            if phase.split("(")[0] in key or phase == "sys":
                 d = self.collect_data(key, phase, expr, which=which)
                 z = d["data"]
                 if z:
@@ -1436,7 +1437,7 @@ class PS:
                 ax = fig.add_subplot()
             for key in recs:
                 phase_parts = phase.split(")")[0].split("(")
-                if phase_parts[0] in key:
+                if phase_parts[0] in key or phase == "sys":
                     tmin, pmin, tmax, pmax = self.shapes[key].bounds
                     # ttspace = self.xspace[np.logical_and(self.xspace >= tmin - self.xstep, self.xspace <= tmax + self.xstep)]
                     # ppspace = self.yspace[np.logical_and(self.yspace >= pmin - self.ystep, self.yspace <= pmax + self.ystep)]

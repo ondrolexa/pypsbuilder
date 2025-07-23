@@ -1,9 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.6.4] - master
+### Added
+ - `sys` could be used as phase to access G H S V rho variables
+
 ## [2.6.3] - 2025-04-03
 ### Fixed
- - fxed multipolygon bug when subsections are merged
+ - fixed multipolygon bug when subsections are merged
 
 ## [2.6.2] - 2025-02-11
 ### Fixed
