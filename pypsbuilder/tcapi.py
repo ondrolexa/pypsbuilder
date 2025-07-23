@@ -310,206 +310,220 @@ class TC35API(TCAPI):
         self.tcexe = tcexe
         self.drexe = drexe
         self.TCenc = encoding
-        try:
-            # TC version
-            errinfo = "THERMOCALC executable test."
-            self.tcout = self.runtc("\nkill\n\n").strip()
-            # tc-prefs file
-            if not self.workdir.joinpath("tc-prefs.txt").exists():
-                raise InitError("No tc-prefs.txt file in working directory.")
-            errinfo = "tc-prefs.txt file in working directory cannot be accessed."
-            for line in self.workdir.joinpath("tc-prefs.txt").open(
-                "r", encoding=self.TCenc
-            ):
-                kw = line.split()
-                if kw != []:
-                    if kw[0] == "scriptfile":
-                        self.name = kw[1]
-                        if not self.scriptfile.exists():
-                            raise InitError(
-                                "tc-prefs: scriptfile tc-"
-                                + self.name
-                                + ".txt does not exists in your working directory."
-                            )
-                        if len(self.name) > 15:
-                            raise InitError(
-                                "tc-prefs: scriptfile name is longer than 15 characters. It cause troubles for THERMOCALC. Please rename scriptfile to shorter name."
-                            )
-                    if kw[0] == "calcmode":
-                        if kw[1] != "1":
-                            raise InitError("tc-prefs: calcmode must be 1.")
-                    if kw[0] == "dontwrap":
-                        if kw[1] != "no":
-                            raise InitError("tc-prefs: dontwrap must be no.")
-            # defaults
-            self.ptx_steps = 20  # IS IT NEEDED ????
-            # Checks run output
-            if "exit, and correct the scriptfile ?" in self.tcout:
-                raise ScriptfileError(
-                    self.tcout.split("exit, and correct the scriptfile ?")[0].split(
-                        "\n"
-                    )[-4]
-                )
-            # Checks various settings
-            errinfo = "Scriptfile error!"
-            with self.scriptfile.open("r", encoding=self.TCenc) as f:
-                r = f.read()
-            lines = [ln.strip() for ln in r.splitlines() if ln.strip() != ""]
-            lines = lines[: lines.index("*")]  # remove part not used by TC
-            # Check pypsbuilder blocks
-            if not ("%{PSBGUESS-BEGIN}" in lines and "%{PSBGUESS-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile."
-                )
-            if not ("%{PSBCALC-BEGIN}" in lines and "%{PSBCALC-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBCALC-BEGIN} and {PSBCALC-END} tags in your scriptfile."
-                )
-            if not ("%{PSBBULK-BEGIN}" in lines and "%{PSBBULK-END}" in lines):
-                raise ScriptfileError(
-                    "There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile."
-                )
-            # Create scripts directory
-            scripts = {}
-            for ln in lines:
-                ln_clean = ln.split("%")[0].strip()
-                if ln_clean != "":
-                    tokens = ln_clean.split(maxsplit=1)
-                    if len(tokens) > 1:
-                        if tokens[0] in scripts:
-                            scripts[tokens[0]].append(tokens[1].strip())
+        if self.tcexe:
+            try:
+                # TC version
+                errinfo = "THERMOCALC executable test."
+                self.tcout = self.runtc("\nkill\n\n").strip()
+                # tc-prefs file
+                if not self.workdir.joinpath("tc-prefs.txt").exists():
+                    raise InitError("No tc-prefs.txt file in working directory.")
+                errinfo = "tc-prefs.txt file in working directory cannot be accessed."
+                for line in self.workdir.joinpath("tc-prefs.txt").open(
+                    "r", encoding=self.TCenc
+                ):
+                    kw = line.split()
+                    if kw != []:
+                        if kw[0] == "scriptfile":
+                            self.name = kw[1]
+                            if not self.scriptfile.exists():
+                                raise InitError(
+                                    "tc-prefs: scriptfile tc-"
+                                    + self.name
+                                    + ".txt does not exists in your working directory."
+                                )
+                            if len(self.name) > 15:
+                                raise InitError(
+                                    "tc-prefs: scriptfile name is longer than 15 characters. It cause troubles for THERMOCALC. Please rename scriptfile to shorter name."
+                                )
+                        if kw[0] == "calcmode":
+                            if kw[1] != "1":
+                                raise InitError("tc-prefs: calcmode must be 1.")
+                        if kw[0] == "dontwrap":
+                            if kw[1] != "no":
+                                raise InitError("tc-prefs: dontwrap must be no.")
+                # defaults
+                self.ptx_steps = 20  # IS IT NEEDED ????
+                # Checks run output
+                if "exit, and correct the scriptfile ?" in self.tcout:
+                    raise ScriptfileError(
+                        self.tcout.split("exit, and correct the scriptfile ?")[0].split(
+                            "\n"
+                        )[-4]
+                    )
+                # Checks various settings
+                errinfo = "Scriptfile error!"
+                with self.scriptfile.open("r", encoding=self.TCenc) as f:
+                    r = f.read()
+                lines = [ln.strip() for ln in r.splitlines() if ln.strip() != ""]
+                lines = lines[: lines.index("*")]  # remove part not used by TC
+                # Check pypsbuilder blocks
+                if not ("%{PSBGUESS-BEGIN}" in lines and "%{PSBGUESS-END}" in lines):
+                    raise ScriptfileError(
+                        "There are not {PSBGUESS-BEGIN} and {PSBGUESS-END} tags in your scriptfile."
+                    )
+                if not ("%{PSBCALC-BEGIN}" in lines and "%{PSBCALC-END}" in lines):
+                    raise ScriptfileError(
+                        "There are not {PSBCALC-BEGIN} and {PSBCALC-END} tags in your scriptfile."
+                    )
+                if not ("%{PSBBULK-BEGIN}" in lines and "%{PSBBULK-END}" in lines):
+                    raise ScriptfileError(
+                        "There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile."
+                    )
+                # Create scripts directory
+                scripts = {}
+                for ln in lines:
+                    ln_clean = ln.split("%")[0].strip()
+                    if ln_clean != "":
+                        tokens = ln_clean.split(maxsplit=1)
+                        if len(tokens) > 1:
+                            if tokens[0] in scripts:
+                                scripts[tokens[0]].append(tokens[1].strip())
+                            else:
+                                scripts[tokens[0]] = [tokens[1].strip()]
                         else:
-                            scripts[tokens[0]] = [tokens[1].strip()]
+                            scripts[tokens[0]] = []
+                # axfile
+                if "axfile" not in scripts:
+                    raise ScriptfileError(
+                        "No axfile script, axfile is mandatory script."
+                    )
+                errinfo = "Missing argument for axfile script in scriptfile."
+                self.axname = scripts["axfile"][0]
+                if not self.axfile.exists():
+                    raise ScriptfileError(
+                        "axfile "
+                        + str(self.axfile)
+                        + " does not exists in working directory"
+                    )
+                # diagramPT
+                if "diagramPT" not in scripts:
+                    raise ScriptfileError(
+                        "No diagramPT script, diagramPT is mandatory script."
+                    )
+                errinfo = "Wrong arguments for diagramPT script in scriptfile."
+                pmin, pmax, tmin, tmax = scripts["diagramPT"][0].split()
+                self.prange = float(pmin), float(pmax)
+                self.trange = float(tmin), float(tmax)
+                # bulk
+                errinfo = "Wrong bulk in scriptfile."
+                if "bulk" not in scripts:
+                    raise ScriptfileError("No bulk script, bulk must be provided.")
+                if not (1 < len(scripts["bulk"]) < 4):
+                    raise ScriptfileError("Bulk script must have 2 or 3 lines.")
+                self.bulk = []
+                self.bulk.append(scripts["bulk"][0].split())
+                self.bulk.append(scripts["bulk"][1].split())
+                if len(scripts["bulk"]) == 3:
+                    self.bulk.append(
+                        scripts["bulk"][2].split()[: len(self.bulk[0])]
+                    )  # remove possible number of steps
+                # try to get actual bulk from output
+                self.usedbulk = None
+                if "specification of bulk composition" in self.tcout:
+                    try:
+                        part = self.tcout.split("specification of bulk composition")[
+                            1
+                        ].split(
+                            "<==========================================================>"
+                        )[
+                            0
+                        ]
+                        lns = [
+                            ln for ln in part.split(os.linesep) if ln.startswith(" ")
+                        ]
+                        self.usedbulk = []
+                        self.usedbulk.append(lns[0].split())
+                        self.usedbulk.append(lns[1].split())
+                        if len(lns) == 3:
+                            self.usedbulk.append(
+                                lns[2].split()[: len(self.usedbulk[0])]
+                            )
+                    except BaseException:
+                        self.usedbulk = None
+                # inexcess
+                errinfo = "Wrong inexcess in scriptfile."
+                if "setexcess" in scripts:
+                    raise ScriptfileError(
+                        "setexcess script depreceated, use inexcess instead."
+                    )
+                if "inexcess" in scripts:
+                    if scripts["inexcess"]:
+                        self.excess = (
+                            set(scripts["inexcess"][0].split())
+                            - set(["no"])
+                            - set(["none"])
+                        )
                     else:
-                        scripts[tokens[0]] = []
-            # axfile
-            if "axfile" not in scripts:
-                raise ScriptfileError("No axfile script, axfile is mandatory script.")
-            errinfo = "Missing argument for axfile script in scriptfile."
-            self.axname = scripts["axfile"][0]
-            if not self.axfile.exists():
-                raise ScriptfileError(
-                    "axfile "
-                    + str(self.axfile)
-                    + " does not exists in working directory"
-                )
-            # diagramPT
-            if "diagramPT" not in scripts:
-                raise ScriptfileError(
-                    "No diagramPT script, diagramPT is mandatory script."
-                )
-            errinfo = "Wrong arguments for diagramPT script in scriptfile."
-            pmin, pmax, tmin, tmax = scripts["diagramPT"][0].split()
-            self.prange = float(pmin), float(pmax)
-            self.trange = float(tmin), float(tmax)
-            # bulk
-            errinfo = "Wrong bulk in scriptfile."
-            if "bulk" not in scripts:
-                raise ScriptfileError("No bulk script, bulk must be provided.")
-            if not (1 < len(scripts["bulk"]) < 4):
-                raise ScriptfileError("Bulk script must have 2 or 3 lines.")
-            self.bulk = []
-            self.bulk.append(scripts["bulk"][0].split())
-            self.bulk.append(scripts["bulk"][1].split())
-            if len(scripts["bulk"]) == 3:
-                self.bulk.append(
-                    scripts["bulk"][2].split()[: len(self.bulk[0])]
-                )  # remove possible number of steps
-            # try to get actual bulk from output
-            self.usedbulk = None
-            if "specification of bulk composition" in self.tcout:
-                try:
-                    part = self.tcout.split("specification of bulk composition")[
-                        1
-                    ].split(
-                        "<==========================================================>"
-                    )[
-                        0
-                    ]
-                    lns = [ln for ln in part.split(os.linesep) if ln.startswith(" ")]
-                    self.usedbulk = []
-                    self.usedbulk.append(lns[0].split())
-                    self.usedbulk.append(lns[1].split())
-                    if len(lns) == 3:
-                        self.usedbulk.append(lns[2].split()[: len(self.usedbulk[0])])
-                except BaseException:
-                    self.usedbulk = None
-            # inexcess
-            errinfo = "Wrong inexcess in scriptfile."
-            if "setexcess" in scripts:
-                raise ScriptfileError(
-                    "setexcess script depreceated, use inexcess instead."
-                )
-            if "inexcess" in scripts:
-                if scripts["inexcess"]:
-                    self.excess = (
-                        set(scripts["inexcess"][0].split())
-                        - set(["no"])
-                        - set(["none"])
-                    )
+                        raise ScriptfileError(
+                            "In case of no excess phases, use inexcess no or remove script"
+                        )
                 else:
+                    self.excess = set()
+                # omit
+                errinfo = "Wrong omit in scriptfile."
+                if "omit" in scripts:
+                    self.omit = set(scripts["omit"][0].split())
+                else:
+                    self.omit = set()
+                # autoexit
+                if "autoexit" not in scripts:
                     raise ScriptfileError(
-                        "In case of no excess phases, use inexcess no or remove script"
+                        "No autoexit script, autoexit must be provided."
                     )
-            else:
-                self.excess = set()
-            # omit
-            errinfo = "Wrong omit in scriptfile."
-            if "omit" in scripts:
-                self.omit = set(scripts["omit"][0].split())
-            else:
-                self.omit = set()
-            # autoexit
-            if "autoexit" not in scripts:
-                raise ScriptfileError("No autoexit script, autoexit must be provided.")
-            # acceptvar
-            if "acceptvar" in scripts:
-                if scripts["acceptvar"][0] == "no":
-                    raise ScriptfileError("Acceptvar script must be yes or removed")
-            # with
-            if "with" in scripts:
-                if scripts["with"][0].split()[0] == "someof":
+                # acceptvar
+                if "acceptvar" in scripts:
+                    if scripts["acceptvar"][0] == "no":
+                        raise ScriptfileError("Acceptvar script must be yes or removed")
+                # with
+                if "with" in scripts:
+                    if scripts["with"][0].split()[0] == "someof":
+                        raise ScriptfileError(
+                            "Pypsbuilder does not support with sameof <phase list>. Use omit with and omit."
+                        )
+                # samecoding
+                if "samecoding" in scripts:
+                    self.samecoding = [set(sc.split()) for sc in scripts["samecoding"]]
+                else:
+                    self.samecoding = [set()]
+                # pseudosection
+                if "pseudosection" not in scripts:
                     raise ScriptfileError(
-                        "Pypsbuilder does not support with sameof <phase list>. Use omit with and omit."
+                        "No pseudosection script, pseudosection is mandatory script."
                     )
-            # samecoding
-            if "samecoding" in scripts:
-                self.samecoding = [set(sc.split()) for sc in scripts["samecoding"]]
-            else:
-                self.samecoding = [set()]
-            # pseudosection
-            if "pseudosection" not in scripts:
-                raise ScriptfileError(
-                    "No pseudosection script, pseudosection is mandatory script."
-                )
-            # dogmin
-            if "dogmin" in scripts:
-                raise ScriptfileError(
-                    "Dogmin script should be removed from scriptfile."
-                )
-            # union ax phases and samecoding and diff omit
-            if "BOMBED" in self.tcout:
-                raise TCError(self.tcout.split("BOMBED")[1].split(os.linesep)[0])
-            else:
-                ax_phases = set(
-                    self.tcout.split("reading ax:")[1].split(2 * os.linesep)[0].split()
-                )
-                self.phases = ax_phases.union(*self.samecoding) - self.omit
-            # OK
-            self.status = "Initial check done."
-            self.OK = True
-        except BaseException as e:
-            if (
-                isinstance(e, InitError)
-                or isinstance(e, ScriptfileError)
-                or isinstance(e, TCError)
-            ):
-                self.status = "{}: {}".format(type(e).__name__, str(e))
-            else:
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                self.status = "{}: {} on line {} {}".format(
-                    type(e).__name__, str(e), exc_tb.tb_lineno, errinfo
-                )
+                # dogmin
+                if "dogmin" in scripts:
+                    raise ScriptfileError(
+                        "Dogmin script should be removed from scriptfile."
+                    )
+                # union ax phases and samecoding and diff omit
+                if "BOMBED" in self.tcout:
+                    raise TCError(self.tcout.split("BOMBED")[1].split(os.linesep)[0])
+                else:
+                    ax_phases = set(
+                        self.tcout.split("reading ax:")[1]
+                        .split(2 * os.linesep)[0]
+                        .split()
+                    )
+                    self.phases = ax_phases.union(*self.samecoding) - self.omit
+                # OK
+                self.status = "Initial check done."
+                self.OK = True
+            except BaseException as e:
+                if (
+                    isinstance(e, InitError)
+                    or isinstance(e, ScriptfileError)
+                    or isinstance(e, TCError)
+                ):
+                    self.status = "{}: {}".format(type(e).__name__, str(e))
+                else:
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    self.status = "{}: {} on line {} {}".format(
+                        type(e).__name__, str(e), exc_tb.tb_lineno, errinfo
+                    )
+                self.OK = False
+        else:
+            self.status = "Mocked."
             self.OK = False
 
     def parse_logfile(self, **kwargs):
@@ -536,103 +550,95 @@ class TC35API(TCAPI):
         output = kwargs.get("output", None)
         resic = kwargs.get("resic", None)
         get_phases = kwargs.get("get_phases", False)
-        try:
-            if output is None:
-                with self.logfile.open("r", encoding=self.TCenc) as f:
-                    output = f.read().split(
-                        "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n"
-                    )[1]
-            lines = [ln for ln in output.splitlines() if ln != ""]
-            results = None
-            do_parse = True
-            if resic is None:
-                if not self.icfile.exists():
-                    if [ix for ix, ln in enumerate(lines) if "BOMBED" in ln]:
-                        status = "bombed"
-                    else:
-                        status = "nir"
-                    do_parse = False
-                else:
-                    with self.icfile.open("r", encoding=self.TCenc) as f:
-                        resic = f.read()
-            if do_parse:
-                # parse ptguesses
-                bstarts = [
-                    ix
-                    for ix, ln in enumerate(lines)
-                    if ln.startswith(
-                        "------------------------------------------------------------"
-                    )
-                ]
-                bstarts.append(len(lines))
-                ptguesses = []
-                corrects = []
-                for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                    block = lines[bs:be]
-                    if block[2].startswith("#"):
-                        corrects.append(False)
-                    else:
-                        corrects.append(True)
-                    xyz = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")
-                    ]
-                    gixs = [
-                        ix for ix, ln in enumerate(block) if ln.startswith("ptguess")
-                    ][0] - 3
-                    gixe = xyz[-1] + 2
-                    ptguesses.append(block[gixs:gixe])
-                # parse icfile
-                blocks = resic.split(
-                    "\n===========================================================\n\n"
-                )[1:]
-                # done
-                if len(blocks) > 0:
-                    if self.tcversionfloat > 3.5:
-                        rlist = [
-                            TCResult.from_block351(block, ptguess)
-                            for block, ptguess, correct in zip(
-                                blocks, ptguesses, corrects
-                            )
-                            if correct
-                        ]
-                    else:
-                        rlist = [
-                            TCResult.from_block(block, ptguess)
-                            for block, ptguess, correct in zip(
-                                blocks, ptguesses, corrects
-                            )
-                            if correct
-                        ]
-                    if len(rlist) > 0:
-                        status = "ok"
-                        results = TCResultSet(rlist)
-                    else:
-                        status = "nir"
+        # try:
+        if output is None:
+            with self.logfile.open("r", encoding=self.TCenc) as f:
+                output = f.read().split(
+                    "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n"
+                )[1]
+        lines = [ln for ln in output.splitlines() if ln != ""]
+        results = None
+        do_parse = True
+        if resic is None:
+            if not self.icfile.exists():
+                if [ix for ix, ln in enumerate(lines) if "BOMBED" in ln]:
+                    status = "bombed"
                 else:
                     status = "nir"
-            if get_phases:
-                phases, out = None, None
-                with self.scriptfile.open("r", encoding=self.TCenc) as f:
-                    scf = f.read()
-                _, rem = scf.split("%{PSBCALC-BEGIN}")
-                calc, _ = rem.split("%{PSBCALC-END}")
-                calcs = calc.splitlines()
-                for ln in calcs:
-                    script = ln.split("%")[0].strip()
-                    if script.startswith("with"):
-                        phases = set(script.split("with", 1)[1].split()).union(
-                            self.excess
-                        )
-                    if script.startswith("zeromodeisopleth"):
-                        out = set(script.split("zeromodeisopleth", 1)[1].split())
-                return status, results, output, (phases, out, calcs)
+                do_parse = False
             else:
-                return status, results, output
-        except Exception:
-            if get_phases:
-                return "bombed", None, None, (None, None, [])
+                with self.icfile.open("r", encoding=self.TCenc) as f:
+                    resic = f.read()
+        if do_parse:
+            # parse ptguesses
+            bstarts = [
+                ix
+                for ix, ln in enumerate(lines)
+                if ln.startswith(
+                    "------------------------------------------------------------"
+                )
+            ]
+            bstarts.append(len(lines))
+            ptguesses = []
+            corrects = []
+            for bs, be in zip(bstarts[:-1], bstarts[1:]):
+                block = lines[bs:be]
+                if block[2].startswith("#"):
+                    corrects.append(False)
+                else:
+                    corrects.append(True)
+                xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
+                gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][
+                    0
+                ] - 3
+                gixe = xyz[-1] + 2
+                ptguesses.append(block[gixs:gixe])
+            # parse icfile
+            blocks = resic.split(
+                "\n===========================================================\n\n"
+            )[1:]
+            # done
+            if len(blocks) > 0:
+                if self.tcversionfloat > 3.5:
+                    rlist = [
+                        TCResult.from_block351(block, ptguess)
+                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
+                        if correct
+                    ]
+                else:
+                    rlist = [
+                        TCResult.from_block(block, ptguess)
+                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
+                        if correct
+                    ]
+                if len(rlist) > 0:
+                    status = "ok"
+                    results = TCResultSet(rlist)
+                else:
+                    status = "nir"
             else:
-                return "bombed", None, None
+                status = "nir"
+        if get_phases:
+            phases, out = None, None
+            with self.scriptfile.open("r", encoding=self.TCenc) as f:
+                scf = f.read()
+            _, rem = scf.split("%{PSBCALC-BEGIN}")
+            calc, _ = rem.split("%{PSBCALC-END}")
+            calcs = calc.splitlines()
+            for ln in calcs:
+                script = ln.split("%")[0].strip()
+                if script.startswith("with"):
+                    phases = set(script.split("with", 1)[1].split()).union(self.excess)
+                if script.startswith("zeromodeisopleth"):
+                    out = set(script.split("zeromodeisopleth", 1)[1].split())
+            return status, results, output, (phases, out, calcs)
+        else:
+            return status, results, output
+        # except Exception:
+        #     if get_phases:
+        #         return "bombed", None, None, (None, None, [])
+        #     else:
+        #         return "bombed", None, None
 
     def parse_logfile_backup(self, **kwargs):
         output = kwargs.get("output", None)

@@ -7,7 +7,9 @@ pytest.ps = PTsection(trange=(400.0, 700.0), prange=(7.0, 16.0))
 
 @pytest.fixture
 def mock_tc():
-    return TC35API("./examples/outputs", None, None)
+    api = TC35API("./examples/outputs", None, None)
+    api.tcout = "THERMOCALC 3.50"
+    return api
 
 
 def test_parse_ini1(mock_tc):
@@ -16,12 +18,12 @@ def test_parse_ini1(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     inv = InvPoint(
         phases={"bi", "mu", "chl", "H2O", "ep", "q", "g", "sph", "pa"},
@@ -49,12 +51,12 @@ def test_parse_ini2(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     inv = InvPoint(
         phases={"ep", "pa", "sph", "q", "H2O", "mu", "chl", "g", "ab", "bi"},
@@ -82,12 +84,12 @@ def test_parse_ini3(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     inv = InvPoint(
         phases={"pa", "H2O", "sph", "g", "mu", "bi", "q", "ep", "ab"},
@@ -115,12 +117,12 @@ def test_parse_uni1(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     uni = UniLine(
         phases={"bi", "mu", "chl", "H2O", "ep", "q", "g", "sph", "pa"},
@@ -150,12 +152,12 @@ def test_parse_uni2(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     uni = UniLine(
         phases={"pa", "H2O", "sph", "g", "mu", "bi", "q", "ep"},
@@ -185,12 +187,12 @@ def test_parse_uni3(mock_tc):
     icfile = mock_tc.workdir / "{}-ic.txt".format(test)
 
     with ofile.open("r", encoding=mock_tc.TCenc) as f:
-        output = f.read()
+        tcout = f.read()
 
     with icfile.open("r", encoding=mock_tc.TCenc) as f:
         resic = f.read()
 
-    status, res, output = mock_tc.parse_logfile(output=output, resic=resic)
+    status, res, output = mock_tc.parse_logfile(output=tcout, resic=resic)
 
     uni = UniLine(
         phases={"pa", "H2O", "sph", "g", "mu", "bi", "q", "ep", "ab"},
