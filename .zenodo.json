@@ -1,0 +1,20 @@
+{
+    "creators": [
+        {
+            "name": "Lexa, Ondrej",
+            "orcid": "0000-0002-1825-0097",
+            "affiliation": "IPSG, Charles University, Prague, Czech Republic",
+            "type": "ProjectLeader"
+        }
+    ],
+    "title": "pypsbuilder - THERMOCALC front-end for constructing and visualizations of P-T, T-X and P-X pseudosections",
+    "access_right": "open",
+    "keywords": [
+        "metamorphic petrology",
+        "python",
+        "pseudosections"
+    ],
+    "license": "mit",
+    "upload_type": "software",
+    "language": "eng"
+}
