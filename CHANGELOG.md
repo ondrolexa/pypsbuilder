@@ -1,7 +1,9 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.6.4] - master
+## [2.6.4] - 2025-08-03
+### Fixed
+ - TC 3.51 compatibility added
 ### Added
  - `sys` could be used as phase to access G H S V rho variables
 
