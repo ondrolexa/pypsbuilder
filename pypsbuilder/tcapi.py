@@ -11,9 +11,9 @@ Todo:
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
-import sys
 import os
 import subprocess
+import sys
 
 # import itertools
 # import re
@@ -21,6 +21,7 @@ from pathlib import Path
 
 # from collections import OrderedDict
 import numpy as np
+
 from .psclasses import TCResult, TCResultSet
 
 popen_kw = dict(

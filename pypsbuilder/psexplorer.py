@@ -22,38 +22,46 @@ Example:
 # website: https://github.com/ondrolexa/pypsbuilder
 
 import argparse
-import sys
+import ast
+import gzip
 
 # import os
 import pickle
-import gzip
-import ast
+import sys
 import time
-from pathlib import Path
-from collections import OrderedDict
 import warnings
+from collections import OrderedDict
+from pathlib import Path
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
-from matplotlib.collections import LineCollection
-from matplotlib.colorbar import ColorbarBase
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib.table import table
-from matplotlib import ticker
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
-
-from shapely.geometry import MultiPoint, Point, LineString
-from shapely.ops import linemerge
-from scipy.interpolate import Rbf, interp1d, SmoothBivariateSpline
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import ticker
+from matplotlib.collections import LineCollection
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import BoundaryNorm, ListedColormap, Normalize
+from matplotlib.table import table
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from scipy.interpolate import (
+    Rbf,
+    SmoothBivariateSpline,
+    griddata,  # interp2d
+    interp1d,
+)
 from scipy.linalg import LinAlgWarning, lstsq
-from scipy.interpolate import griddata  # interp2d
+from shapely.geometry import LineString, MultiPoint, Point
+from shapely.ops import linemerge
 from tqdm import tqdm, trange
 
+from .psclasses import (  # InvPoint, UniLine
+    PolygonPatch,
+    PTsection,
+    PXsection,
+    TXsection,
+    polymorphs,
+)
 from .tcapi import get_tcapi
-from .psclasses import PTsection, TXsection, PXsection  # InvPoint, UniLine
-from .psclasses import polymorphs, PolygonPatch
 
 
 class PS:
@@ -243,9 +251,7 @@ class PS:
         """Returns dictionary with phases and their end-members names"""
         em = {}
         for comp in (
-            set(self.all_data_keys.keys())
-            .difference(self.phases)
-            .difference({'sys'})
+            set(self.all_data_keys.keys()).difference(self.phases).difference({"sys"})
         ):
             k, v = comp.split(")")[0].split("(")
             if k in em:
@@ -434,7 +440,7 @@ class PS:
         #             if len(res) > 0:
         #                 for k in res[0]['data'].keys():
         #                     data[k] = list(res[0]['data'][k].keys())
-        data['sys'] = ['G', 'H', 'S', 'V', 'rho']
+        data["sys"] = ["G", "H", "S", "V", "rho"]
         self.all_data_keys = data
 
     def collect_inv_data(self, key, phase, expr):
@@ -1841,8 +1847,8 @@ class PS:
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
         """
-        from skimage import measure
         from matplotlib.cm import ScalarMappable
+        from skimage import measure
 
         if self.check_phase_expr(phase, expr):
             # parse kwargs

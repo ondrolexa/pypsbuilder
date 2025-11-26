@@ -3,34 +3,29 @@
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
-import sys
-import os
-
-import pickle
 import gzip
-from pathlib import Path
-from datetime import datetime
-import itertools
-
-import warnings
-
 import importlib.resources as ires
-from qtpy import QtCore, QtGui, QtWidgets
-from qtpy import QT_VERSION
-from qtpy import API as QTPY_API
+import itertools
+import os
+import pickle
+import sys
+import warnings
+from datetime import datetime
+from pathlib import Path
 
-
-import numpy as np
 import matplotlib
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+import numpy as np
 
 # from matplotlib.widgets import Cursor
 from matplotlib import cm
-from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
-from shapely.geometry import Point, LineString, Polygon
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.colors import BoundaryNorm, ListedColormap, Normalize
+from matplotlib.figure import Figure
+from qtpy import API as QTPY_API
+from qtpy import QT_VERSION, QtCore, QtGui, QtWidgets
 from scipy.interpolate import interp1d
+from shapely.geometry import LineString, Point, Polygon
 
 try:
     import networkx as nx
@@ -39,26 +34,26 @@ try:
 except ImportError:
     NX_OK = False
 
-from .ui_ptbuilder import Ui_PTBuilder
-from .ui_txbuilder import Ui_TXBuilder
-from .ui_pxbuilder import Ui_PXBuilder
-from .ui_addinv import Ui_AddInv
-from .ui_adduni import Ui_AddUni
-from .ui_uniguess import Ui_UniGuess
+from . import __copyright__, __version__
 from .psclasses import (
-    InvPoint,
-    UniLine,
-    polymorphs,
-    PTsection,
-    TXsection,
-    PXsection,
     Dogmin,
+    InvPoint,
+    PolygonPatch,
+    PTsection,
+    PXsection,
     TCResult,
     TCResultSet,
-    PolygonPatch,
+    TXsection,
+    UniLine,
+    polymorphs,
 )
 from .tcapi import get_tcapi
-from . import __version__, __copyright__
+from .ui_addinv import Ui_AddInv
+from .ui_adduni import Ui_AddUni
+from .ui_ptbuilder import Ui_PTBuilder
+from .ui_pxbuilder import Ui_PXBuilder
+from .ui_txbuilder import Ui_TXBuilder
+from .ui_uniguess import Ui_UniGuess
 
 warnings.filterwarnings("ignore")
 
@@ -1951,7 +1946,9 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings("LX", f"ptbuilder {QTPY_API}{QT_VERSION.split('.')[0]}")
+        builder_settings = QtCore.QSettings(
+            "LX", f"ptbuilder {QTPY_API}{QT_VERSION.split('.')[0]}"
+        )
         if write:
             builder_settings.setValue("steps", self.spinSteps.value())
             builder_settings.setValue("precision", self.spinPrec.value())
@@ -5244,7 +5241,8 @@ class AboutDialog(QtWidgets.QDialog):
         author.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         swinfo = QtWidgets.QLabel(
-            f"Python:{sys.version.split()[0]} {QTPY_API} {QT_VERSION}")
+            f"Python:{sys.version.split()[0]} {QTPY_API} {QT_VERSION}"
+        )
         swinfo.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         github = QtWidgets.QLabel(

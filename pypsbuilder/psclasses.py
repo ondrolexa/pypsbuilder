@@ -8,15 +8,17 @@ outputs and storage of calculated invariant points and univariant lines.
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
-import pickle
 import gzip
-import numpy as np
+import pickle
+
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
-from shapely.geometry import LineString, Point, MultiPoint
-from shapely.ops import polygonize, linemerge  # unary_union
+from shapely.geometry import LineString, MultiPoint, Point
+from shapely.ops import linemerge, polygonize  # unary_union
 
+### List of two-element sets containing polymorphs
 polymorphs = [
     {"sill", "and"},
     {"ky", "and"},
@@ -24,7 +26,6 @@ polymorphs = [
     {"q", "coe"},
     {"diam", "gph"},
 ]
-"""list: List of two-element sets containing polymorphs."""
 
 
 class PseudoBase:

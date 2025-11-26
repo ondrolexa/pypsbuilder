@@ -9,14 +9,14 @@ and ax file according to user selection
 # author: Ondrej Lexa
 # website: https://github.com/ondrolexa/pypsbuilder
 
-from pathlib import Path
 import platform
-from io import BytesIO
 import shutil
+import string
+import unicodedata
+from io import BytesIO
+from pathlib import Path
 from urllib.request import urlopen
 from zipfile import ZipFile
-import unicodedata
-import string
 
 # recent files
 set_urls = {

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from pypsbuilder.psexplorer import PTPS, TXPS, PXPS
 from pypsbuilder.psclasses import (
     InvPoint,
-    UniLine,
     PTsection,
-    TXsection,
     PXsection,
+    TXsection,
+    UniLine,
 )
+from pypsbuilder.psexplorer import PTPS, PXPS, TXPS
 from pypsbuilder.tcapi import get_tcapi
 
 __all__ = (
