@@ -1343,6 +1343,7 @@ class PS:
             labelkeys (frozenset or list): Keys of divariant fields where contours
                 should be labeled.
             clabelfs (int): Contour labels font size. Default 9
+            clabelfmt (str): Format fol contour labels. Default "%g"
             nosplit (bool): Controls whether the contour underlying labels are
                 removed or not. Defaut True
             gradient (bool): Whether the first derivate of values should be used.
@@ -1623,7 +1624,7 @@ class PS:
                                 contlbl,
                                 fontsize=kwargs.get("clabelfs", 9),
                                 manual=positions,
-                                fmt="%g",
+                                fmt=kwargs.get("clabelfmt", "%g"),
                                 inline_spacing=3,
                                 inline=not nosplit,
                             )
@@ -1772,7 +1773,13 @@ class PS:
                         show=False,
                         ax=ax,
                     )
-                    handles.append(mpatches.Patch(color=color, alpha=alpha, label=expr))
+                    handles.append(
+                        mpatches.Patch(
+                            color=color,
+                            alpha=alpha,
+                            label=f"{expr} {levels[0]:g}-{levels[1]:g}",
+                        )
+                    )
                 self.add_overlay(ax)
                 ax.legend(handles=handles)
                 # coords
