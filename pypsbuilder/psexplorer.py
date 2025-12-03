@@ -647,8 +647,6 @@ class PS:
                 by key(s).
             cmap (str): matplotlib colormap used to divariant fields coloring.
                 Colors are based on variance. Default 'Purples'.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
             bulk (bool): Whether to show bulk composition on top of diagram.
                 Default False.
             alpha (float): alpha value for colors. Default 0.6
@@ -664,20 +662,20 @@ class PS:
             save_kw: dict passed to savefig method.
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
+
+        Accepts all args for add_overlay
         """
         out = kwargs.get("out", None)
         cmap = kwargs.get("cmap", "Purples")
         alpha = kwargs.get("alpha", 0.6)
         label = kwargs.get("label", False)
-        skiplabels = kwargs.get("skiplabels", 0)
-        labelfs = kwargs.get("labelfs", 6)
         bulk = kwargs.get("bulk", False)
         high = kwargs.get("high", [])
         connect = kwargs.get("connect", False)
         show_vertices = kwargs.get("show_vertices", False)
         fig = kwargs.get("fig", None)
         fig_kw = kwargs.get("fig_kw", {})
-        ax = kwargs.get("ax", None)
+        ax = kwargs.pop("ax", None)
         filename = kwargs.get("filename", None)
         save_kw = kwargs.get("save_kw", {})
         show = kwargs.get("show", None)
@@ -720,7 +718,7 @@ class PS:
                         x, y = zip(*patch.get_path().vertices)
                         ax.plot(x, y, "k.", ms=3)
             ax.autoscale_view()
-            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+            self.add_overlay(ax, **kwargs)
             if out:
                 for o in out:
                     xy = []
@@ -840,7 +838,24 @@ class PS:
             self.x_var, x, self.y_var, y, phases, prec=prec
         )
 
-    def add_overlay(self, ax, fc="none", ec="k", label=False, skiplabels=0, fontsize=6):
+    def add_overlay(self, ax, **kwargs):
+        """Add fields to axes
+
+        Args:
+            fields_fc (str): fill color for fields. Default "none"
+            fields_ec (str): edge color for fields. Default "black"
+            fields_lw (str): edge line width for fields. Default 0.5
+            label (bool): Whether to label divariant fields. Default False.
+            skiplabels (float): Minimal area fraction of fields in percents
+                to be labelled. Default 0
+            labelfs (float): Size of label font. Default 6
+        """
+        fc = kwargs.get("fields_fc", "none")
+        ec = kwargs.get("fields_ec", "black")
+        lw = kwargs.get("fields_lw", 0.5)
+        label = kwargs.get("label", False)
+        skiplabels = kwargs.get("skiplabels", 0)
+        fontsize = kwargs.get("labelfs", 6)
         area = (self.xrange[1] - self.xrange[0]) * (self.yrange[1] - self.yrange[0])
         for k, shape in self.shapes.items():
             if shape.geom_type == "MultiPolygon":
@@ -848,7 +863,7 @@ class PS:
             else:
                 shapelist = [shape]
             for shape in shapelist:
-                ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=0.5))
+                ax.add_patch(PolygonPatch(shape, ec=ec, fc=fc, lw=lw, zorder=-100))
                 if label and (100 * shape.area / area > skiplabels):
                     # multiline for long labels
                     tl = sorted(list(k.difference(self.tc.excess)))
@@ -919,9 +934,7 @@ class PS:
             else:
                 print("No data collected")
 
-    def show_grid(
-        self, phase, expr=None, interpolation=None, label=False, skiplabels=0, labelfs=6
-    ):
+    def show_grid(self, phase, **kwargs):
         """Convinient function to show values of expression for given phase only
         from Grid Data.
 
@@ -932,10 +945,11 @@ class PS:
                 possible variables.
             interpolation (str): matplotlib imshow interpolation method.
                 Default None.
-            label (bool): Whether to label divariant fields. Default False.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
+
+        Accepts all args for add_overlay
         """
+        expr = kwargs.get("", None)
+        interpolation = kwargs.get("", None)
         if self.gridded:
             if self.check_phase_expr(phase, expr):
                 fig, ax = plt.subplots()
@@ -967,9 +981,7 @@ class PS:
                         vmin=mn,
                         vmax=mx,
                     )
-                self.add_overlay(
-                    ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                )
+                self.add_overlay(ax, **kwargs)
                 ax.set_xlim(self.xrange)
                 ax.set_ylim(self.yrange)
                 fig.colorbar(im)
@@ -979,28 +991,7 @@ class PS:
         else:
             print("Not yet gridded...")
 
-    def search_composition(
-        self,
-        *args,
-        interpolation=None,
-        colors=None,
-        label=False,
-        skiplabels=0,
-        labelfs=6,
-        logerr=True,
-        maxerr=10,
-        geterror=False,
-        getpt=False,
-        fig=None,
-        fig_kw={},
-        isopleths=False,
-        which=7,
-        smooth=0,
-        alpha=0.5,
-        lw=2,
-        filename=None,
-        save_kw={},
-    ):
+    def search_composition(self, *args, **kwargs):
         """Function to plot root squared error of calculated and estimated values.
 
         Args:
@@ -1011,14 +1002,11 @@ class PS:
             val (float): searched value
             interpolation (str): matplotlib imshow interpolation method.
                 Default None.
-            label (bool): Whether to label divariant fields. Default False.
             logerr (bool): When True, plot logarithms of error. Default True
             geterror (bool): When True, calculated RMSE array is returned. Otherwise
                 error is plotted. Deafult False
             getpt (bool): When True return tuple of (p, T, err) where error is minimal.
                 Default False
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
@@ -1029,6 +1017,8 @@ class PS:
                 invariant points, 1 bit - uniariant lines and 2 bit - GridData
                 points
 
+        Accepts all args for add_overlay
+
         Example:
             >>> pt.search_composition(
                     'g', 'xMgX', 0.076,
@@ -1037,6 +1027,21 @@ class PS:
                     'g', 'xMnX', 0.268
                 )
         """
+        interpolation = kwargs.get("interpolation", None)
+        colors = kwargs.get("colors", None)
+        logerr = kwargs.get("logerr", True)
+        maxerr = kwargs.get("maxerr", 10)
+        geterror = kwargs.get("geterror", False)
+        getpt = kwargs.get("getpt", False)
+        fig = kwargs.get("fig", None)
+        fig_kw = kwargs.get("fig_kw", {})
+        isopleths = kwargs.get("isopleths", False)
+        which = kwargs.get("which", 7)
+        smooth = kwargs.get("smooth", 0)
+        alpha = kwargs.get("alpha", 0.5)
+        lw = kwargs.get("lw", 2)
+        filename = kwargs.get("filename", None)
+        save_kw = kwargs.get("save_kw", {})
         if len(args) % 3 == 0:
             if self.gridded:
                 err = []
@@ -1093,9 +1098,7 @@ class PS:
                                     phase, expr, levels=[val], ax=ax, lw=lw, color=cc
                                 )
                     ax.plot(T, p, "r*", ms=20)
-                    self.add_overlay(
-                        ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                    )
+                    self.add_overlay(ax, **kwargs)
                     ax.set_xlim(self.xrange)
                     ax.set_ylim(self.yrange)
                     fig.colorbar(im)
@@ -1113,8 +1116,11 @@ class PS:
         else:
             print("The number of argumets must be multiple of 3...")
 
-    def show_status(self, label=False, skiplabels=0, labelfs=6):
-        """Shows status of grid calculations"""
+    def show_status(self, **kwargs):
+        """Shows status of grid calculations
+
+        Accepts all args for add_overlay
+        """
         if self.gridded:
             fig, ax = plt.subplots()
             im = {}
@@ -1130,7 +1136,7 @@ class PS:
                     cmap=cmap,
                     norm=norm,
                 )
-            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+            self.add_overlay(ax, **kwargs)
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             ax.set_title("Gridding status - {}".format(self.name))
@@ -1141,13 +1147,15 @@ class PS:
         else:
             print("Not yet gridded...")
 
-    def show_delta(self, label=False, pointsec=False, skiplabels=0, labelfs=6):
+    def show_delta(self, **kwargs):
         """Shows THERMOCALC execution time for all grid points.
 
         Args:
             pointsec (bool): Whether to show points/sec or secs/point. Default False.
-            label (bool): Whether to label divariant fields. Default False.
+
+        Accepts all args for add_overlay
         """
+        pointsec = kwargs.get("pointsec", False)
         if self.gridded:
             fig, ax = plt.subplots()
             cval = {}
@@ -1173,7 +1181,7 @@ class PS:
                     vmin=mn,
                     vmax=mx,
                 )
-            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+            self.add_overlay(ax, **kwargs)
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             cbar = fig.colorbar(im)
@@ -1198,17 +1206,14 @@ class PS:
                 break
         return key
 
-    def gidentify(self, label=False, skiplabels=0, labelfs=6):
+    def gidentify(self, **kwargs):
         """Visual version of `identify` method. PT point is provided by mouse click.
 
-        Args:
-            label (bool): Whether to label divariant fields. Default False.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
+        Accepts all args for add_overlay
         """
         fig, ax = plt.subplots()
         ax.autoscale_view()
-        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+        self.add_overlay(ax, **kwargs)
         ax.set_xlim(self.xrange)
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
@@ -1216,17 +1221,14 @@ class PS:
         plt.close(fig)
         return self.identify(x, y)
 
-    def glabel(self, label=False, skiplabels=0, labelfs=6):
+    def glabel(self, **kwargs):
         """Return formatted string of assamblage at PT point provided by mouse click.
 
-        Args:
-            label (bool): Whether to label divariant fields. Default False.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
+        Accepts all args for add_overlay
         """
         fig, ax = plt.subplots()
         ax.autoscale_view()
-        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+        self.add_overlay(ax, **kwargs)
         ax.set_xlim(self.xrange)
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
@@ -1269,17 +1271,14 @@ class PS:
         else:
             print("Not yet gridded...")
 
-    def ginput_path(self, label=False, skiplabels=0, labelfs=6):
+    def ginput_path(self, **kwargs):
         """Collect Path data by mouse digitizing.
 
-        Args:
-            label (bool): Whether to label divariant fields. Default False.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
+        Accepts all args for add_overlay
         """
         fig, ax = plt.subplots()
         ax.autoscale_view()
-        self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+        self.add_overlay(ax, **kwargs)
         ax.set_xlim(self.xrange)
         ax.set_ylim(self.yrange)
         ax.format_coord = self.format_coord
@@ -1358,6 +1357,8 @@ class PS:
             save_kw: dict passed to savefig method.
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
+
+        Accepts all args for add_overlay
         """
         if self.check_phase_expr(phase, expr):
             # parse kwargs
@@ -1366,6 +1367,7 @@ class PS:
             epsilon = kwargs.get("epsilon", None)
             filled = kwargs.get("filled", True)
             filled_over = kwargs.get("filled_over", False)
+            linewidths = kwargs.get("linewidths", 1.5)
             out = kwargs.get("out", None)
             bulk = kwargs.get("bulk", False)
             high = kwargs.get("high", [])
@@ -1388,7 +1390,7 @@ class PS:
             labelkeys = kwargs.get("labelkeys", [])
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
-            ax = kwargs.get("ax", None)
+            ax = kwargs.pop("ax", None)
             filename = kwargs.get("filename", None)
             save_kw = kwargs.get("save_kw", {})
             show = kwargs.get("show", None)
@@ -1585,25 +1587,61 @@ class PS:
                             if filled:
                                 if colors is not None:
                                     cont = ax.contourf(
-                                        tg, pg, zg, cntv, colors=colors, alpha=alpha
+                                        tg,
+                                        pg,
+                                        zg,
+                                        cntv,
+                                        colors=colors,
+                                        alpha=alpha,
+                                        linewidths=linewidths,
                                     )
                                     if filled_over:
                                         contover = ax.contour(
-                                            tg, pg, zg, cntv, colors=colors
+                                            tg,
+                                            pg,
+                                            zg,
+                                            cntv,
+                                            colors=colors,
+                                            linewidths=linewidths,
                                         )
                                 else:
                                     cont = ax.contourf(
-                                        tg, pg, zg, cntv, cmap=cmap, alpha=alpha
+                                        tg,
+                                        pg,
+                                        zg,
+                                        cntv,
+                                        cmap=cmap,
+                                        alpha=alpha,
+                                        linewidths=linewidths,
                                     )
                                     if filled_over:
                                         contover = ax.contour(
-                                            tg, pg, zg, cntv, colors="whitesmoke"
+                                            tg,
+                                            pg,
+                                            zg,
+                                            cntv,
+                                            colors="whitesmoke",
+                                            linewidths=linewidths,
                                         )
                             else:
                                 if colors is not None:
-                                    cont = ax.contour(tg, pg, zg, cntv, colors=colors)
+                                    cont = ax.contour(
+                                        tg,
+                                        pg,
+                                        zg,
+                                        cntv,
+                                        colors=colors,
+                                        linewidths=linewidths,
+                                    )
                                 else:
-                                    cont = ax.contour(tg, pg, zg, cntv, cmap=cmap)
+                                    cont = ax.contour(
+                                        tg,
+                                        pg,
+                                        zg,
+                                        cntv,
+                                        cmap=cmap,
+                                        linewidths=linewidths,
+                                    )
                         patch = PolygonPatch(shape, fc="none", ec="none")
                         ax.add_patch(patch)
                         # label if needed
@@ -1633,7 +1671,7 @@ class PS:
                             contover.set_clip_path(patch)
 
             if only is None:
-                self.add_overlay(ax)
+                self.add_overlay(ax, **kwargs)
                 # zero mode lines
                 if out:
                     for o in out:
@@ -1727,6 +1765,8 @@ class PS:
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
 
+        Accepts all args for add_overlay
+
         Example:
             >>> pt.overlap_isopleths(
                     'g', 'xFeX', (0.51, 0.65),
@@ -1739,7 +1779,7 @@ class PS:
             if self.gridded:
                 fig = kwargs.get("fig", None)
                 fig_kw = kwargs.get("fig_kw", {})
-                ax = kwargs.get("ax", None)
+                ax = kwargs.pop("ax", None)
                 alpha = kwargs.get("alpha", 0.5)
                 filename = kwargs.get("filename", None)
                 save_kw = kwargs.get("save_kw", {})
@@ -1780,7 +1820,7 @@ class PS:
                             label=f"{expr} {levels[0]:g}-{levels[1]:g}",
                         )
                     )
-                self.add_overlay(ax)
+                self.add_overlay(ax, **kwargs)
                 ax.legend(handles=handles)
                 # coords
                 ax.format_coord = self.format_coord
@@ -1846,13 +1886,15 @@ class PS:
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
             fig_kw: dict passed to subplots method.
-            lw (float): Linewidth of isopleths. Default 1.0
+            linewidths (float): Linewidth of isopleths. Default 1.0
             ax (Axes): Axes to be used. Default None
             filename: If not None, figure is saved to file
             save_kw: dict passed to savefig method.
             color: matplotlib color for isopleths. If None cmap is used. Default None.
             show (bool): When False, Axes are returned, otherwise plot is shown.
                 Default True
+
+        Accepts all args for add_overlay
         """
         from matplotlib.cm import ScalarMappable
         from skimage import measure
@@ -1880,8 +1922,8 @@ class PS:
             colorbar = kwargs.get("colorbar", True)
             fig = kwargs.get("fig", None)
             fig_kw = kwargs.get("fig_kw", {})
-            lw = kwargs.get("lw", 1.0)
-            ax = kwargs.get("ax", None)
+            linewidths = kwargs.get("lw", 1.0)
+            ax = kwargs.pop("ax", None)
             filename = kwargs.get("filename", None)
             save_kw = kwargs.get("save_kw", {})
             show = kwargs.get("show", None)
@@ -2072,20 +2114,28 @@ class PS:
                                         x, y = np.array(lnp.coords).T
                                         if color is None:
                                             ax.plot(
-                                                x, y, color=mapper.to_rgba(v), lw=lw
+                                                x,
+                                                y,
+                                                color=mapper.to_rgba(v),
+                                                lw=linewidths,
                                             )
                                         else:
-                                            ax.plot(x, y, color=color, lw=lw)
+                                            ax.plot(x, y, color=color, lw=linewidths)
                                 else:
                                     ln = ln.simplify(tolerance=0.01)
                                     x, y = np.array(ln.coords).T
                                     if color is None:
-                                        ax.plot(x, y, color=mapper.to_rgba(v), lw=lw)
+                                        ax.plot(
+                                            x,
+                                            y,
+                                            color=mapper.to_rgba(v),
+                                            lw=linewidthsw,
+                                        )
                                     else:
-                                        ax.plot(x, y, color=color, lw=lw)
+                                        ax.plot(x, y, color=color, lw=linewidths)
             if only is None:
                 if overlay:
-                    self.add_overlay(ax)
+                    self.add_overlay(ax, **kwargs)
                 # zero mode lines
                 if out:
                     for o in out:
@@ -2642,17 +2692,7 @@ class PTPS(PS):
         else:
             print("Not yet gridded...")
 
-    def show_path_data(
-        self,
-        ptpath,
-        phase,
-        expr=None,
-        label=False,
-        pathwidth=4,
-        allpath=True,
-        skiplabels=0,
-        labelfs=6,
-    ):
+    def show_path_data(self, ptpath, phase, expr=None, **kwargs):
         """Show values of expression for given phase calculated along PTpath.
 
         It plots colored strip on PT space. Strips arenot drawn accross fields,
@@ -2664,12 +2704,13 @@ class PTPS(PS):
             expr (str): Expression to evaluate. It could use any variable
                 existing for given phase. Check `all_data_keys` property for
                 possible variables.
-            label (bool): Whether to label divariant fields. Default False.
-            skiplabels (float): Minimal area fraction of fields to be labelled
-            labelfs (float): Size of label font. Default 6
             pathwidth (int): Width of colored strip. Default 4.
             allpath (bool): Whether to plot full PT path (dashed line).
+
+        Accepts all args for add_overlay
         """
+        pathwidth = kwargs.get("pathwidth", 4)
+        allpath = kwargs.get("allpath", True)
         if self.check_phase_expr(phase, expr):
             ex = ptpath.get_path_data(phase, expr)
             fig, ax = plt.subplots()
@@ -2687,9 +2728,7 @@ class PTPS(PS):
                 lc.set_array(exs)
                 lc.set_linewidth(pathwidth)
                 line = ax.add_collection(lc)
-                self.add_overlay(
-                    ax, label=label, skiplabels=skiplabels, fontsize=labelfs
-                )
+                self.add_overlay(ax, **kwargs)
             cbar = fig.colorbar(line, ax=ax)
             cbar.set_label("{}[{}]".format(phase, expr))
             ax.set_xlim(self.xrange)
@@ -2697,7 +2736,7 @@ class PTPS(PS):
             ax.set_title("PT path - {}".format(self.name))
             plt.show()
 
-    def show_path_modes(self, ptpath, exclude=[], cmap="tab20"):
+    def show_path_modes(self, ptpath, **kwargs):
         """Show stacked area diagram of phase modes along PT path
 
         Args:
@@ -2706,6 +2745,8 @@ class PTPS(PS):
                 normalized to 100%.
             cmap (str): matplotlib colormap. Default 'tab20'
         """
+        exclude = kwargs.get("exclude", [])
+        cmap = kwargs.get("cmap", "tab20")
         if not isinstance(exclude, list):
             exclude = [exclude]
         steps = len(ptpath.t)
@@ -2750,13 +2791,21 @@ class PTPS(PS):
         )
         plt.show()
 
-    def pointcalc(
-        self, t=None, p=None, label=False, skiplabels=0, labelfs=6, show_output=False
-    ):
+    def pointcalc(self, **kwargs):
+        """Run TC ar given p, t point.
+
+        Args:
+            t (float): Temperature. If none, user graphically choose point
+            p (float): Pressure. If none, user graphically choose point
+            show_output (bool): Whether to show TC output. Default False
+        """
+        t = kwargs.get("t", None)
+        p = kwargs.get("p", None)
+        show_output = kwargs.get("show_output", False)
         if t is None or p is None:
             fig, ax = plt.subplots()
             ax.autoscale_view()
-            self.add_overlay(ax, label=label, skiplabels=skiplabels, fontsize=labelfs)
+            self.add_overlay(ax, **kwargs)
             ax.set_xlim(self.xrange)
             ax.set_ylim(self.yrange)
             ax.format_coord = self.format_coord
