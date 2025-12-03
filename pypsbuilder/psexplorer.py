@@ -2129,7 +2129,7 @@ class PS:
                                             x,
                                             y,
                                             color=mapper.to_rgba(v),
-                                            lw=linewidthsw,
+                                            lw=linewidths,
                                         )
                                     else:
                                         ax.plot(x, y, color=color, lw=linewidths)
