@@ -3344,8 +3344,8 @@ def eval_expr(expr, dt):
     """
 
     def eval_(node):
-        if isinstance(node, ast.Num):  # number
-            return node.n
+        if isinstance(node, ast.Constant):  # number
+            return node.value
         if isinstance(node, ast.Name):  # variable
             return dt[node.id]
         elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
