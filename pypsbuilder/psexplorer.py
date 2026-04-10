@@ -1756,6 +1756,7 @@ class PS:
                 existing for given phase. Check `all_data_keys` property for
                 possible variables.
             levels (tuple): tuple of min an max values for isopleth band
+            legend (bool): Show legend. Default True
             alpha (float): Alpha value for filled contours. Default 1
             fig (Figure): If not None, axes are added to fig and returned.
                 Default None
@@ -1821,7 +1822,8 @@ class PS:
                         )
                     )
                 self.add_overlay(ax, **kwargs)
-                ax.legend(handles=handles)
+                if kwargs.get("legend", True):
+                    ax.legend(handles=handles)
                 # coords
                 ax.format_coord = self.format_coord
                 # connect button press
