@@ -8,7 +8,7 @@ name = "pypsbuilder"
 dynamic = ["version"]
 description = "THERMOCALC front-end for constructing and analyzing PT pseudosections"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 keywords = ["petrology", "THERMOCALC"]
 authors = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
@@ -16,11 +16,9 @@ maintainers = [{ name = "Ondrej Lexa", email = "lexa.ondrej@gmail.com" }]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering",
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
     "numpy",
@@ -41,7 +39,7 @@ tests = ["pytest", "pytest-cov"]
 docs = ["sphinx", "sphinx_mdinclude", "sphinx_rtd_theme"]
 
 [dependency-groups]
-dev = ["ruff>=0.6", "pre-commit"]
+dev = ["pypsbuilder[pyqt6,jupyter,tests,docs]", "ruff>=0.6", "pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/ondrolexa/pypsbuilder"
