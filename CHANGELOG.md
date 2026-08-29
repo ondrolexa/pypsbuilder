@@ -2,7 +2,19 @@
 All notable pypsbuilder changes.
 
 ## [2.6.5] - master
+### Added
+ - `Import from JSON` menu item in ptbuilder/txbuilder/pxbuilder to batch-import invariant points and univariant lines JSON
+ - THERMOCALC 3.51 support in `tcinit`
 ### Fixed
+ - security: project files now load through a restricted unpickler, closing an arbitrary-code-execution risk from opening a crafted `.ptb`/`.txb`/`.pxb` file
+ - `eval_expr` now supports unary +/- (e.g. `-mode`)
+ - fixed crash opening some real project files (`annotate()` got an array instead of a scalar)
+ - `PS.show_grid` no longer silently drops its `expr`/`interpolation` arguments
+ - fixed `PXPS.fix_solutions` not reseeding THERMOCALC guesses from a solved neighbor before retrying a failed grid point
+ - THERMOCALC/drawpd subprocess calls no longer hang indefinitely on an unresponsive process
+ - fixed deprecated matplotlib colormap API usage
+### Changed
+ - faster diagram field lookups and grid calculation via spatial indexing and vectorized nearest-point search
 
 ## [2.6.4] - 2025-08-03
 ### Fixed

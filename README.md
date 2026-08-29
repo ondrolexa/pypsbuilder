@@ -87,21 +87,16 @@ and install with pip. As PyQt is already installed with mamba/conda, we will ins
 
 To upgrade an already installed **pypsbuilder** to the latest release:
 
-    pip install --upgrade pypsbuilder
-
-or to the latest master version:
-
-    pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+    uv pip install --upgrade pypsbuilder[pyqt6]
 
 ## Contributing / development install
 
 Clone the repository and install with uv:
 
-    uv sync --extra pyqt6 --extra jupyter --extra tests --extra docs --group dev
+    uv sync --group dev
 
 This installs pypsbuilder in editable mode with UI, notebook, test and docs
-extras plus dev tooling (ruff, pre-commit), matching the committed
-`uv.lock`.
+extras plus dev tooling (ruff, pre-commit).
 
 ### Running tests
 
