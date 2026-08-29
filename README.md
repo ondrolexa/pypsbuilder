@@ -18,9 +18,9 @@ Create an isolated environment and install **pypsbuilder** into it. **You should
     uv venv
     uv pip install pypsbuilder[pyqt6]
 
-JupyterLab could also be installed providing the `jupyter` option:
+JupyterLab could also be installed providing the `lab` option:
 
-    uv pip install pypsbuilder[pyqt6,jupyter]
+    uv pip install pypsbuilder[pyqt6,lab]
 
 ### Using pip and venv
 
@@ -51,9 +51,9 @@ and install **pypsbuilder** using pip within the environment. **You should choos
 
     pip install pypsbuilder[pyqt6]
 
-JupyterLab could also be installed providing the `jupyter` option:
+JupyterLab could also be installed providing the `lab` option:
 
-    pip install pypsbuilder[pyqt6,jupyter]
+    pip install pypsbuilder[pyqt6,lab]
 
 ## I'm using conda or mamba to manage environments
 

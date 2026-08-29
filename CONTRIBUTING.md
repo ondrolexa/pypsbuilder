@@ -52,7 +52,7 @@ Ready to contribute? Here's how to set up `pypsbuilder` for local development.
 
 2. Set up a development environment with [uv](https://docs.astral.sh/uv/) and create a branch for local development. See the "Contributing / development install" section in [README.md](README.md) for the full command reference (running tests, formatting/linting with ruff, pre-commit hooks).
 ```
-    $ uv sync --extra pyqt6 --extra jupyter --extra tests --extra docs --group dev
+    $ uv sync --group dev
     $ git checkout -b name-of-your-bugfix-or-feature
 ```
    Now you can make your changes locally.

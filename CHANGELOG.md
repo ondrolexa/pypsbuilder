@@ -1,7 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.6.5] - master
+## [2.6.6] - 2026-08-29
+### Fixed
+ - project extra jupyter renamed to lab
+
+ ## [2.6.5] - 2026-08-29
 ### Added
  - `Import from JSON` menu item in ptbuilder/txbuilder/pxbuilder to batch-import invariant points and univariant lines JSON
  - THERMOCALC 3.51 support in `tcinit`
