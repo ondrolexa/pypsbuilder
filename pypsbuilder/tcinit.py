@@ -47,6 +47,9 @@ def tcprojinit():
                 dir_needed = False
             else:
                 print(f"ERROR: {dest} is not empty...")
+        elif not dest.exists() and dest.parent.is_dir():
+            dest.mkdir()
+            dir_needed = False
         else:
             print(f"ERROR: {dest} is not valid directory...")
 
@@ -70,6 +73,28 @@ def tcprojinit():
             print("ERROR: project name may not be longer than 8 characters")
         else:
             projname_needed = False
+
+    range_needed = True
+    while range_needed:
+        range_raw = input("Enter [pmin, pmax, tmin, tmax] [1.9, 10.1, 345, 805]: ")
+        if range_raw == "":
+            pmin, pmax, tmin, tmax = 1.9, 10.1, 345, 805
+        else:
+            try:
+                pmin, pmax, tmin, tmax = (
+                    float(v) for v in range_raw.strip("[]").split(",")
+                )
+            except ValueError:
+                print("ERROR: enter four comma-separated numbers")
+                continue
+        if pmax <= pmin:
+            print("ERROR: pmax must be greater than pmin")
+        elif tmax <= tmin:
+            print("ERROR: tmax must be greater than tmin")
+        else:
+            range_needed = False
+
+    pstep = (pmax - pmin) / 2
 
     set_needed = True
     sets = {1: "metapelite", 2: "metabasite", 3: "igg25", 4: "igw24"}
@@ -186,7 +211,15 @@ def tcprojinit():
     # create project file
     with open(dest / f"tc-{projname}.txt", "w") as f:
         content = string.Template(tcprj_tmpl).substitute(
-            system=system, project=projname, samecoding=samecoding, guesses=guesses
+            system=system,
+            project=projname,
+            samecoding=samecoding,
+            guesses=guesses,
+            pmin=pmin,
+            pmax=pmax,
+            tmin=tmin,
+            tmax=tmax,
+            step=pstep,
         )[1:]
         f.write(content)
 
@@ -803,18 +836,17 @@ tozero no
 % which conditions
 % ================
 
-diagramPT 2 10 350 800
+diagramPT $pmin $pmax $tmin $tmax
 
 % ================
 % psbuilder blocks
 % ================
 
 %{PSBCALC-BEGIN}
-calcP 11 15 0.08
-calcT 370 425
+calcP $pmin $pmax $step
+calcT $tmin $tmax
 calctatp yes
-with bi g mu q ilm hem
-zeromodeisopleth q
+with *
 %{PSBCALC-END}
 
 % =====================

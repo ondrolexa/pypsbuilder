@@ -1,6 +1,11 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.6.7] - 2026-08-29
+### Added
+ - `tcinit` now prompts for the P-T range (`[pmin, pmax, tmin, tmax]`), used to set the generated scriptfile's `diagramPT`/`calcP`/`calcT` lines
+ - `tcinit` creates the destination directory automatically when it doesn't exist yet but its parent does
+
 ## [2.6.6] - 2026-08-29
 ### Fixed
  - project extra jupyter renamed to lab

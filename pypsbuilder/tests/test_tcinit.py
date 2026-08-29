@@ -115,7 +115,7 @@ def test_tcprojinit_all_platform_dataset_combinations(
 ):
     dest = tmp_path / f"proj_{comp}_{choice}"
     dest.mkdir()
-    inputs = iter([str(dest), "testproj", choice])
+    inputs = iter([str(dest), "testproj", "", choice])
 
     with (
         mock.patch("builtins.input", lambda *a: next(inputs)),
@@ -139,6 +139,11 @@ def test_tcprojinit_all_platform_dataset_combinations(
     assert (dest / f"tc-ds{ds}.txt").read_text() == "fake dataset file content\n"
     assert (dest / f"tc-{system}.txt").read_text() == "fake axfile content\n"
 
+    projfile = (dest / "tc-testproj.txt").read_text()
+    assert "diagramPT 1.9 10.1 345 805" in projfile
+    assert "calcP 1.9 10.1 4.1" in projfile
+    assert "calcT 345 805" in projfile
+
 
 def test_tcprojinit_samecoding_extracted_from_prefix_matched_file(
     tmp_path, synthetic_urls
@@ -148,7 +153,7 @@ def test_tcprojinit_samecoding_extracted_from_prefix_matched_file(
     this session."""
     dest = tmp_path / "proj"
     dest.mkdir()
-    inputs = iter([str(dest), "testproj", "4"])  # igw24
+    inputs = iter([str(dest), "testproj", "", "4"])  # igw24
 
     with (
         mock.patch("builtins.input", lambda *a: next(inputs)),
@@ -169,7 +174,7 @@ def test_tcprojinit_no_samecoding_file_falls_back_to_empty(tmp_path):
     current code falls back to an empty string rather than raising."""
     dest = tmp_path / "proj"
     dest.mkdir()
-    inputs = iter([str(dest), "testproj", "1"])  # metapelite
+    inputs = iter([str(dest), "testproj", "", "1"])  # metapelite
 
     cache = {
         tcinit.exe_urls["linux"]: _exe_zip("tc351-linux-bundle", "tc351lin"),
@@ -192,6 +197,45 @@ def test_tcprojinit_no_samecoding_file_falls_back_to_empty(tmp_path):
     assert projfile.exists()
 
 
+def test_tcprojinit_creates_missing_directory_with_existing_parent(
+    tmp_path, synthetic_urls
+):
+    dest = tmp_path / "newdir"
+    assert not dest.exists()
+    inputs = iter([str(dest), "testproj", "", "1"])
+
+    with (
+        mock.patch("builtins.input", lambda *a: next(inputs)),
+        mock.patch("pypsbuilder.tcinit.platform.system", return_value="Linux"),
+        mock.patch("pypsbuilder.tcinit.urlopen", _fake_urlopen(synthetic_urls)),
+    ):
+        tcinit.tcprojinit()
+
+    assert dest.is_dir()
+    assert (dest / "tc-prefs.txt").exists()
+    assert (dest / "tc-testproj.txt").exists()
+
+
+def test_tcprojinit_rejects_missing_parent_directory(tmp_path, synthetic_urls, capsys):
+    dest = tmp_path / "missing" / "newdir"
+    assert not dest.parent.exists()
+
+    good_dest = tmp_path / "empty_proj"
+    good_dest.mkdir()
+
+    inputs = iter([str(dest), str(good_dest), "testproj", "", "1"])
+
+    with (
+        mock.patch("builtins.input", lambda *a: next(inputs)),
+        mock.patch("pypsbuilder.tcinit.platform.system", return_value="Linux"),
+        mock.patch("pypsbuilder.tcinit.urlopen", _fake_urlopen(synthetic_urls)),
+    ):
+        tcinit.tcprojinit()
+
+    assert "is not valid directory" in capsys.readouterr().out
+    assert (good_dest / "tc-prefs.txt").exists()
+
+
 def test_tcprojinit_rejects_nonempty_directory(tmp_path, synthetic_urls, capsys):
     dest = tmp_path / "proj"
     dest.mkdir()
@@ -200,7 +244,7 @@ def test_tcprojinit_rejects_nonempty_directory(tmp_path, synthetic_urls, capsys)
     good_dest = tmp_path / "empty_proj"
     good_dest.mkdir()
 
-    inputs = iter([str(dest), str(good_dest), "testproj", "1"])
+    inputs = iter([str(dest), str(good_dest), "testproj", "", "1"])
 
     with (
         mock.patch("builtins.input", lambda *a: next(inputs)),
@@ -216,7 +260,7 @@ def test_tcprojinit_rejects_nonempty_directory(tmp_path, synthetic_urls, capsys)
 def test_tcprojinit_default_project_name(tmp_path, synthetic_urls):
     dest = tmp_path / "proj"
     dest.mkdir()
-    inputs = iter([str(dest), "", "1"])  # empty name -> default "project"
+    inputs = iter([str(dest), "", "", "1"])  # empty name -> default "project"
 
     with (
         mock.patch("builtins.input", lambda *a: next(inputs)),
@@ -229,13 +273,46 @@ def test_tcprojinit_default_project_name(tmp_path, synthetic_urls):
     assert "scriptfile project" in (dest / "tc-prefs.txt").read_text()
 
 
+def test_tcprojinit_range_validation_and_retry(tmp_path, synthetic_urls, capsys):
+    dest = tmp_path / "proj"
+    dest.mkdir()
+    inputs = iter(
+        [
+            str(dest),
+            "testproj",
+            "not, a, number, here",  # unparseable -> retry
+            "10, 2, 345, 805",  # pmax <= pmin -> retry
+            "1.9, 10.1, 805, 345",  # tmax <= tmin -> retry
+            "2, 12, 400, 700",  # valid
+            "1",
+        ]
+    )
+
+    with (
+        mock.patch("builtins.input", lambda *a: next(inputs)),
+        mock.patch("pypsbuilder.tcinit.platform.system", return_value="Linux"),
+        mock.patch("pypsbuilder.tcinit.urlopen", _fake_urlopen(synthetic_urls)),
+    ):
+        tcinit.tcprojinit()
+
+    out = capsys.readouterr().out
+    assert "ERROR: enter four comma-separated numbers" in out
+    assert "ERROR: pmax must be greater than pmin" in out
+    assert "ERROR: tmax must be greater than tmin" in out
+
+    projfile = (dest / "tc-testproj.txt").read_text()
+    assert "diagramPT 2.0 12.0 400.0 700.0" in projfile
+    assert "calcP 2.0 12.0 5.0" in projfile
+    assert "calcT 400.0 700.0" in projfile
+
+
 def test_tcprojinit_project_name_sanitization(tmp_path, synthetic_urls):
     dest = tmp_path / "proj"
     dest.mkdir()
     # spaces replaced, non-ascii stripped, then re-entered because
     # "a b" -> "a_b" is valid on first pass (no retry needed here);
     # test a name that's too long first to exercise the retry loop
-    inputs = iter([str(dest), "toolongname123", "short nm", "1"])
+    inputs = iter([str(dest), "toolongname123", "short nm", "", "1"])
 
     with (
         mock.patch("builtins.input", lambda *a: next(inputs)),

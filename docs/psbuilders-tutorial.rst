@@ -65,18 +65,23 @@ Using tcinit to setup working directory
 ---------------------------------------
 
 For TC3.5 you can use the ``tcinit`` command to initialize a working
-directory. Run it in an empty directory and answer the prompts::
+directory. Run it and answer the prompts::
 
 		$ tcinit
 
-It downloads THERMOCALC 3.51 for your platform (Linux, Windows or macOS) and
-lets you choose one of four bundled datasets/a-x files: ``metapelite``,
-``metabasite``, ``igg25`` (igneous, White et al. 2025 update) or ``igw24``
-(igneous, Weller et al. 2024). The chosen dataset, a-x file, starting
-guesses and preferences file are written into the project directory,
-already tagged with the ``%{PSBGUESS-...}``, ``%{PSBCALC-...}`` and
-``%{PSBBULK-...}`` blocks described above, so the resulting scriptfile works
-with ``ptbuilder``/``txbuilder``/``pxbuilder`` out of the box.
+You will be asked for a project directory (defaults to the current
+directory; if it doesn't exist yet but its parent does, it is created for
+you automatically), a project name (max 8 characters), the P-T range to use
+(``[pmin, pmax, tmin, tmax]``, defaulting to ``[1.9, 10.1, 345, 805]`` and
+written into the scriptfile's ``diagramPT``/``calcP``/``calcT`` lines), and
+one of four bundled datasets/a-x files: ``metapelite``, ``metabasite``,
+``igg25`` (igneous, White et al. 2025 update) or ``igw24`` (igneous, Weller
+et al. 2024). It then downloads THERMOCALC 3.51 for your platform (Linux,
+Windows or macOS). The chosen dataset, a-x file, starting guesses and
+preferences file are written into the project directory, already tagged
+with the ``%{PSBGUESS-...}``, ``%{PSBCALC-...}`` and ``%{PSBBULK-...}``
+blocks described above, so the resulting scriptfile works with
+``ptbuilder``/``txbuilder``/``pxbuilder`` out of the box.
 
 
 New P-T pseudosection project
