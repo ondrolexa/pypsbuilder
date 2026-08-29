@@ -20,8 +20,14 @@ import numpy as np
 import pytest
 from qtpy import QtCore, QtWidgets
 
-from pypsbuilder import InvPoint, PTsection, UniLine
-from pypsbuilder.psbuilders import (
+# A QApplication must exist before psbuilders.py's module-level
+# `matplotlib.use("QtAgg")` runs below: matplotlib only permits the Qt
+# backend without a real X/Wayland DISPLAY (as on a headless CI runner) if
+# it detects an already-running QApplication.
+_qapp = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+from pypsbuilder import InvPoint, PTsection, UniLine  # noqa: E402
+from pypsbuilder.psbuilders import (  # noqa: E402
     BuildersBase,
     DogminModel,
     InvModel,
