@@ -50,8 +50,9 @@ Ready to contribute? Here's how to set up `pypsbuilder` for local development.
 
 1. Just head over to the [GitHub page](https://github.com/ondrolexa/pypsbuilder) and click the "Fork" button. It's just that simple. Once you've done that, you can use your favorite git client to clone your repo.
 
-2. Create a branch for local development
+2. Set up a development environment with [uv](https://docs.astral.sh/uv/) and create a branch for local development. See the "Contributing / development install" section in [README.md](README.md) for the full command reference (running tests, formatting/linting with ruff, pre-commit hooks).
 ```
+    $ uv sync --extra pyqt6 --extra jupyter --extra tests --extra docs --group dev
     $ git checkout -b name-of-your-bugfix-or-feature
 ```
    Now you can make your changes locally.
@@ -70,4 +71,4 @@ Before you submit a pull request, check that it meets these guidelines.
 
 1. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
+   feature to the list in README.md.

@@ -52,6 +52,8 @@ from scipy.interpolate import (
 from scipy.linalg import LinAlgWarning, lstsq
 from shapely.geometry import LineString, MultiPoint, Point
 from shapely.ops import linemerge
+from shapely.prepared import prep
+from shapely.strtree import STRtree
 from tqdm import tqdm, trange
 
 from .psclasses import (  # InvPoint, UniLine
@@ -59,6 +61,7 @@ from .psclasses import (  # InvPoint, UniLine
     PTsection,
     PXsection,
     TXsection,
+    load_project_file,
     polymorphs,
 )
 from .tcapi import get_tcapi
@@ -80,14 +83,15 @@ class PS:
             Path(projfile).resolve() for projfile in args if Path(projfile).exists()
         ]
         assert len(projfiles) > 0, "You have to provide existing filename."
-        assert hasattr(
-            self, "section_class"
-        ), "You can not instantiate base class directly. Use PTPS, TXPS or PXPS."
+        assert hasattr(self, "section_class"), (
+            "You can not instantiate base class directly. Use PTPS, TXPS or PXPS."
+        )
         # parse kwargs
         tolerance = kwargs.get("tolerance", None)
         origwd = kwargs.get("origwd", False)
         # individual based (keys are 0, 1...)
         self.projfiles = {}
+        self._projdata = {}
         self.sections = {}
         self.grids = {}
         self._shapes = {}
@@ -102,13 +106,13 @@ class PS:
         # read
         for ix, projfile in enumerate(projfiles):
             self.projfiles[ix] = projfile
-            with gzip.open(str(projfile), "rb") as stream:
-                data = pickle.load(stream)
+            data = load_project_file(projfile)
+            self._projdata[ix] = data
             # check section type
-            assert isinstance(
-                data["section"], self.section_class
-            ), "The provided project file is not {}.".format(
-                self.section_class.__name__
+            assert isinstance(data["section"], self.section_class), (
+                "The provided project file is not {}.".format(
+                    self.section_class.__name__
+                )
             )
             self.sections[ix] = data["section"]
             # check if workdir exists
@@ -118,28 +122,28 @@ class PS:
             if self.tc is None:
                 if origwd:
                     tc, ok = get_tcapi(Path(data["workdir"]))
-                    assert (
-                        ok
-                    ), "Error during initialization of THERMOCALC in {}\n{}".format(
-                        data["workdir"], tc
+                    assert ok, (
+                        "Error during initialization of THERMOCALC in {}\n{}".format(
+                            data["workdir"], tc
+                        )
                     )
                 else:
                     tc, ok = get_tcapi(projfile.parent)
-                    assert (
-                        ok
-                    ), "Error during initialization of THERMOCALC in {}\n{}".format(
-                        projfile.parent, tc
+                    assert ok, (
+                        "Error during initialization of THERMOCALC in {}\n{}".format(
+                            projfile.parent, tc
+                        )
                     )
                 self.tc = tc
             else:
                 if origwd:
-                    assert data["workdir"] == str(
-                        tc.workdir
-                    ), "Workdirs of merged profiles must be same."
+                    assert data["workdir"] == str(tc.workdir), (
+                        "Workdirs of merged profiles must be same."
+                    )
                 else:
-                    assert (
-                        projfile.parent == tc.workdir
-                    ), "Workdirs of merged profiles must be same."
+                    assert projfile.parent == tc.workdir, (
+                        "Workdirs of merged profiles must be same."
+                    )
 
             self._shapes[ix], self.unilists[ix], log = self.sections[ix].create_shapes(
                 tolerance=self.tolerance
@@ -174,6 +178,19 @@ class PS:
                     self.shapes[key] = self.shapes[key].union(shape)
                 else:
                     self.shapes[key] = shape
+        # spatial index + prepared geometries for fast point-in-polygon
+        # queries in identify()/common_grid_and_masks() (self.shapes is
+        # fixed once built above, so this cache never needs invalidating)
+        shape_keys = list(self.shapes.keys())
+        self._shape_tree_keys = shape_keys
+        self._shape_tree = (
+            STRtree([self.shapes[k] for k in shape_keys]) if shape_keys else None
+        )
+        self._prepared_shapes = {k: prep(v) for k, v in self.shapes.items()}
+        self._prepared_ix_shapes = {
+            ix: {k: prep(v) for k, v in shapes.items()}
+            for ix, shapes in self._shapes.items()
+        }
         # update variable lookup table
         self.collect_all_data_keys()
 
@@ -315,11 +332,9 @@ class PS:
         Returns:
             set: set of associated invariant points
         """
-        return (
-            {self.sections[ix].unilines[ed].begin for ed in unilist}
-            .union({self.sections[ix].unilines[ed].end for ed in unilist})
-            .difference({0})
-        )
+        return {self.sections[ix].unilines[ed].begin for ed in unilist}.union(
+            {self.sections[ix].unilines[ed].end for ed in unilist}
+        ).difference({0})
 
     def save(self):
         """Save gridded copositions and constructed divariant fields into
@@ -331,9 +346,9 @@ class PS:
         """
         if self.gridded:
             for ix, projfile in self.projfiles.items():
-                # put to dict
-                with gzip.open(str(projfile), "rb") as stream:
-                    data = pickle.load(stream)
+                # reuse the dict already loaded in __init__ instead of
+                # re-reading the same file from disk
+                data = self._projdata[ix]
                 data["variance"] = self._variance[ix]
                 data["grid"] = self.grids[ix]
                 # do save
@@ -348,10 +363,10 @@ class PS:
             for ix, grid in self.grids.items():
                 # Create data masks
                 points = MultiPoint(list(zip(grid.xg.flatten(), grid.yg.flatten())))
-                shapes = self._shapes[ix]
-                for key in shapes:
+                prepared_shapes = self._prepared_ix_shapes[ix]
+                for key in prepared_shapes:
                     grid.masks[key] = np.array(
-                        list(map(shapes[key].contains, points.geoms))
+                        list(map(prepared_shapes[key].contains, points.geoms))
                     ).reshape(grid.xg.shape)
         else:
             print("Not yet gridded...")
@@ -378,7 +393,7 @@ class PS:
         points = MultiPoint(list(zip(self.xg.flatten(), self.yg.flatten())))
         for key in self.shapes:
             self.masks[key] = np.array(
-                list(map(self.shapes[key].contains, points.geoms))
+                list(map(self._prepared_shapes[key].contains, points.geoms))
             ).reshape(self.xg.shape)
 
     def collect_all_data_keys(self):
@@ -948,8 +963,8 @@ class PS:
 
         Accepts all args for add_overlay
         """
-        expr = kwargs.get("", None)
-        interpolation = kwargs.get("", None)
+        expr = kwargs.get("expr", None)
+        interpolation = kwargs.get("interpolation", None)
         if self.gridded:
             if self.check_phase_expr(phase, expr):
                 fig, ax = plt.subplots()
@@ -1192,6 +1207,211 @@ class PS:
         else:
             print("Not yet gridded...")
 
+    @staticmethod
+    def _inv_point_arrays(ps):
+        """Precompute (ids, x, y) arrays of ps.invpoints for a vectorized
+        nearest-point search, used by calculate_composition to seed
+        ptguesses from the closest invariant point instead of a per-grid
+        point O(n) Python loop."""
+        ids = np.fromiter(ps.invpoints.keys(), dtype=int)
+        x = np.fromiter((inv._x for inv in ps.invpoints.values()), dtype=float)
+        y = np.fromiter((inv._y for inv in ps.invpoints.values()), dtype=float)
+        return ids, x, y
+
+    def _uni_point_arrays(self, ps, ix, k, cache):
+        """Precompute, and cache per divariant field key k, concatenated
+        (uni_id, vix, x, y) arrays of non-manual univariant line points
+        bounding field k, for a vectorized nearest-point search. Returns
+        None if there are no candidate points (mirrors the empty-loop
+        no-op of the original per-point Python search)."""
+        if k not in cache:
+            ids, vixs, xs, ys = [], [], [], []
+            for id_uni in self.unilists[ix][k]:
+                uni = ps.unilines[id_uni]
+                if not uni.manual:
+                    vix_range = np.arange(len(uni._x))[uni.used]
+                    ids.append(np.full(len(vix_range), id_uni))
+                    vixs.append(vix_range)
+                    xs.append(uni._x[uni.used])
+                    ys.append(uni._y[uni.used])
+            cache[k] = (
+                (
+                    np.concatenate(ids),
+                    np.concatenate(vixs),
+                    np.concatenate(xs),
+                    np.concatenate(ys),
+                )
+                if xs
+                else None
+            )
+        return cache[k]
+
+    # Hooks overridden by PTPS/TXPS/PXPS to parameterize calculate_composition
+    # for their respective fixed/free axis combinations - see each
+    # subclass's override for the axis-specific rationale.
+    def _gridding_desc(self, ix):
+        return "Gridding {}/{}".format(ix + 1, len(self.sections))
+
+    def _grid_index_order(self, grid):
+        return np.ndindex(grid.xg.shape)
+
+    def _calc_assemblage_context(self):
+        return None
+
+    def _calc_assemblage_args(self, ctx, k, x, y):
+        return (k.difference(self.tc.excess), y, x), {}
+
+    def calculate_composition(self, nx=50, ny=50):
+        """Method to calculate compositional variations on grid.
+
+        A compositions are calculated for stable assemblages in regular grid
+        covering pT range of pseudosection. A stable assemblage is identified
+        from constructed divariant fields. Results are stored in `grid` property
+        as `GridData` instance. A property `all_data_keys` is updated.
+
+        Before any grid point calculation, ptguesses are updated from nearest
+        invariant point. If calculation fails, nearest solution from univariant
+        line is used to update ptguesses. Finally, if solution is still not found,
+        the method `fix_solutions` is called and neigbouring grid calculations are
+        used to provide ptguess.
+
+        Args:
+            nx (int): Number of grid points along x direction (T)
+            ny (int): Number of grid points along y direction (p)
+        """
+        axr = self.xrange
+        ayr = self.yrange
+        gpleft = 0
+        for ix, ps in self.sections.items():
+            paxr = ps.xrange
+            payr = ps.yrange
+            grid = GridData(
+                ps,
+                nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
+                ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])),
+            )
+            last_inv = 0
+            inv_ids, inv_x, inv_y = self._inv_point_arrays(ps)
+            uni_arrays_cache = {}
+            calc_ctx = self._calc_assemblage_context()
+            with tqdm(
+                desc=self._gridding_desc(ix), total=np.prod(grid.xg.shape)
+            ) as pbar:
+                for r, c in self._grid_index_order(grid):
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # update guesses from closest inv point
+                        d2 = (inv_x - x) ** 2 + (inv_y - y) ** 2
+                        id_close = int(inv_ids[np.argmin(d2)])
+                        if id_close != last_inv and not ps.invpoints[id_close].manual:
+                            self.tc.update_scriptfile(
+                                guesses=ps.invpoints[id_close].ptguess()
+                            )
+                            last_inv = id_close
+                        grid.status[r, c] = 0
+                        args, kwargs = self._calc_assemblage_args(calc_ctx, k, x, y)
+                        start_time = time.time()
+                        tcout, ans = self.tc.calc_assemblage(*args, **kwargs)
+                        delta = time.time() - start_time
+                        status, res, output = self.tc.parse_logfile()
+                        if res is not None:
+                            grid.gridcalcs[r, c] = res[0]
+                            grid.status[r, c] = 1
+                            grid.delta[r, c] = delta
+                        else:
+                            # update guesses from closest uni line point
+                            uni_arrays = self._uni_point_arrays(
+                                ps, ix, k, uni_arrays_cache
+                            )
+                            if uni_arrays is not None:
+                                uni_ids_arr, vixs_arr, xs_arr, ys_arr = uni_arrays
+                                d2 = (xs_arr - x) ** 2 + (ys_arr - y) ** 2
+                                idx = np.argmin(d2)
+                                id_close = int(uni_ids_arr[idx])
+                                vix_close = int(vixs_arr[idx])
+                            self.tc.update_scriptfile(
+                                guesses=ps.unilines[id_close].ptguess(idx=vix_close)
+                            )
+                            args, kwargs = self._calc_assemblage_args(calc_ctx, k, x, y)
+                            start_time = time.time()
+                            tcout, ans = self.tc.calc_assemblage(*args, **kwargs)
+                            delta = time.time() - start_time
+                            status, res, output = self.tc.parse_logfile()
+                            if res is not None:
+                                grid.gridcalcs[r, c] = res[0]
+                                grid.status[r, c] = 1
+                                grid.delta[r, c] = delta
+                            else:
+                                grid.gridcalcs[r, c] = None
+                                grid.status[r, c] = 0
+                    else:
+                        grid.gridcalcs[r, c] = None
+                    pbar.update(1)
+            print(
+                "Grid search done. {} empty points left.".format(
+                    len(np.flatnonzero(grid.status == 0))
+                )
+            )
+            gpleft += len(np.flatnonzero(grid.status == 0))
+            self.grids[ix] = grid
+        if gpleft > 0:
+            self.fix_solutions()
+        self.create_masks()
+        self.collect_all_data_keys()
+        self.save()
+
+    def fix_solutions(self):
+        """Method try to find solution for grid points with failed status.
+
+        Ptguesses are used from successfully calculated neighboring points until
+        solution is find. Otherwise ststus remains failed.
+        """
+        if self.gridded:
+            for ix, grid in self.grids.items():
+                log = []
+                ri, ci = np.nonzero(grid.status == 0)
+                fixed, ftot = 0, len(ri)
+                calc_ctx = self._calc_assemblage_context()
+                tq = trange(ftot, desc="Fix ({}/{})".format(fixed, ftot))
+                for ind in tq:
+                    r, c = ri[ind], ci[ind]
+                    x, y = grid.xg[r, c], grid.yg[r, c]
+                    k = self.identify(x, y)
+                    if k is not None:
+                        # search already done grid neighs
+                        for rn, cn in grid.neighs(r, c):
+                            if grid.status[rn, cn] == 1:
+                                self.tc.update_scriptfile(
+                                    guesses=grid.gridcalcs[rn, cn].ptguess
+                                )
+                                args, kwargs = self._calc_assemblage_args(
+                                    calc_ctx, k, x, y
+                                )
+                                start_time = time.time()
+                                tcout, ans = self.tc.calc_assemblage(*args, **kwargs)
+                                delta = time.time() - start_time
+                                status, res, output = self.tc.parse_logfile()
+                                if res is not None:
+                                    grid.gridcalcs[r, c] = res[0]
+                                    grid.status[r, c] = 1
+                                    grid.delta[r, c] = delta
+                                    fixed += 1
+                                    tq.set_description(
+                                        desc="Fix ({}/{})".format(fixed, ftot)
+                                    )
+                                    break
+                    if grid.status[r, c] == 0:
+                        log.append("No solution find for {}, {}".format(x, y))
+                log.append(
+                    "Fix done. {} empty grid points left.".format(
+                        len(np.flatnonzero(grid.status == 0))
+                    )
+                )
+                print("\n".join(log))
+        else:
+            print("Not yet gridded...")
+
     def identify(self, x, y):
         """Return key (frozenset) of divariant field for given temperature and pressure.
 
@@ -1199,12 +1419,14 @@ class PS:
             x (float): x coord
             y (float): y coord
         """
-        key = None
-        for k, shape in self.shapes.items():
-            if shape.contains(Point(x, y)):
-                key = k
-                break
-        return key
+        if self._shape_tree is None:
+            return None
+        point = Point(x, y)
+        for idx in self._shape_tree.query(point, predicate="intersects"):
+            key = self._shape_tree_keys[idx]
+            if self._prepared_shapes[key].contains(point):
+                return key
+        return None
 
     def gidentify(self, **kwargs):
         """Visual version of `identify` method. PT point is provided by mouse click.
@@ -1236,7 +1458,7 @@ class PS:
         plt.close(fig)
         for ix, (x, y) in enumerate(pts):
             print(
-                f'{ix + 1}: {" ".join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}'
+                f"{ix + 1}: {' '.join(sorted([self.abbr.get(sa, sa) for sa in self.identify(x, y)]))}"
             )
 
     def remove_grid_data(self, key, phase, expr):
@@ -2359,12 +2581,11 @@ class PS:
         Note: Gridded values are interpolated from raw results
 
         Args:
-            comps (list): List of (phase, expr) tuples.
-                          phase (str): Phase or end-member named
-                          expr (str): Expression to evaluate. It could use any
-                                      variable existing for given phase. Check
-                                      `all_data_keys` property for possible
-                                      variables.
+            comps (list): List of (phase, expr) tuples, where phase (str) is
+                a phase or end-member name and expr (str) is an expression
+                to evaluate. It could use any variable existing for the
+                given phase - check the `all_data_keys` property for
+                possible variables.
             tabfile (str): filename for tabfile. Default pseudosection name.tab
         """
         if not tabfile:
@@ -2470,161 +2691,6 @@ class PTPS(PS):
         self.section_class = PTsection
         super(PTPS, self).__init__(*args, **kwargs)
 
-    def calculate_composition(self, nx=50, ny=50):
-        """Method to calculate compositional variations on grid.
-
-        A compositions are calculated for stable assemblages in regular grid
-        covering pT range of pseudosection. A stable assemblage is identified
-        from constructed divariant fields. Results are stored in `grid` property
-        as `GridData` instance. A property `all_data_keys` is updated.
-
-        Before any grid point calculation, ptguesses are updated from nearest
-        invariant point. If calculation fails, nearest solution from univariant
-        line is used to update ptguesses. Finally, if solution is still not found,
-        the method `fix_solutions` is called and neigbouring grid calculations are
-        used to provide ptguess.
-
-        Args:
-            nx (int): Number of grid points along x direction (T)
-            ny (int): Number of grid points along y direction (p)
-        """
-        axr = self.xrange
-        ayr = self.yrange
-        gpleft = 0
-        for ix, ps in self.sections.items():
-            paxr = ps.xrange
-            payr = ps.yrange
-            grid = GridData(
-                ps,
-                nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
-                ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])),
-            )
-            last_inv = 0
-            for r, c in tqdm(
-                np.ndindex(grid.xg.shape),
-                desc="Gridding {}/{}".format(ix + 1, len(self.sections)),
-                total=np.prod(grid.xg.shape),
-            ):
-                x, y = grid.xg[r, c], grid.yg[r, c]
-                k = self.identify(x, y)
-                if k is not None:
-                    # update guesses from closest inv point
-                    dst = sys.float_info.max
-                    for id_inv, inv in ps.invpoints.items():
-                        d2 = (inv._x - x) ** 2 + (inv._y - y) ** 2
-                        if d2 < dst:
-                            dst = d2
-                            id_close = id_inv
-                    if id_close != last_inv and not ps.invpoints[id_close].manual:
-                        self.tc.update_scriptfile(
-                            guesses=ps.invpoints[id_close].ptguess()
-                        )
-                        last_inv = id_close
-                    grid.status[r, c] = 0
-                    start_time = time.time()
-                    tcout, ans = self.tc.calc_assemblage(
-                        k.difference(self.tc.excess), y, x
-                    )
-                    delta = time.time() - start_time
-                    status, res, output = self.tc.parse_logfile()
-                    if res is not None:
-                        grid.gridcalcs[r, c] = res[0]
-                        grid.status[r, c] = 1
-                        grid.delta[r, c] = delta
-                    else:
-                        # update guesses from closest uni line point
-                        dst = sys.float_info.max
-                        for id_uni in self.unilists[ix][k]:
-                            uni = ps.unilines[id_uni]
-                            if not uni.manual:
-                                for vix in list(range(len(uni._x))[uni.used]):
-                                    d2 = (uni._x[vix] - x) ** 2 + (uni._y[vix] - y) ** 2
-                                    if d2 < dst:
-                                        dst = d2
-                                        id_close = id_uni
-                                        vix_close = vix
-                        self.tc.update_scriptfile(
-                            guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                        )
-                        start_time = time.time()
-                        tcout, ans = self.tc.calc_assemblage(
-                            k.difference(self.tc.excess), y, x
-                        )
-                        delta = time.time() - start_time
-                        status, res, output = self.tc.parse_logfile()
-                        if res is not None:
-                            grid.gridcalcs[r, c] = res[0]
-                            grid.status[r, c] = 1
-                            grid.delta[r, c] = delta
-                        else:
-                            grid.gridcalcs[r, c] = None
-                            grid.status[r, c] = 0
-                else:
-                    grid.gridcalcs[r, c] = None
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
-            gpleft += len(np.flatnonzero(grid.status == 0))
-            self.grids[ix] = grid
-        if gpleft > 0:
-            self.fix_solutions()
-        self.create_masks()
-        # save
-        self.save()
-        # update variable lookup table
-        self.collect_all_data_keys()
-
-    def fix_solutions(self):
-        """Method try to find solution for grid points with failed status.
-
-        Ptguesses are used from successfully calculated neighboring points until
-        solution is find. Otherwise ststus remains failed.
-        """
-        if self.gridded:
-            for ix, grid in self.grids.items():
-                log = []
-                ri, ci = np.nonzero(grid.status == 0)
-                fixed, ftot = 0, len(ri)
-                tq = trange(ftot, desc="Fix ({}/{})".format(fixed, ftot))
-                for ind in tq:
-                    r, c = ri[ind], ci[ind]
-                    x, y = grid.xg[r, c], grid.yg[r, c]
-                    k = self.identify(x, y)
-                    if k is not None:
-                        # search already done grid neighs
-                        for rn, cn in grid.neighs(r, c):
-                            if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(
-                                    guesses=grid.gridcalcs[rn, cn].ptguess
-                                )
-                                start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, x
-                                )
-                                delta = time.time() - start_time
-                                status, res, output = self.tc.parse_logfile()
-                                if res is not None:
-                                    grid.gridcalcs[r, c] = res[0]
-                                    grid.status[r, c] = 1
-                                    grid.delta[r, c] = delta
-                                    fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
-                                    break
-                    if grid.status[r, c] == 0:
-                        log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
-                print("\n".join(log))
-        else:
-            print("Not yet gridded...")
-
     def collect_ptpath(self, tpath, ppath, N=100, kind="quadratic"):
         """Method to collect THERMOCALC calculations along defined PT path.
 
@@ -2644,12 +2710,12 @@ class PTPS(PS):
         """
         if self.gridded:
             tpath, ppath = np.asarray(tpath), np.asarray(ppath)
-            assert (
-                tpath.shape == ppath.shape
-            ), "Shape of temperatures and pressures should be same."
-            assert (
-                tpath.ndim == 1
-            ), "Temperatures and pressures should be 1D array like data."
+            assert tpath.shape == ppath.shape, (
+                "Shape of temperatures and pressures should be same."
+            )
+            assert tpath.ndim == 1, (
+                "Temperatures and pressures should be 1D array like data."
+            )
             gpath = np.arange(tpath.shape[0], dtype=float)
             gpath /= gpath[-1]
             if gpath.size < 3:
@@ -2865,169 +2931,18 @@ class TXPS(PS):
         self.section_class = TXsection
         super(TXPS, self).__init__(*args, **kwargs)
 
-    def calculate_composition(self, nx=50, ny=50):
-        """Method to calculate compositional variations on grid.
+    def _grid_index_order(self, grid):
+        return (
+            (r, c) for r in range(len(grid.yspace)) for c in range(len(grid.xspace))
+        )
 
-        A compositions are calculated for stable assemblages in regular grid
-        covering pT range of pseudosection. A stable assemblage is identified
-        from constructed divariant fields. Results are stored in `grid` property
-        as `GridData` instance. A property `all_data_keys` is updated.
+    def _calc_assemblage_context(self):
+        # p is fixed at the pseudosection's pressure midpoint; x/onebulk is
+        # the composition variable calculate_composition grids over.
+        return (self.tc.prange[0] + self.tc.prange[1]) / 2
 
-        Before any grid point calculation, ptguesses are updated from nearest
-        invariant point. If calculation fails, nearest solution from univariant
-        line is used to update ptguesses. Finally, if solution is still not found,
-        the method `fix_solutions` is called and neigbouring grid calculations are
-        used to provide ptguess.
-
-        Args:
-            nx (int): Number of grid points along x direction (T)
-            ny (int): Number of grid points along y direction (p)
-        """
-        axr = self.xrange
-        ayr = self.yrange
-        gpleft = 0
-        for ix, ps in self.sections.items():
-            paxr = ps.xrange
-            payr = ps.yrange
-            grid = GridData(
-                ps,
-                nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
-                ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])),
-            )
-            last_inv = 0
-            with tqdm(
-                desc="Gridding {}/{}".format(ix + 1, len(self.sections)),
-                total=np.prod(grid.xg.shape),
-            ) as pbar:
-                pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
-                for r in range(len(grid.yspace)):
-                    for c in range(len(grid.xspace)):
-                        x, y = grid.xg[r, c], grid.yg[r, c]
-                        k = self.identify(x, y)
-                        if k is not None:
-                            # update guesses from closest inv point
-                            dst = sys.float_info.max
-                            for id_inv, inv in ps.invpoints.items():
-                                d2 = (inv._x - x) ** 2 + (inv._y - y) ** 2
-                                if d2 < dst:
-                                    dst = d2
-                                    id_close = id_inv
-                            if (
-                                id_close != last_inv
-                                and not ps.invpoints[id_close].manual
-                            ):
-                                self.tc.update_scriptfile(
-                                    guesses=ps.invpoints[id_close].ptguess()
-                                )
-                                last_inv = id_close
-                            grid.status[r, c] = 0
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(
-                                k.difference(self.tc.excess), pm, x, onebulk=y
-                            )
-                            delta = time.time() - start_time
-                            status, res, output = self.tc.parse_logfile()
-                            if res is not None:
-                                grid.gridcalcs[r, c] = res[0]
-                                grid.status[r, c] = 1
-                                grid.delta[r, c] = delta
-                            else:
-                                # update guesses from closest uni line point
-                                dst = sys.float_info.max
-                                for id_uni in self.unilists[ix][k]:
-                                    uni = ps.unilines[id_uni]
-                                    if not uni.manual:
-                                        for vix in list(range(len(uni._x))[uni.used]):
-                                            d2 = (uni._x[vix] - x) ** 2 + (
-                                                uni._y[vix] - y
-                                            ) ** 2
-                                            if d2 < dst:
-                                                dst = d2
-                                                id_close = id_uni
-                                                vix_close = vix
-                                self.tc.update_scriptfile(
-                                    guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                                )
-                                start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), pm, x, onebulk=y
-                                )
-                                delta = time.time() - start_time
-                                status, res, output = self.tc.parse_logfile()
-                                if res is not None:
-                                    grid.gridcalcs[r, c] = res[0]
-                                    grid.status[r, c] = 1
-                                    grid.delta[r, c] = delta
-                                else:
-                                    grid.gridcalcs[r, c] = None
-                                    grid.status[r, c] = 0
-                        else:
-                            grid.gridcalcs[r, c] = None
-                        pbar.update(1)
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
-            gpleft += len(np.flatnonzero(grid.status == 0))
-            self.grids[ix] = grid
-        if gpleft > 0:
-            self.fix_solutions()
-        self.create_masks()
-        # update variable lookup table
-        self.collect_all_data_keys()
-        # save
-        self.save()
-
-    def fix_solutions(self):
-        """Method try to find solution for grid points with failed status.
-
-        Ptguesses are used from successfully calculated neighboring points until
-        solution is find. Otherwise ststus remains failed.
-        """
-        if self.gridded:
-            for ix, grid in self.grids.items():
-                log = []
-                ri, ci = np.nonzero(grid.status == 0)
-                fixed, ftot = 0, len(ri)
-                pm = (self.tc.prange[0] + self.tc.prange[1]) / 2
-                tq = trange(ftot, desc="Fix ({}/{})".format(fixed, ftot))
-                for ind in tq:
-                    r, c = ri[ind], ci[ind]
-                    x, y = grid.xg[r, c], grid.yg[r, c]
-                    k = self.identify(x, y)
-                    if k is not None:
-                        # search already done grid neighs
-                        for rn, cn in grid.neighs(r, c):
-                            if grid.status[rn, cn] == 1:
-                                self.tc.update_scriptfile(
-                                    guesses=grid.gridcalcs[rn, cn]["ptguess"]
-                                )
-                                start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), pm, x, onebulk=y
-                                )
-                                delta = time.time() - start_time
-                                status, res, output = self.tc.parse_logfile()
-                                if res is not None:
-                                    grid.gridcalcs[r, c] = res[0]
-                                    grid.status[r, c] = 1
-                                    grid.delta[r, c] = delta
-                                    fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
-                                    break
-                    if grid.status[r, c] == 0:
-                        log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
-                print("\n".join(log))
-        else:
-            print("Not yet gridded...")
+    def _calc_assemblage_args(self, ctx, k, x, y):
+        return (k.difference(self.tc.excess), ctx, x), {"onebulk": y}
 
 
 class PXPS(PS):
@@ -3037,163 +2952,21 @@ class PXPS(PS):
         self.section_class = PXsection
         super(PXPS, self).__init__(*args, **kwargs)
 
-    def calculate_composition(self, nx=50, ny=50):
-        """Method to calculate compositional variations on grid.
+    def _gridding_desc(self, ix):
+        return "Gridding"
 
-        A compositions are calculated for stable assemblages in regular grid
-        covering pT range of pseudosection. A stable assemblage is identified
-        from constructed divariant fields. Results are stored in `grid` property
-        as `GridData` instance. A property `all_data_keys` is updated.
+    def _grid_index_order(self, grid):
+        return (
+            (r, c) for c in range(len(grid.xspace)) for r in range(len(grid.yspace))
+        )
 
-        Before any grid point calculation, ptguesses are updated from nearest
-        invariant point. If calculation fails, nearest solution from univariant
-        line is used to update ptguesses. Finally, if solution is still not found,
-        the method `fix_solutions` is called and neigbouring grid calculations are
-        used to provide ptguess.
+    def _calc_assemblage_context(self):
+        # T is fixed at the pseudosection's temperature midpoint; x/onebulk
+        # is the composition variable calculate_composition grids over.
+        return (self.tc.trange[0] + self.tc.trange[1]) / 2
 
-        Args:
-            nx (int): Number of grid points along x direction (T)
-            ny (int): Number of grid points along y direction (p)
-        """
-        axr = self.xrange
-        ayr = self.yrange
-        gpleft = 0
-        for ix, ps in self.sections.items():
-            paxr = ps.xrange
-            payr = ps.yrange
-            grid = GridData(
-                ps,
-                nx=round(nx * (paxr[1] - paxr[0]) / (axr[1] - axr[0])),
-                ny=round(ny * (payr[1] - payr[0]) / (ayr[1] - ayr[0])),
-            )
-            last_inv = 0
-            with tqdm(desc="Gridding", total=np.prod(grid.xg.shape)) as pbar:
-                tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
-                for c in range(len(grid.xspace)):
-                    for r in range(len(grid.yspace)):
-                        x, y = grid.xg[r, c], grid.yg[r, c]
-                        k = self.identify(x, y)
-                        if k is not None:
-                            # update guesses from closest inv point
-                            dst = sys.float_info.max
-                            for id_inv, inv in ps.invpoints.items():
-                                d2 = (inv._x - x) ** 2 + (inv._y - y) ** 2
-                                if d2 < dst:
-                                    dst = d2
-                                    id_close = id_inv
-                            if (
-                                id_close != last_inv
-                                and not ps.invpoints[id_close].manual
-                            ):
-                                self.tc.update_scriptfile(
-                                    guesses=ps.invpoints[id_close].ptguess()
-                                )
-                                last_inv = id_close
-                            grid.status[r, c] = 0
-                            start_time = time.time()
-                            tcout, ans = self.tc.calc_assemblage(
-                                k.difference(self.tc.excess), y, tm, onebulk=x
-                            )
-                            delta = time.time() - start_time
-                            status, res, output = self.tc.parse_logfile()
-                            if res is not None:
-                                grid.gridcalcs[r, c] = res[0]
-                                grid.status[r, c] = 1
-                                grid.delta[r, c] = delta
-                            else:
-                                # update guesses from closest uni line point
-                                dst = sys.float_info.max
-                                for id_uni in self.unilists[ix][k]:
-                                    uni = ps.unilines[id_uni]
-                                    if not uni.manual:
-                                        for vix in list(range(len(uni._x))[uni.used]):
-                                            d2 = (uni._x[vix] - x) ** 2 + (
-                                                uni._y[vix] - y
-                                            ) ** 2
-                                            if d2 < dst:
-                                                dst = d2
-                                                id_close = id_uni
-                                                vix_close = vix
-                                self.tc.update_scriptfile(
-                                    guesses=ps.unilines[id_close].ptguess(idx=vix_close)
-                                )
-                                start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, tm, onebulk=x
-                                )
-                                delta = time.time() - start_time
-                                status, res, output = self.tc.parse_logfile()
-                                if res is not None:
-                                    grid.gridcalcs[r, c] = res[0]
-                                    grid.status[r, c] = 1
-                                    grid.delta[r, c] = delta
-                                else:
-                                    grid.gridcalcs[r, c] = None
-                                    grid.status[r, c] = 0
-                        else:
-                            grid.gridcalcs[r, c] = None
-                        pbar.update(1)
-            print(
-                "Grid search done. {} empty points left.".format(
-                    len(np.flatnonzero(grid.status == 0))
-                )
-            )
-            gpleft += len(np.flatnonzero(grid.status == 0))
-            self.grids[ix] = grid
-        if gpleft > 0:
-            self.fix_solutions()
-        self.create_masks()
-        # update variable lookup table
-        self.collect_all_data_keys()
-        # save
-        self.save()
-
-    def fix_solutions(self):
-        """Method try to find solution for grid points with failed status.
-
-        Ptguesses are used from successfully calculated neighboring points until
-        solution is find. Otherwise ststus remains failed.
-        """
-        if self.gridded:
-            for ix, grid in self.grids.items():
-                log = []
-                ri, ci = np.nonzero(grid.status == 0)
-                fixed, ftot = 0, len(ri)
-                tm = (self.tc.trange[0] + self.tc.trange[1]) / 2
-                tq = trange(ftot, desc="Fix ({}/{})".format(fixed, ftot))
-                for ind in tq:
-                    r, c = ri[ind], ci[ind]
-                    x, y = grid.xg[r, c], grid.yg[r, c]
-                    k = self.identify(x, y)
-                    if k is not None:
-                        # search already done grid neighs
-                        for rn, cn in grid.neighs(r, c):
-                            if grid.status[rn, cn] == 1:
-                                start_time = time.time()
-                                tcout, ans = self.tc.calc_assemblage(
-                                    k.difference(self.tc.excess), y, tm, onebulk=x
-                                )
-                                delta = time.time() - start_time
-                                status, res, output = self.tc.parse_logfile()
-                                if res is not None:
-                                    grid.gridcalcs[r, c] = res[0]
-                                    grid.status[r, c] = 1
-                                    grid.delta[r, c] = delta
-                                    fixed += 1
-                                    tq.set_description(
-                                        desc="Fix ({}/{})".format(fixed, ftot)
-                                    )
-                                    break
-                    if grid.status[r, c] == 0:
-                        log.append("No solution find for {}, {}".format(x, y))
-                log.append(
-                    "Fix done. {} empty grid points left.".format(
-                        len(np.flatnonzero(grid.status == 0))
-                    )
-                )
-                print("\n".join(log))
-        else:
-            print("Not yet gridded...")
+    def _calc_assemblage_args(self, ctx, k, x, y):
+        return (k.difference(self.tc.excess), y, ctx), {"onebulk": x}
 
 
 class GridData:
@@ -3363,6 +3136,8 @@ def eval_expr(expr, dt):
         ast.Mult: np.multiply,
         ast.Div: np.divide,
         ast.Pow: np.power,
+        ast.USub: np.negative,
+        ast.UAdd: np.positive,
     }
     return eval_(ast.parse(expr, mode="eval").body)
 

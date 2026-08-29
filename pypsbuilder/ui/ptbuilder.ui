@@ -1093,6 +1093,7 @@
       <string>Import</string>
      </property>
      <addaction name="actionImport_project"/>
+     <addaction name="actionImport_json"/>
      <addaction name="actionImport_from_old"/>
      <addaction name="actionImport_drfile"/>
     </widget>
@@ -1198,6 +1199,11 @@
   <action name="actionImport_project">
    <property name="text">
     <string>&amp;Import into range...</string>
+   </property>
+  </action>
+  <action name="actionImport_json">
+   <property name="text">
+    <string>Import from JSON...</string>
    </property>
   </action>
   <action name="actionImport_from_old">

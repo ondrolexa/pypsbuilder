@@ -39,7 +39,9 @@ pyqt6 = ["pyqt6"]
 jupyter = ["jupyterlab"]
 tests = ["pytest", "pytest-cov"]
 docs = ["sphinx", "sphinx_mdinclude", "sphinx_rtd_theme"]
-dev = ["pypsbuilder[pyqt6,jupyter,tests,docs]", "black"]
+
+[dependency-groups]
+dev = ["ruff>=0.6", "pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/ondrolexa/pypsbuilder"
@@ -61,6 +63,15 @@ tcinit = "pypsbuilder.tcinit:tcprojinit"
 [tool.hatch.version]
 path = "pypsbuilder/__init__.py"
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-extend-exclude = '''.*ui_.*'''
+target-version = "py310"
+extend-exclude = ["**/ui_*.py"]
+
+[tool.ruff.lint]
+# explicit select restores ruff's classic minimal default (this installed
+# ruff otherwise enables ~400 rules when only `ignore` is set); mirrors the
+# old flake8 --ignore=F401,E501,W503,E731,E743,E741,E203 (E501/W503/E203
+# aren't in this rule set anyway; only F401/E731/E741/E743 need ignoring)
+select = ["E4", "E7", "E9", "F"]
+ignore = ["F401", "E731", "E741", "E743"]

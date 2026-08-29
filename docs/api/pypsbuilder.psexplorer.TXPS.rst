@@ -41,7 +41,6 @@
       ~TXPS.merge_data
       ~TXPS.onclick
       ~TXPS.overlap_isopleths
-      ~TXPS.pointcalc
       ~TXPS.remove_grid_data
       ~TXPS.save
       ~TXPS.save_tab

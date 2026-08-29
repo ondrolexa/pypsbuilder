@@ -2,11 +2,27 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pypsbuilder)](https://pypi.org/project/pypsbuilder/)
 [![Testing](https://github.com/ondrolexa/pypsbuilder/actions/workflows/testing.yml/badge.svg?event=push)](https://github.com/ondrolexa/pypsbuilder)
-[![Documentation Status](https://readthedocs.org/projects/polylx/badge/?version=stable)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/pypsbuilder/badge/?version=latest)](https://pypsbuilder.readthedocs.io/en/latest/?badge=latest)
 
 Not that simplistic THERMOCALC front-end for constructing and visualizations of P-T, T-X and P-X pseudosections
 
 ## How to install
+
+### Using uv (recommended)
+
+If you don't already have [uv](https://docs.astral.sh/uv/) installed, see the
+[installation instructions](https://docs.astral.sh/uv/getting-started/installation/).
+
+Create an isolated environment and install **pypsbuilder** into it. **You should choose the UI framework using option** `pyqt5` **or** `pyqt6`:
+
+    uv venv
+    uv pip install pypsbuilder[pyqt6]
+
+JupyterLab could also be installed providing the `jupyter` option:
+
+    uv pip install pypsbuilder[pyqt6,jupyter]
+
+### Using pip and venv
 
 It is strongly suggested to install **pypsbuilder** into separate environment. You can create
 Python virtual environment. For Linux and macOS use:
@@ -67,7 +83,7 @@ and install with pip. As PyQt is already installed with mamba/conda, we will ins
 > pip install --no-deps pypsbuilder
 > ```
 
-#### Upgrade existing installation
+### Upgrade existing installation
 
 To upgrade an already installed **pypsbuilder** to the latest release:
 
@@ -76,6 +92,57 @@ To upgrade an already installed **pypsbuilder** to the latest release:
 or to the latest master version:
 
     pip install --upgrade https://github.com/ondrolexa/pypsbuilder/archive/master.zip
+
+## Contributing / development install
+
+Clone the repository and install with uv:
+
+    uv sync --extra pyqt6 --extra jupyter --extra tests --extra docs --group dev
+
+This installs pypsbuilder in editable mode with UI, notebook, test and docs
+extras plus dev tooling (ruff, pre-commit), matching the committed
+`uv.lock`.
+
+### Running tests
+
+Run the full test suite (must be run from the repo root, since tests
+reference `./examples/outputs` with a relative path):
+
+    uv run pytest
+    uv run pytest --cov --cov-report=xml
+
+Run a single test:
+
+    uv run pytest pypsbuilder/tests/test_pclasses.py::test_parse_ini1
+
+### Formatting and linting
+
+pypsbuilder uses [ruff](https://docs.astral.sh/ruff/) for both formatting and linting:
+
+    uv run ruff format pypsbuilder
+    uv run ruff check pypsbuilder
+
+### pre-commit hooks
+
+Formatting, linting and the test suite also run automatically via
+[pre-commit](https://pre-commit.com/):
+
+    uv run pre-commit install
+    uv run pre-commit run --all-files
+
+### Building the package
+
+    uv build
+
+### Rebuilding Qt UI modules
+
+After editing a `.ui` file in Qt Designer, regenerate the corresponding
+`ui_*.py` module (requires `pyuic6`):
+
+    cd pypsbuilder/ui && ./compile_ui.sh
+
+The script rewrites each generated file's `PyQt6` imports to `qtpy`
+imports, so the app stays usable with either `pyqt5` or `pyqt6`.
 
 ## Documentation and tutorials
 

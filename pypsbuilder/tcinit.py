@@ -20,16 +20,16 @@ from zipfile import ZipFile
 
 # recent files
 set_urls = {
-    "metapelite": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-metapelite-2022-01-23.zip",
-    "metabasite": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-metabasite-2022-01-30.zip",
-    "igneous": "https://hpxeosandthermocalc.org/wp-content/uploads/2022/01/tc-thermoinput-igneous-2022-01-23.zip",
+    "metapelite": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc-thermoinput-metapelite-2022-01-23.zip",
+    "metabasite": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc-thermoinput-metabasite-2022-01-30.zip",
+    "igw24": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/06/tc-thermoinput-igw24-2025-06-28.zip",
+    "igg25": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc-thermoinput-igg25-h18corr-2024-12-21.zip",
 }
 
 exe_urls = {
-    "linux": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-linux-bundle.zip",
-    "win": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350-win-bundle.zip",
-    "mac": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-mac-bundle.zip",
-    "macasi": "https://hpxeosandthermocalc.org/wp-content/uploads/2020/12/tc350beta-macasi-bundle.zip",
+    "linux": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc351-linux-bundle.zip",
+    "win": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc351-win-bundle.zip",
+    "mac": "https://hpxeosandthermocalc.org/wp-content/uploads/2025/05/tc351-mac-bundle.zip",
 }
 
 
@@ -72,7 +72,7 @@ def tcprojinit():
             projname_needed = False
 
     set_needed = True
-    sets = {1: "metapelite", 2: "metabasite", 3: "igneous"}
+    sets = {1: "metapelite", 2: "metabasite", 3: "igg25", 4: "igw24"}
     while set_needed:
         print("Choose THEMOCALC input set")
         for k in sets:
@@ -81,52 +81,32 @@ def tcprojinit():
             n = input("Which set? [1]: ")
             if n == "":
                 n = "1"
-            if int(n) in [1, 2, 3]:
+            if int(n) in [1, 2, 3, 4]:
                 set_needed = False
         except ValueError:
-            print("ERROR: enter 1, 2 or 3")
+            print("ERROR: enter 1, 2, 3 or 4")
     tcset = sets[int(n)]
 
     if tcset == "metapelite":
         ds = "62"
-        systems = {1: "mp50MnNCKFMASHTO", 2: "mp50NCKFMASHTO", 3: "mp50KFMASH"}
-        system_needed = True
-        while system_needed:
-            print("Choose system for metapelite set")
-            for k in systems:
-                print(f" {k}. {systems[k]}")
-            try:
-                v = input("Which system? [1]: ")
-                if v == "":
-                    v = "1"
-                if int(v) in [1, 2, 3]:
-                    system_needed = False
-            except ValueError:
-                print("ERROR: enter 1, 2 or 3")
-        system = systems[int(v)]
-        guesses = metapelite_guesses[system]
+        system = "mp51MnNCKFMASHTO"
+        samecoding = metapelite_samecoding
+        guesses = metapelite_guesses
     elif tcset == "metabasite":
         ds = "62"
-        system = "mb50NCKFMASHTO"
-        guesses = metabasite_guesses[system]
-    else:
-        ds = "633"
-        systems = {1: "ig50NCKFMASHTOCr", 2: "ig50NCKFMASTOCr"}
-        system_needed = True
-        while system_needed:
-            print("Choose system for igneous set")
-            for k in systems:
-                print(f" {k}. {systems[k]}")
-            try:
-                v = input("Which system? [1]: ")
-                if v == "":
-                    v = "1"
-                if int(v) in [1, 2]:
-                    system_needed = False
-            except ValueError:
-                print("ERROR: enter 1 or 2")
-        system = systems[int(v)]
-        guesses = igneous_guesses[system]
+        system = "mb51NCKFMASHTO"
+        samecoding = metabasite_samecoding
+        guesses = metabasite_guesses
+    elif tcset == "igw24":
+        ds = "636"
+        system = "ig51W24"
+        samecoding = igw24_samecoding
+        guesses = igw24_guesses
+    elif tcset == "igg25":
+        ds = "636"
+        system = "ig51G25"
+        samecoding = igg25_samecoding
+        guesses = igg25_guesses
 
     # create prefs file
     with open(dest / "tc-prefs.txt", "w") as f:
@@ -140,58 +120,67 @@ def tcprojinit():
     if comp == "Linux":
         with urlopen(exe_urls["linux"]) as zip:
             with ZipFile(BytesIO(zip.read())) as zfile:
-                source = zfile.open("tc350beta-linux-bundle/tc350beta")
-                target = open(dest / "tc350beta", "wb")
-                with source, target:
+                with (
+                    zfile.open("tc351-linux-bundle/tc351lin") as source,
+                    open(dest / "tc351lin", "wb") as target,
+                ):
                     shutil.copyfileobj(source, target)
-                Path(dest / "tc350beta").chmod(33261)
+                Path(dest / "tc351lin").chmod(0o755)
     elif comp == "Windows":
         with urlopen(exe_urls["win"]) as zip:
             with ZipFile(BytesIO(zip.read())) as zfile:
-                source = zfile.open("tc350-win-bundle/tc350beta.exe")
-                target = open(dest / "tc350beta.exe", "wb")
-                with source, target:
+                with (
+                    zfile.open("tc351-win-bundle/tc351.exe") as source,
+                    open(dest / "tc351.exe", "wb") as target,
+                ):
                     shutil.copyfileobj(source, target)
-                Path(dest / "tc350beta.exe").chmod(33261)
-    elif comp == "Darwin":
-        proc = platform.processor()
-        if proc == "x86_64":
-            with urlopen(exe_urls["mac"]) as zip:
-                with ZipFile(BytesIO(zip.read())) as zfile:
-                    source = zfile.open("tc350beta-bundle/tc350beta")
-                    target = open(dest / "tc350beta", "wb")
-                    with source, target:
-                        shutil.copyfileobj(source, target)
-                    Path(dest / "tc350beta").chmod(33261)
-        elif proc == "arm":
-            with urlopen(exe_urls["macasi"]) as zip:
-                with ZipFile(BytesIO(zip.read())) as zfile:
-                    source = zfile.open("tc350beta-macASi-bundle/tc350si")
-                    target = open(dest / "tc350si", "wb")
-                    with source, target:
-                        shutil.copyfileobj(source, target)
-                    Path(dest / "tc350si").chmod(33261)
-        else:
-            raise AttributeError(f"Unsupported MacOS {proc} processor")
+                Path(dest / "tc351.exe").chmod(0o755)
     else:
-        raise AttributeError(f"Unsupported {comp} platform")
+        with urlopen(exe_urls["mac"]) as zip:
+            with ZipFile(BytesIO(zip.read())) as zfile:
+                with (
+                    zfile.open("tc351-mac-bundle/tc351") as source,
+                    open(dest / "tc351", "wb") as target,
+                ):
+                    shutil.copyfileobj(source, target)
+                Path(dest / "tc351").chmod(0o755)
 
     # download set
     tcset_url = set_urls[tcset]
-    prefix = tcset_url.split("/")[-1].split(".")[0]
     with urlopen(tcset_url) as zip:
         with ZipFile(BytesIO(zip.read())) as zfile:
-            with zfile.open(f"{prefix}/samecoding_and_starting_guesses.txt") as f:
-                scsg = f.readlines()
-            scsg = [s.decode("mac-roman") for s in scsg]
-            samecoding = "".join([ln for ln in scsg if ln.startswith("samecoding")])
-            source = zfile.open(f"{prefix}/tc-ds{ds}.txt")
-            target = open(dest / f"tc-ds{ds}.txt", "wb")
-            with source, target:
+            # the zip's actual top-level folder name doesn't always match
+            # the URL slug (e.g. "igw24" in the URL vs "igW24" inside the
+            # zip), so read it from the archive instead of guessing it
+            prefix = sorted(
+                {
+                    name.split("/")[0]
+                    for name in zfile.namelist()
+                    if not name.startswith("__MACOSX")
+                }
+            )[0]
+            scsg_candidates = sorted(
+                name
+                for name in zfile.namelist()
+                if name.startswith(f"{prefix}/samecoding_and_starting_guesses")
+                and name.endswith(".txt")
+            )
+            if not scsg_candidates:
+                samecoding = ""
+            else:
+                with zfile.open(scsg_candidates[0]) as f:
+                    scsg = f.readlines()
+                scsg = [s.decode("mac-roman") for s in scsg]
+                samecoding = "".join([ln for ln in scsg if ln.startswith("samecoding")])
+            with (
+                zfile.open(f"{prefix}/tc-ds{ds}.txt") as source,
+                open(dest / f"tc-ds{ds}.txt", "wb") as target,
+            ):
                 shutil.copyfileobj(source, target)
-            source = zfile.open(f"{prefix}/tc-{system}.txt")
-            target = open(dest / f"tc-{system}.txt", "wb")
-            with source, target:
+            with (
+                zfile.open(f"{prefix}/tc-{system}.txt") as source,
+                open(dest / f"tc-{system}.txt", "wb") as target,
+            ):
                 shutil.copyfileobj(source, target)
 
     # create project file
@@ -210,162 +199,15 @@ calcmode 1
 *
 """
 
-metapelite_guesses = {
-    "mp50KFMASH": """
-% --------------------------------------------------------
-%  Starting guesses in KFMASH
-%  for g liq mu bi opx sa cd st chl ctd sp1
-% --------------------------------------------------------
+metapelite_samecoding = """
+samecoding mu pa       % make paragonite from muscovite
+samecoding sp mt       % make high-T magnetite from spinel
+samecoding ilm hem     % make FTO hematite from FTO ilmenite
+samecoding ilmm hemm   % make FMMnTO hematite from FMMnTO ilmenite
+"""
 
-xyzguess x(g)          0.828230
-
-xyzguess q(liq)        0.361210
-xyzguess fsp(liq)      0.298204
-xyzguess ol(liq)      0.0452697
-xyzguess x(liq)        0.811725
-xyzguess h2o(liq)      0.273973
-
-xyzguess x(mu)         0.424480
-xyzguess y(mu)         0.855215  range  0.000 2.000
-
-xyzguess x(bi)         0.515248
-xyzguess y(bi)         0.181294
-xyzguess Q(bi)         0.135847
-
-xyzguess x(opx)        0.725005
-xyzguess y(opx)        0.157290  range  0.000 2.000
-xyzguess Q(opx)        0.258819
-
-xyzguess  x(sa)         0.1
-xyzguess  y(sa)         0.3
-xyzguess  Q(sa)         0.05 range -1 1
-
-xyzguess x(cd)         0.529141
-xyzguess h(cd)         0.259128
-
-xyzguess x(st)         0.9
-
-xyzguess x(chl)        0.412420
-xyzguess y(chl)        0.610079
-xyzguess QAl(chl)      0.389713  range -1.000 1.000
-xyzguess Q1(chl)      0.0751369  range -1.000 1.000
-xyzguess Q4(chl)      0.0641869  range -1.000 1.000
-
-xyzguess x(ctd)           0.88
-
-xyzguess x(sp1)           0.9
-""",
-    "mp50NCKFMASHTO": """
-% --------------------------------------------------------
-%  Starting guesses in NCKFMASHTO
-%  for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1
-% --------------------------------------------------------
-
-xyzguess x(g)          0.833575
-xyzguess z(g)         0.0735303
-xyzguess f(g)         0.0524207
-
-xyzguess q(L)          0.260829
-xyzguess fsp(L)        0.332998
-xyzguess na(L)         0.267890
-xyzguess an(L)        0.0124108
-xyzguess ol(L)       0.00460699
-xyzguess x(L)          0.799969
-xyzguess h2o(L)        0.376568
-
-xyzguess ca(pl4tr)        0.410144
-xyzguess k(pl4tr)        0.0182303
-
-xyzguess na(k4tr)       0.159152
-xyzguess ca(k4tr)     0.00450582
-
-xyzguess f(ep)         0.379418
-xyzguess Q(ep)         0.346850  range  0.000 0.500
-
-xyzguess x(ma)         0.6
-xyzguess y(ma)         0.96
-xyzguess f(ma)         0.001
-xyzguess n(ma)         0.05
-xyzguess c(ma)         0.94
-
-xyzguess x(mu)         0.501982
-xyzguess y(mu)         0.839614
-xyzguess f(mu)        0.0172093
-xyzguess n(mu)         0.144000
-xyzguess c(mu)       0.00179401
-
-xyzguess x(pa)         0.501982
-xyzguess y(pa)         0.998030
-xyzguess f(pa)       0.00182412
-xyzguess n(pa)         0.945628
-xyzguess c(pa)        0.0116010
-
-xyzguess x(bi)         0.698859
-xyzguess y(bi)         0.268818
-xyzguess f(bi)         0.158096
-xyzguess t(bi)        0.0981352
-xyzguess Q(bi)        0.0683120
-
-xyzguess x(opx)        0.811609
-xyzguess y(opx)        0.128377  range  0.000 2.000
-xyzguess f(opx)            0.01
-xyzguess c(opx)            0.01
-xyzguess Q(opx)        0.216433
-
-xyzguess  x(sa)            0.1
-xyzguess  y(sa)            0.3
-xyzguess  f(sa)            0.05
-xyzguess  Q(sa)            0.05 range -1 1
-
-xyzguess x(cd)         0.480790
-xyzguess h(cd)         0.427693
-
-xyzguess  x(st)            0.88
-xyzguess  f(st)            0.05
-xyzguess  t(st)            0.04
-
-xyzguess x(chl)        0.551609
-xyzguess y(chl)        0.328449
-xyzguess f(chl)        0.418479
-xyzguess QAl(chl)      0.253018  range -1.000 1.000
-xyzguess Q1(chl)       0.123137  range -1.000 1.000
-xyzguess Q4(chl)       0.121632  range -1.000 1.000
-
-xyzguess x(ctd)        0.990857
-xyzguess f(ctd)            0.01
-
-xyzguess  x(sp)    0.6
-xyzguess  y(sp)    0.95
-xyzguess  z(sp)    0.01
-
-xyzguess  x(mt)    0.85
-xyzguess  y(mt)    0.05
-xyzguess  z(mt)    0.01
-
-xyzguess i(ilmm)       0.890349
-xyzguess g(ilmm)      0.0148847
-xyzguess Q(ilmm)       0.828083  range -1.000 1.000
-
-xyzguess i(hemm)       0.380640
-xyzguess g(hemm)     0.00296953
-xyzguess Q(hemm)     -0.0102634  range -0.300 0.300
-
-xyzguess  x(ilm)       0.80
-xyzguess  Q(ilm)       0.8   range -0.99 0.99
-
-xyzguess  x(hem)       0.20
-xyzguess  Q(hem)       0.8   range -0.99 0.99
-
-xyzguess x(mt1)        0.683170
-xyzguess Q(mt1)        0.727847
-""",
-    "mp50MnNCKFMASHTO": """
-% --------------------------------------------------------
-%  Starting guesses in MnNCKFMASHTO
-%  for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1
-% --------------------------------------------------------
-
-
+metapelite_guesses = """
+% -------------------
 xyzguess x(g)          0.824169
 xyzguess z(g)         0.0317199
 xyzguess m(g)          0.118530
@@ -472,11 +314,20 @@ xyzguess  Q(hem)       0.8   range -0.99 0.99
 
 xyzguess x(mt1)        0.632160
 xyzguess Q(mt1)        0.564334
-""",
-}
 
-metabasite_guesses = {
-    "mb50NCKFMASHTO": """
+% --------------------------------------------------------
+"""
+
+metabasite_samecoding = """
+samecoding hb act gl
+samecoding dio o jd
+samecoding sp mt
+samecoding ilm hem
+samecoding ilmm hemm
+"""
+
+
+metabasite_guesses = """
 % -------------------
 xyzguess q(L)          0.151242
 xyzguess fsp(L)        0.248743
@@ -614,317 +465,320 @@ xyzguess Q1(chl)       0.0859470  range -1.000 1.000
 xyzguess Q4(chl)       0.0245983  range -1.000 1.000
 % -------------------
 """
-}
 
-igneous_guesses = {
-    "ig50NCKFMASHTOCr": """
-% silicate melt, hydrous (NCKFMASHTOCr)
-xyzguess wo(L)         0.107216
-xyzguess sl(L)        0.0873506
-xyzguess fo(L)        0.0142023
-xyzguess fa(L)        0.0109878
-xyzguess jd(L)         0.151907
-xyzguess hm(L)       0.00154624
-xyzguess ek(L)       9.81910e-6
-xyzguess ti(L)       0.00413534
-xyzguess kj(L)        0.0368694
-xyzguess yct(L)       0.0885231
-xyzguess h2o(L)        0.219727
+igg25_samecoding = """
+samecoding liq_G25w  liq      		% silicate melt (wet)
+samecoding fl_G25    fl	                % aqueous fluid
+samecoding ol_H18    ol	 		% olivine
+samecoding g_W24     g			% garnet
+samecoding spl_T21   spl mgt cm usp	% spinel, magnetite, Cr-spinel, ulvospinel
+samecoding fsp_H22   pl afs  		% plagioclase, alkali feldspar
+samecoding cpx_W24   cpx pig		% augitic clinopyroxene, pigeonite
+samecoding opx_W24   opx		% orthopyroxene
+samecoding ilm_W24   ilm hem            % ilmenite, hematite
+samecoding bi_G25    bi                 % biotite
+samecoding mu_W14    mu                 % muscovite
+samecoding amp_G16   hb gl act          % hornblende, glaucophane, actinolite
+samecoding ep_H11    ep                 % epidote
+samecoding cd_G25    cd                 % cordierite
+"""
 
-% aqueous fluid with dissolved silicates
-xyzguess wo(fl)     0.000103865
-xyzguess sl(fl)      5.87807e-5
-xyzguess fo(fl)      1.41812e-8
-xyzguess fa(fl)      3.11791e-8
-xyzguess jd(fl)     0.000862050
-xyzguess hm(fl)     0.000159068
-xyzguess ek(fl)      3.29610e-7
-xyzguess ti(fl)     0.000162396
-xyzguess kj(fl)      0.00562408
-xyzguess h2o(fl)       0.985936
-
-% plagioclase
-xyzguess ca(pl4tr)        0.8
-xyzguess k(pl4tr)        0.0116338
-
-% olivine
-xyzguess x(ol)         0.102434
-xyzguess c(ol)       0.00275804
-xyzguess Q(ol)      0.000156353
-
-% orthopyroxene
-xyzguess x(opx)       0.0956777
-xyzguess y(opx)        0.182193  range  0.000 2.000
-xyzguess c(opx)       0.0489271
-xyzguess Q(opx)      -0.0475598  range -1.000 1.000
-xyzguess f(opx)       0.0177886
-xyzguess t(opx)      0.00823030
-xyzguess cr(opx)      0.0205952
-xyzguess j(opx)      0.00906326
-
-% clinopyroxene
-xyzguess x(cpx)       0.0964208
-xyzguess y(cpx)       0.0825558  range  0.000 2.000
-xyzguess o(cpx)        0.219892
-xyzguess n(cpx)        0.118338
-xyzguess Q(cpx)      -0.0282419  range -1.000 1.000
-xyzguess f(cpx)       0.0209603
-xyzguess cr(cpx)      0.0154784
-xyzguess t(cpx)       0.0127859
-xyzguess k(cpx)      0.00527429
-
-% pigeonite
-xyzguess x(pig)        0.124
-xyzguess y(pig)        0.112  range  0.000 2.000
-xyzguess o(pig)        0.888
-xyzguess n(pig)        0.028
-xyzguess Q(pig)       -0.0115  range -1.000 1.000
-xyzguess f(pig)        0.004
-xyzguess cr(pig)       0.001
-xyzguess t(pig)        0.148
-xyzguess k(pig)        0.001
-
-% spinel
-xyzguess x(spn)        0.144990
-xyzguess y(spn)       0.0139965
-xyzguess c(spn)       0.0451070
-xyzguess t(spn)       0.0110937
-xyzguess Q1(spn)       0.503697
-xyzguess Q2(spn)      0.0807768
-xyzguess Q3(spn)      0.0218537
-
-% K-feldspar
-xyzguess na(k4tr)       0.1
-xyzguess ca(k4tr)       0.004
-
-% muscovite
-xyzguess x(mu)          0.275719
-xyzguess y(mu)          0.334730
-xyzguess f(mu)          0.0164856
-xyzguess n(mu)          0.00226622
-xyzguess c(mu)          3.36760e-5
-
-% biotite
-xyzguess x(bi)         0.457528
-xyzguess y(bi)        0.0772161
-xyzguess f(bi)        0.0158764
-xyzguess t(bi)         0.119336
-xyzguess Q(bi)         0.228603
-
-% garnet
-xyzguess x(g)          0.455851
-xyzguess c(g)          0.286243
-xyzguess f(g)        0.00253871
-xyzguess cr(g)      0.000841005
-xyzguess t(g)         0.0113394
-
-% epidote
-xyzguess f(ep)          0.189427
-xyzguess Q(ep)          0.182107  range  0.000 0.500
-
-% cordierite
-xyzguess x(cd)            0.3
-xyzguess h(cd)            0.7
-
-% Al-spinel
-xyzguess x(spn)            0.14499
-xyzguess y(spn)            0.01398
-xyzguess c(spn)            0.04504
-xyzguess t(spn)            0.01114
-xyzguess Q1(spn)           0.50372 range -1 1
-xyzguess Q2(spn)           0.08077 range -1 1
-xyzguess Q3(spn)           0.02183 range -1 1
-
-% Cr-spinel
-xyzguess x(cm)            0.2
-xyzguess y(cm)            0.1
-xyzguess c(cm)            0.8
-xyzguess t(cm)            0.05
-xyzguess Q1(cm)           0.05 range -1 1
-xyzguess Q2(cm)           0.05 range -1 1
-xyzguess Q3(cm)           0.05 range -1 1
-
-% magnetite
-xyzguess x(mt)            0.8
-xyzguess y(mt)            0.55
-xyzguess c(mt)            0.2
-xyzguess t(mt)            0.01
-xyzguess Q1(mt)           0.33 range -1 1
-xyzguess Q2(mt)           0.14 range -1 1
-xyzguess Q3(mt)           0.25 range -1 1
-
-% hornblende
-xyzguess x(hb)         0.355436
-xyzguess y(hb)         0.393748
-xyzguess z(hb)        0.0255955
-xyzguess a(hb)         0.476446
-xyzguess k(hb)        0.0647451
-xyzguess c(hb)         0.924162
-xyzguess f(hb)         0.103286
-xyzguess t(hb)        0.0360617
-xyzguess Q1(hb)      -0.0186478  range -1.000 1.000
-xyzguess Q2(hb)        0.111970  range -1.000 1.000
-
-% ilmenite
-xyzguess x(ilm)        0.913364
-xyzguess Q(ilm)        0.627896  range -0.990 0.990
-
+igg25_guesses = """
 % --------------------------------------------------------
-""",
-    "ig50NCKFMASTOCr": """
-% silicate melt, dry (NCKFMASTOCr)
-xyzguess wo(L)         0.228033
-xyzguess sl(L)         0.123908
-xyzguess fo(L)         0.383275
-xyzguess fa(L)        0.0784050
-xyzguess jd(L)        0.0408634
-xyzguess hm(L)        0.0156940
-xyzguess ek(L)        0.0178215
-xyzguess ti(L)       0.00817432
-xyzguess kj(L)       0.00163650
-xyzguess yct(L)     0.000695507
-
-% aqueous fluid with dissolved silicates
-xyzguess wo(fl)     0.000103865
-xyzguess sl(fl)      5.87807e-5
-xyzguess fo(fl)      1.41812e-8
-xyzguess fa(fl)      3.11791e-8
-xyzguess jd(fl)     0.000862050
-xyzguess hm(fl)     0.000159068
-xyzguess ek(fl)      3.29610e-7
-xyzguess ti(fl)     0.000162396
-xyzguess kj(fl)      0.00562408
-xyzguess h2o(fl)       0.985936
-
-% plagioclase
-xyzguess ca(pl4tr)        0.8
-xyzguess k(pl4tr)        0.0116338
-
-% olivine
-xyzguess x(ol)         0.102434
-xyzguess c(ol)       0.00275804
-xyzguess Q(ol)      0.000156353
-
-% orthopyroxene
-xyzguess x(opx)       0.0956777
-xyzguess y(opx)        0.182193  range  0.000 2.000
-xyzguess c(opx)       0.0489271
-xyzguess Q(opx)      -0.0475598  range -1.000 1.000
-xyzguess f(opx)       0.0177886
-xyzguess t(opx)      0.00823030
-xyzguess cr(opx)      0.0205952
-xyzguess j(opx)      0.00906326
-
-% clinopyroxene
-xyzguess x(cpx)       0.0964208
-xyzguess y(cpx)       0.0825558  range  0.000 2.000
-xyzguess o(cpx)        0.219892
-xyzguess n(cpx)        0.118338
-xyzguess Q(cpx)      -0.0282419  range -1.000 1.000
-xyzguess f(cpx)       0.0209603
-xyzguess cr(cpx)      0.0154784
-xyzguess t(cpx)       0.0127859
-xyzguess k(cpx)      0.00527429
-
-% pigeonite
-xyzguess x(pig)        0.124
-xyzguess y(pig)        0.112  range  0.000 2.000
-xyzguess o(pig)        0.888
-xyzguess n(pig)        0.028
-xyzguess Q(pig)       -0.0115  range -1.000 1.000
-xyzguess f(pig)        0.004
-xyzguess cr(pig)       0.001
-xyzguess t(pig)        0.148
-xyzguess k(pig)        0.001
-
-% spinel
-xyzguess x(spn)        0.144990
-xyzguess y(spn)       0.0139965
-xyzguess c(spn)       0.0451070
-xyzguess t(spn)       0.0110937
-xyzguess Q1(spn)       0.503697
-xyzguess Q2(spn)      0.0807768
-xyzguess Q3(spn)      0.0218537
-
-% K-feldspar
-xyzguess na(k4tr)       0.1
-xyzguess ca(k4tr)       0.004
-
-% muscovite
-xyzguess x(mu)          0.275719
-xyzguess y(mu)          0.334730
-xyzguess f(mu)          0.0164856
-xyzguess n(mu)          0.00226622
-xyzguess c(mu)          3.36760e-5
-
-% biotite
-xyzguess x(bi)         0.457528
-xyzguess y(bi)        0.0772161
-xyzguess f(bi)        0.0158764
-xyzguess t(bi)         0.119336
-xyzguess Q(bi)         0.228603
-
-% garnet
-xyzguess x(g)          0.455851
-xyzguess c(g)          0.286243
-xyzguess f(g)        0.00253871
-xyzguess cr(g)      0.000841005
-xyzguess t(g)         0.0113394
-
-% epidote
-xyzguess f(ep)          0.189427
-xyzguess Q(ep)          0.182107  range  0.000 0.500
-
-% cordierite
-xyzguess x(cd)            0.3
-xyzguess h(cd)            0.7
-
-% Al-spinel
-xyzguess x(spn)            0.14499
-xyzguess y(spn)            0.01398
-xyzguess c(spn)            0.04504
-xyzguess t(spn)            0.01114
-xyzguess Q1(spn)           0.50372 range -1 1
-xyzguess Q2(spn)           0.08077 range -1 1
-xyzguess Q3(spn)           0.02183 range -1 1
-
-% Cr-spinel
-xyzguess x(cm)            0.2
-xyzguess y(cm)            0.1
-xyzguess c(cm)            0.8
-xyzguess t(cm)            0.05
-xyzguess Q1(cm)           0.05 range -1 1
-xyzguess Q2(cm)           0.05 range -1 1
-xyzguess Q3(cm)           0.05 range -1 1
-
-% magnetite
-xyzguess x(mt)            0.8
-xyzguess y(mt)            0.55
-xyzguess c(mt)            0.2
-xyzguess t(mt)            0.01
-xyzguess Q1(mt)           0.33 range -1 1
-xyzguess Q2(mt)           0.14 range -1 1
-xyzguess Q3(mt)           0.25 range -1 1
-
-% hornblende
-xyzguess x(hb)         0.355436
-xyzguess y(hb)         0.393748
-xyzguess z(hb)        0.0255955
-xyzguess a(hb)         0.476446
-xyzguess k(hb)        0.0647451
-xyzguess c(hb)         0.924162
-xyzguess f(hb)         0.103286
-xyzguess t(hb)        0.0360617
-xyzguess Q1(hb)      -0.0186478  range -1.000 1.000
-xyzguess Q2(hb)        0.111970  range -1.000 1.000
-
-% ilmenite
-xyzguess x(ilm)        0.913364
-xyzguess Q(ilm)        0.627896  range -0.990 0.990
-
+xyzguess wo(liq)      0.18
+xyzguess sl(liq)      0.14
+xyzguess fo(liq)      0.02
+xyzguess fa(liq)      0.03
+xyzguess ns(liq)      0.25
+xyzguess hm(liq)      0.04
+xyzguess ek(liq)      0.0005
+xyzguess ti(liq)      0.03
+xyzguess ks(liq)      0.18
+xyzguess yan(liq)     0.004
+xyzguess yab(liq)     0.09
+xyzguess yen(liq)     0.02
+xyzguess ykf(liq)     0.06
+% -----------------------------
+xyzguess x(ol)        0.3
+xyzguess c(ol)        0.01
+xyzguess Q(ol)        0.001     range -0.5 0.5
+% -----------------------------
+xyzguess x(g)         0.4
+xyzguess c(g)         0.2
+xyzguess f(g)         0.01
+xyzguess cr(g)        0.002
+xyzguess t(g)         0.02
+% -----------------------------
+xyzguess x(spl)       0.65
+xyzguess y(spl)       0.08
+xyzguess c(spl)       0.01
+xyzguess t(spl)       0.01
+xyzguess Q1(spl)      0.2       range -1 1
+xyzguess Q2(spl)      0.2       range -1 1
+xyzguess Q3(spl)      0.15      range -1 1
+% -----------------------------
+xyzguess x(cm)        0.5
+xyzguess y(cm)        0.08
+xyzguess c(cm)        0.85
+xyzguess t(cm)        0.01
+xyzguess Q1(cm)       0.2       range -1 1
+xyzguess Q2(cm)       0.4       range -1 1
+xyzguess Q3(cm)       0.02      range -1 1
+% -----------------------------
+xyzguess x(mgt)       0.85
+xyzguess y(mgt)       0.85
+xyzguess c(mgt)       0.01
+xyzguess t(mgt)       0.01
+xyzguess Q1(mgt)      0.05      range -1 1
+xyzguess Q2(mgt)      0.05      range -1 1
+xyzguess Q3(mgt)      0.02      range -1 1
+% -----------------------------
+xyzguess x(usp)       0.3
+xyzguess y(usp)       0.1
+xyzguess c(usp)       0.01
+xyzguess t(usp)       0.85
+xyzguess Q1(usp)      0.15      range -1 1
+xyzguess Q2(usp)      0.05      range -1 1
+xyzguess Q3(usp)      0.02      range -1 1
+% -----------------------------
+xyzguess ca(pl)       0.67
+xyzguess k(pl)        0.01
+% -----------------------------
+xyzguess ca(afs)      0.03
+xyzguess k(afs)       0.85
+% -----------------------------
+xyzguess x(cpx)       0.2
+xyzguess y(cpx)       0.08      range  0  2
+xyzguess o(cpx)       0.1
+xyzguess n(cpx)       0.05
+xyzguess f(cpx)       0.03
+xyzguess t(cpx)       0.02
+xyzguess cr(cpx)      0.003
+xyzguess k(cpx)       0.001
+xyzguess Q(cpx)      -0.01      range -1 1
+% -----------------------------
+xyzguess x(pig)       0.2
+xyzguess y(pig)       0.08      range  0  2
+xyzguess o(pig)       0.8
+xyzguess n(pig)       0.05
+xyzguess f(pig)       0.03
+xyzguess t(pig)       0.02
+xyzguess cr(pig)      0.003
+xyzguess k(pig)       0.001
+xyzguess Q(pig)      -0.01      range -1 1
+% -----------------------------
+xyzguess x(opx)       0.3
+xyzguess y(opx)       0.1	range  0  2
+xyzguess c(opx)       0.05
+xyzguess j(opx)       0.02
+xyzguess f(opx)       0.03
+xyzguess t(opx)       0.02
+xyzguess cr(opx)      0.003
+xyzguess Q(opx)      -0.2       range -1 1
+% -----------------------------
+xyzguess i(ilm)       0.98
+xyzguess m(ilm)       0.0007
+xyzguess Q(ilm)       0.88      range -1 1
+xyzguess Qt(ilm)      0.88      range -1 1
+% -----------------------------
+xyzguess i(hem)        0.1
+xyzguess m(hem)        0.001
+xyzguess Q(hem)        0.08     range -1 1
+xyzguess Qt(hem)       0.08     range -1 1
+% -----------------------------
+xyzguess x(bi)         0.35
+xyzguess y(bi)         0.25
+xyzguess f(bi)         0.04
+xyzguess t(bi)         0.17
+xyzguess Q(bi)         0.25   range -1  1
+% -----------------------------
+xyzguess x(mu)         0.25
+xyzguess y(mu)         0.60
+xyzguess f(mu)         0.17
+xyzguess n(mu)         0.06
+xyzguess c(mu)         0.004
+% -----------------------------
+xyzguess x(hb)         0.40
+xyzguess y(hb)         0.65
+xyzguess z(hb)         0.35
+xyzguess a(hb)         0.35
+xyzguess k(hb)         0.01
+xyzguess c(hb)         0.60
+xyzguess f(hb)         0.05
+xyzguess t(hb)         0.01
+xyzguess Q1(hb)       -0.06  range  -1  1
+xyzguess Q2(hb)        0.30  range  -1  1
+% -----------------------------
+xyzguess x(gl)         0.45
+xyzguess y(gl)         0.80
+xyzguess z(gl)         0.88
+xyzguess a(gl)         0.05
+xyzguess k(gl)         0.01
+xyzguess c(gl)         0.10
+xyzguess f(gl)         0.04
+xyzguess t(gl)         0.04
+xyzguess Q1(gl)        0.40  range  -1  1
+xyzguess Q2(gl)       -0.03  range  -1  1
+% -----------------------------
+xyzguess x(act)        0.35
+xyzguess y(act)        0.20
+xyzguess z(act)        0.20
+xyzguess a(act)        0.05
+xyzguess k(act)        0.01
+xyzguess c(act)        0.78
+xyzguess f(act)        0.02
+xyzguess t(act)        0.002
+xyzguess Q1(act)       0.3   range -1  1
+xyzguess Q2(act)      -0.15  range -1  1
+% -----------------------------
+xyzguess f(ep)          0.1
+xyzguess Q(ep)          0.2      range  -1/2  1/2
+% -----------------------------
+xyzguess x(cd)          0.3
+xyzguess h(cd)          0.7
 % --------------------------------------------------------
-""",
-}
+"""
+
+igw24_samecoding = """
+samecoding liq_W24d  liq      		% silicate melt (dry)
+samecoding ol_H18    ol	 		% olivine
+samecoding g_W24     g			% garnet
+samecoding spl_T21   spl mgt cm usp	% spinel, magnetite, Cr-spinel, ulvospinel
+samecoding fsp_H22   pl afs  		% plagioclase, alkali feldspar
+samecoding cpx_W24   cpx pig		% augitic clinopyroxene, pigeonite
+samecoding opx_W24   opx		% orthopyroxene
+samecoding ilm_W24   ilm hem            % ilmenite, hematite
+samecoding nph_W24   nph nphk 		% Na-rich nepheline, K-rich nepheline
+samecoding kals_W24  kals		% kalsilite
+samecoding lct_W24   lct		% leucite
+samecoding mel_W24   mel		% melilite
+"""
+
+igw24_guesses = """
+% --------------------------------------------------------
+xyzguess wo(liq)      0.18
+xyzguess sl(liq)      0.14
+xyzguess fo(liq)      0.02
+xyzguess fa(liq)      0.03
+xyzguess ns(liq)      0.25
+xyzguess hm(liq)      0.04
+xyzguess ek(liq)      0.0005
+xyzguess ti(liq)      0.03
+xyzguess ks(liq)      0.18
+xyzguess yan(liq)     0.004
+xyzguess yab(liq)     0.09
+xyzguess yen(liq)     0.02
+xyzguess ykf(liq)     0.06
+% -----------------------------
+xyzguess x(ol)        0.3
+xyzguess c(ol)        0.01
+xyzguess Q(ol)        0.001     range -0.5 0.5
+% -----------------------------
+xyzguess x(g)         0.4
+xyzguess c(g)         0.2
+xyzguess f(g)         0.01
+xyzguess cr(g)        0.002
+xyzguess t(g)         0.02
+% -----------------------------
+xyzguess x(spl)       0.65
+xyzguess y(spl)       0.08
+xyzguess c(spl)       0.01
+xyzguess t(spl)       0.01
+xyzguess Q1(spl)      0.2       range -1 1
+xyzguess Q2(spl)      0.2       range -1 1
+xyzguess Q3(spl)      0.15      range -1 1
+% -----------------------------
+xyzguess x(cm)        0.5
+xyzguess y(cm)        0.08
+xyzguess c(cm)        0.85
+xyzguess t(cm)        0.01
+xyzguess Q1(cm)       0.2       range -1 1
+xyzguess Q2(cm)       0.4       range -1 1
+xyzguess Q3(cm)       0.02      range -1 1
+% -----------------------------
+xyzguess x(mgt)       0.85
+xyzguess y(mgt)       0.85
+xyzguess c(mgt)       0.01
+xyzguess t(mgt)       0.01
+xyzguess Q1(mgt)      0.05      range -1 1
+xyzguess Q2(mgt)      0.05      range -1 1
+xyzguess Q3(mgt)      0.02      range -1 1
+% -----------------------------
+xyzguess x(usp)       0.3
+xyzguess y(usp)       0.1
+xyzguess c(usp)       0.01
+xyzguess t(usp)       0.85
+xyzguess Q1(usp)      0.15      range -1 1
+xyzguess Q2(usp)      0.05      range -1 1
+xyzguess Q3(usp)      0.02      range -1 1
+% -----------------------------
+xyzguess ca(pl)       0.67
+xyzguess k(pl)        0.01
+% -----------------------------
+xyzguess ca(afs)      0.03
+xyzguess k(afs)       0.85
+% -----------------------------
+xyzguess x(cpx)       0.2
+xyzguess y(cpx)       0.08      range  0  2
+xyzguess o(cpx)       0.1
+xyzguess n(cpx)       0.05
+xyzguess f(cpx)       0.03
+xyzguess t(cpx)       0.02
+xyzguess cr(cpx)      0.003
+xyzguess k(cpx)       0.001
+xyzguess Q(cpx)      -0.01      range -1 1
+% -----------------------------
+xyzguess x(pig)       0.2
+xyzguess y(pig)       0.08      range  0  2
+xyzguess o(pig)       0.8
+xyzguess n(pig)       0.05
+xyzguess f(pig)       0.03
+xyzguess t(pig)       0.02
+xyzguess cr(pig)      0.003
+xyzguess k(pig)       0.001
+xyzguess Q(pig)      -0.01      range -1 1
+% -----------------------------
+xyzguess x(opx)       0.3
+xyzguess y(opx)       0.1	range  0  2
+xyzguess c(opx)       0.05
+xyzguess j(opx)       0.02
+xyzguess f(opx)       0.03
+xyzguess t(opx)       0.02
+xyzguess cr(opx)      0.003
+xyzguess Q(opx)      -0.2       range -1 1
+% -----------------------------
+xyzguess i(ilm)       0.98
+xyzguess m(ilm)       0.0007
+xyzguess Q(ilm)       0.88      range -1 1
+xyzguess Qt(ilm)      0.88      range -1 1
+% -----------------------------
+xyzguess i(hem)        0.1
+xyzguess m(hem)        0.001
+xyzguess Q(hem)        0.08     range -1 1
+xyzguess Qt(hem)       0.08     range -1 1
+% -----------------------------
+xyzguess k(nph)        0.1
+xyzguess s(nph)        0.04
+xyzguess f(nph)        0.0001
+xyzguess c(nph)        0.001
+xyzguess Q(nph)        0.2      range -1 1
+% -----------------------------
+xyzguess k(nphk)       0.9
+xyzguess s(nphk)       0.04
+xyzguess f(nphk)       0.0001
+xyzguess c(nphk)       0.001
+xyzguess Q(nphk)       0.05     range -1 1
+% -----------------------------
+xyzguess k(kals)       0.88
+% ----------------------------
+xyzguess n(lct)        0.05
+% -----------------------------
+xyzguess x(mel)        0.20
+xyzguess n(mel)        0.18
+xyzguess y(mel)        0.40
+xyzguess f(mel)        0.06
+% ----------------------------
+"""
 
 tcprj_tmpl = """
 % ==================================================================
@@ -943,7 +797,6 @@ autoexit
 % ============
 
 inexcess  no
-omit no
 tozero no
 
 % ================

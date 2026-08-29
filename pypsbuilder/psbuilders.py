@@ -6,6 +6,7 @@
 import gzip
 import importlib.resources as ires
 import itertools
+import json
 import os
 import pickle
 import sys
@@ -17,7 +18,6 @@ import matplotlib
 import numpy as np
 
 # from matplotlib.widgets import Cursor
-from matplotlib import cm
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.colors import BoundaryNorm, ListedColormap, Normalize
@@ -45,6 +45,7 @@ from .psclasses import (
     TCResultSet,
     TXsection,
     UniLine,
+    load_project_file,
     polymorphs,
 )
 from .tcapi import get_tcapi
@@ -272,6 +273,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionQuit.triggered.connect(self.close)
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
+        self.actionImport_json.triggered.connect(lambda: self.import_from_json())
         self.actionCleanup.triggered.connect(self.cleanup_storage)
         self.actionFixphase.triggered.connect(self.fix_phasenames)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
@@ -383,7 +385,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         # disconnect signals
         try:
             self.phasemodel.itemChanged.disconnect(self.phase_changed)
-        except Exception:
+        except TypeError:
             pass
         if self.cid is not None:
             self.canvas.mpl_disconnect(self.cid)
@@ -430,8 +432,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.setOverrideCursor(
                     QtCore.Qt.CursorShape.WaitCursor
                 )
-                with gzip.open(projfile, "rb") as stream:
-                    data = pickle.load(stream)
+                data = load_project_file(projfile)
                 # do import
                 self.initViewModels()
                 # select phases
@@ -557,8 +558,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.builder_file_selector,
             )[0]
             if Path(projfile).is_file():
-                with gzip.open(projfile, "rb") as stream:
-                    data = pickle.load(stream)
+                data = load_project_file(projfile)
                 if "section" in data:  # NEW
                     workdir = Path(
                         data.get("workdir", Path(projfile).resolve().parent)
@@ -608,6 +608,231 @@ class BuildersBase(QtWidgets.QMainWindow):
                         "Unknown format of the project file",
                         qb.StandardButton.Abort,
                     )
+
+    def _validate_import_json(self, data):
+        for key in ("kind", "P", "T", "inv", "uni"):
+            if key not in data:
+                return False, "Missing required key '{}' in JSON.".format(key)
+        kind_map = {"PTBuilder": "PT", "TXBuilder": "TX", "PXBuilder": "PX"}
+        expected = kind_map[self.builder_name]
+        if data["kind"] != expected:
+            return False, "JSON kind is '{}', but this is a {} builder.".format(
+                data["kind"], expected
+            )
+
+        def in_range(value, rng):
+            return rng[0] <= value <= rng[1]
+
+        def range_in_range(value, rng):
+            return (
+                isinstance(value, list)
+                and len(value) == 2
+                and rng[0] <= value[0] <= value[1] <= rng[1]
+            )
+
+        if expected == "TX":
+            p_ok = isinstance(data["P"], (int, float)) and in_range(
+                data["P"], self.tc.prange
+            )
+            t_ok = range_in_range(data["T"], self.tc.trange)
+        elif expected == "PX":
+            p_ok = range_in_range(data["P"], self.tc.prange)
+            t_ok = isinstance(data["T"], (int, float)) and in_range(
+                data["T"], self.tc.trange
+            )
+        else:
+            p_ok = range_in_range(data["P"], self.tc.prange)
+            t_ok = range_in_range(data["T"], self.tc.trange)
+        if not (p_ok and t_ok):
+            return False, (
+                "JSON P/T range does not fit inside the scriptfile's diagram "
+                "window P={}, T={}.".format(self.tc.prange, self.tc.trange)
+            )
+        if not isinstance(data["inv"], list) or not isinstance(data["uni"], list):
+            return False, "'inv' and 'uni' must be lists."
+        return True, ""
+
+    def _resolve_unknown_phases(self, data, phase_map=None):
+        """Ensure every phase referenced in data['inv']/data['uni'] is known
+        to self.tc.phases, renaming data in place. Unknown phases are
+        resolved from phase_map when given (headless/scripted use); otherwise
+        the user is prompted for a replacement name per unknown phase,
+        mirroring fix_phasenames's QInputDialog pattern. Returns True on
+        success, False if the import should be aborted.
+        """
+        used_phases = set()
+        for entry in itertools.chain(data["inv"], data["uni"]):
+            if isinstance(entry, dict):
+                used_phases.update(entry.get("phases", []) or [])
+                used_phases.update(entry.get("out", []) or [])
+        unknown = sorted(used_phases - self.tc.phases)
+        if not unknown:
+            return True
+        mapping = dict(phase_map) if phase_map else {}
+        for name in unknown:
+            if name in mapping:
+                continue
+            if phase_map is not None:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Unknown phase",
+                    "No mapping provided for unknown phase '{}'.".format(name),
+                    QtWidgets.QMessageBox.StandardButton.Abort,
+                )
+                return False
+            text, ok = QtWidgets.QInputDialog.getText(
+                self,
+                "Unknown phase '{}'".format(name),
+                "Phase '{}' is not defined in this project.\n"
+                "Enter the correct phase name:".format(name),
+            )
+            if not ok or not text.strip():
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Cannot import",
+                    "Import cancelled: phase '{}' was not resolved.".format(name),
+                    QtWidgets.QMessageBox.StandardButton.Abort,
+                )
+                return False
+            mapping[name] = text.strip()
+        for entry in itertools.chain(data["inv"], data["uni"]):
+            if isinstance(entry, dict):
+                entry["phases"] = [mapping.get(p, p) for p in entry.get("phases", [])]
+                entry["out"] = [mapping.get(p, p) for p in entry.get("out", [])]
+        return True
+
+    def import_from_json(self, jsonfile=None, phase_map=None):
+        if not (
+            self.ready and len(self.ps.invpoints) == 0 and len(self.ps.unilines) == 0
+        ):
+            qb = QtWidgets.QMessageBox
+            qb.critical(
+                self,
+                "Cannot import",
+                "Import from JSON requires an initialized, empty project "
+                "(no invariant points or univariant lines yet).",
+                qb.StandardButton.Abort,
+            )
+            return
+        if jsonfile is None:
+            qd = QtWidgets.QFileDialog
+            jsonfile = qd.getOpenFileName(
+                self, "Import from JSON", str(self.tc.workdir), "JSON file (*.json)"
+            )[0]
+            if not jsonfile:
+                return
+        try:
+            with open(jsonfile, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Invalid JSON",
+                "Could not read JSON file:\n{}".format(e),
+                QtWidgets.QMessageBox.StandardButton.Abort,
+            )
+            return
+        ok, msg = self._validate_import_json(data)
+        if not ok:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Invalid JSON for this project",
+                msg,
+                QtWidgets.QMessageBox.StandardButton.Abort,
+            )
+            return
+        if not self._resolve_unknown_phases(data, phase_map=phase_map):
+            return
+        n_inv_ok = n_inv_fail = n_inv_dup = 0
+        n_uni_ok = n_uni_fail = n_uni_dup = 0
+        QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+        try:
+            n = len(data["inv"])
+            for i, entry in enumerate(data["inv"]):
+                self.statusBar().showMessage(
+                    "Importing invariant point {}/{}...".format(i + 1, n)
+                )
+                QtWidgets.QApplication.processEvents()
+                try:
+                    phases, out = set(entry["phases"]), set(entry["out"])
+                except (KeyError, TypeError):
+                    n_inv_fail += 1
+                    continue
+                if len(out) != 2:
+                    n_inv_fail += 1
+                    continue
+                inv_tmp = InvPoint(phases=phases, out=out)
+                isnew, id_inv = self.ps.getidinv(inv_tmp)
+                if not isnew:
+                    n_inv_dup += 1
+                    continue
+                inv = self._import_calc_inv(inv_tmp.phases, inv_tmp.out)
+                if inv is None:
+                    n_inv_fail += 1
+                    continue
+                self.invmodel.appendRow(id_inv, inv)
+                n_inv_ok += 1
+                if self.checkAutoconnectInv.isChecked():
+                    for uni in self.ps.unilines.values():
+                        if uni.contains_inv(inv):
+                            candidates = [inv]
+                            for other_inv in self.ps.invpoints.values():
+                                if other_inv.id != id_inv and uni.contains_inv(
+                                    other_inv
+                                ):
+                                    candidates.append(other_inv)
+                            if len(candidates) == 2:
+                                self.uni_connect(uni.id, candidates)
+
+            n = len(data["uni"])
+            for j, entry in enumerate(data["uni"]):
+                self.statusBar().showMessage(
+                    "Importing univariant line {}/{}...".format(j + 1, n)
+                )
+                QtWidgets.QApplication.processEvents()
+                try:
+                    phases, out = set(entry["phases"]), set(entry["out"])
+                except (KeyError, TypeError):
+                    n_uni_fail += 1
+                    continue
+                if len(out) != 1:
+                    n_uni_fail += 1
+                    continue
+                uni_tmp = UniLine(phases=phases, out=out)
+                isnew, id_uni = self.ps.getiduni(uni_tmp)
+                if not isnew:
+                    n_uni_dup += 1
+                    continue
+                uni = self._import_calc_uni(uni_tmp.phases, uni_tmp.out, entry)
+                if uni is None:
+                    n_uni_fail += 1
+                    continue
+                candidates = [
+                    inv for inv in self.ps.invpoints.values() if uni.contains_inv(inv)
+                ]
+                self.unimodel.appendRow(id_uni, uni)
+                n_uni_ok += 1
+                if self.checkAutoconnectUni.isChecked() and len(candidates) == 2:
+                    self.uni_connect(id_uni, candidates)
+        finally:
+            QtWidgets.QApplication.restoreOverrideCursor()
+
+        self.changed = True
+        self.invview.resizeColumnsToContents()
+        self.uniview.resizeColumnsToContents()
+        self.plot()
+        summary = (
+            "Imported {}/{} invariant points and {}/{} univariant lines from JSON."
+        ).format(n_inv_ok, len(data["inv"]), n_uni_ok, len(data["uni"]))
+        if n_inv_fail or n_uni_fail:
+            summary += (
+                " {} invariant points and {} univariant lines could not be calculated."
+            ).format(n_inv_fail, n_uni_fail)
+        if n_inv_dup or n_uni_dup:
+            summary += (
+                " ({} invariant points and {} univariant lines were duplicates, skipped.)"
+            ).format(n_inv_dup, n_uni_dup)
+        self.statusBar().showMessage(summary)
 
     def cleanup_storage(self):
         if self.ready:
@@ -838,11 +1063,21 @@ class BuildersBase(QtWidgets.QMainWindow):
                 dia = OutputDialog("TC output", self.textFullOutput.toPlainText())
                 dia.exec()
 
+    def toolbar_mode_name(self):
+        """str: current matplotlib toolbar mode name ("PAN"/"ZOOM"/...).
+
+        matplotlib's NavigationToolbar2 exposes the active mode only via the
+        internal `_Mode` enum's `.name` attribute, not a public API, so this
+        degrades to "" instead of raising if that attribute is ever renamed
+        by a future matplotlib version.
+        """
+        return getattr(getattr(self.toolbar, "mode", None), "name", "")
+
     def clean_high(self):
         if self.unihigh is not None:
             try:
                 self.unihigh[0].remove()
-            except Exception:
+            except (NotImplementedError, ValueError):
                 pass
             self.unihigh = None
             self.textOutput.clear()
@@ -850,7 +1085,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.invhigh is not None:
             try:
                 self.invhigh[0].remove()
-            except Exception:
+            except (NotImplementedError, ValueError):
                 pass
             self.invhigh = None
             self.textOutput.clear()
@@ -858,13 +1093,13 @@ class BuildersBase(QtWidgets.QMainWindow):
         if self.outhigh is not None:
             try:
                 self.outhigh[0].remove()
-            except Exception:
+            except (NotImplementedError, ValueError):
                 pass
             self.outhigh = None
         if self.presenthigh is not None:
             try:
                 self.presenthigh[0].remove()
-            except Exception:
+            except (NotImplementedError, ValueError):
                 pass
             self.presenthigh = None
         self.canvas.draw()
@@ -1444,9 +1679,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                                 done = True
                     if not done:
                         # cancel zoom and pan action on toolbar
-                        if self.toolbar.mode.name == "PAN":
+                        if self.toolbar_mode_name() == "PAN":
                             self.toolbar.pan()
-                        elif self.toolbar.mode.name == "ZOOM":
+                        elif self.toolbar_mode_name() == "ZOOM":
                             self.toolbar.zoom()
                         self.cid = self.canvas.mpl_connect(
                             "button_press_event", self.clicker
@@ -1653,9 +1888,9 @@ class BuildersBase(QtWidgets.QMainWindow):
                 which = phases.difference(self.ps.excess)
                 if which:
                     # cancel zoom and pan action on toolbar
-                    if self.toolbar.mode.name == "PAN":
+                    if self.toolbar_mode_name() == "PAN":
                         self.toolbar.pan()
-                    elif self.toolbar.mode.name == "ZOOM":
+                    elif self.toolbar_mode_name() == "ZOOM":
                         self.toolbar.zoom()
                     self.did = self.canvas.mpl_connect(
                         "button_press_event", self.dogminer
@@ -1690,7 +1925,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 phases = set(dgtxt.split("phases: ")[1].split(" (")[0].split())
                 tmp = InvPoint(phases=phases, out=set(), output="User-defined")
                 self.set_phaselist(tmp, show_output=False)
-            except Exception:
+            except IndexError:
                 self.statusBar().showMessage("You need to run dogmin first.")
         else:
             self.statusBar().showMessage("Project is not yet initialized.")
@@ -1830,14 +2065,14 @@ class BuildersBase(QtWidgets.QMainWindow):
                     if unconnected:
                         self.ax.annotate(
                             inv.annotation(self.checkLabelInvText.checkState()),
-                            (inv.x, inv.y),
+                            (inv._x, inv._y),
                             **invlabel_unc_kw,
                         )
                     else:
                         if not self.checkHidedoneInv.isChecked():
                             self.ax.annotate(
                                 inv.annotation(self.checkLabelInvText.checkState()),
-                                (inv.x, inv.y),
+                                (inv._x, inv._y),
                                 **invlabel_kw,
                             )
                 else:
@@ -1887,7 +2122,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if shapes:
                     vari = [-len(key) for key in shapes]
                     poc = max(vari) - min(vari) + 1
-                    pscolors = cm.get_cmap("cool")(np.linspace(0, 1, poc))
+                    pscolors = matplotlib.colormaps["cool"](np.linspace(0, 1, poc))
                     # Set alpha
                     pscolors[:, -1] = 0.6  # alpha
                     pscmap = ListedColormap(pscolors)
@@ -2161,8 +2396,7 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.builder_file_selector + ";;PSBuilder 1.X project (*.psb)",
             )[0]
         if Path(projfile).is_file():
-            with gzip.open(projfile, "rb") as stream:
-                data = pickle.load(stream)
+            data = load_project_file(projfile)
             # NEW FORMAT
             if "section" in data:
                 active = Path(projfile).resolve().parent
@@ -2627,10 +2861,10 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
                 self.statusBar().showMessage("Dogmin failed.")
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
+    def do_calc(self, calcT, phases=None, out=None, run_tc=True):
         if self.ready:
             if run_tc:
-                if phases == {} and out == {}:
+                if phases is None and out is None:
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
@@ -2874,6 +3108,60 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             self.statusBar().showMessage("Project is not yet initialized.")
         self.pushMerge.setChecked(False)
 
+    def _import_calc_inv(self, phases, out):
+        tcout, ans = self.tc.calc_pt(
+            phases, out, prange=self.tc.prange, trange=self.tc.trange
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir"):
+            return None
+        return InvPoint(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=res.y,
+            x=res.x,
+            output=output,
+            results=res,
+        )
+
+    def _import_calc_uni(self, phases, out, entry):
+        try:
+            p0, p1 = entry["P"]
+            t0, t1 = entry["T"]
+            ratio_P = (p1 - p0) / (self.tc.prange[1] - self.tc.prange[0])
+            ratio_T = (t1 - t0) / (self.tc.trange[1] - self.tc.trange[0])
+        except (KeyError, TypeError, ValueError, ZeroDivisionError):
+            return None
+        # extend by 10% of the JSON line's own P/T span to minimize
+        # metastable segments while still leaving room for endpoints
+        pext = 0.1 * (p1 - p0)
+        text = 0.1 * (t1 - t0)
+        prange = (max(p0 - pext, self.tc.prange[0]), min(p1 + pext, self.tc.prange[1]))
+        trange = (max(t0 - text, self.tc.trange[0]), min(t1 + text, self.tc.trange[1]))
+        calc = self.tc.calc_p if ratio_P < ratio_T else self.tc.calc_t
+        tcout, ans = calc(
+            phases,
+            out,
+            prange=prange,
+            trange=trange,
+            steps=self.spinSteps.value(),
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir") or len(res) < 2:
+            return None
+        return UniLine(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=res.y,
+            x=res.x,
+            output=output,
+            results=res,
+        )
+
 
 class TXBuilder(BuildersBase, Ui_TXBuilder):
     """Main class for txbuilder"""
@@ -2894,7 +3182,9 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings("LX", "txbuilder")
+        builder_settings = QtCore.QSettings(
+            "LX", f"txbuilder {QTPY_API}{QT_VERSION.split('.')[0]}"
+        )
         if write:
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("extend_range", self.spinOver.value())
@@ -3099,8 +3389,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 self, "Open project", openin, self.builder_file_selector
             )[0]
         if Path(projfile).is_file():
-            with gzip.open(projfile, "rb") as stream:
-                data = pickle.load(stream)
+            data = load_project_file(projfile)
             if "section" in data:
                 active = Path(projfile).resolve().parent
                 try:
@@ -3276,8 +3565,7 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
                 "PTBuilder project (*.ptb)",
             )[0]
             if Path(projfile).is_file():
-                with gzip.open(projfile, "rb") as stream:
-                    data = pickle.load(stream)
+                data = load_project_file(projfile)
                 if "section" in data:  # NEW
                     pm = sum(self.tc.prange) / 2
                     extend = self.spinOver.value()
@@ -3607,10 +3895,10 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
+    def do_calc(self, calcT, phases=None, out=None, run_tc=True):
         if self.ready:
             if run_tc:
-                if phases == {} and out == {}:
+                if phases is None and out is None:
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
@@ -3877,6 +4165,76 @@ class TXBuilder(BuildersBase, Ui_TXBuilder):
             self.statusBar().showMessage("Project is not yet initialized.")
         self.pushMerge.setChecked(False)
 
+    def _import_calc_inv(self, phases, out):
+        pm = sum(self.tc.prange) / 2
+        prange = (
+            max(pm - self.rangeSpin.value() / 2, self.tc.prange[0]),
+            min(pm + self.rangeSpin.value() / 2, self.tc.prange[1]),
+        )
+        tcout, ans = self.tc.calc_tx(
+            phases,
+            out,
+            prange=prange,
+            trange=self.tc.trange,
+            xvals=(0, 1),
+            steps=self.spinSteps.value(),
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir") or len(res) < 2:
+            return None
+        splt = interp1d(res.y, res.x, bounds_error=False, fill_value=np.nan)
+        splx = interp1d(res.y, res.c, bounds_error=False, fill_value=np.nan)
+        Xm = splt([pm])
+        Ym = splx([pm])
+        if np.isnan(Xm[0]):
+            return None
+        ix = np.argmin((res.x - Xm) ** 2)
+        return InvPoint(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=Ym,
+            x=Xm,
+            output=output,
+            results=res[ix : ix + 1],
+        )
+
+    def _import_calc_uni(self, phases, out, entry):
+        pm = sum(self.tc.prange) / 2
+        try:
+            t0, t1 = entry["T"]
+            x0, x1 = entry["X"]
+        except (KeyError, TypeError, ValueError):
+            return None
+        # extend by 10% of the JSON line's own T/X span to minimize
+        # metastable segments while still leaving room for endpoints
+        text = 0.1 * (t1 - t0)
+        xext = 0.1 * (x1 - x0)
+        trange = (max(t0 - text, self.tc.trange[0]), min(t1 + text, self.tc.trange[1]))
+        xvals = (max(x0 - xext, 0.0), min(x1 + xext, 1.0))
+        tcout, ans = self.tc.calc_tx(
+            phases,
+            out,
+            prange=(pm, pm),
+            trange=trange,
+            xvals=xvals,
+            steps=self.spinSteps.value(),
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir") or len(res) < 2:
+            return None
+        return UniLine(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=res.c,
+            x=res.x,
+            output=output,
+            results=res,
+        )
+
 
 class PXBuilder(BuildersBase, Ui_PXBuilder):
     """Main class for pxbuilder"""
@@ -3897,7 +4255,9 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
 
     def app_settings(self, write=False):
         # Applicatiom settings
-        builder_settings = QtCore.QSettings("LX", "pxbuilder")
+        builder_settings = QtCore.QSettings(
+            "LX", f"pxbuilder {QTPY_API}{QT_VERSION.split('.')[0]}"
+        )
         if write:
             builder_settings.setValue("precision", self.spinPrec.value())
             builder_settings.setValue("extend_range", self.spinOver.value())
@@ -4102,8 +4462,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 self, "Open project", openin, self.builder_file_selector
             )[0]
         if Path(projfile).is_file():
-            with gzip.open(projfile, "rb") as stream:
-                data = pickle.load(stream)
+            data = load_project_file(projfile)
             if "section" in data:
                 active = Path(projfile).resolve().parent
                 try:
@@ -4279,8 +4638,7 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
                 "PTBuilder project (*.ptb)",
             )[0]
             if Path(projfile).is_file():
-                with gzip.open(projfile, "rb") as stream:
-                    data = pickle.load(stream)
+                data = load_project_file(projfile)
                 if "section" in data:  # NEW
                     tm = sum(self.tc.trange) / 2
                     extend = self.spinOver.value()
@@ -4603,10 +4961,10 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
             self.tc.update_scriptfile(bulk=self.bulk, xsteps=self.spinSteps.value())
             self.pushDogmin.setChecked(False)
 
-    def do_calc(self, calcT, phases={}, out={}, run_tc=True):
+    def do_calc(self, calcT, phases=None, out=None, run_tc=True):
         if self.ready:
             if run_tc:
-                if phases == {} and out == {}:
+                if phases is None and out is None:
                     phases, out = self.get_phases_out()
                 self.statusBar().showMessage("Running THERMOCALC...")
             QtWidgets.QApplication.processEvents()
@@ -4872,6 +5230,76 @@ class PXBuilder(BuildersBase, Ui_PXBuilder):
         else:
             self.statusBar().showMessage("Project is not yet initialized.")
         self.pushMerge.setChecked(False)
+
+    def _import_calc_inv(self, phases, out):
+        tm = sum(self.tc.trange) / 2
+        trange = (
+            max(tm - self.rangeSpin.value() / 2, self.tc.trange[0]),
+            min(tm + self.rangeSpin.value() / 2, self.tc.trange[1]),
+        )
+        tcout, ans = self.tc.calc_px(
+            phases,
+            out,
+            prange=self.tc.prange,
+            trange=trange,
+            xvals=(0, 1),
+            steps=self.spinSteps.value(),
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir") or len(res) < 2:
+            return None
+        splp = interp1d(res.x, res.y, bounds_error=False, fill_value=np.nan)
+        splx = interp1d(res.x, res.c, bounds_error=False, fill_value=np.nan)
+        Ym = splp([tm])
+        Xm = splx([tm])
+        if np.isnan(Ym[0]):
+            return None
+        ix = np.argmin((res.y - Ym) ** 2)
+        return InvPoint(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=Ym,
+            x=Xm,
+            output=output,
+            results=res[ix : ix + 1],
+        )
+
+    def _import_calc_uni(self, phases, out, entry):
+        tm = sum(self.tc.trange) / 2
+        try:
+            p0, p1 = entry["P"]
+            x0, x1 = entry["X"]
+        except (KeyError, TypeError, ValueError):
+            return None
+        # extend by 10% of the JSON line's own P/X span to minimize
+        # metastable segments while still leaving room for endpoints
+        pext = 0.1 * (p1 - p0)
+        xext = 0.1 * (x1 - x0)
+        prange = (max(p0 - pext, self.tc.prange[0]), min(p1 + pext, self.tc.prange[1]))
+        xvals = (max(x0 - xext, 0.0), min(x1 + xext, 1.0))
+        tcout, ans = self.tc.calc_px(
+            phases,
+            out,
+            prange=prange,
+            trange=(tm, tm),
+            xvals=xvals,
+            steps=self.spinSteps.value(),
+        )
+        status, res, output = self.tc.parse_logfile()
+        if status in ("bombed", "nir") or len(res) < 2:
+            return None
+        return UniLine(
+            phases=phases,
+            out=out,
+            cmd=ans,
+            variance=res.variance,
+            y=res.y,
+            x=res.c,
+            output=output,
+            results=res,
+        )
 
 
 class InvModel(QtCore.QAbstractTableModel):
@@ -5330,7 +5758,7 @@ class TopologyGraph(QtWidgets.QDialog):
         # npos = nx.planar_layout(G)
         # npos = nx.kamada_kawai_layout(G, pos=nx.planar_layout(G))
         widths = Normalize(vmin=0, vmax=len(edges))
-        color = cm.get_cmap("tab20", len(edges))
+        color = matplotlib.colormaps["tab20"].resampled(len(edges))
         for ix, out in enumerate(edges):
             nx.draw_networkx_edges(
                 G,
@@ -5432,7 +5860,7 @@ def intersection(uni1, uni2, ratio=1, extra=0.2, N=100):
     for i in range(n):
         try:
             T[:, i] = np.linalg.solve(AA[:, :, i], BB[:, i])
-        except Exception:
+        except np.linalg.LinAlgError:
             T[:, i] = np.nan
 
     in_range = (T[0, :] >= 0) & (T[1, :] >= 0) & (T[0, :] <= 1) & (T[1, :] <= 1)

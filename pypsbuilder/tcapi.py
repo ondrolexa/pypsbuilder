@@ -31,6 +31,20 @@ popen_kw = dict(
     universal_newlines=False,
 )
 
+# seconds to wait for a THERMOCALC/drawpd subprocess before giving up
+TC_TIMEOUT = 60
+
+
+def _hidden_startupinfo():
+    """Windows-only STARTUPINFO that hides the subprocess console window;
+    None on other platforms (subprocess.Popen accepts startupinfo=None)."""
+    if sys.platform.startswith("win"):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags = 1
+        startupinfo.wShowWindow = 0
+        return startupinfo
+    return None
+
 
 def get_tcapi(workdir=".", TCenc="mac-roman"):
     workdir = Path(workdir).resolve()
@@ -62,18 +76,19 @@ def get_tcapi(workdir=".", TCenc="mac-roman"):
             raise InitError("No THERMOCALC executable in {} directory.".format(workdir))
         # TC version
         errinfo = "THERMOCALC executable test."
-        if sys.platform.startswith("win"):
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags = 1
-            startupinfo.wShowWindow = 0
-        else:
-            startupinfo = None
         p = subprocess.Popen(
-            str(tcexe), cwd=str(workdir), startupinfo=startupinfo, **popen_kw
+            str(tcexe), cwd=str(workdir), startupinfo=_hidden_startupinfo(), **popen_kw
         )
-        out, err = p.communicate(input="kill\n\n".encode(TCenc))
-        if err is not None:
-            print(err.decode("utf-8"))
+        try:
+            out, _ = p.communicate(input="kill\n\n".encode(TCenc), timeout=TC_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.communicate()
+            raise TCError(
+                "THERMOCALC did not respond within {}s in {}".format(
+                    TC_TIMEOUT, workdir
+                )
+            )
         sys.stdout.flush()
         output = out.decode(TCenc).strip()
         if float(output.split("\n")[0].split()[1]) < 3.5:
@@ -88,7 +103,7 @@ def get_tcapi(workdir=".", TCenc="mac-roman"):
                 return api, True
             else:
                 return api.status, False
-    except BaseException as e:
+    except Exception as e:
         if (
             isinstance(e, InitError)
             or isinstance(e, ScriptfileError)
@@ -266,18 +281,24 @@ class TCAPI(object):
         Returns:
             str: THERMOCALC standard output
         """
-        if sys.platform.startswith("win"):
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags = 1
-            startupinfo.wShowWindow = 0
-        else:
-            startupinfo = None
         p = subprocess.Popen(
-            str(self.tcexe), cwd=str(self.workdir), startupinfo=startupinfo, **popen_kw
+            str(self.tcexe),
+            cwd=str(self.workdir),
+            startupinfo=_hidden_startupinfo(),
+            **popen_kw,
         )
-        output, err = p.communicate(input=instr.encode(self.TCenc))
-        if err is not None:
-            print(err.decode("utf-8"))
+        try:
+            output, _ = p.communicate(
+                input=instr.encode(self.TCenc), timeout=TC_TIMEOUT
+            )
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.communicate()
+            raise TCError(
+                "THERMOCALC did not respond within {}s in {}".format(
+                    TC_TIMEOUT, self.workdir
+                )
+            )
         sys.stdout.flush()
         return output.decode(self.TCenc)
 
@@ -285,27 +306,62 @@ class TCAPI(object):
         """Method to run drawpd."""
         if self.drexe:
             instr = "\n" + self.name + "\n"
-            if sys.platform.startswith("win"):
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags = 1
-                startupinfo.wShowWindow = 0
-            else:
-                startupinfo = None
             p = subprocess.Popen(
                 str(self.drexe),
                 cwd=str(self.workdir),
-                startupinfo=startupinfo,
+                startupinfo=_hidden_startupinfo(),
                 **popen_kw,
             )
-            p.communicate(input=instr.encode(self.TCenc))
+            try:
+                p.communicate(input=instr.encode(self.TCenc), timeout=TC_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.communicate()
+                raise TCError(
+                    "drawpd did not respond within {}s in {}".format(
+                        TC_TIMEOUT, self.workdir
+                    )
+                )
             sys.stdout.flush()
             return True
         else:
             print("No drawpd executable identified in working directory.")
             return False
 
+    @staticmethod
+    def _parse_variance(tcout):
+        """Parse variance of required equilibrium from THERMOCALC output.
+
+        Shared by TC35API/TC34API's calc_variance, which otherwise invoke
+        THERMOCALC differently per version (scriptfile-based calcs for 3.5,
+        a direct interactive assemblage query for 3.4).
+        """
+        for ln in tcout.splitlines():
+            if "variance of required equilibrium" in ln:
+                return int(ln[ln.index("(") + 1 : ln.index("?")])
+        return None
+
 
 class TC35API(TCAPI):
+    @staticmethod
+    def _parse_scripts(lines):
+        """Parse scriptfile lines (with trailing %-comments already
+        strippable) into a dict of script-keyword -> list of argument
+        lines, e.g. {"axfile": ["mb50NCKFMASHTO"], "bulk": [...]}."""
+        scripts = {}
+        for ln in lines:
+            ln_clean = ln.split("%")[0].strip()
+            if ln_clean != "":
+                tokens = ln_clean.split(maxsplit=1)
+                if len(tokens) > 1:
+                    if tokens[0] in scripts:
+                        scripts[tokens[0]].append(tokens[1].strip())
+                    else:
+                        scripts[tokens[0]] = [tokens[1].strip()]
+                else:
+                    scripts[tokens[0]] = []
+        return scripts
+
     def __init__(self, workdir, tcexe, drexe, encoding="mac-roman"):
         self.workdir = Path(workdir).resolve()
         self.tcexe = tcexe
@@ -372,18 +428,7 @@ class TC35API(TCAPI):
                         "There are not {PSBBULK-BEGIN} and {PSBBULK-END} tags in your scriptfile."
                     )
                 # Create scripts directory
-                scripts = {}
-                for ln in lines:
-                    ln_clean = ln.split("%")[0].strip()
-                    if ln_clean != "":
-                        tokens = ln_clean.split(maxsplit=1)
-                        if len(tokens) > 1:
-                            if tokens[0] in scripts:
-                                scripts[tokens[0]].append(tokens[1].strip())
-                            else:
-                                scripts[tokens[0]] = [tokens[1].strip()]
-                        else:
-                            scripts[tokens[0]] = []
+                scripts = self._parse_scripts(lines)
                 # axfile
                 if "axfile" not in scripts:
                     raise ScriptfileError(
@@ -427,9 +472,7 @@ class TC35API(TCAPI):
                             1
                         ].split(
                             "<==========================================================>"
-                        )[
-                            0
-                        ]
+                        )[0]
                         lns = [
                             ln for ln in part.split(os.linesep) if ln.startswith(" ")
                         ]
@@ -440,7 +483,7 @@ class TC35API(TCAPI):
                             self.usedbulk.append(
                                 lns[2].split()[: len(self.usedbulk[0])]
                             )
-                    except BaseException:
+                    except Exception:
                         self.usedbulk = None
                 # inexcess
                 errinfo = "Wrong inexcess in scriptfile."
@@ -510,7 +553,7 @@ class TC35API(TCAPI):
                 # OK
                 self.status = "Initial check done."
                 self.OK = True
-            except BaseException as e:
+            except Exception as e:
                 if (
                     isinstance(e, InitError)
                     or isinstance(e, ScriptfileError)
@@ -637,89 +680,13 @@ class TC35API(TCAPI):
             return status, results, output, (phases, out, calcs)
         else:
             return status, results, output
-        # except Exception:
-        #     if get_phases:
-        #         return "bombed", None, None, (None, None, [])
-        #     else:
-        #         return "bombed", None, None
-
-    def parse_logfile_backup(self, **kwargs):
-        output = kwargs.get("output", None)
-        resic = kwargs.get("resic", None)
-        if output is None:
-            with self.logfile.open("r", encoding=self.TCenc) as f:
-                output = f.read()
-        lines = [ln for ln in output.splitlines() if ln != ""]
-        results = None
-        do_parse = True
-        if resic is None:
-            if not self.icfile.exists():
-                if [ix for ix, ln in enumerate(lines) if "BOMBED" in ln]:
-                    status = "bombed"
-                else:
-                    status = "nir"
-                do_parse = False
-            else:
-                with self.icfile.open("r", encoding=self.TCenc) as f:
-                    resic = f.read()
-        if do_parse:
-            lines = [ln for ln in output.splitlines() if ln != ""]
-            # parse ptguesses
-            bstarts = [
-                ix
-                for ix, ln in enumerate(lines)
-                if ln.startswith(
-                    "--------------------------------------------------------------------"
-                )
-            ]
-            bstarts.append(len(lines))
-            ptguesses = []
-            corrects = []
-            for bs, be in zip(bstarts[:-1], bstarts[1:]):
-                block = lines[bs:be]
-                if block[2].startswith("#"):
-                    corrects.append(False)
-                else:
-                    corrects.append(True)
-                xyz = [ix for ix, ln in enumerate(block) if ln.startswith("xyzguess")]
-                gixs = [ix for ix, ln in enumerate(block) if ln.startswith("ptguess")][
-                    0
-                ] - 3
-                gixe = xyz[-1] + 2
-                ptguesses.append(block[gixs:gixe])
-            # parse icfile
-            blocks = resic.split(
-                "\n===========================================================\n\n"
-            )[1:]
-            # done
-            if len(blocks) > 0:
-                if self.tcversionfloat > 3.5:
-                    rlist = [
-                        TCResult.from_block351(block, ptguess)
-                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
-                        if correct
-                    ]
-                else:
-                    rlist = [
-                        TCResult.from_block(block, ptguess)
-                        for block, ptguess, correct in zip(blocks, ptguesses, corrects)
-                        if correct
-                    ]
-                if len(rlist) > 0:
-                    status = "ok"
-                    results = TCResultSet(rlist)
-                else:
-                    status = "nir"
-            else:
-                status = "nir"
-        return status, results, output
 
     def update_scriptfile(self, **kwargs):
         """Method to update scriptfile.
 
         This method is used to programatically edit scriptfile.
 
-        Kwargs:
+        Keyword Args:
             calcs: List of lines defining fully hands-off calculations. Default None.
             get_old_calcs: When True method returns existing calcs lines
                 before possible modification. Default False.
@@ -1033,7 +1000,6 @@ class TC35API(TCAPI):
         Returns:
             int: variance
         """
-        variance = None
         calcs = [
             "calcP {} {}".format(*self.prange),
             "calcT {} {}".format(*self.trange),
@@ -1043,11 +1009,7 @@ class TC35API(TCAPI):
         old_calcs = self.update_scriptfile(get_old_calcs=True, calcs=calcs)
         tcout = self.runtc("kill\n\n")
         self.update_scriptfile(calcs=old_calcs)
-        for ln in tcout.splitlines():
-            if "variance of required equilibrium" in ln:
-                variance = int(ln[ln.index("(") + 1 : ln.index("?")])
-                break
-        return variance
+        return self._parse_variance(tcout)
 
 
 class TC34API(TCAPI):
@@ -1278,7 +1240,7 @@ class TC34API(TCAPI):
                 # OK
                 self.status = "Initial check done."
                 self.OK = True
-            except BaseException as e:
+            except Exception as e:
                 if (
                     isinstance(e, InitError)
                     or isinstance(e, ScriptfileError)
@@ -1718,10 +1680,5 @@ class TC34API(TCAPI):
         Returns:
             int: variance
         """
-        variance = None
         tcout = self.runtc("{}\nkill\n\n".format(" ".join(phases)))
-        for ln in tcout.splitlines():
-            if "variance of required equilibrium" in ln:
-                variance = int(ln[ln.index("(") + 1 : ln.index("?")])
-                break
-        return variance
+        return self._parse_variance(tcout)

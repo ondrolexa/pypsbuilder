@@ -1,5 +1,9 @@
+import gzip
+import pickle
+
 import pytest
 from pypsbuilder import InvPoint, UniLine, PTsection
+from pypsbuilder.psclasses import load_project_file
 from pypsbuilder.tcapi import TC35API
 
 pytest.ps = PTsection(trange=(400.0, 700.0), prange=(7.0, 16.0))
@@ -277,3 +281,35 @@ def test_create_shapes():
     akey = frozenset({"pa", "ep", "g", "q", "bi", "mu", "H2O", "sph"})
     assert len(shapes) == 1, "Wrong number of areas created"
     assert akey in shapes, "Wrong key for constructed area"
+
+
+def test_load_project_file_roundtrip(tmp_path):
+    projfile = tmp_path / "test.ptb"
+    data = {"section": pytest.ps, "workdir": str(tmp_path), "bulk": ["H2O", "SiO2"]}
+    with gzip.open(projfile, "wb") as stream:
+        pickle.dump(data, stream)
+
+    loaded = load_project_file(projfile)
+
+    assert loaded["workdir"] == str(tmp_path)
+    assert loaded["bulk"] == ["H2O", "SiO2"]
+    section = loaded["section"]
+    assert isinstance(section, PTsection)
+    assert set(section.invpoints) == set(pytest.ps.invpoints)
+    assert set(section.unilines) == set(pytest.ps.unilines)
+    for id, uni in section.unilines.items():
+        assert uni.phases == pytest.ps.unilines[id].phases
+        assert uni.out == pytest.ps.unilines[id].out
+
+
+def test_load_project_file_rejects_disallowed_class(tmp_path):
+    class _Evil:
+        def __reduce__(self):
+            return (eval, ("1 + 1",))
+
+    projfile = tmp_path / "evil.ptb"
+    with gzip.open(projfile, "wb") as stream:
+        pickle.dump(_Evil(), stream)
+
+    with pytest.raises(pickle.UnpicklingError):
+        load_project_file(projfile)

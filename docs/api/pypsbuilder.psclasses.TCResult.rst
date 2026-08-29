@@ -15,6 +15,7 @@
    
       ~TCResult.__init__
       ~TCResult.from_block
+      ~TCResult.from_block351
       ~TCResult.rename_phase
    
    

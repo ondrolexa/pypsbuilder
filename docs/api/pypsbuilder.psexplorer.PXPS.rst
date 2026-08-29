@@ -41,7 +41,6 @@
       ~PXPS.merge_data
       ~PXPS.onclick
       ~PXPS.overlap_isopleths
-      ~PXPS.pointcalc
       ~PXPS.remove_grid_data
       ~PXPS.save
       ~PXPS.save_tab

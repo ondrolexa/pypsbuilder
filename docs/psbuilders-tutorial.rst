@@ -4,11 +4,11 @@ Pseudosection builders tutorial
 The **pypsbuilder** provides three builders ``ptbuilder``, ``txbuilder`` and
 ``pxbuilder`` to create P-T, T-X and P-X pseudosections.
 
-Before you can successfully run any builder, you have to prepare working
-directory, which contain `THERMOCALC` and `drawpd` executables, preferences
-file, thermodynamic dataset and a-x file. Builders will work only with certain
-setting, like ``calcmode`` must be set to 1, no ask for scripts etc.
-Builders validate settings and gives warning if some action is needed.
+Before you can successfully run any builder, you have to prepare a working
+directory, which contains the `THERMOCALC` and `drawpd` executables, a
+preferences file, a thermodynamic dataset and an a-x file. Builders require
+certain settings, like ``calcmode`` set to 1 and no ``ask`` for scripts.
+Builders validate settings and give a warning if some action is needed.
 
 **The only special need is to place special tags for bulk composition, ptguesses
 and dogmin in your scriptfile, to manage starting guesses and dogmin runs**.
@@ -64,16 +64,30 @@ example scriptfiles in ``examples/avgpelite`` or ``examples/avgpelite_34`` direc
 Using tcinit to setup working directory
 ---------------------------------------
 
-For TC3.5 you can use ``tcinit`` script to initialize working directory.
-It will download the latest 3.5 version of THERMOCALC, appropriate dataset
-and a-x file according to user selection.
+For TC3.5 you can use the ``tcinit`` command to initialize a working
+directory. Run it in an empty directory and answer the prompts::
+
+		$ tcinit
+
+It downloads THERMOCALC 3.51 for your platform (Linux, Windows or macOS) and
+lets you choose one of four bundled datasets/a-x files: ``metapelite``,
+``metabasite``, ``igg25`` (igneous, White et al. 2025 update) or ``igw24``
+(igneous, Weller et al. 2024). The chosen dataset, a-x file, starting
+guesses and preferences file are written into the project directory,
+already tagged with the ``%{PSBGUESS-...}``, ``%{PSBCALC-...}`` and
+``%{PSBBULK-...}`` blocks described above, so the resulting scriptfile works
+with ``ptbuilder``/``txbuilder``/``pxbuilder`` out of the box.
 
 
 New P-T pseudosection project
 -----------------------------
 
-Use the terminal or an Anaconda Prompt, activate the ``pyps`` environment and
-run ``ptbuilder``::
+If you installed pypsbuilder with `uv <https://docs.astral.sh/uv/>`__, run::
+
+		$ uv run ptbuilder
+
+Otherwise, use the terminal or an Anaconda Prompt, activate the environment
+where pypsbuilder is installed (e.g. ``pyps``) and run ``ptbuilder``::
 
 		$ conda activate pyps
 		(pyps) $ ptbuilder
@@ -90,7 +104,7 @@ Create invariant point
 
 In *Phases* list you select phases which should be in stable assemblage, while
 in lower pane you select two phases for which modal proportion should be zero.
-Than just click either ``Calc P`` or ``Calc T`` and invariant point will appear
+Then just click either ``Calc P`` or ``Calc T`` and invariant point will appear
 on diagram and in the list of invariant points in lower right part of window.
 
 .. image:: images/psbuilder_inv.png
@@ -102,7 +116,7 @@ Similarly, you can create univariant line, when only one phase is selected to
 have zero modal proportion. In addition ``ptbuilder`` allows you to create
 univariant lines based on already calculated invariant points. Right-click on
 invariant points will show context menu with possible choices of univariant
-lines passing trough this point and which are not yet calculated. Note, that
+lines passing through this point and which are not yet calculated. Note, that
 selecting offered univariant line phases from context menu, the starting guesses
 from invariant point will be used in subsequent calculation. Hit **Calc T**
 or **Calc P** according to dp/dT of univariant line. Once calculated, result is
@@ -171,13 +185,13 @@ Manual invariant points or univariant lines
 stable phases and zero mode phases accordingly. For manual univariant line
 begin and end invariant point must be specified. For manual invariant point, you
 can either specify position of point by clicking on diagram by mouse or when
-more than two univariant lines passing trough that point already exists,
+more than two univariant lines passing through that point already exists,
 calculated intersection could be used.
 
 Searching for invariant points
 ------------------------------
 
-To find out, what phase is appearing or disappearing along exiting univariant
+To find out, what phase is appearing or disappearing along an existing univariant
 line, you can activate that line and click the ``Search`` button. Builder list
 possible (only found ones, if ptguesses are not appropriate, only metastable
 invariant points could be offered) solutions ordered along univariant line
@@ -218,14 +232,14 @@ Common problem is that you realize during construction of pseudosection, that
 some univariant lines are double crossing and therefore two invariant points
 and two separated segments of univariant lines with identical assemblage and
 zero mode phase(s) exists. The **pypsbuilders** cannot have those "identical"
-points and lines in single project an pseudosection has be split in two
+points and lines in a single project and pseudosection has to be split in two
 parts by defining axes limits on `Settings` pane. Split line should be
 placed approximately like on the figure.
 
 .. image:: images/crossing.png
 
-The all parts of single pseudosection could be post-processed and visualized
-by **psexplorers** simulataneously as single pseudosection.
+All parts of a single pseudosection can be post-processed and visualized
+by **psexplorers** simultaneously as a single pseudosection.
 
 When you have already calculated invariant points and lines and you want to use
 them in separate project, create new project, set axes limits properly and

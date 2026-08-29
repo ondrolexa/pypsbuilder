@@ -2,8 +2,9 @@ Command line scripts
 ====================
 
 Before any further calculations you can check and draw your pseudosection using
-`psshow` command which construct finished areas within your project. It has few
-options to label pseudosection with assamblages or highlight out phase lines.
+the `psshow` command, which draws the finished areas within your project. It has
+a few options to label the pseudosection with assemblages or highlight out-phase
+lines.
 
 .. parsed-literal::
 
@@ -18,9 +19,9 @@ options to label pseudosection with assamblages or highlight out phase lines.
     positional arguments:
       project               builder project file(s)
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
-      -o OUT [OUT ...], --out OUT [OUT ...]
+      -o, --out OUT [OUT ...]
                             highlight out lines for given phases
       -l, --label           show area labels
       --origwd              use stored original working directory
@@ -61,7 +62,7 @@ aware that calculations takes some time.
     positional arguments:
       project               builder project file(s)
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
       --nx NX               number of T steps
       --ny NY               number of P steps
@@ -95,12 +96,12 @@ Once gridded you can draw isopleths diagrams using `psiso` command:
       project               builder project file(s)
       phase                 phase used for contouring
 
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
-      -e EXPR, --expr EXPR  expression evaluated to calculate values
+      -e, --expr EXPR       expression evaluated to calculate values
       -f, --filled          filled contours
       --origwd              use stored original working directory
-      -o OUT [OUT ...], --out OUT [OUT ...]
+      -o, --out OUT [OUT ...]
                             highlight out lines for given phases
       --nosplit             controls whether the underlying contour is removed or
                             not
@@ -166,3 +167,32 @@ Another example of some other options.
     --out chl ep --cmap YlGnBu_r
 
 .. image:: images/psiso_other.png
+
+Export project for drawpd
+--------------------------
+
+The `psdrawpd` command exports a project into the legacy ``drawpd`` format,
+useful for compatibility with older THERMOCALC tooling or for archiving a
+diagram outside of pypsbuilder.
+
+.. parsed-literal::
+
+    $ psdrawpd -h
+    usage: psdrawpd [-h] [-a] [--origwd] [--tolerance TOLERANCE]
+                    project [project ...]
+
+    Generate drawpd file from project
+
+    positional arguments:
+      project               psbuilder project file(s)
+
+    options:
+      -h, --help            show this help message and exit
+      -a, --areas           export also areas
+      --origwd              use stored original working directory
+      --tolerance TOLERANCE
+                            tolerance to simplify univariant lines
+
+.. parsed-literal::
+
+    $ psdrawpd '/path/to/project.ptb' -a

@@ -9,6 +9,7 @@ outputs and storage of calculated invariant points and univariant lines.
 # website: https://github.com/ondrolexa/pypsbuilder
 
 import gzip
+import importlib
 import pickle
 
 import matplotlib.pyplot as plt
@@ -27,12 +28,79 @@ polymorphs = [
     {"diam", "gph"},
 ]
 
+# Modules whose classes are trusted to appear in a pypsbuilder project file
+# (psexplorer for GridData/PTpath attached by PS.save() once a project has
+# been gridded). Checked dynamically against each module's actual class
+# list rather than a hand-typed name list, so nothing gets missed.
+_PICKLE_TRUSTED_MODULES = ("pypsbuilder.psclasses", "pypsbuilder.psexplorer")
+
+# Stdlib types actually reachable from a pickled section object graph (an
+# OrderedDict of masks inside GridData, a datetime.datetime save timestamp,
+# plain sets).
+_PICKLE_SAFE_STDLIB = {
+    "builtins": {"set", "frozenset", "slice"},
+    "datetime": {"datetime", "date", "time"},
+    "collections": {"OrderedDict"},
+}
+
+
+class _RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that only allows pypsbuilder's own classes plus a small
+    numpy/stdlib safelist.
+
+    Project files are commonly shared between researchers, and plain
+    `pickle.load` executes arbitrary code embedded in the file for any
+    class reference it contains, so unrestricted unpickling of a
+    third-party project file is an arbitrary-code-execution risk.
+
+    The whole numpy namespace is trusted rather than a hand-picked list of
+    reconstruction functions: numpy's array pickling internals
+    (`_reconstruct`/`scalar`/`_frombuffer`/...) only rebuild array data from
+    raw bytes/shape/dtype and differ between numpy 1.x/2.x internal module
+    paths, so pinning exact names is both unsafe (easy to miss one, as a
+    round-trip test caught during development) and doesn't buy real
+    security since none of them execute arbitrary code.
+    """
+
+    def find_class(self, module, name):
+        if module in _PICKLE_TRUSTED_MODULES:
+            mod = importlib.import_module(module)
+            obj = getattr(mod, name, None)
+            if isinstance(obj, type):
+                return obj
+        elif name in _PICKLE_SAFE_STDLIB.get(module, ()):
+            return super().find_class(module, name)
+        elif module == "numpy" or module.startswith("numpy."):
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(
+            "Refusing to unpickle {}.{} in project file".format(module, name)
+        )
+
+
+def load_project_file(projfile):
+    """Load a gzip-pickled psbuilder project file (``.ptb``/``.txb``/``.pxb``).
+
+    Uses :class:`_RestrictedUnpickler` instead of plain ``pickle.load`` so a
+    crafted project file can't execute arbitrary code on load.
+
+    Args:
+        projfile (str, Path): path to the project file.
+
+    Returns:
+        dict: the stored project data (``section``, ``workdir``, ``bulk``,
+        and any other keys saved with the project).
+    """
+    with gzip.open(str(projfile), "rb") as stream:
+        return _RestrictedUnpickler(stream).load()
+
 
 class PseudoBase:
     """Base class with common methods for InvPoint and UniLine."""
 
-    def label(self, excess={}):
+    def label(self, excess=None):
         """str: full label with space delimeted phases - zero mode phase."""
+        if excess is None:
+            excess = set()
         phases_lbl = " ".join(sorted(list(self.phases.difference(excess))))
         out_lbl = " ".join(sorted(list(self.out)))
         return "{} - {}".format(phases_lbl, out_lbl)
@@ -390,11 +458,13 @@ class Dogmin:
     def out(self):
         return set()
 
-    def label(self, excess={}):
+    def label(self, excess=None):
         """str: full label with space delimeted phases."""
+        if excess is None:
+            excess = set()
         return " ".join(sorted(list(self.phases.difference(excess))))
 
-    def annotation(self, show_out=False, excess={}):
+    def annotation(self, show_out=False, excess=None):
         """str: String representation of ID with possible zermo mode phase."""
         if show_out:
             return self.label(excess=excess)
@@ -410,9 +480,9 @@ class Dogmin:
 
 
 class TCResult:
-    def __init__(self, T, p, variance=0, c=0, data={}, ptguess=[""]):
-        self.data = data
-        self.ptguess = ptguess
+    def __init__(self, T, p, variance=0, c=0, data=None, ptguess=None):
+        self.data = data if data is not None else {}
+        self.ptguess = ptguess if ptguess is not None else [""]
         self.T = T
         self.p = p
         self.variance = variance
@@ -711,13 +781,106 @@ class TCResultSet:
         self.results.insert(ix, result)
 
 
+class _IdentityIndexedDict(dict):
+    """dict of id -> InvPoint/UniLine that also maintains an auxiliary
+    (frozenset(phases), frozenset(out)) -> id index, so
+    SectionBase.getidinv/getiduni can do an O(1) lookup instead of a full
+    linear scan over every point/line.
+
+    All mutation is routed through __setitem__/__delitem__ (and every other
+    mutating dict method, implemented on top of those two) so the index
+    stays correct regardless of whether callers go through
+    SectionBase.add_inv/add_uni or mutate the dict directly with
+    `section.invpoints[id] = inv` / `del section.invpoints[id]` (both
+    patterns are used throughout the codebase).
+
+    _ensure_index() guards against dict subclasses being reconstructed via
+    __new__ during unpickling, which bypasses __init__ entirely - the
+    auxiliary index is rebuilt on first use rather than assumed to exist.
+    """
+
+    def _ensure_index(self):
+        if "_identity_index" not in self.__dict__:
+            self.__dict__["_identity_index"] = {}
+            self.__dict__["_max_id"] = 0
+
+    def _index_add(self, id, obj):
+        self._ensure_index()
+        self._identity_index.setdefault(frozenset(obj.phases), {})[
+            frozenset(obj.out)
+        ] = id
+        if id > self._max_id:
+            self._max_id = id
+
+    def _index_remove(self, id, obj):
+        self._ensure_index()
+        group = self._identity_index.get(frozenset(obj.phases))
+        if group is not None and group.get(frozenset(obj.out)) == id:
+            del group[frozenset(obj.out)]
+            if not group:
+                del self._identity_index[frozenset(obj.phases)]
+
+    def __setitem__(self, id, obj):
+        self._ensure_index()
+        if id in self:
+            self._index_remove(id, self[id])
+        super().__setitem__(id, obj)
+        self._index_add(id, obj)
+
+    def __delitem__(self, id):
+        self._ensure_index()
+        self._index_remove(id, self[id])
+        super().__delitem__(id)
+
+    def pop(self, id, *default):
+        self._ensure_index()
+        if id in self:
+            self._index_remove(id, self[id])
+        return super().pop(id, *default)
+
+    def popitem(self):
+        self._ensure_index()
+        id, obj = super().popitem()
+        self._index_remove(id, obj)
+        return id, obj
+
+    def clear(self):
+        super().clear()
+        self.__dict__["_identity_index"] = {}
+        self.__dict__["_max_id"] = 0
+
+    def setdefault(self, id, default=None):
+        if id not in self:
+            self[id] = default
+        return self[id]
+
+    def update(self, *args, **kwargs):
+        for id, obj in dict(*args, **kwargs).items():
+            self[id] = obj
+
+    def find_id(self, phases, out_candidates):
+        """Return the smallest id of an existing entry whose phases match
+        and whose out is any of out_candidates, or None if there is none."""
+        self._ensure_index()
+        group = self._identity_index.get(frozenset(phases))
+        if not group:
+            return None
+        found = [group[o] for o in map(frozenset, out_candidates) if o in group]
+        return min(found) if found else None
+
+    @property
+    def max_id(self):
+        self._ensure_index()
+        return self._max_id
+
+
 class SectionBase:
     """Base class for PTsection, TXsection and PXsection"""
 
     def __init__(self, **kwargs):
         self.excess = kwargs.get("excess", set())
-        self.invpoints = {}
-        self.unilines = {}
+        self.invpoints = _IdentityIndexedDict()
+        self.unilines = _IdentityIndexedDict()
         self.dogmins = {}
 
     def __repr__(self):
@@ -825,43 +988,35 @@ class SectionBase:
 
     def getidinv(self, inv=None):
         """Return id of either new or existing invariant point"""
-        ids = 0
+        if inv is None:
+            return True, self.invpoints.max_id + 1
         # collect polymorphs identities
-        if inv is not None:
-            outs = [inv.out]
-            for poly in polymorphs:
-                if poly.issubset(inv.phases):
-                    switched = inv.out.difference(poly).union(poly.difference(inv.out))
-                    if switched:
-                        outs.append(switched)
-
-        for iid, cinv in self.invpoints.items():
-            if inv is not None:
-                if cinv.phases == inv.phases:
-                    if cinv.out in outs:
-                        inv.out = cinv.out  # switch to already used ??? Needed ???
-                        return False, iid
-            ids = max(ids, iid)
-        return True, ids + 1
+        outs = [inv.out]
+        for poly in polymorphs:
+            if poly.issubset(inv.phases):
+                switched = inv.out.difference(poly).union(poly.difference(inv.out))
+                if switched:
+                    outs.append(switched)
+        iid = self.invpoints.find_id(inv.phases, outs)
+        if iid is not None:
+            inv.out = self.invpoints[iid].out  # switch to already used ??? Needed ???
+            return False, iid
+        return True, self.invpoints.max_id + 1
 
     def getiduni(self, uni=None):
         """Return id of either new or existing univariant line"""
-        ids = 0
+        if uni is None:
+            return True, self.unilines.max_id + 1
         # collect polymorphs identities
-        if uni is not None:
-            outs = [uni.out]
-            for poly in polymorphs:
-                if poly.issubset(uni.phases):
-                    outs.append(poly.difference(uni.out))
-
-        for uid, cuni in self.unilines.items():
-            if uni is not None:
-                if cuni.phases == uni.phases:
-                    if cuni.out in outs:
-                        uni.out = cuni.out  # switch to already used ??? Needed ???
-                        return False, uid
-            ids = max(ids, uid)
-        return True, ids + 1
+        outs = [uni.out]
+        for poly in polymorphs:
+            if poly.issubset(uni.phases):
+                outs.append(poly.difference(uni.out))
+        uid = self.unilines.find_id(uni.phases, outs)
+        if uid is not None:
+            uni.out = self.unilines[uid].out  # switch to already used ??? Needed ???
+            return False, uid
+        return True, self.unilines.max_id + 1
 
     def trim_uni(self, id):
         uni = self.unilines[id]
@@ -891,10 +1046,14 @@ class SectionBase:
                 d1, d2 = d2, d1
                 uni.begin, uni.end = uni.end, uni.begin
             # get slice of points to keep
-            uni.used = slice(
-                np.flatnonzero(vdst >= d1)[0].item(),
-                np.flatnonzero(vdst <= d2)[-1].item() + 1,
-            )
+            keep_start = np.flatnonzero(vdst >= d1)
+            keep_end = np.flatnonzero(vdst <= d2)
+            if keep_start.size == 0 or keep_end.size == 0:
+                raise ValueError(
+                    "Cannot trim uni {}: no points fall within its endpoint "
+                    "range (degenerate or corrupted line).".format(id)
+                )
+            uni.used = slice(keep_start[0].item(), keep_end[-1].item() + 1)
 
         # concatenate begin, keep, end
         if uni.begin > 0:
@@ -1073,15 +1232,11 @@ class SectionBase:
 
     @staticmethod
     def read_file(projfile):
-        with gzip.open(str(projfile), "rb") as stream:
-            data = pickle.load(stream)
-        return data
+        return load_project_file(projfile)
 
     @staticmethod
     def from_file(projfile):
-        with gzip.open(str(projfile), "rb") as stream:
-            data = pickle.load(stream)
-        return data["section"]
+        return load_project_file(projfile)["section"]
 
 
 class PTsection(SectionBase):

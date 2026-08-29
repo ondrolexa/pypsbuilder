@@ -1,10 +1,22 @@
 #!/bin/bash
+set -euo pipefail
 
-pyuic6 ptbuilder.ui > ../ui_ptbuilder.py
-pyuic6 txbuilder.ui > ../ui_txbuilder.py
-pyuic6 pxbuilder.ui > ../ui_pxbuilder.py
-pyuic6 adduni.ui > ../ui_adduni.py
-pyuic6 addinv.ui > ../ui_addinv.py
-pyuic6 uniguess.ui > ../ui_uniguess.py
+cd "$(dirname "$0")"
 
-# do not forget to replace PyQt6 with qtpy in all generated .py files
+declare -A ui_files=(
+    [ptbuilder.ui]=../ui_ptbuilder.py
+    [txbuilder.ui]=../ui_txbuilder.py
+    [pxbuilder.ui]=../ui_pxbuilder.py
+    [adduni.ui]=../ui_adduni.py
+    [addinv.ui]=../ui_addinv.py
+    [uniguess.ui]=../ui_uniguess.py
+)
+
+for ui in "${!ui_files[@]}"; do
+    out=${ui_files[$ui]}
+    pyuic6 "$ui" > "$out"
+    # pyuic6 generates `from PyQt6 import ...`; use qtpy instead so the app
+    # stays usable with either pyqt5 or pyqt6.
+    sed -i.bak -E 's/^from PyQt6 import/from qtpy import/' "$out"
+    rm -f "$out.bak"
+done

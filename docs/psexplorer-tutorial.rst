@@ -5,8 +5,9 @@ Pseudosection explorers tutorial
 already constructed pseudosections. You can also create isopleths diagrams or do
 calculations along paths.
 
-It provides four command-line scipts `psgrid`, `psshow` and
-`psiso` for quick visualizations. For options, check built-in help, e.g.::
+It provides four command-line scripts, `psshow`, `psgrid`, `psiso` and
+`psdrawpd`, for quick visualizations and export. For options, check built-in
+help, e.g.::
 
     $ psshow -h
 
@@ -17,8 +18,13 @@ To show pseudosection, you need to provide project file::
 Using psexplorers in Python (or Jupyter notebook)
 -------------------------------------------------
 
-To access all options of **psexplorer** it is suggested to use Python API. You
-need to activate the pyps environment and run python interpreter::
+To access all options of **psexplorer** it is suggested to use the Python API.
+If you installed pypsbuilder with `uv <https://docs.astral.sh/uv/>`__, run::
+
+    $ uv run python
+
+Alternatively, activate the conda environment (or virtualenv) where
+pypsbuilder is installed and start the interpreter directly::
 
     $ conda activate pyps
     $ python
@@ -109,7 +115,7 @@ Access data and variables stored in project
 -------------------------------------------
 
 The calculated data are usually accessed using stable assemblage key (see above).
-Theera are three groups of data stored 1) at invariant points, 2) along univariant
+There are three groups of data stored: 1) at invariant points, 2) along univariant
 lines and 3) on grid covering multivariate fields. To see data coverage and all
 available variables, you can use ``show_data`` method. When no variable (or expression)
 is provided, method will show available variables.
