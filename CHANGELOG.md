@@ -2,6 +2,8 @@
 All notable pypsbuilder changes.
 
 ## [2.6.8] - master
+### Added
+ - `Export JSON` menu item added to ptbuilder/txbuilder/pxbuilder File menu, exporting invariant points and univariant lines in a schema readable back in by `Import from JSON`
 ### Fixed
  - TC35API rejects `omit` scriptfile script as unrecognised (discontinued in THERMOCALC 3.51); use `with`/`inexcess` instead
  - TC35API bombed-run detection matches THERMOCALC 3.51's actual `-- run bombed` output

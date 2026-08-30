@@ -96,7 +96,9 @@ class BuildersBase(QtWidgets.QMainWindow):
         )
         self.setWindowIcon(QtGui.QIcon(window_icon))
         self.__changed = False
-        self.about_dialog = AboutDialog(self.builder_name, __version__, __copyright__)
+        self.about_dialog = AboutDialog(
+            self.builder_name, __version__, __copyright__, window_icon, parent=self
+        )
         self.unihigh = None
         self.invhigh = None
         self.outhigh = None
@@ -274,6 +276,7 @@ class BuildersBase(QtWidgets.QMainWindow):
         self.actionAbout.triggered.connect(self.about_dialog.exec)
         self.actionImport_project.triggered.connect(self.import_from_prj)
         self.actionImport_json.triggered.connect(lambda: self.import_from_json())
+        self.actionExport_json.triggered.connect(lambda: self.export_to_json())
         self.actionCleanup.triggered.connect(self.cleanup_storage)
         self.actionFixphase.triggered.connect(self.fix_phasenames)
         self.actionShow_areas.triggered.connect(self.check_prj_areas)
@@ -834,6 +837,73 @@ class BuildersBase(QtWidgets.QMainWindow):
             ).format(n_inv_dup, n_uni_dup)
         self.statusBar().showMessage(summary)
 
+    def _build_export_json(self):
+        """Build the JSON-serializable dict of current invariant points and
+        univariant lines. Kept free of Qt/file I/O so it can be tested
+        directly against a duck-typed stand-in for self.
+        """
+        kind_map = {"PTBuilder": "PT", "TXBuilder": "TX", "PXBuilder": "PX"}
+        kind = kind_map[self.builder_name]
+
+        def axes(x0, x1, y0, y1):
+            if kind == "PT":
+                return {"P": [y0, y1], "T": [x0, x1], "X": None}
+            elif kind == "TX":
+                return {"P": None, "T": [x0, x1], "X": [y0, y1]}
+            else:  # PX
+                return {"P": [y0, y1], "T": None, "X": [x0, x1]}
+
+        if kind == "TX":
+            P = float(sum(self.tc.prange) / 2)
+            T = [float(v) for v in self.ps.xrange]
+        elif kind == "PX":
+            P = [float(v) for v in self.ps.yrange]
+            T = float(sum(self.tc.trange) / 2)
+        else:
+            P = [float(v) for v in self.ps.yrange]
+            T = [float(v) for v in self.ps.xrange]
+
+        inv_list = []
+        for inv in self.ps.invpoints.values():
+            entry = axes(inv._x, inv._x, inv._y, inv._y)
+            entry["phases"] = sorted(inv.phases)
+            entry["out"] = sorted(inv.out)
+            inv_list.append(entry)
+
+        uni_list = []
+        for uni in self.ps.unilines.values():
+            entry = axes(
+                float(uni.x.min()),
+                float(uni.x.max()),
+                float(uni.y.min()),
+                float(uni.y.max()),
+            )
+            entry["phases"] = sorted(uni.phases)
+            entry["out"] = sorted(uni.out)
+            uni_list.append(entry)
+
+        return {"kind": kind, "P": P, "T": T, "inv": inv_list, "uni": uni_list}
+
+    def export_to_json(self):
+        if not self.ready:
+            self.statusBar().showMessage("Project is not yet initialized.")
+            return
+        filename = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Export to JSON", str(self.tc.workdir), "JSON file (*.json)"
+        )[0]
+        if not filename:
+            return
+        if not filename.lower().endswith(".json"):
+            filename = filename + ".json"
+        data = self._build_export_json()
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        self.statusBar().showMessage(
+            "Exported {} invariant points and {} univariant lines to {}".format(
+                len(data["inv"]), len(data["uni"]), filename
+            )
+        )
+
     def cleanup_storage(self):
         if self.ready:
             qb = QtWidgets.QMessageBox
@@ -1057,10 +1127,12 @@ class BuildersBase(QtWidgets.QMainWindow):
     def show_output(self, int):
         if self.ready:
             if int == 0:
-                dia = OutputDialog("Modes", self.textOutput.toPlainText())
+                dia = OutputDialog("Modes", self.textOutput.toPlainText(), parent=self)
                 dia.exec()
             if int == 1:
-                dia = OutputDialog("TC output", self.textFullOutput.toPlainText())
+                dia = OutputDialog(
+                    "TC output", self.textFullOutput.toPlainText(), parent=self
+                )
                 dia.exec()
 
     def toolbar_mode_name(self):
@@ -5647,12 +5719,28 @@ class UniGuess(QtWidgets.QDialog, Ui_UniGuess):
 class AboutDialog(QtWidgets.QDialog):
     """About dialog"""
 
-    def __init__(self, builder, version, copyright, parent=None):
+    def __init__(self, builder, version, copyright, icon=None, parent=None):
         """Display a dialog that shows application information."""
         super(AboutDialog, self).__init__(parent)
 
         self.setWindowTitle("About")
-        self.resize(300, 100)
+        self.resize(320, 220)
+        # keep the dialog above the main window (and everything else)
+        # instead of a plain modal QDialog, which some window managers can
+        # still push behind the parent window
+        self.setWindowFlags(
+            self.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint
+        )
+
+        if icon is not None:
+            self.setWindowIcon(QtGui.QIcon(icon))
+            logo = QtWidgets.QLabel()
+            logo.setPixmap(
+                QtGui.QIcon(icon).pixmap(
+                    64, 64, QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.On
+                )
+            )
+            logo.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
         title = QtWidgets.QLabel("{} {}".format(builder, version))
         title.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -5682,6 +5770,8 @@ class AboutDialog(QtWidgets.QDialog):
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignVCenter)
 
+        if icon is not None:
+            self.layout.addWidget(logo)
         self.layout.addWidget(title)
         self.layout.addWidget(suptitle)
         self.layout.addWidget(author)
@@ -5700,6 +5790,9 @@ class OutputDialog(QtWidgets.QDialog):
 
         self.setWindowTitle(title)
         self.resize(800, 600)
+        self.setWindowFlags(
+            self.windowFlags() | QtCore.Qt.WindowType.WindowStaysOnTopHint
+        )
 
         self.plainText = QtWidgets.QPlainTextEdit(self)
         self.plainText.setLineWrapMode(QtWidgets.QPlainTextEdit.LineWrapMode.NoWrap)

@@ -26,7 +26,7 @@ from qtpy import QtCore, QtWidgets
 # it detects an already-running QApplication.
 _qapp = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-from pypsbuilder import InvPoint, PTsection, UniLine  # noqa: E402
+from pypsbuilder import InvPoint, PTsection, PXsection, TXsection, UniLine  # noqa: E402
 from pypsbuilder.psbuilders import (  # noqa: E402
     BuildersBase,
     DogminModel,
@@ -188,6 +188,125 @@ def test_unimodel_row_lifecycle(qapp):
 
 
 # ---------------------------------------------------------------------
+# BuildersBase._build_export_json (pure data construction, no Qt/file I/O
+# so it's tested directly against a duck-typed stand-in for self, avoiding
+# a live QMainWindow/THERMOCALC just like import_from_json's schema is
+# validated by _validate_import_json without one)
+# ---------------------------------------------------------------------
+
+
+def _fake_builder(builder_name, ps, tc_prange=(1.9, 10.1), tc_trange=(345.0, 805.0)):
+    return SimpleNamespace(
+        builder_name=builder_name,
+        ps=ps,
+        tc=SimpleNamespace(prange=tc_prange, trange=tc_trange),
+    )
+
+
+def test_build_export_json_pt():
+    ps = PTsection(trange=(345.0, 805.0), prange=(1.9, 10.1))
+    inv = InvPoint(
+        phases={"bi", "g", "mu"},
+        out={"bi", "g"},
+        x=np.array([530.0]),
+        y=np.array([5.5]),
+    )
+    uni = UniLine(
+        phases={"bi", "g", "mu"},
+        out={"mu"},
+        x=np.array([500.0, 560.0]),
+        y=np.array([5.0, 6.0]),
+    )
+    ps.invpoints[1] = inv
+    ps.unilines[1] = uni
+
+    data = BuildersBase._build_export_json(_fake_builder("PTBuilder", ps))
+
+    assert data["kind"] == "PT"
+    assert data["P"] == [1.9, 10.1]
+    assert data["T"] == [345.0, 805.0]
+
+    inv_entry = data["inv"][0]
+    assert inv_entry["P"] == [5.5, 5.5]
+    assert inv_entry["T"] == [530.0, 530.0]
+    assert inv_entry["X"] is None
+    assert inv_entry["phases"] == sorted(["bi", "g", "mu"])
+    assert inv_entry["out"] == sorted(["bi", "g"])
+
+    uni_entry = data["uni"][0]
+    assert uni_entry["P"] == [5.0, 6.0]
+    assert uni_entry["T"] == [500.0, 560.0]
+    assert uni_entry["X"] is None
+    assert uni_entry["out"] == ["mu"]
+
+
+def test_build_export_json_tx():
+    ps = TXsection(trange=(345.0, 805.0))
+    inv = InvPoint(
+        phases={"a", "b", "c"}, out={"a", "b"}, x=np.array([500.0]), y=np.array([0.4])
+    )
+    uni = UniLine(
+        phases={"a", "b", "c"},
+        out={"c"},
+        x=np.array([480.0, 520.0]),
+        y=np.array([0.3, 0.5]),
+    )
+    ps.invpoints[1] = inv
+    ps.unilines[1] = uni
+
+    data = BuildersBase._build_export_json(
+        _fake_builder("TXBuilder", ps, tc_prange=(2.0, 8.0))
+    )
+
+    assert data["kind"] == "TX"
+    assert data["P"] == 5.0
+    assert data["T"] == [345.0, 805.0]
+
+    inv_entry = data["inv"][0]
+    assert inv_entry["P"] is None
+    assert inv_entry["T"] == [500.0, 500.0]
+    assert inv_entry["X"] == [0.4, 0.4]
+
+    uni_entry = data["uni"][0]
+    assert uni_entry["P"] is None
+    assert uni_entry["T"] == [480.0, 520.0]
+    assert uni_entry["X"] == [0.3, 0.5]
+
+
+def test_build_export_json_px():
+    ps = PXsection(prange=(1.9, 10.1))
+    inv = InvPoint(
+        phases={"a", "b", "c"}, out={"a", "b"}, x=np.array([0.4]), y=np.array([5.0])
+    )
+    uni = UniLine(
+        phases={"a", "b", "c"},
+        out={"c"},
+        x=np.array([0.3, 0.5]),
+        y=np.array([4.5, 5.5]),
+    )
+    ps.invpoints[1] = inv
+    ps.unilines[1] = uni
+
+    data = BuildersBase._build_export_json(
+        _fake_builder("PXBuilder", ps, tc_trange=(400.0, 600.0))
+    )
+
+    assert data["kind"] == "PX"
+    assert data["P"] == [1.9, 10.1]
+    assert data["T"] == 500.0
+
+    inv_entry = data["inv"][0]
+    assert inv_entry["T"] is None
+    assert inv_entry["X"] == [0.4, 0.4]
+    assert inv_entry["P"] == [5.0, 5.0]
+
+    uni_entry = data["uni"][0]
+    assert uni_entry["T"] is None
+    assert uni_entry["X"] == [0.3, 0.5]
+    assert uni_entry["P"] == [4.5, 5.5]
+
+
+# ---------------------------------------------------------------------
 # Headless smoke instantiation of the three builders
 # ---------------------------------------------------------------------
 
@@ -197,4 +316,5 @@ def test_builder_headless_smoke_instantiation(qapp, builder_cls):
     window = builder_cls()
     assert window.ready is False
     assert window.centralWidget() is not None
+    assert window.actionExport_json.text() == "Export JSON..."
     window.close()
