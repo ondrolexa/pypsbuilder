@@ -1,6 +1,13 @@
 # Changelog
 All notable pypsbuilder changes.
 
+## [2.6.8] - master
+### Fixed
+ - TC35API rejects `omit` scriptfile script as unrecognised (discontinued in THERMOCALC 3.51); use `with`/`inexcess` instead
+ - TC35API bombed-run detection matches THERMOCALC 3.51's actual `-- run bombed` output
+### Changed
+ - CI test matrix now runs on Linux, Windows and macOS (in addition to the existing Python version matrix)
+
 ## [2.6.7] - 2026-08-29
 ### Added
  - `tcinit` now prompts for the P-T range (`[pmin, pmax, tmin, tmax]`), used to set the generated scriptfile's `diagramPT`/`calcP`/`calcT` lines

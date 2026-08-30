@@ -1,6 +1,6 @@
 % ==================================================================
 % Scriptfile for pypsbuilder calculation
-% 
+%
 % Use "%" for commenting (nothing is read between % and the line ending).
 % No lines are read after the "*" character.
 % DO NOT REMOVE pypsbuilder TAGS !!!
@@ -16,7 +16,6 @@ autoexit
 
 inexcess q H2O
 %tozero H2O
-omit sp0 sp1 Ni NiO opx sp ta plc abh ilmm hemm ilm0 ksp0 mt0 mt1 heme
 
 % =======================
 % which conditions
@@ -61,7 +60,7 @@ samecoding plc pl      % rename Cbar1 plagioclase as 'pl'
 
 %{PSBGUESS-BEGIN}
 % ----------------------------------------------------------
-% at P = 5.5, T = 500, for: g pl mu bi chl ab ru q H2O 
+% at P = 5.5, T = 500, for: g pl mu bi chl ab ru q H2O
 % ----------------------------------------------------------
 ptguess 5.539 500.35
 % ----------------------------------------------------------
@@ -98,7 +97,7 @@ xyzguess Q4(chl)      0.0941449  range -1.000 1.000
 
 % --------------------------------------------------------
 % Starting guesses in MnNCKFMASHTO (over-ridden by any above)
-% for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1  
+% for g liq pl ksp ep ma mu pa bi opx sa cd st chl ctd sp mt ilmm hemm ilm hem mt1
 % --------------------------------------------------------
 
 xyzguess x(g)          0.824169
@@ -121,9 +120,9 @@ xyzguess na(ksp)       0.227897
 xyzguess ca(ksp)      0.0114380
 
 xyzguess f(ep)         0.379418
-xyzguess Q(ep)         0.346850  range  0.000 0.500 
+xyzguess Q(ep)         0.346850  range  0.000 0.500
 
-xyzguess x(ma)         0.6  
+xyzguess x(ma)         0.6
 xyzguess y(ma)         0.96
 xyzguess f(ma)         0.001
 xyzguess n(ma)         0.05
@@ -133,7 +132,7 @@ xyzguess x(mu)         0.501982
 xyzguess y(mu)         0.839614
 xyzguess f(mu)        0.0172093
 xyzguess n(mu)         0.144000
-xyzguess c(mu)       0.00179401 
+xyzguess c(mu)       0.00179401
 
 xyzguess x(pa)         0.501982
 xyzguess y(pa)         0.998030
@@ -153,7 +152,7 @@ xyzguess m(opx)           0.001
 xyzguess y(opx)        0.128377  range  0.000 2.000
 xyzguess f(opx)            0.01
 xyzguess c(opx)            0.01
-xyzguess Q(opx)        0.216433 
+xyzguess Q(opx)        0.216433
 
 xyzguess x(sa)            0.1
 xyzguess y(sa)            0.3
@@ -181,13 +180,13 @@ xyzguess x(ctd)        0.990857
 xyzguess m(ctd)           0.001
 xyzguess f(ctd)            0.01
 
-xyzguess x(sp)    0.6    
-xyzguess y(sp)    0.95   
-xyzguess z(sp)    0.01  
+xyzguess x(sp)    0.6
+xyzguess y(sp)    0.95
+xyzguess z(sp)    0.01
 
-xyzguess x(mt)    0.85    
-xyzguess y(mt)    0.05   
-xyzguess z(mt)    0.01  
+xyzguess x(mt)    0.85
+xyzguess y(mt)    0.05
+xyzguess z(mt)    0.01
 
 xyzguess i(ilmm)       0.858568
 xyzguess g(ilmm)      0.0294376
@@ -199,11 +198,11 @@ xyzguess g(hemm)     0.00296953
 xyzguess m(hemm)      0.0305831
 xyzguess Q(hemm)     -0.0102634  range -0.300 0.300
 
-xyzguess x(ilm)       0.80           
+xyzguess x(ilm)       0.80
 xyzguess Q(ilm)       0.01       range -0.990 0.990
 
-xyzguess x(hem)       0.20           
-xyzguess Q(hem)       0.8        range -0.99 0.99   
+xyzguess x(hem)       0.20
+xyzguess Q(hem)       0.8        range -0.99 0.99
 
 xyzguess x(mt1)        0.632160
 xyzguess Q(mt1)        0.564334

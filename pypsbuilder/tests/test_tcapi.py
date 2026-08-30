@@ -34,7 +34,6 @@ axfile testax
 autoexit
 
 inexcess  no
-omit no
 
 diagramPT 2 10 350 800
 
@@ -291,10 +290,9 @@ def test_tc35_init_bombed(tmp_path):
     (tmp_path / "tc-testproj.txt").write_text(TC35_SCRIPTFILE)
     (tmp_path / "tc-testax.txt").write_text("dummy\n")
     (tmp_path / "tc-prefs.txt").write_text("scriptfile testproj\ncalcmode 1\n")
-    tcout = (
-        "THERMOCALC 3.51\nreading ax:testax{}{}bi\n{}"
-        "using tc-ds62.txt produced\nBOMBED because of reasons\n"
-    ).format(os.linesep, os.linesep, os.linesep)
+    tcout = "THERMOCALC 3.51{}-- run bombed because of reasons{}".format(
+        os.linesep, os.linesep
+    )
     with mock.patch.object(TC35API, "runtc", return_value=tcout):
         tc = TC35API(tmp_path, "fake-tcexe", None)
     assert tc.OK is False

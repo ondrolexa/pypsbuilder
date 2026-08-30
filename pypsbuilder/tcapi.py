@@ -507,9 +507,10 @@ class TC35API(TCAPI):
                 # omit
                 errinfo = "Wrong omit in scriptfile."
                 if "omit" in scripts:
-                    self.omit = set(scripts["omit"][0].split())
+                    raise ScriptfileError("omit, is unrecognised (or discontinued).")
                 else:
                     self.omit = set()
+                errinfo = "Error in scriptfile."
                 # autoexit
                 if "autoexit" not in scripts:
                     raise ScriptfileError(
@@ -541,15 +542,21 @@ class TC35API(TCAPI):
                         "Dogmin script should be removed from scriptfile."
                     )
                 # union ax phases and samecoding and diff omit
-                if "BOMBED" in self.tcout:
-                    raise TCError(self.tcout.split("BOMBED")[1].split(os.linesep)[0])
-                else:
+                if "reading ax:" in self.tcout:
                     ax_phases = set(
                         self.tcout.split("reading ax:")[1]
                         .split(2 * os.linesep)[0]
                         .split()
                     )
                     self.phases = ax_phases.union(*self.samecoding) - self.omit
+                else:
+                    if "-- run bombed" in self.tcout:
+                        raise TCError(
+                            "-- run bombed"
+                            + self.tcout.split("-- run bombed")[1].split(os.linesep)[0]
+                        )
+                    else:
+                        raise TCError("Unspecified error")
                 # OK
                 self.status = "Initial check done."
                 self.OK = True
@@ -573,7 +580,7 @@ class TC35API(TCAPI):
             self.OK = False
 
     def parse_logfile(self, **kwargs):
-        """Parser for THERMOCALC 3.50beta output.
+        """Parser for THERMOCALC 3.51 output.
 
         It parses the outputs of THERMOCALC after calculation.
 

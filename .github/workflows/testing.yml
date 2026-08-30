@@ -9,9 +9,11 @@ on:
 jobs:
   build:
     name: Package testing
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12", "3.13", "3.14"]
 
     env:
@@ -28,6 +30,7 @@ jobs:
           enable-cache: true
 
       - name: Install Qt runtime dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libxkbcommon0

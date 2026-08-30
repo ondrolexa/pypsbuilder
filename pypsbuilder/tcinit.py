@@ -99,7 +99,7 @@ def tcprojinit():
     set_needed = True
     sets = {1: "metapelite", 2: "metabasite", 3: "igg25", 4: "igw24"}
     while set_needed:
-        print("Choose THEMOCALC input set")
+        print("Choose THERMOCALC input set")
         for k in sets:
             print(f" {k}. {sets[k]} set")
         try:
