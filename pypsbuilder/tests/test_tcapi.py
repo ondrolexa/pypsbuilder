@@ -24,6 +24,10 @@ from unittest import mock
 
 from pypsbuilder.tcapi import TC34API, TC35API, get_tcapi
 
+# get_tcapi() globs for tc3*.exe on Windows, tc3* elsewhere - synthetic
+# executables in tests must match the real host platform's convention
+_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
 # ---------------------------------------------------------------------
 # Synthetic TC35API scriptfile - format mirrors tcinit.py's tcprj_tmpl
 # ---------------------------------------------------------------------
@@ -187,7 +191,7 @@ def test_get_tcapi_no_executable(tmp_path):
 
 
 def test_get_tcapi_dispatches_tc35(tmp_path):
-    exe = tmp_path / "tc351"
+    exe = tmp_path / f"tc351{_EXE_SUFFIX}"
     exe.write_text("#!/bin/sh\n")
     exe.chmod(0o755)
     fake_proc = _fake_popen(b"THERMOCALC 3.51 something\n")
@@ -203,7 +207,7 @@ def test_get_tcapi_dispatches_tc35(tmp_path):
 
 
 def test_get_tcapi_dispatches_tc34(tmp_path):
-    exe = tmp_path / "tc346"
+    exe = tmp_path / f"tc346{_EXE_SUFFIX}"
     exe.write_text("#!/bin/sh\n")
     exe.chmod(0o755)
     fake_proc = _fake_popen(b"THERMOCALC 3.46 something\n")
@@ -219,7 +223,7 @@ def test_get_tcapi_dispatches_tc34(tmp_path):
 
 
 def test_get_tcapi_not_ok_returns_status(tmp_path):
-    exe = tmp_path / "tc351"
+    exe = tmp_path / f"tc351{_EXE_SUFFIX}"
     exe.write_text("#!/bin/sh\n")
     exe.chmod(0o755)
     fake_proc = _fake_popen(b"THERMOCALC 3.51 something\n")
@@ -234,7 +238,7 @@ def test_get_tcapi_not_ok_returns_status(tmp_path):
 
 
 def test_get_tcapi_timeout(tmp_path):
-    exe = tmp_path / "tc351"
+    exe = tmp_path / f"tc351{_EXE_SUFFIX}"
     exe.write_text("#!/bin/sh\n")
     exe.chmod(0o755)
     fake_proc = mock.MagicMock()

@@ -11,6 +11,7 @@ and monkeypatches input()/platform.system()/urlopen.
 """
 
 import io
+import os
 from pathlib import Path
 from unittest import mock
 from zipfile import ZipFile
@@ -134,7 +135,9 @@ def test_tcprojinit_all_platform_dataset_combinations(
     exe_name = {"Linux": "tc351lin", "Windows": "tc351.exe", "Darwin": "tc351"}[comp]
     exe_path = dest / exe_name
     assert exe_path.exists()
-    assert exe_path.stat().st_mode & 0o111  # executable bit set
+    if os.name == "posix":
+        # chmod's executable bit isn't meaningful on Windows filesystems
+        assert exe_path.stat().st_mode & 0o111
 
     assert (dest / f"tc-ds{ds}.txt").read_text() == "fake dataset file content\n"
     assert (dest / f"tc-{system}.txt").read_text() == "fake axfile content\n"
