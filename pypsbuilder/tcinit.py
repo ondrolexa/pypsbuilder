@@ -246,19 +246,19 @@ xyzguess z(g)         0.0317199
 xyzguess m(g)          0.118530
 xyzguess f(g)         0.0260643
 
-xyzguess q(L)          0.173460
-xyzguess fsp(L)        0.311414
-xyzguess na(L)         0.443405
-xyzguess an(L)       0.00913561
-xyzguess ol(L)       0.00192499
-xyzguess x(L)          0.746571
-xyzguess h2o(L)        0.485792
+xyzguess q(liq)        0.173460
+xyzguess fsp(liq)      0.311414
+xyzguess na(liq)       0.443405
+xyzguess an(liq)     0.00913561
+xyzguess ol(liq)     0.00192499
+xyzguess x(liq)        0.746571
+xyzguess h2o(liq)      0.485792
 
-xyzguess ca(pl)        0.377110
-xyzguess k(pl)        0.0370401
+xyzguess ca(pl4tr)     0.377110
+xyzguess k(pl4tr)     0.0370401
 
-xyzguess na(ksp)       0.227897
-xyzguess ca(ksp)      0.0114380
+xyzguess na(k4tr)      0.227897
+xyzguess ca(k4tr)     0.0114380
 
 xyzguess f(ep)         0.379418
 xyzguess Q(ep)         0.346850  range  0.000 0.500
