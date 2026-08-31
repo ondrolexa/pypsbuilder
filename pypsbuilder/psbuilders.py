@@ -81,6 +81,10 @@ app_icons = dict(
     PXBuilder="images/pxbuilder.png",
 )
 
+# maps a section's x_var/y_var ("T"/"p"/"C") to the JSON entry key that
+# carries that axis's [min, max] span ("T"/"P"/"X")
+json_key_for_var = {"T": "T", "p": "P", "C": "X"}
+
 
 class BuildersBase(QtWidgets.QMainWindow):
     """Main base class for pseudosection builders."""
@@ -704,16 +708,70 @@ class BuildersBase(QtWidgets.QMainWindow):
                 entry["out"] = [mapping.get(p, p) for p in entry.get("out", [])]
         return True
 
+    def _entry_xy(self, entry):
+        """Midpoint (x, y) of a JSON inv/uni entry in diagram (ps.xrange/yrange) units."""
+        xv = entry.get(json_key_for_var[self.ps.x_var])
+        yv = entry.get(json_key_for_var[self.ps.y_var])
+        if xv is None or yv is None:
+            return None, None
+        return sum(xv) / 2, sum(yv) / 2
+
+    def _nearest_invpoint(self, x, y):
+        """Closest existing InvPoint to (x, y), distance normalized by
+        ps.xrange/yrange, or None if there's nothing to compare against.
+        """
+        if x is None or y is None or not self.ps.invpoints:
+            return None
+        xspan = self.ps.xrange[1] - self.ps.xrange[0]
+        yspan = self.ps.yrange[1] - self.ps.yrange[0]
+        if xspan <= 0 or yspan <= 0:
+            return None
+        return min(
+            self.ps.invpoints.values(),
+            key=lambda inv: ((inv._x - x) / xspan) ** 2 + ((inv._y - y) / yspan) ** 2,
+        )
+
+    def _seed_guess_from_nearest(self, entry):
+        """Seed the scriptfile's ptguesses from the nearest already-calculated
+        invariant point to this JSON entry, mirroring invsel_guesses's manual
+        `update_scriptfile(guesses=inv.ptguess())` pattern.
+        """
+        nearest = self._nearest_invpoint(*self._entry_xy(entry))
+        if nearest is not None:
+            self.tc.update_scriptfile(guesses=nearest.ptguess())
+
+    def _autoconnect_inv(self, inv, id_inv):
+        """Connect any univariant line that now has both its endpoints
+        calculated, mirroring the manual autoconnect behavior.
+        """
+        for uni in self.ps.unilines.values():
+            if uni.contains_inv(inv):
+                candidates = [inv]
+                for other_inv in self.ps.invpoints.values():
+                    if other_inv.id != id_inv and uni.contains_inv(other_inv):
+                        candidates.append(other_inv)
+                if len(candidates) == 2:
+                    self.uni_connect(uni.id, candidates)
+
+    def _import_step_count(self, span, full_span):
+        """Step count so the physical step used for a JSON-imported univariant
+        line is never finer than 1/200 of the full pseudosection range for
+        the axis being stepped (a floor on step size), capped at
+        spinSteps.value().
+        """
+        if full_span <= 0 or span <= 0:
+            return self.spinSteps.value()
+        min_step = full_span / 200
+        max_steps = int(span / min_step)
+        return max(min(self.spinSteps.value(), max_steps), 1)
+
     def import_from_json(self, jsonfile=None, phase_map=None):
-        if not (
-            self.ready and len(self.ps.invpoints) == 0 and len(self.ps.unilines) == 0
-        ):
+        if not self.ready:
             qb = QtWidgets.QMessageBox
             qb.critical(
                 self,
                 "Cannot import",
-                "Import from JSON requires an initialized, empty project "
-                "(no invariant points or univariant lines yet).",
+                "Import from JSON requires an initialized project.",
                 qb.StandardButton.Abort,
             )
             return
@@ -750,10 +808,14 @@ class BuildersBase(QtWidgets.QMainWindow):
         n_uni_ok = n_uni_fail = n_uni_dup = 0
         QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
         try:
+            # Round 1: attempt every new invariant point once. Entries that
+            # fail are retried in round 2 below, once other points from this
+            # same import are available as nearby ptguess seeds.
             n = len(data["inv"])
+            retry = []
             for i, entry in enumerate(data["inv"]):
                 self.statusBar().showMessage(
-                    "Importing invariant point {}/{}...".format(i + 1, n)
+                    "Importing invariant point {}/{} (round 1)...".format(i + 1, n)
                 )
                 QtWidgets.QApplication.processEvents()
                 try:
@@ -769,6 +831,27 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if not isnew:
                     n_inv_dup += 1
                     continue
+                self._seed_guess_from_nearest(entry)
+                inv = self._import_calc_inv(inv_tmp.phases, inv_tmp.out)
+                if inv is None:
+                    retry.append((id_inv, inv_tmp, entry))
+                    continue
+                self.invmodel.appendRow(id_inv, inv)
+                n_inv_ok += 1
+                if self.checkAutoconnectInv.isChecked():
+                    self._autoconnect_inv(inv, id_inv)
+                self.plot()
+
+            # Round 2: retry points that failed in round 1, now that any
+            # points calculated in round 1 are available as nearby ptguess
+            # seeds too.
+            n = len(retry)
+            for i, (id_inv, inv_tmp, entry) in enumerate(retry):
+                self.statusBar().showMessage(
+                    "Importing invariant point {}/{} (round 2)...".format(i + 1, n)
+                )
+                QtWidgets.QApplication.processEvents()
+                self._seed_guess_from_nearest(entry)
                 inv = self._import_calc_inv(inv_tmp.phases, inv_tmp.out)
                 if inv is None:
                     n_inv_fail += 1
@@ -776,16 +859,8 @@ class BuildersBase(QtWidgets.QMainWindow):
                 self.invmodel.appendRow(id_inv, inv)
                 n_inv_ok += 1
                 if self.checkAutoconnectInv.isChecked():
-                    for uni in self.ps.unilines.values():
-                        if uni.contains_inv(inv):
-                            candidates = [inv]
-                            for other_inv in self.ps.invpoints.values():
-                                if other_inv.id != id_inv and uni.contains_inv(
-                                    other_inv
-                                ):
-                                    candidates.append(other_inv)
-                            if len(candidates) == 2:
-                                self.uni_connect(uni.id, candidates)
+                    self._autoconnect_inv(inv, id_inv)
+                self.plot()
 
             n = len(data["uni"])
             for j, entry in enumerate(data["uni"]):
@@ -806,6 +881,7 @@ class BuildersBase(QtWidgets.QMainWindow):
                 if not isnew:
                     n_uni_dup += 1
                     continue
+                self._seed_guess_from_nearest(entry)
                 uni = self._import_calc_uni(uni_tmp.phases, uni_tmp.out, entry)
                 if uni is None:
                     n_uni_fail += 1
@@ -817,13 +893,13 @@ class BuildersBase(QtWidgets.QMainWindow):
                 n_uni_ok += 1
                 if self.checkAutoconnectUni.isChecked() and len(candidates) == 2:
                     self.uni_connect(id_uni, candidates)
+                self.plot()
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
         self.changed = True
         self.invview.resizeColumnsToContents()
         self.uniview.resizeColumnsToContents()
-        self.plot()
         summary = (
             "Imported {}/{} invariant points and {}/{} univariant lines from JSON."
         ).format(n_inv_ok, len(data["inv"]), n_uni_ok, len(data["uni"]))
@@ -3198,12 +3274,22 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
             results=res,
         )
 
+    def _uni_calc_strategy(self, p0, p1, t0, t1):
+        """ "calc_p" (steps T, calctatp no) or "calc_t" (steps P, calctatp
+        yes) for a JSON-imported univariant line spanning [p0, p1] x
+        [t0, t1]: step through whichever axis spans proportionally more of
+        the full pseudosection range - i.e. the axis the line runs along
+        more, as plotted - and solve for the other.
+        """
+        ratio_P = (p1 - p0) / (self.tc.prange[1] - self.tc.prange[0])
+        ratio_T = (t1 - t0) / (self.tc.trange[1] - self.tc.trange[0])
+        return "calc_p" if ratio_P < ratio_T else "calc_t"
+
     def _import_calc_uni(self, phases, out, entry):
         try:
-            p0, p1 = entry["P"]
-            t0, t1 = entry["T"]
-            ratio_P = (p1 - p0) / (self.tc.prange[1] - self.tc.prange[0])
-            ratio_T = (t1 - t0) / (self.tc.trange[1] - self.tc.trange[0])
+            p0, p1 = sorted(entry["P"])
+            t0, t1 = sorted(entry["T"])
+            strategy = self._uni_calc_strategy(p0, p1, t0, t1)
         except (KeyError, TypeError, ValueError, ZeroDivisionError):
             return None
         # extend by 10% of the JSON line's own P/T span to minimize
@@ -3212,13 +3298,19 @@ class PTBuilder(BuildersBase, Ui_PTBuilder):
         text = 0.1 * (t1 - t0)
         prange = (max(p0 - pext, self.tc.prange[0]), min(p1 + pext, self.tc.prange[1]))
         trange = (max(t0 - text, self.tc.trange[0]), min(t1 + text, self.tc.trange[1]))
-        calc = self.tc.calc_p if ratio_P < ratio_T else self.tc.calc_t
+        calc = getattr(self.tc, strategy)
+        if strategy == "calc_p":
+            span = trange[1] - trange[0]
+            full_span = self.tc.trange[1] - self.tc.trange[0]
+        else:
+            span = prange[1] - prange[0]
+            full_span = self.tc.prange[1] - self.tc.prange[0]
         tcout, ans = calc(
             phases,
             out,
             prange=prange,
             trange=trange,
-            steps=self.spinSteps.value(),
+            steps=self._import_step_count(span, full_span),
         )
         status, res, output = self.tc.parse_logfile()
         if status in ("bombed", "nir") or len(res) < 2:

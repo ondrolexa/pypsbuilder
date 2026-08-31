@@ -8,6 +8,7 @@ All notable pypsbuilder changes.
  - TC35API rejects `omit` scriptfile script as unrecognised (discontinued in THERMOCALC 3.51); use `with`/`inexcess` instead
  - TC35API bombed-run detection matches THERMOCALC 3.51's actual `-- run bombed` output
  - About, Modes and Full TC output dialogs no longer get hidden behind the main builder window; About dialog now also shows the builder's icon
+ - `Import from JSON` no longer requires an empty project; existing invariant points/univariant lines are left untouched and only genuinely new entries are calculated. It seeds THERMOCALC ptguesses from the nearest already-calculated invariant point before each calculation
 ### Changed
  - CI test matrix now runs on Linux, Windows and macOS (in addition to the existing Python version matrix)
 

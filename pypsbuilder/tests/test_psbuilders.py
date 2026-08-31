@@ -195,11 +195,14 @@ def test_unimodel_row_lifecycle(qapp):
 # ---------------------------------------------------------------------
 
 
-def _fake_builder(builder_name, ps, tc_prange=(1.9, 10.1), tc_trange=(345.0, 805.0)):
+def _fake_builder(
+    builder_name, ps, tc_prange=(1.9, 10.1), tc_trange=(345.0, 805.0), spin_steps=50
+):
     return SimpleNamespace(
         builder_name=builder_name,
         ps=ps,
         tc=SimpleNamespace(prange=tc_prange, trange=tc_trange),
+        spinSteps=SimpleNamespace(value=lambda: spin_steps),
     )
 
 
@@ -304,6 +307,115 @@ def test_build_export_json_px():
     assert uni_entry["T"] is None
     assert uni_entry["X"] == [0.3, 0.5]
     assert uni_entry["P"] == [4.5, 5.5]
+
+
+# ---------------------------------------------------------------------
+# BuildersBase._entry_xy / _nearest_invpoint / _import_step_count
+# (pure JSON-import helpers, tested the same duck-typed way as
+# _build_export_json above)
+# ---------------------------------------------------------------------
+
+
+def test_entry_xy_pt():
+    ps = PTsection(trange=(345.0, 805.0), prange=(1.9, 10.1))
+    b = _fake_builder("PTBuilder", ps)
+    x, y = BuildersBase._entry_xy(b, {"T": [500.0, 560.0], "P": [5.0, 6.0]})
+    assert x == 530.0
+    assert y == 5.5
+
+
+def test_entry_xy_tx():
+    ps = TXsection(trange=(345.0, 805.0))
+    b = _fake_builder("TXBuilder", ps)
+    x, y = BuildersBase._entry_xy(b, {"T": [480.0, 520.0], "X": [0.3, 0.5], "P": None})
+    assert x == 500.0
+    assert y == 0.4
+
+
+def test_entry_xy_px():
+    ps = PXsection(prange=(1.9, 10.1))
+    b = _fake_builder("PXBuilder", ps)
+    x, y = BuildersBase._entry_xy(b, {"X": [0.3, 0.5], "P": [4.5, 5.5], "T": None})
+    assert x == 0.4
+    assert y == 5.0
+
+
+def test_entry_xy_missing_key_returns_none():
+    ps = PTsection(trange=(345.0, 805.0), prange=(1.9, 10.1))
+    b = _fake_builder("PTBuilder", ps)
+    x, y = BuildersBase._entry_xy(b, {"T": [500.0, 560.0]})
+    assert (x, y) == (None, None)
+
+
+def test_nearest_invpoint_normalizes_by_range():
+    # xrange span 100, yrange span 10: a point that's far in x but close in y
+    # should win over one that's close in x but far in y, once both are
+    # normalized by their axis span - the opposite of what raw Euclidean
+    # distance would pick.
+    ps = PTsection(trange=(0.0, 100.0), prange=(0.0, 10.0))
+    inv_close_in_y = InvPoint(
+        phases={"a", "b"}, out={"a"}, x=np.array([10.0]), y=np.array([5.0])
+    )
+    inv_close_in_x = InvPoint(
+        phases={"a", "c"}, out={"a"}, x=np.array([50.0]), y=np.array([0.0])
+    )
+    ps.invpoints[1] = inv_close_in_y
+    ps.invpoints[2] = inv_close_in_x
+    b = _fake_builder("PTBuilder", ps)
+    nearest = BuildersBase._nearest_invpoint(b, 50.0, 5.0)
+    assert nearest is inv_close_in_y
+
+
+def test_nearest_invpoint_none_when_empty():
+    ps = PTsection(trange=(345.0, 805.0), prange=(1.9, 10.1))
+    b = _fake_builder("PTBuilder", ps)
+    assert BuildersBase._nearest_invpoint(b, 500.0, 5.0) is None
+
+
+def test_import_step_count_keeps_user_steps_for_wide_span():
+    b = _fake_builder("PTBuilder", PTsection(), spin_steps=50)
+    # full_span=600 -> min step 3; a wide local span of 300 allows up to 100
+    # steps before hitting the floor, well above the user's configured 50
+    assert BuildersBase._import_step_count(b, span=300.0, full_span=600.0) == 50
+
+
+def test_import_step_count_floor_kicks_in_for_narrow_span():
+    b = _fake_builder("PTBuilder", PTsection(), spin_steps=50)
+    # full_span=600 -> min step 3; a narrow local span of 15 only allows 5
+    # steps before the step size would drop below the floor, capping the
+    # user's configured 50 down to 5
+    assert BuildersBase._import_step_count(b, span=15.0, full_span=600.0) == 5
+
+
+def test_import_step_count_falls_back_when_full_span_zero():
+    b = _fake_builder("PTBuilder", PTsection(), spin_steps=50)
+    assert BuildersBase._import_step_count(b, span=15.0, full_span=0.0) == 50
+
+
+# ---------------------------------------------------------------------
+# PTBuilder._uni_calc_strategy (calctatp yes/no choice for JSON-imported
+# univariant lines)
+# ---------------------------------------------------------------------
+
+
+def test_uni_calc_strategy_steps_t_for_near_isobaric_line():
+    # full P span 19.9, full T span 700; local P span 0.05 (~0.25% of P
+    # range) vs local T span 100 (~14% of T range) - near-isobaric line,
+    # step T and solve P (calc_p, calctatp no)
+    b = _fake_builder(
+        "PTBuilder", PTsection(), tc_prange=(0.1, 20.0), tc_trange=(300.0, 1000.0)
+    )
+    assert PTBuilder._uni_calc_strategy(b, 5.0, 5.05, 500.0, 600.0) == "calc_p"
+
+
+def test_uni_calc_strategy_steps_p_for_near_isothermal_line():
+    # local P span 10 (~50% of P range) vs local T span 1 (~0.14% of T
+    # range) - near-isothermal line, step P and solve T (calc_t, calctatp
+    # yes)
+    b = _fake_builder(
+        "PTBuilder", PTsection(), tc_prange=(0.1, 20.0), tc_trange=(300.0, 1000.0)
+    )
+    assert PTBuilder._uni_calc_strategy(b, 5.0, 15.0, 500.0, 501.0) == "calc_t"
 
 
 # ---------------------------------------------------------------------
