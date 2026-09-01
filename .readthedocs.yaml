@@ -22,6 +22,7 @@ build:
 python:
   install:
     - method: uv
+      command: sync
       path: .
       extras:
         - docs
