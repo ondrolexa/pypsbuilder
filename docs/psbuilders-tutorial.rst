@@ -250,6 +250,35 @@ When you have already calculated invariant points and lines and you want to use
 them in separate project, create new project, set axes limits properly and
 use `File>Import > Import into range` to read it.
 
+Import and export JSON
+-----------------------
+
+Besides the ``.ptb``/``.txb``/``.pxb`` project files, invariant points and
+univariant lines can be exchanged as plain JSON, e.g. to share a
+pseudosection's topology without the project file, or to seed a new project
+from results calculated elsewhere.
+
+``File>Export>Export JSON...`` writes the current project's invariant points
+and univariant lines to a JSON file with top-level keys ``kind`` (``"PT"``,
+``"TX"`` or ``"PX"``), ``P``/``T`` (the diagram's fixed P or T value for
+T-X/P-X sections, otherwise its ``[min, max]`` range), and ``inv``/``uni``
+lists. Each entry in ``inv``/``uni`` carries ``P``/``T``/``X`` (a
+``[min, max]`` range, or ``null`` for the axis unused by this builder's
+``kind``), ``phases`` and ``out`` (the zero-mode phase(s): two for an
+invariant point, one for a univariant line).
+
+``File>Import>Import from JSON...`` reads such a file back and calculates any
+invariant point or univariant line not already present in the project
+(existing ones are left untouched and reported as duplicates). Its P/T range
+must fit inside the project's own diagram window, and phases referenced in
+the file that aren't defined in this project prompt for a replacement name
+(or are resolved from a ``phase_map`` when calling ``import_from_json()``
+from a script). Each calculation is seeded from the nearest already
+calculated invariant point, invariant points that fail on the first pass are
+retried once more points are available as seeds, and univariant lines are
+stepped along whichever axis they run along more, at a resolution capped
+relative to the full diagram range.
+
 T-X and P-X pseudosections
 --------------------------
 

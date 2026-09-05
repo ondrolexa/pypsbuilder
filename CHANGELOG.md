@@ -1,7 +1,7 @@
 # Changelog
 All notable pypsbuilder changes.
 
-## [2.6.8] - master
+## [2.6.8] - 2026-09-05
 ### Added
  - `Export JSON` menu item added to ptbuilder/txbuilder/pxbuilder File menu, exporting invariant points and univariant lines in a schema readable back in by `Import from JSON`
 ### Fixed
@@ -9,6 +9,7 @@ All notable pypsbuilder changes.
  - TC35API bombed-run detection matches THERMOCALC 3.51's actual `-- run bombed` output
  - About, Modes and Full TC output dialogs no longer get hidden behind the main builder window; About dialog now also shows the builder's icon
  - `Import from JSON` no longer requires an empty project; existing invariant points/univariant lines are left untouched and only genuinely new entries are calculated. It seeds THERMOCALC ptguesses from the nearest already-calculated invariant point before each calculation
+ - `tcinit`'s bundled TC 3.51 starting-guess template used inconsistent solution-model names (`L`, `pl`, `ksp` instead of `liq`, `pl4tr`, `k4tr`) for the same phases it names correctly elsewhere in the template
 ### Changed
  - CI test matrix now runs on Linux, Windows and macOS (in addition to the existing Python version matrix)
 
