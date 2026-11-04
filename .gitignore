@@ -65,5 +65,3 @@ target/
 # venv
 .venv/
 
-# uv lockfile (not committed for library project)
-uv.lock
